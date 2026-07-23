@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1783554385162,
+      "tag": "0000_greedy_retro_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783592805889,
+      "tag": "0001_naive_shooting_star",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783593878574,
+      "tag": "0002_mixed_thundra",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783646829923,
+      "tag": "0003_cheerful_rumiko_fujikawa",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783648179574,
+      "tag": "0004_flowery_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783794285915,
+      "tag": "0005_tan_catseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783794435461,
+      "tag": "0006_warm_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784788124570,
+      "tag": "0007_blue_mister_sinister",
+      "breakpoints": true
+    }
+  ]
+}

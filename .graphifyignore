@@ -1,0 +1,13 @@
+# Keep graphify code-only / local — exclude non-code that needs an LLM backend
+docs/
+public/
+.husky/
+.tanstack/
+.opencode/
+*.md
+*.png
+*.jpg
+*.webp
+*.gif
+*.svg
+*.pdf

@@ -1,0 +1,9 @@
+declare module '@fontsource/geist-sans';
+declare module '@fontsource/geist-mono';
+declare module '@fontsource-variable/inter';
+declare module '@fontsource-variable/dm-sans';
+declare module '@fontsource-variable/outfit';
+declare module '@fontsource-variable/fira-code';
+declare module '@fontsource-variable/jetbrains-mono';
+declare module '@fontsource/architects-daughter';
+declare module '@fontsource/space-mono';

@@ -1,0 +1,50 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 30
+    groups:
+      tanstack:
+        patterns: ['@tanstack/*']
+      radix:
+        patterns: ['@radix-ui/*']
+      fontsource:
+        patterns: ['@fontsource*']
+      dnd-kit:
+        patterns: ['@dnd-kit/*']
+      testing:
+        patterns: ['@testing-library/*']
+      react:
+        patterns: ['react', 'react-dom']
+      types:
+        patterns: ['@types/*']
+      tailwind:
+        patterns: ['tailwindcss', '@tailwindcss/*']
+      vite:
+        patterns: ['vite', '@vitejs/*', 'nitro']
+      drizzle:
+        patterns: ['drizzle-orm', 'drizzle-kit', '@better-auth/drizzle-adapter']
+      better-auth:
+        patterns: ['better-auth']
+      playwright:
+        patterns: ['@playwright/*']
+      lint-format:
+        patterns: ['oxlint', 'oxfmt', 'typescript', 'lint-staged']
+      faker:
+        patterns: ['@faker-js/*']
+      tooling:
+        patterns:
+          [
+            'cmdk',
+            'date-fns',
+            'class-variance-authority',
+            'clsx',
+            'input-otp',
+            'jsdom',
+            'react-day-picker',
+            'react-dropzone',
+            'motion',
+            '@tabler/icons-react'
+          ]

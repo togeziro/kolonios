@@ -1,0 +1,1 @@
+ALTER TABLE "kanban_tasks" ADD CONSTRAINT "kanban_tasks_column_slug_kanban_columns_slug_fk" FOREIGN KEY ("column_slug") REFERENCES "public"."kanban_columns"("slug") ON DELETE no action ON UPDATE no action;

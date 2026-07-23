@@ -1,0 +1,64 @@
+# Dependencies
+node_modules
+.bun
+
+# Build outputs
+dist
+build
+.output
+*.tsbuildinfo
+
+# TanStack Router generated
+src/routeTree.gen.ts
+
+# Environment variables
+.env
+.env*.local
+
+# IDEs and editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Testing
+coverage
+test-results
+
+# Misc
+*.tgz
+.cache
+/tmp/
+/temp/
+
+# OpenCode internal config
+.opencode/
+
+# graphify knowledge graph artifacts (generated)
+graphify-out/
+
+# Machine-installed git hooks (regenerated per-machine by `graphify hook install`)
+.husky/_/
+
+# Machine-local tooling artifacts
+.mimocode/
+.tanstack/tmp/
+
+# Only track README.md; other root .md files are project documentation
+*.md
+!README.md
