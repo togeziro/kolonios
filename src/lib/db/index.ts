@@ -3,7 +3,7 @@ import postgres from 'postgres';
 import * as schema from './schema';
 
 const connectionString =
-  process.env.DATABASE_URL || 'postgres://tanstack:tanstack@localhost:5432/tanstack_dashboard';
+  process.env.DATABASE_URL || 'postgres://tanstack:tanstack@localhost:5432/kolonios';
 
 // Reuse the client across hot reloads in dev so we don't exhaust connections.
 const globalForDb = globalThis as unknown as {

@@ -46,8 +46,7 @@ export default defineConfig({
     // (see scripts/create-test-db.ts). Never point this at the dev DB.
     env: {
       DATABASE_URL:
-        process.env.DATABASE_URL ||
-        'postgres://tanstack:tanstack@localhost:5432/tanstack_dashboard_test'
+        process.env.DATABASE_URL || 'postgres://tanstack:tanstack@localhost:5432/kolonios_test'
     },
     globals: true,
     environment: 'node',

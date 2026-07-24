@@ -5,8 +5,8 @@
 //
 import { execSync } from 'node:child_process';
 
-const TEST_DB = 'tanstack_dashboard_test';
-const ADMIN_URL = 'postgres://tanstack:tanstack@localhost:5432/tanstack_dashboard';
+const TEST_DB = 'kolonios_test';
+const ADMIN_URL = 'postgres://tanstack:tanstack@localhost:5432/kolonios';
 const TEST_URL = `postgres://tanstack:tanstack@localhost:5432/${TEST_DB}`;
 
 console.log(`Dropping database ${TEST_DB} (if it exists)...`);

@@ -59,6 +59,5 @@ graphify-out/
 .mimocode/
 .tanstack/tmp/
 
-# Only track README.md; other root .md files are project documentation
+# Documentation files are now tracked
 *.md
-!README.md

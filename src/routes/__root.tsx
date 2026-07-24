@@ -32,12 +32,12 @@ export const Route = createRootRouteWithContext<{
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'TanStack Dashboard' },
+      { title: 'kolonios' },
       {
         name: 'description',
-        content: 'Dashboard with TanStack Start and Shadcn'
+        content: 'kolonios dashboard'
       },
-      { tag: 'link', rel: 'icon', href: '/tanstack-dashboard.png' }
+      { tag: 'link', rel: 'icon', href: '/favicon.ico' }
     ]
   }),
   loader: async () => {

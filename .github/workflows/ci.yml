@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_USER: tanstack
           POSTGRES_PASSWORD: tanstack
-          POSTGRES_DB: tanstack_dashboard
+          POSTGRES_DB: kolonios
         ports:
           - 5432:5432
         options: >-
@@ -26,7 +26,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgres://tanstack:tanstack@localhost:5432/tanstack_dashboard_test
+      DATABASE_URL: postgres://tanstack:tanstack@localhost:5432/kolonios_test
       NODE_OPTIONS: '--max-old-space-size=4096'
 
     steps:

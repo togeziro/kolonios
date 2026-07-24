@@ -60,7 +60,8 @@ function InputGroupAddon({
 }: React.ComponentProps<'div'> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
     <div
-      role='group'
+      role='button'
+      tabIndex={0}
       data-slot='input-group-addon'
       data-align={align}
       className={cn(inputGroupAddonVariants({ align }), className)}
