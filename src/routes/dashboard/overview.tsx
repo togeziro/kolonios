@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useSession } from '@/lib/auth/auth-client';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import PageContainer from '@/components/layout/page-container';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -14,6 +16,7 @@ import { BarGraph } from '@/features/overview/components/bar-graph';
 import { RecentSales } from '@/features/overview/components/recent-sales';
 import { AreaGraph } from '@/features/overview/components/area-graph';
 import { PieGraph } from '@/features/overview/components/pie-graph';
+import StaffMobileDashboard from '@/features/attendance/components/staff-mobile-dashboard';
 
 export const Route = createFileRoute('/dashboard/overview')({
   ssr: 'data-only',
@@ -21,6 +24,15 @@ export const Route = createFileRoute('/dashboard/overview')({
 });
 
 function OverviewPage() {
+  const isMobile = useIsMobile();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+  const isStaff = role === 'employee' || role === 'technician';
+
+  if (isMobile && isStaff) {
+    return <StaffMobileDashboard />;
+  }
+
   return (
     <PageContainer>
       <div className='flex flex-1 flex-col space-y-2'>

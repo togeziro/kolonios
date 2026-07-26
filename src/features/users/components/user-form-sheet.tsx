@@ -10,28 +10,20 @@ import {
   SheetTitle
 } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { createUserMutation, updateUserMutation } from '../api/mutations';
 import type { User } from '../api/types';
 import { toast } from 'sonner';
 import * as z from 'zod';
 import { userSchema, type UserFormValues } from '../schemas/user';
-import { ROLE_OPTIONS } from './users-table/options';
-
-const STATUS_OPTIONS = [
-  { value: 'Active', label: 'Active' },
-  { value: 'Inactive', label: 'Inactive' },
-  { value: 'Invited', label: 'Invited' }
-];
-
-interface UserFormSheetProps {
-  user?: User;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+import { AUTH_ROLE_OPTIONS, STATUS_OPTIONS } from './users-table/options';
+import { designationOptionsQueryOptions } from '@/features/masterdata/api/queries';
 
 export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) {
   const isEdit = !!user;
+
+  const { data: optionsData } = useQuery(designationOptionsQueryOptions());
+  const jobTitleOptions = optionsData?.options ?? [];
 
   const createMutation = useMutation({
     ...createUserMutation,
@@ -59,7 +51,8 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
       email: user?.email ?? '',
       phone: user?.phone ?? '',
       role: user?.role ?? '',
-      status: user?.status ?? 'Active'
+      status: user?.status ?? 'Active',
+      designation_id: ''
     } as UserFormValues,
     validators: {
       onSubmit: userSchema
@@ -137,13 +130,20 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
 
               <FormSelectField
                 name='role'
-                label='Role'
+                label='Access Level'
                 required
-                options={ROLE_OPTIONS}
-                placeholder='Select role'
+                options={AUTH_ROLE_OPTIONS}
+                placeholder='Select access level'
                 validators={{
-                  onBlur: z.string().min(1, 'Please select a role')
+                  onBlur: z.string().min(1, 'Please select an access level')
                 }}
+              />
+
+              <FormSelectField
+                name='designation_id'
+                label='Job Title'
+                options={jobTitleOptions}
+                placeholder='Select job title'
               />
 
               <FormSelectField
@@ -171,6 +171,12 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
       </SheetContent>
     </Sheet>
   );
+}
+
+interface UserFormSheetProps {
+  user?: User;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function UserFormSheetTrigger() {

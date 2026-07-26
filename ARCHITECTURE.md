@@ -19,28 +19,51 @@ e2e/                            # Playwright end-to-end tests (helpers, specs, f
 src/
 ├── routes/                     # File-based routing (TanStack Router)
 │   ├── __root.tsx              # Root layout (providers, theme, HTML shell)
+│   ├── index.tsx               # Home (auth redirect)
+│   ├── dashboard.tsx           # Conditional layout: MobileShell vs sidebar
+│   ├── api/auth/$.tsx          # Better Auth catch-all handler
 │   └── dashboard/              # Dashboard pages
+│       ├── overview.tsx        # Analytics or StaffMobileDashboard
+│       ├── attendance/         # Check-in/out page
+│       ├── leave/              # Leave management
+│       ├── admin/              # Department & designation CRUD
+│       ├── users.tsx           # Users table
+│       ├── product/            # Product CRUD
+│       ├── react-query.tsx     # React Query demo
+│       ├── kanban.tsx          # Task board
+│       ├── notifications.tsx   # Notifications page
+│       ├── forms/              # Form examples
+│       └── elements/           # UI showcase
 ├── features/                   # Feature modules
 │   ├── <name>/
 │   │   ├── api/                # Types, server functions, queries, mutations
 │   │   ├── components/         # Feature-specific components
-│   │   └── utils/              # Feature-specific utilities & state
+│   │   └── utils/              # Feature-specific utilities
 ├── lib/
+│   ├── auth/                   # Better Auth server + client config + permissions
 │   └── db/                     # Drizzle schema, migrations, data access
-├── components/                 # Shared UI (shadcn/ui primitives)
+├── components/
+│   ├── ui/                     # shadcn/ui primitives
+│   ├── layout/                 # Sidebar, header, mobile-shell, bottom-nav, mobile-header
+│   ├── themes/                 # Theme system (selector, mode toggle, config)
+│   └── kbar/                   # Command+K interface
 ├── hooks/                      # Custom hooks
 ├── config/                     # Navigation, infobar, data table config
-└── styles/                     # Global CSS & theme files
+├── i18n/                       # Internationalization (i18next, EN/ID)
+├── constants/                  # Option constants, seed patterns
+├── styles/                     # Global CSS & theme files
+└── types/                      # TypeScript types
 ```
 
 ## Key Patterns
 
 - **Server functions**: `createServerFn()` with `import()` inside handlers
-- **State management**: React Query for all server state (products, users, kanban, notifications)
+- **State management**: React Query for all server state (products, users, kanban, notifications, attendance, masterdata)
 - **DB access**: Server-only modules in `src/lib/db/`, never imported by client code
-- **RPC boundary authz**: Every `createServerFn` endpoint enforces a valid session at the boundary (not just the route `beforeLoad`): `requireSession()` for reads/mutations, `requireRole('admin')` for product/user writes.
+- **RPC boundary authz**: Every `createServerFn` endpoint enforces a valid session at the boundary (not just the route `beforeLoad`): `requireSession()` for reads/mutations, `requireRole('admin')` for product/user writes, `requireEmployee()` for attendance self-service.
 - **Input validation**: Every server-function input is validated at runtime with a Zod schema via `@tanstack/zod-adapter`.
 - **Error mapping**: `lib/db/*.ts` functions are wrapped in `try/catch` using the shared `mapDbError`. Intentional domain errors throw `DomainError` (pass through); unexpected DB errors become a generic message.
+- **Mobile layout**: Conditional `MobileShell` renders when user is `employee`/`technician` and screen <768px; replaces sidebar/header with bottom nav + FAB.
 - **Pre-commit hooks**: simple-git-hooks + lint-staged (oxlint, oxfmt --check, tsc --noEmit)
 - **E2E testing**: Playwright tests in `e2e/` auto-start the dev server, run headless Chromium with a single worker (shared DB).
 

@@ -60,22 +60,29 @@ imports to prevent the `postgres` driver from leaking into the client bundle.
 
 | Function              | Method | Payload                         | Returns              |
 | --------------------- | ------ | ------------------------------- | -------------------- |
-| `checkInFn`           | POST   | `CheckInPayload`                | `EmployeeShift`      |
-| `checkOutFn`          | POST   | `CheckOutPayload`               | `EmployeeShift`      |
-| `getEmployeeAttendanceFn` | GET | `AttendanceFilters`          | `AttendanceResponse` |
-| `getBulkAttendanceFn` | GET    | `BulkAttendanceFilters`         | `AttendanceResponse` |
-| `requestLeaveFn`      | POST   | `LeaveRequestPayload`           | `Leave`              |
-| `approveLeaveFn`      | POST   | `{ leaveId, approved: boolean }`| `Leave`              |
+| `checkInFn`           | POST   | `AttendanceCheckInPayload`      | `EmployeeShift`      |
+| `checkOutFn`          | POST   | `AttendanceCheckOutPayload`     | `EmployeeShift`      |
+| `getMyAttendanceFn`   | GET    | —                               | `AttendanceResponse` |
+| `getAttendanceHistoryFn` | GET | `AttendanceFilters`           | `AttendanceHistoryResponse` |
+| `getMyLeavesFn`       | GET    | `LeaveFilters`                  | `LeaveListResponse`  |
+| `createLeaveRequestFn`| POST   | `LeaveRequestPayload`           | `Leave`              |
+| `getPerformanceStatsFn` | GET  | —                               | `PerformanceStatsResponse` |
+| `getLocationsFn`      | GET    | —                               | `Location[]`         |
+| `getShiftsFn`         | GET    | —                               | `Shift[]`            |
 
 ### Masterdata
 
-| Function           | Method | Payload                   | Returns             |
-| ------------------ | ------ | ------------------------- | ------------------- |
-| `getEmployeesFn`   | GET    | `EmployeeFilters`         | `EmployeesResponse` |
-| `createEmployeeFn` | POST   | `EmployeeMutationPayload` | `Employee`          |
-| `updateEmployeeFn` | POST   | `{ id, values }`          | `Employee`          |
-| `getDepartmentsFn` | GET    | —                         | `Department[]`      |
-| `getDesignationsFn`| GET    | —                         | `Designation[]`     |
+| Function                  | Method | Payload                         | Returns              |
+| ------------------------- | ------ | ------------------------------- | -------------------- |
+| `getDepartmentsFn`        | GET    | —                               | `Department[]`       |
+| `createDepartmentFn`      | POST   | `DepartmentMutationPayload`     | `Department`         |
+| `updateDepartmentFn`      | POST   | `{ id, values }`                | `Department`         |
+| `deleteDepartmentFn`      | POST   | `{ id }`                        | `{ success }`        |
+| `getDesignationsFn`       | GET    | `{ department_id? }`            | `Designation[]`      |
+| `createDesignationFn`     | POST   | `DesignationMutationPayload`    | `Designation`        |
+| `updateDesignationFn`     | POST   | `{ id, values }`                | `Designation`        |
+| `deleteDesignationFn`     | POST   | `{ id }`                        | `{ success }`        |
+| `getDesignationOptionsFn` | GET    | —                               | `DesignationOption[]`|
 
 ## Authentication
 

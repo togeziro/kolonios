@@ -139,7 +139,50 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **Internationalization (i18n) with i18next** — Full i18n support using `i18next` + `react-i18next`:
+- **Attendance frontend (complete)** — Check-in/out with geo-fencing, leave requests, attendance history:
+  - `src/features/attendance/` — Types, Zod validation, React Query options + key factory
+  - `checkInFn` / `checkOutFn` — Server functions with Haversine geo-fence validation
+  - `getMyAttendanceFn` / `getAttendanceHistoryFn` — Today's attendance + historical records
+  - `getMyLeavesFn` / `createLeaveRequestFn` — Leave list + create
+  - `getPerformanceStatsFn` / `getLocationsFn` / `getShiftsFn` — Supporting queries
+  - Routes `/dashboard/attendance` and `/dashboard/leave`
+  - Components: `AttendanceCheckCard`, `AttendanceHistory`, `LeaveRequestForm`, `LeaveHistory`
+  - Navigation shortcuts: Attendance (a,a), Leave (l,l) in Overview group
+
+- **Mobile layout for staff** — Responsive dashboard with mobile-first components:
+  - `useIsMobile` hook — Media query based responsive detection
+  - `MobileHeader` — Avatar + greeting + notification badge + sign-out dropdown
+  - `MobileAttendanceSummary` — Circular progress + check-in/out card
+  - `InProgressTasks` — Horizontal scroll task cards
+  - `TaskGroups` — Department group list with progress circles
+  - `BottomNav` + FAB check-in button — Fixed bottom navigation
+  - `MobileShell` — Mobile layout wrapper (header + outlet + bottom nav)
+  - `StaffMobileDashboard` — Combines all mobile fragments for staff home
+  - Conditional render in `/dashboard/overview` and `dashboard.tsx` based on role + screen size
+
+- **Masterdata CRUD from UI** — Department and designation management:
+  - `src/features/masterdata/` — Server functions, queries, admin components
+  - Full CRUD: create/update/delete for departments and designations
+  - Routes `/dashboard/admin/departments` and `/dashboard/admin/designations`
+  - Dialog-based forms with TanStack Table display
+  - Navigation: Admin group with Departments and Job Titles
+  - User form separates "Access Level" (auth role) from "Job Title" (designation from DB)
+
+- **Seed data expanded** from 3 departments/4 designations to 6 ISP departments/13 designations:
+  - Departments: Engineering, Operations, Sales & Marketing, Customer Service, Finance & Billing, HR & Administration
+  - Designations: NOC Engineer, Network Engineer, Senior Network Engineer, Field Technician, Senior Field Technician, Installation Specialist, Sales Agent, Sales Supervisor, Customer Service Rep, Support Engineer, Billing Specialist, Finance Officer, HR Specialist
+  - 4 demo users: admin, hr, employee, technician (all with `Password123!`)
+  - 2 locations (Head Office, Branch Office 1), 3 shifts (Morning, Afternoon, Night)
+
+### Fixed
+
+- **Auth client React import** — Changed from `better-auth/client` (vanilla atom-based) to `better-auth/react` so `useSession` returns `{ data, isPending, error, refetch }` instead of an `Atom` store. Fixes TS2349 type errors in mobile-header, dashboard.tsx, and overview.tsx.
+
+### Changed
+
+- **AUTH_ROLE_OPTIONS** — Renamed from `ROLE_OPTIONS` to clarify these are auth roles, not job titles. User form now has separate "Access Level" (admin/hr/employee/technician) and "Job Title" (DB designation) fields.
+
+### Internationalization (i18n) with i18next — Full i18n support using `i18next` + `react-i18next`:
   - `src/i18n/config.ts` — i18n instance factory with SSR support, resources for EN/ID
   - `src/i18n/provider.tsx` — `I18nProvider` component + `getServerSideI18n` for SSR
   - `src/i18n/types.ts` — TypeScript type augmentation for typed translation keys

@@ -62,6 +62,10 @@ The app is organized as three cooperating tiers so each concern stays isolated:
 - **Feature-based folder structure** for scalable projects
 - **Kanban board** with drag-n-drop (dnd-kit + PostgreSQL via Drizzle ORM)
 - **Notification center** with bell icon badge, popover preview, and full page view (PostgreSQL-backed via Drizzle + React Query)
+- **Attendance module** — Check-in/out with geo-fencing (Haversine), leave management, performance tracking, attendance history
+- **Mobile staff dashboard** — Responsive mobile layout with bottom nav, FAB check-in, circular progress, swipeable tasks
+- **Masterdata CRUD** — Department and designation management from UI (full create/edit/delete)
+- **RBAC** — 4 roles (admin, hr, employee, technician) with per-module permissions
 - **Command palette** (Cmd+K) for quick navigation
 - **Better Auth** — DB-session auth with an `admin` role plugin, hardened RPC boundary (session + Zod + mapped errors)
 - **Testing** — Vitest unit/integration tests + Playwright E2E tests for product CRUD and table sorting
@@ -71,13 +75,17 @@ The app is organized as three cooperating tiers so each concern stays isolated:
 
 | Page                                          | Description                                                                                                                                   |
 | :-------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Dashboard Overview](/dashboard/overview)     | Cards with Recharts graphs. Suspense boundaries for independent loading/error per section.                                                    |
+| [Dashboard Overview](/dashboard/overview)     | Cards with Recharts graphs. Suspense boundaries for independent loading/error per section. Mobile staff dashboard for employee/technician.    |
 | [Product List (Table)](/dashboard/product)    | TanStack Table + React Query (route loader prefetch + client cache) with URL search params for search, filter, pagination.                    |
 | [Create Product Form](/dashboard/product/new) | TanStack Form + Zod with `useMutation` for create/update. Cache invalidation on success.                                                      |
 | [Users (Table)](/dashboard/users)             | Users table with React Query + URL state pattern. Same architecture as Products.                                                              |
 | [React Query Demo](/dashboard/react-query)    | Pokemon API showcase demonstrating route loader + `useSuspenseQuery` pattern with client-side cache.                                          |
 | [Kanban Board](/dashboard/kanban)             | Drag n Drop task management board with dnd-kit, PostgreSQL-backed via Drizzle + React Query. Column sorting, task cards with priority badges. |
 | [Notifications](/dashboard/notifications)     | Notification center with bell icon badge, popover preview, and dedicated full page with tabs.                                                 |
+| [Attendance](/dashboard/attendance)           | Check-in/out with geo-fencing validation, today's status, attendance history table.                                                           |
+| [Leave](/dashboard/leave)                     | Leave request form with type/date selection, leave history list.                                                                              |
+| [Departments](/dashboard/admin/departments)   | CRUD management for company departments.                                                                                                     |
+| [Job Titles](/dashboard/admin/designations)   | CRUD management for designations with department assignment and base salary.                                                                  |
 | [Forms](/dashboard/forms/basic)               | Basic, Multi-step, Sheet/Dialog, and Advanced form patterns with TanStack Form + Zod.                                                         |
 | [Not Found](/notfound)                        | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                                                             |
 
@@ -89,9 +97,12 @@ src/
 │   ├── __root.tsx                 # Root layout (providers, theme, HTML shell)
 │   ├── index.tsx                  # Home (auth redirect)
 │   ├── auth/                      # Auth pages (sign-in, sign-up)
-│   ├── dashboard.tsx              # Dashboard layout (sidebar, header, kbar)
+│   ├── dashboard.tsx              # Dashboard layout (sidebar/header or MobileShell)
 │   └── dashboard/                 # Dashboard pages
-│       ├── overview.tsx           # Analytics with Suspense boundaries
+│       ├── overview.tsx           # Analytics + mobile staff dashboard
+│       ├── attendance/            # Check-in/out page
+│       ├── leave/                 # Leave management
+│       ├── admin/                 # Department & designation CRUD
 │       ├── product/               # Product CRUD (route loaders + React Query)
 │       ├── users.tsx              # Users table (route loaders + React Query)
 │       ├── react-query.tsx        # React Query demo page
@@ -102,7 +113,7 @@ src/
 │
 ├── components/                    # Shared components
 │   ├── ui/                        # UI primitives (buttons, inputs, kanban, etc.)
-│   ├── layout/                    # Layout components (header, sidebar, etc.)
+│   ├── layout/                    # Layout components (header, sidebar, mobile-shell, bottom-nav)
 │   ├── themes/                    # Theme system (selector, mode toggle, config)
 │   └── kbar/                      # Command+K interface
 │
@@ -114,12 +125,14 @@ src/
 │   ├── kanban/                    # Drag-drop task board
 │   ├── notifications/             # Notification center (React Query + PostgreSQL)
 │   ├── auth/                      # Auth components
+│   ├── attendance/                # Check-in/out, leave, performance (Haversine geo-fencing)
+│   ├── masterdata/                # Departments & designations CRUD
 │   └── forms/                     # Form showcases
 │
 ├── lib/                           # Core utilities (query-client, parsers, etc.)
 │   ├── auth/                     # Better Auth client + server config + permissions
 │   └── db/                        # Drizzle ORM connection, schema, server-only data access
-├── hooks/                         # Custom hooks (use-data-table, use-media-query, etc.)
+├── hooks/                         # Custom hooks (use-data-table, use-media-query, use-is-mobile, etc.)
 ├── config/                        # Navigation, infobar, data table config
 ├── constants/                     # Option constants, seed patterns & faker fallbacks
 ├── styles/                        # Global CSS & theme files
@@ -150,7 +163,8 @@ Set up and seed the PostgreSQL database (ensure you have PostgreSQL running loca
 
 ```bash
 bun run db:push    # apply the Drizzle schema to the database
-bun run db:seed     # seed products, kanban board, notifications, and a demo admin user
+bun run db:seed     # seed 20 products, kanban board, 8 notifications, 2 locations, 3 shifts,
+                   #       6 departments, 13 designations, 4 demo users, 4 employee records
 ```
 
 Run the development server:
@@ -161,7 +175,14 @@ bun run dev
 
 You should now be able to access the application at http://localhost:3000.
 
-Log in with the seeded demo account: **`admin@example.com`** / **`Password123!`** (Better Auth `admin` role).
+Log in with a seeded demo account:
+
+| Email                     | Password       | Role      |
+| ------------------------- | -------------- | --------- |
+| `admin@example.com`       | `Password123!` | admin     |
+| `hr@example.com`          | `Password123!` | hr        |
+| `employee@example.com`    | `Password123!` | employee  |
+| `technician@example.com`  | `Password123!` | technician |
 
 ### Testing
 

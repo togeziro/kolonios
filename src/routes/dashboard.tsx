@@ -5,6 +5,9 @@ import Header from '@/components/layout/header';
 import { InfoSidebar } from '@/components/layout/info-sidebar';
 import { InfobarProvider } from '@/components/ui/infobar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { MobileShell } from '@/components/layout/mobile-shell';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useSession } from '@/lib/auth/auth-client';
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: async () => {
@@ -29,6 +32,19 @@ export const Route = createFileRoute('/dashboard')({
 });
 
 function DashboardLayout() {
+  const isMobile = useIsMobile();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+  const isStaff = role === 'employee' || role === 'technician';
+
+  if (isMobile && isStaff) {
+    return (
+      <KBar>
+        <MobileShell />
+      </KBar>
+    );
+  }
+
   return (
     <KBar>
       <SidebarProvider>

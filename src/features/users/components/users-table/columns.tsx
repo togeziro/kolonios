@@ -4,7 +4,7 @@ import type { User } from '../../api/types';
 import { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
 import { CellAction } from './cell-action';
-import { ROLE_OPTIONS } from './options';
+import { AUTH_ROLE_OPTIONS } from './options';
 
 export const columns: ColumnDef<User>[] = [
   {
@@ -51,7 +51,7 @@ export const columns: ColumnDef<User>[] = [
     meta: {
       label: 'roles',
       variant: 'multiSelect' as const,
-      options: ROLE_OPTIONS
+      options: AUTH_ROLE_OPTIONS
     }
   },
   {

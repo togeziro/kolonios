@@ -41,6 +41,43 @@ export const navGroups: NavGroup[] = [
         shortcut: ['k', 'k'],
         isActive: false,
         items: []
+      },
+      {
+        title: 'Attendance',
+        url: '/dashboard/attendance',
+        icon: 'clock',
+        shortcut: ['a', 'a'],
+        isActive: false,
+        items: []
+      },
+      {
+        title: 'Leave',
+        url: '/dashboard/leave',
+        icon: 'calendar',
+        shortcut: ['l', 'l'],
+        isActive: false,
+        items: []
+      }
+    ]
+  },
+  {
+    label: 'Admin',
+    items: [
+      {
+        title: 'Departments',
+        url: '/dashboard/admin/departments',
+        icon: 'workspace',
+        shortcut: ['d', 'e'],
+        isActive: false,
+        items: []
+      },
+      {
+        title: 'Job Titles',
+        url: '/dashboard/admin/designations',
+        icon: 'employee',
+        shortcut: ['j', 't'],
+        isActive: false,
+        items: []
       }
     ]
   },

@@ -18,11 +18,15 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 
 ## Implemented Features
 
-- **Dashboard Overview** — Analytics cards with Recharts graphs, Suspense-based loading
+- **Dashboard Overview** — Analytics cards with Recharts graphs, Suspense-based loading; mobile staff layout for employees/technicians
 - **Product Management** — CRUD with data table (search, filter, pagination, sort, URL state)
 - **User Management** — Data table with role/status filters
 - **Kanban Board** — Drag-and-drop task management with priority badges, PostgreSQL-backed via Drizzle + React Query
 - **Notification Center** — Bell icon badge, popover preview, full page with tabs, PostgreSQL-backed via Drizzle + React Query
+- **Attendance** — Check-in/out with geo-fencing (Haversine), today's status, attendance history; leave requests with type/date selection, leave history
+- **Masterdata** — Full CRUD for departments and designations with dialog-based forms
+- **Mobile Dashboard** — Responsive mobile layout for staff: bottom nav, FAB check-in, circular progress, swipeable tasks
+- **RBAC** — 4 roles (admin, hr, employee, technician) with per-module permissions enforced at the RPC boundary
 - **Forms** — Basic, multi-step, sheet/dialog, and advanced patterns with TanStack Form + Zod
 - **Command Palette** — Cmd+K navigation via kbar
 - **Multi-Theme Support** — 10+ themes with light/dark/system switching
@@ -56,7 +60,7 @@ Directional buckets, not a strict timeline.
 
 ### Now
 
-**Attendance Module (foundation complete)**
+**Attendance Module (complete)**
 - [x] Design attendance database schema (shifts, locations, employee_shifts, leaves, performance_reports)
 - [x] Implement RBAC roles: `admin`, `hr`, `employee`, `technician`
 - [x] Create `src/lib/db/schema/attendance.ts` and `src/lib/db/schema/masterdata.ts`
@@ -65,18 +69,19 @@ Directional buckets, not a strict timeline.
 - [x] Generate and apply database migrations (`bun run db:push`)
 - [x] Seed default data: locations, shifts, departments, designations, demo users
 - [x] Create employee records linked to demo users
-- [ ] Implement attendance data access layer with Drizzle
-- [ ] Create check-in/check-out server functions with geo-fencing
-- [ ] Build attendance dashboard with data tables and calendar
-- [ ] Add leave management (cuti) with approval workflows
-- [ ] Implement performance tracking (Laporan Kinerja)
-- [ ] Add WhatsApp notifications for attendance events
+- [x] Implement attendance data access layer with Drizzle + Haversine geo-fence
+- [x] Create check-in/check-out server functions with geo-fencing
+- [x] Build attendance dashboard components (check-in card, history table, leave form)
+- [x] Add leave management (cuti) with request form and history
+- [x] Implement performance tracking (Laporan Kinerja) API
+- [x] Mobile staff dashboard with circular progress, bottom nav, FAB check-in
 
-**Masterdata Module (foundation complete)**
+**Masterdata Module (complete)**
 - [x] Extend RBAC roles: `admin`, `hr`, `employee`, `technician`
 - [x] Create employee management tables (employees, departments, designations)
-- [x] Seed masterdata: 3 departments, 4 designations, 4 employee records
-- [ ] Build location/company settings management
+- [x] Seed masterdata: 6 ISP departments, 13 designations, 4 employee records
+- [x] Full CRUD from UI: departments and designations with dialog-based forms
+- [x] Separate auth role (Access Level) from job title (Designation from DB) in user form
 
 ### Next
 

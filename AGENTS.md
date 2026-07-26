@@ -13,13 +13,38 @@ Agent-facing quick reference. Full project documentation:
 bun install
 cp env.example.txt .env
 bun run db:push    # apply DB schema
-bun run db:seed    # seed 20 products + 1 demo user + 8 notifications + kanban
+bun run db:seed    # seed 20 products + 1 demo user + 8 notifications + kanban +
+                   #       2 locations + 3 shifts + 6 departments + 13 designations +
+                   #       4 demo users + 4 employee records
 bun run dev        # http://localhost:3000
 bun run build      # client + server bundles
 bun run start      # run built app from .output/
 ```
 
 All `bun run` scripts (lint, format, typecheck, db:*) are defined in `package.json`.
+
+## Project Structure
+
+- `src/features/attendance/` — Check-in/out, leave, performance (Haversine geo-fencing)
+- `src/features/masterdata/` — Departments & designations CRUD from UI
+- `src/routes/dashboard/` — Conditional layout: `MobileShell` (mobile + staff role) vs sidebar layout
+- `src/components/layout/` — Shared layout: sidebar, header, mobile-shell, bottom-nav, mobile-header
+
+## Key files
+
+- `src/lib/auth/auth-client.ts` — Uses `better-auth/react` (React-ready `useSession` hook)
+- `src/lib/db/attendance.ts` — Attendance data access with Haversine
+- `src/lib/db/masterdata.ts` — Masterdata CRUD
+- `src/hooks/use-is-mobile.ts` — Responsive media query hook for mobile detection
+
+## Demo Accounts
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@example.com` | `Password123!` | admin |
+| `hr@example.com` | `Password123!` | hr |
+| `employee@example.com` | `Password123!` | employee |
+| `technician@example.com` | `Password123!` | technician |
 
 <!-- CODEGRAPH_START -->
 ## CodeGraph

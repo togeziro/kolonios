@@ -141,9 +141,12 @@ async function seedMasterdata() {
   console.log(`Seeded ${shiftData.length} shifts`);
 
   const departmentData = [
-    { name: 'Engineering', code: 'ENG', description: 'Software Development' },
-    { name: 'Operations', code: 'OPS', description: 'Operations & Support' },
-    { name: 'HR', code: 'HR', description: 'Human Resources' }
+    { name: 'Engineering', code: 'ENG', description: 'Network Engineering & NOC' },
+    { name: 'Operations', code: 'OPS', description: 'Field Operations & Installation' },
+    { name: 'Sales & Marketing', code: 'SALES', description: 'Sales & Marketing Team' },
+    { name: 'Customer Service', code: 'CS', description: 'Customer Support & Helpdesk' },
+    { name: 'Finance & Billing', code: 'FIN', description: 'Finance & Billing Department' },
+    { name: 'HR & Administration', code: 'HR', description: 'Human Resources & Admin' }
   ] satisfies NewDepartment[];
 
   await db.insert(departments).values(departmentData);
@@ -151,13 +154,25 @@ async function seedMasterdata() {
 
   const engId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'ENG')).limit(1))[0]?.id;
   const opsId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'OPS')).limit(1))[0]?.id;
+  const salesId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'SALES')).limit(1))[0]?.id;
+  const csId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'CS')).limit(1))[0]?.id;
+  const finId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'FIN')).limit(1))[0]?.id;
   const hrId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'HR')).limit(1))[0]?.id;
 
   const designationData = [
-    { name: 'Software Engineer', code: 'SW_ENGR', department_id: engId, base_salary: 50000000 },
-    { name: 'Senior Software Engineer', code: 'SR_ENGR', department_id: engId, base_salary: 80000000 },
-    { name: 'Operations Specialist', code: 'OPS_SPEC', department_id: opsId, base_salary: 40000000 },
-    { name: 'HR Specialist', code: 'HR_SPEC', department_id: hrId, base_salary: 45000000 }
+    { name: 'NOC Engineer', code: 'NOC_ENGR', department_id: engId, base_salary: 5000000 },
+    { name: 'Network Engineer', code: 'NET_ENGR', department_id: engId, base_salary: 7000000 },
+    { name: 'Senior Network Engineer', code: 'SR_NET', department_id: engId, base_salary: 10000000 },
+    { name: 'Field Technician', code: 'FLD_TECH', department_id: opsId, base_salary: 4500000 },
+    { name: 'Senior Field Technician', code: 'SR_TECH', department_id: opsId, base_salary: 6000000 },
+    { name: 'Installation Specialist', code: 'INSTALL', department_id: opsId, base_salary: 4500000 },
+    { name: 'Sales Agent', code: 'SALES_AGT', department_id: salesId, base_salary: 4000000 },
+    { name: 'Sales Supervisor', code: 'SALES_SUP', department_id: salesId, base_salary: 7000000 },
+    { name: 'Customer Service Rep', code: 'CS_REP', department_id: csId, base_salary: 4000000 },
+    { name: 'Support Engineer', code: 'SUP_ENGR', department_id: csId, base_salary: 5000000 },
+    { name: 'Billing Specialist', code: 'BILLING', department_id: finId, base_salary: 4500000 },
+    { name: 'Finance Officer', code: 'FIN_OFF', department_id: finId, base_salary: 6000000 },
+    { name: 'HR Specialist', code: 'HR_SPEC', department_id: hrId, base_salary: 5000000 }
   ] satisfies NewDesignation[];
 
   await db.insert(designations).values(designationData);
@@ -194,9 +209,9 @@ async function seedDemoUsers() {
 async function seedEmployees() {
   const employeeData = [
     { user_id: 'placeholder', employee_code: 'EMP001', full_name: 'Demo Admin', email: 'admin@example.com', department_id: 1, designation_id: 1 },
-    { user_id: 'placeholder', employee_code: 'EMP002', full_name: 'Demo HR', email: 'hr@example.com', department_id: 3, designation_id: 4 },
-    { user_id: 'placeholder', employee_code: 'EMP003', full_name: 'Demo Employee', email: 'employee@example.com', department_id: 1, designation_id: 1 },
-    { user_id: 'placeholder', employee_code: 'EMP004', full_name: 'Demo Technician', email: 'technician@example.com', department_id: 2, designation_id: 2 }
+    { user_id: 'placeholder', employee_code: 'EMP002', full_name: 'Demo HR', email: 'hr@example.com', department_id: 6, designation_id: 13 },
+    { user_id: 'placeholder', employee_code: 'EMP003', full_name: 'Demo Employee', email: 'employee@example.com', department_id: 3, designation_id: 7 },
+    { user_id: 'placeholder', employee_code: 'EMP004', full_name: 'Demo Technician', email: 'technician@example.com', department_id: 2, designation_id: 4 }
   ];
 
   const users = await db.select({ id: user.id, email: user.email }).from(user);

@@ -2,7 +2,7 @@
 
 ## Implementation Status
 
-**Foundation Complete** ✅
+**Complete** ✅
 
 | Component | Status |
 |-----------|--------|
@@ -11,17 +11,18 @@
 | RBAC roles (admin, hr, employee, technician) | ✅ Implemented |
 | Session helpers (requireHR, requireEmployee, requireTechnician) | ✅ Implemented |
 | Seed data (locations, shifts, departments, designations, users) | ✅ Implemented |
+| Data access layer (Haversine geo-fence) | ✅ Implemented |
+| Server functions (checkIn, checkOut, leave, performance) | ✅ Implemented |
+| Check-in/out frontend (card + history) | ✅ Implemented |
+| Leave management (form + history) | ✅ Implemented |
+| Mobile staff dashboard | ✅ Implemented |
 | Documentation | ✅ Complete |
-
-**Next Steps** (not yet implemented):
-- Attendance data access layer (`src/lib/db/attendance.ts`)
-- Server functions (checkInFn, checkOutFn, requestLeaveFn, etc.)
-- Frontend components (attendance dashboard, check-in dialog, leave form)
-- Geo-fencing validation (Haversine distance calculation)
 
 ## Overview
 
 The Attendance Module provides employee attendance management with geo-fencing capabilities, leave requests, and performance tracking. It follows the same patterns as the existing kolonios codebase using TanStack Start, Drizzle ORM, and Better Auth.
+
+The module includes a **mobile-first staff dashboard** (`/dashboard` for employees/technicians on mobile) with circular progress, bottom navigation, FAB check-in, and swipeable task groups.
 
 ## Database Schema
 
@@ -149,30 +150,84 @@ Following the existing kolonios patterns:
 export const checkInFn = createServerFn({ method: 'POST' })
   .validator(checkInSchema)
   .handler(async ({ data }) => {
-    await requireRole('employee');
-    const { checkIn } = await import('@/lib/db/attendance');
+    await requireEmployee();
     return checkIn(data, session.user.id);
   });
 
-// Get employee attendance history
-export const getEmployeeAttendanceFn = createServerFn({ method: 'GET' })
+// Check-out with location validation
+export const checkOutFn = createServerFn({ method: 'POST' })
+  .validator(checkOutSchema)
+  .handler(async ({ data }) => {
+    await requireEmployee();
+    return checkOut(data, session.user.id);
+  });
+
+// Get today's attendance
+export const getMyAttendanceFn = createServerFn({ method: 'GET' })
+  .handler(async () => {
+    await requireEmployee();
+    return getMyAttendance(session.user.id);
+  });
+
+// Get attendance history with filters
+export const getAttendanceHistoryFn = createServerFn({ method: 'GET' })
   .validator(attendanceFiltersSchema)
   .handler(async ({ data }) => {
-    await requireRole('employee');
-    const { getEmployeeAttendance } = await import('@/lib/db/attendance');
-    return getEmployeeAttendance(data);
+    await requireEmployee();
+    return getAttendanceHistory(session.user.id, data);
+  });
+
+// Get leave requests
+export const getMyLeavesFn = createServerFn({ method: 'GET' })
+  .validator(leaveFiltersSchema)
+  .handler(async ({ data }) => {
+    await requireEmployee();
+    return getMyLeaves(session.user.id, data);
+  });
+
+// Create leave request
+export const createLeaveRequestFn = createServerFn({ method: 'POST' })
+  .validator(leaveRequestSchema)
+  .handler(async ({ data }) => {
+    await requireEmployee();
+    return createLeaveRequest(data, session.user.id);
+  });
+
+// Get performance stats
+export const getPerformanceStatsFn = createServerFn({ method: 'GET' })
+  .handler(async () => {
+    await requireEmployee();
+    return getPerformanceStats(session.user.id);
   });
 ```
 
-## UI/UX Patterns
+Server functions live in `src/features/attendance/api/service.ts`. All enforce `requireEmployee()` at the handler level.
 
-Following the kolonios UI patterns:
+## Frontend Components
 
-- Use `shadcn/ui` components (Dialog, Table, Form, Calendar)
-- Use `motion` for animations
-- Use `sonner` for toast notifications
-- Use `TanStack Table` for data tables with URL state sync
-- Use `TanStack Form` + `Zod` for form validation
+### Route Pages
+
+- **`/dashboard/attendance`** — `AttendancePage` combines `AttendanceCheckCard` (today's status, check-in/out button) with `AttendanceHistory` (paginated history table with date/status filters)
+- **`/dashboard/leave`** — `LeavePage` combines `LeaveRequestForm` (type, dates, reason) with `LeaveHistory` (leave requests list with status badges)
+
+### Mobile Dashboard
+
+- **`/dashboard/overview`** — Renders `StaffMobileDashboard` when user role is `employee` or `technician` and screen is mobile-sized (`< 768px`)
+- **`StaffMobileDashboard`** — Composes `MobileAttendanceSummary` (circular progress + check-in/out card), `InProgressTasks` (horizontal scroll), `TaskGroups` (vertical department groups with progress circles)
+- **Layout** — `MobileShell` wrapper replaces sidebar/header with `MobileHeader` + `BottomNav` + FAB
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `AttendanceCheckCard` | `src/features/attendance/components/attendance-check-card.tsx` | Today's check-in status, check-in/out button |
+| `AttendanceHistory` | `src/features/attendance/components/attendance-history.tsx` | Paginated history table with filters |
+| `LeaveRequestForm` | `src/features/attendance/components/leave-request-form.tsx` | Leave type, dates, reason inputs |
+| `LeaveHistory` | `src/features/attendance/components/leave-history.tsx` | Leave list with status badges |
+| `StaffMobileDashboard` | `src/features/attendance/components/staff-mobile-dashboard.tsx` | Mobile home dashboard composable |
+| `MobileAttendanceSummary` | `src/features/attendance/components/mobile-attendance-summary.tsx` | Circular progress + check-in/out card |
+| `InProgressTasks` | `src/features/attendance/components/in-progress-tasks.tsx` | Horizontal scroll task cards |
+| `TaskGroups` | `src/features/attendance/components/task-groups.tsx` | Department group list with progress |
 
 ## Integration with Notifications
 

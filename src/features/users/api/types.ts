@@ -35,4 +35,5 @@ export type UserMutationPayload = {
   phone: string;
   role: string;
   status: string;
+  designation_id?: string;
 };
