@@ -1,8 +1,9 @@
 import { faker } from '@faker-js/faker';
 import { db } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
-import { products, kanbanColumns, kanbanTasks, notifications } from '../src/lib/db/schema';
+import { products, kanbanColumns, kanbanTasks, notifications, employees, departments, designations, locations, shifts } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
+import { type NewEmployee, type NewDepartment, type NewDesignation, type NewLocation, type NewShift } from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const PRODUCT_CATEGORIES = [
@@ -15,6 +16,8 @@ const PRODUCT_CATEGORIES = [
   'Jewelry',
   'Beauty Products'
 ] as const;
+
+const ROLES = ['admin', 'hr', 'employee', 'technician'] as const;
 
 
 
@@ -114,10 +117,108 @@ async function seedNotifications(userId: string) {
   console.log(`Seeded ${rows.length} notifications for user ${userId}`);
 }
 
+async function seedMasterdata() {
+  await db.delete(locations);
+  await db.delete(shifts);
+  await db.delete(departments);
+  await db.delete(designations);
+
+  const locationData = [
+    { name: 'Head Office', latitude: -6.2088, longitude: 106.8456, radius: 50, description: 'Main office Jakarta' },
+    { name: 'Branch Office 1', latitude: -6.5000, longitude: 106.8000, radius: 50, description: 'Bandung Branch' }
+  ] satisfies NewLocation[];
+
+  await db.insert(locations).values(locationData);
+  console.log(`Seeded ${locationData.length} locations`);
+
+  const shiftData = [
+    { name: 'Morning Shift', start_time: '08:00', end_time: '17:00', type: 'fixed' as const, status: 'active' as const },
+    { name: 'Afternoon Shift', start_time: '13:00', end_time: '22:00', type: 'fixed' as const, status: 'active' as const },
+    { name: 'Night Shift', start_time: '22:00', end_time: '06:00', type: 'fixed' as const, status: 'active' as const }
+  ] satisfies NewShift[];
+
+  await db.insert(shifts).values(shiftData);
+  console.log(`Seeded ${shiftData.length} shifts`);
+
+  const departmentData = [
+    { name: 'Engineering', code: 'ENG', description: 'Software Development' },
+    { name: 'Operations', code: 'OPS', description: 'Operations & Support' },
+    { name: 'HR', code: 'HR', description: 'Human Resources' }
+  ] satisfies NewDepartment[];
+
+  await db.insert(departments).values(departmentData);
+  console.log(`Seeded ${departmentData.length} departments`);
+
+  const engId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'ENG')).limit(1))[0]?.id;
+  const opsId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'OPS')).limit(1))[0]?.id;
+  const hrId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'HR')).limit(1))[0]?.id;
+
+  const designationData = [
+    { name: 'Software Engineer', code: 'SW_ENGR', department_id: engId, base_salary: 50000000 },
+    { name: 'Senior Software Engineer', code: 'SR_ENGR', department_id: engId, base_salary: 80000000 },
+    { name: 'Operations Specialist', code: 'OPS_SPEC', department_id: opsId, base_salary: 40000000 },
+    { name: 'HR Specialist', code: 'HR_SPEC', department_id: hrId, base_salary: 45000000 }
+  ] satisfies NewDesignation[];
+
+  await db.insert(designations).values(designationData);
+  console.log(`Seeded ${designationData.length} designations`);
+}
+
+async function seedDemoUsers() {
+  const demoAccounts = [
+    { email: 'admin@example.com', name: 'Demo Admin', password: 'Password123!', role: 'admin' as const },
+    { email: 'hr@example.com', name: 'Demo HR', password: 'Password123!', role: 'hr' as const },
+    { email: 'employee@example.com', name: 'Demo Employee', password: 'Password123!', role: 'employee' as const },
+    { email: 'technician@example.com', name: 'Demo Technician', password: 'Password123!', role: 'technician' as const }
+  ];
+
+  await Promise.all(demoAccounts.map(async (demo) => {
+    try {
+      const created = await (auth.api as any).createUser({
+        body: { email: demo.email, name: demo.name, password: demo.password, role: demo.role }
+      });
+      console.log(`Seeded ${demo.role} user ${demo.email}`);
+      return created.id as string;
+    } catch (err: any) {
+      const msg = (err?.message ?? '').toLowerCase();
+      if (msg.includes('already exists')) {
+        console.log(`${demo.role} user ${demo.email} already exists (skipped)`);
+        const [existing] = await db.select({ id: user.id }).from(user).where(eq(user.email, demo.email)).limit(1);
+        return existing?.id;
+      }
+      throw err;
+    }
+  }));
+}
+
+async function seedEmployees() {
+  const employeeData = [
+    { user_id: 'placeholder', employee_code: 'EMP001', full_name: 'Demo Admin', email: 'admin@example.com', department_id: 1, designation_id: 1 },
+    { user_id: 'placeholder', employee_code: 'EMP002', full_name: 'Demo HR', email: 'hr@example.com', department_id: 3, designation_id: 4 },
+    { user_id: 'placeholder', employee_code: 'EMP003', full_name: 'Demo Employee', email: 'employee@example.com', department_id: 1, designation_id: 1 },
+    { user_id: 'placeholder', employee_code: 'EMP004', full_name: 'Demo Technician', email: 'technician@example.com', department_id: 2, designation_id: 2 }
+  ];
+
+  const users = await db.select({ id: user.id, email: user.email }).from(user);
+  const userMap = new Map(users.map(u => [u.email, u.id]));
+
+  const employeeRecords = employeeData.map((emp, i) => ({
+    ...emp,
+    user_id: userMap.get(emp.email) || `auto-${i}`
+  }));
+
+  await db.delete(employees);
+  await db.insert(employees).values(employeeRecords);
+  console.log(`Seeded ${employeeRecords.length} employee records`);
+}
+
 async function main() {
   faker.seed(42);
   await seedProducts();
   await seedKanban();
+  await seedMasterdata();
+  await seedDemoUsers();
+  await seedEmployees();
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');

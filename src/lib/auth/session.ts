@@ -1,5 +1,9 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 
+type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'user';
+
+const validRoles: Role[] = ['admin', 'hr', 'employee', 'technician', 'user'];
+
 export async function requireSession() {
   const { auth } = await import('./auth.server');
   const { getRequestHeaders } = await import('@tanstack/react-start/server');
@@ -24,13 +28,45 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
   });
 });
 
-// `requireRole('user')` is equivalent to `requireSession()` (any authenticated
-// user qualifies as a "user"). The `'user'` branch exists for API symmetry and
-// is intentionally a no-op beyond session validation.
-export async function requireRole(role: 'admin' | 'user') {
-  const session = await requireSession();
-  if (role === 'admin' && session.user.role !== 'admin') {
-    throw new Error('Forbidden');
+export async function requireRole(role: Role) {
+  if (!validRoles.includes(role)) {
+    throw new Error(`Invalid role: ${role}`);
   }
+  const session = await requireSession();
+  const userRole = session.user.role as Role;
+
+  const adminRoles = ['admin'];
+  const hrRoles = ['admin', 'hr'];
+  const employeeRoles = ['admin', 'hr', 'employee', 'technician'];
+
+  if (role === 'admin' && !adminRoles.includes(userRole)) {
+    throw new Error('Forbidden: Admin access required');
+  }
+  if (role === 'hr' && !hrRoles.includes(userRole)) {
+    throw new Error('Forbidden: HR access required');
+  }
+  if (role === 'employee' && !employeeRoles.includes(userRole)) {
+    throw new Error('Forbidden: Employee access required');
+  }
+  if (role === 'technician' && !employeeRoles.includes(userRole)) {
+    throw new Error('Forbidden: Technician access required');
+  }
+
   return session;
+}
+
+export async function requireAdmin() {
+  return requireRole('admin');
+}
+
+export async function requireHR() {
+  return requireRole('hr');
+}
+
+export async function requireEmployee() {
+  return requireRole('employee');
+}
+
+export async function requireTechnician() {
+  return requireRole('technician');
 }

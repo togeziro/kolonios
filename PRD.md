@@ -56,11 +56,15 @@ Directional buckets, not a strict timeline.
 
 ### Now
 
-**Attendance Module (in progress)**
+**Attendance Module (foundation complete)**
 - [x] Design attendance database schema (shifts, locations, employee_shifts, leaves, performance_reports)
 - [x] Implement RBAC roles: `admin`, `hr`, `employee`, `technician`
 - [x] Create `src/lib/db/schema/attendance.ts` and `src/lib/db/schema/masterdata.ts`
 - [x] Update permissions with attendance-specific rules
+- [x] Update session helpers with `requireHR()`, `requireEmployee()`, `requireTechnician()`
+- [x] Generate and apply database migrations (`bun run db:push`)
+- [x] Seed default data: locations, shifts, departments, designations, demo users
+- [x] Create employee records linked to demo users
 - [ ] Implement attendance data access layer with Drizzle
 - [ ] Create check-in/check-out server functions with geo-fencing
 - [ ] Build attendance dashboard with data tables and calendar
@@ -68,9 +72,10 @@ Directional buckets, not a strict timeline.
 - [ ] Implement performance tracking (Laporan Kinerja)
 - [ ] Add WhatsApp notifications for attendance events
 
-**Masterdata Module (foundation)**
+**Masterdata Module (foundation complete)**
 - [x] Extend RBAC roles: `admin`, `hr`, `employee`, `technician`
 - [x] Create employee management tables (employees, departments, designations)
+- [x] Seed masterdata: 3 departments, 4 designations, 4 employee records
 - [ ] Build location/company settings management
 
 ### Next

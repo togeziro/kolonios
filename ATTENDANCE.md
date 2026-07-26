@@ -1,5 +1,24 @@
 # Attendance Module Documentation
 
+## Implementation Status
+
+**Foundation Complete** ✅
+
+| Component | Status |
+|-----------|--------|
+| Database schema (5 tables) | ✅ Implemented & migrated |
+| Masterdata schema (3 tables) | ✅ Implemented & migrated |
+| RBAC roles (admin, hr, employee, technician) | ✅ Implemented |
+| Session helpers (requireHR, requireEmployee, requireTechnician) | ✅ Implemented |
+| Seed data (locations, shifts, departments, designations, users) | ✅ Implemented |
+| Documentation | ✅ Complete |
+
+**Next Steps** (not yet implemented):
+- Attendance data access layer (`src/lib/db/attendance.ts`)
+- Server functions (checkInFn, checkOutFn, requestLeaveFn, etc.)
+- Frontend components (attendance dashboard, check-in dialog, leave form)
+- Geo-fencing validation (Haversine distance calculation)
+
 ## Overview
 
 The Attendance Module provides employee attendance management with geo-fencing capabilities, leave requests, and performance tracking. It follows the same patterns as the existing kolonios codebase using TanStack Start, Drizzle ORM, and Better Auth.
@@ -14,11 +33,11 @@ Company office locations used for geo-fencing check-in/out.
 | Column | Type | Description |
 |--------|------|-------------|
 | id | serial | Primary key |
-| nama_lokasi | text | Location name (e.g., "HQ Jakarta") |
-| lat_kantor | real | Latitude coordinate |
-| long_kantor | real | Longitude coordinate |
+| name | text | Location name (e.g., "HQ Jakarta") |
+| latitude | real | Latitude coordinate |
+| longitude | real | Longitude coordinate |
 | radius | real | Check-in radius in meters (default: 100) |
-| keterangan | text | Additional notes |
+| description | text | Additional notes |
 | status | text | Active/inactive status |
 
 #### `shifts`
@@ -27,9 +46,9 @@ Employee shift definitions (inspired by SC_absensi).
 | Column | Type | Description |
 |--------|------|-------------|
 | id | serial | Primary key |
-| nama_shift | text | Shift name (e.g., "Morning Shift") |
-| jam_masuk | text | Scheduled check-in time (HH:MM format) |
-| jam_keluar | text | Scheduled check-out time (HH:MM format) |
+| name | text | Shift name (e.g., "Morning Shift") |
+| start_time | text | Scheduled check-in time (HH:MM format) |
+| end_time | text | Scheduled check-out time (HH:MM format) |
 | type | shiftTypeEnum | fixed or flexible |
 | status | shiftStatusEnum | active or inactive |
 
@@ -41,15 +60,15 @@ Daily attendance records (mapping shift pattern from Laravel).
 | id | serial | Primary key |
 | user_id | text | Employee ID |
 | shift_id | integer | Assigned shift |
-| tanggal | text | Attendance date (YYYY-MM-DD) |
-| jam_absen | text | Actual check-in time |
-| telat | real | Minutes late |
-| jam_pulang | text | Actual check-out time |
-| pulang_cepat | real | Minutes early |
-| lat_absen/long_absen | real | Check-in coordinates |
-| lat_pulang/long_pulang | real | Check-out coordinates |
+| date | text | Attendance date (YYYY-MM-DD) |
+| check_in_time | text | Actual check-in time |
+| late_duration | real | Minutes late |
+| check_out_time | text | Actual check-out time |
+| early_out_duration | real | Minutes early |
+| check_in_latitude/check_in_longitude | real | Check-in coordinates |
+| check_out_latitude/check_out_longitude | real | Check-out coordinates |
 | lock_location | integer | 1 = geo-fence required |
-| status_pengajuan | leaveStatusEnum | Approval status |
+| request_status | leaveStatusEnum | Approval status |
 
 #### `leaves`
 Leave request system (cuti from SC_absensi).
@@ -58,11 +77,12 @@ Leave request system (cuti from SC_absensi).
 |--------|------|-------------|
 | id | serial | Primary key |
 | user_id | text | Employee ID |
-| tanggal_mulai | text | Start date |
-| tanggal_akhir | text | End date |
-| jumlah_hari | real | Total days |
-| jenis_cuti | leaveTypeEnum | annual, sick, personal, emergency |
-| alasan | text | Reason for leave |
+| start_date | text | Start date |
+| end_date | text | End date |
+| total_days | real | Total days |
+| leave_type | leaveTypeEnum | annual, sick, personal, emergency |
+| reason | text | Reason for leave |
+| request_file | text | File attachment |
 | status | leaveStatusEnum | pending, approved, rejected, cancelled |
 
 #### `performance_reports`
@@ -72,8 +92,9 @@ Performance tracking (Laporan Kinerja from SC_absensi).
 |--------|------|-------------|
 | id | serial | Primary key |
 | user_id | text | Employee ID |
-| tanggal | text | Report date |
-| nilai | numeric | Score value |
+| date | text | Report date |
+| score | numeric | Score value |
+| running_average | numeric | Running average score |
 | reference | text | Related entity (e.g., "employee_shifts") |
 | reference_id | text | Related entity ID |
 
@@ -161,7 +182,7 @@ Attendance events trigger notifications:
 // After check-in
 await addNotificationFn({
   title: 'Check-in recorded',
-  body: `You checked in at ${jam_absen} (late by ${telat} minutes)`,
+  body: `You checked in at ${check_in_time} (late by ${late_duration} minutes)`,
   action: 'attendance',
   userId: session.user.id
 });
@@ -170,7 +191,7 @@ await addNotificationFn({
 if (status === 'approved') {
   await addNotificationFn({
     title: 'Leave approved',
-    body: `Your leave request for ${tanggal_mulai} has been approved`,
+    body: `Your leave request for ${start_date} has been approved`,
     action: 'leaves',
     userId: user_id
   });
@@ -202,3 +223,38 @@ module.exports = {
 2. **Rate limiting**: Check-in limited to once per day per user
 3. **Authorization**: Users can only modify their own attendance unless admin/HR
 4. **Image storage**: Photos stored securely, accessed only by authorized personnel
+
+## Development Tools
+
+### Drizzle Studio
+
+Drizzle Studio provides a web-based GUI for database inspection and management.
+
+**Starting Drizzle Studio:**
+
+```bash
+bun run db:studio
+```
+
+By default, the server starts on `127.0.0.1:4983` and the UI is accessible at
+`https://local.drizzle.studio`.
+
+**Remote access (from outside the VM):**
+
+Since Drizzle Studio v0.31.10 uses a Cloudflare-hosted UI, direct browser access
+to the server port is not supported. For remote development:
+
+1. **SSH tunnel** (recommended):
+   ```bash
+   ssh -L 4983:localhost:4983 user@172.17.16.3
+   # Then open: https://local.drizzle.studio?host=127.0.0.1&port=4983
+   ```
+
+2. **Run with custom host/port**:
+   ```bash
+   bunx drizzle-kit studio --host 0.0.0.0 --port 4983
+   ```
+
+**Note:** The hosted version of Drizzle Studio is intended for local development
+only. For VPS deployment, consider using the Drizzle Studio Gateway (alpha) or
+an alternative database GUI tool (pgAdmin, DBeaver, TablePlus).

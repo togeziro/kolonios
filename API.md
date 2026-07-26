@@ -250,11 +250,16 @@ export const auth = betterAuth({
 
 ### Demo Credentials
 
-`scripts/seed.ts` seeds a single demo account (idempotent):
+`scripts/seed.ts` seeds demo accounts (idempotent):
 
-| Email               | Password       | Role  |
-| ------------------- | -------------- | ----- |
-| `admin@example.com` | `Password123!` | admin |
+| Email               | Password       | Role      |
+| ------------------- | -------------- | --------- |
+| `admin@example.com` | `Password123!` | admin     |
+| `hr@example.com`    | `Password123!` | hr        |
+| `employee@example.com` | `Password123!` | employee |
+| `technician@example.com` | `Password123!` | technician |
+
+All demo accounts have linked employee records with seed masterdata.
 
 ### TanStack Start Splat Handler
 
@@ -284,3 +289,25 @@ also fire on splat routes. `scripts/postinstall.js` re-applies this patch after
 The old `bcryptjs` and `jose` packages have been removed. All user management
 (create, update, delete, list) now goes through the Better Auth admin API via
 `src/lib/db/users.ts`.
+
+## Development Tools
+
+### Drizzle Studio
+
+A web-based GUI for database inspection and management.
+
+**Start:**
+```bash
+bun run db:studio
+```
+
+**Access:** `https://local.drizzle.studio` (UI is Cloudflare-hosted, connects to local server)
+
+**Remote access:** Use SSH tunnel:
+```bash
+ssh -L 4983:localhost:4983 user@172.17.16.3
+# Then open: https://local.drizzle.studio?host=127.0.0.1&port=4983
+```
+
+**Note:** Drizzle Studio is for local development only. For VPS deployment, use
+Drizzle Studio Gateway (alpha) or alternative database GUIs (pgAdmin, DBeaver).

@@ -5,17 +5,22 @@
 ### Database Layer
 
 - [x] Create `src/lib/db/schema/attendance.ts` with enums and tables:
-  - `shifts` (nama_shift, jam_masuk, jam_keluar)
-  - `locations` (nama_lokasi, lat_kantor, long_kantor, radius)
-  - `employee_shifts` (mapping similar to Laravel's mapping_shifts)
-  - `leaves` (cuti implementation)
-  - `performance_reports` (Laporan Kinerja)
+  - `shifts` (name, start_time, end_time)
+  - `locations` (name, latitude, longitude, radius)
+  - `employee_shifts` (check_in_time, check_out_time, location locks)
+  - `leaves` (leave_type, status, request_file)
+  - `performance_reports` (score, running_average)
 - [x] Create `src/lib/db/schema/masterdata.ts` for:
   - `employees` (links to user with employee role)
   - `departments`
   - `designations`
 - [x] Add schema exports to `src/lib/db/schema/index.ts`
-- [ ] Generate and apply database migrations
+- [x] Run `bun run db:push` to apply schema locally
+- [x] Create seed script entries for:
+  - Default locations (Head Office, Branch Office 1)
+  - Default shifts (Morning, Afternoon, Night)
+  - Demo users: admin, hr, employee, technician accounts
+  - Employee records linked to users
 
 ### Authentication & Authorization
 
@@ -24,7 +29,14 @@
   - HR can manage all employee attendance
   - Employees can only view their own attendance
   - Admins have full access
-- [ ] Create auth guards for attendance routes
+- [x] Update `src/lib/auth/session.ts` with `requireHR()`, `requireEmployee()`, `requireTechnician()` helpers
+
+### Masterdata Seeding
+
+- [x] Seed default departments: Engineering, Operations, HR
+- [x] Seed default designations with salary data
+- [x] Create employee records for all demo users
+- [ ] Build actual employee/hr login pages (currently just API)
 
 ### Backend API Layer
 
