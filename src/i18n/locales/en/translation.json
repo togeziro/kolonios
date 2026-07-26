@@ -4,7 +4,6 @@
     "dashboard": "Dashboard",
     "product": "Product",
     "users": "Users",
-    "kanban": "Kanban",
     "forms": "Forms",
     "basicForm": "Basic Form",
     "multiStepForm": "Multi-Step Form",
@@ -108,23 +107,6 @@
     "english": "English",
     "indonesian": "Indonesian",
     "switchLanguage": "Switch Language"
-  },
-  "kanban": {
-    "title": "Kanban Board",
-    "newTask": "New Task",
-    "createTask": "Create Task",
-    "editTask": "Edit Task",
-    "taskTitle": "Task Title",
-    "taskDescription": "Task Description",
-    "priority": "Priority",
-    "low": "Low",
-    "medium": "Medium",
-    "high": "High",
-    "urgent": "Urgent",
-    "todo": "To Do",
-    "inProgress": "In Progress",
-    "done": "Done",
-    "cancelled": "Cancelled"
   },
   "notifications": {
     "title": "Notifications",

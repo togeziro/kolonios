@@ -17,7 +17,7 @@ const actionRoutes: Record<string, string> = {
   view: '/dashboard/overview',
   'view-product': '/dashboard/product',
   billing: '/dashboard/overview',
-  open: '/dashboard/kanban'
+  open: '/dashboard/overview'
 };
 
 export function NotificationCenter() {

@@ -35,14 +35,6 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
-        title: 'Kanban',
-        url: '/dashboard/kanban',
-        icon: 'kanban',
-        shortcut: ['k', 'k'],
-        isActive: false,
-        items: []
-      },
-      {
         title: 'Attendance',
         url: '/dashboard/attendance',
         icon: 'clock',

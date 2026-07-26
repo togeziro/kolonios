@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { db } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
-import { products, kanbanColumns, kanbanTasks, notifications, employees, departments, designations, locations, shifts } from '../src/lib/db/schema';
+import { products, notifications, employees, departments, designations, locations, shifts } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
 import { type NewEmployee, type NewDepartment, type NewDesignation, type NewLocation, type NewShift } from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -36,38 +36,6 @@ async function seedProducts(count = 20) {
 }
 
 
-
-async function seedKanban() {
-  await db.delete(kanbanTasks);
-  await db.delete(kanbanColumns);
-
-
-  const columnData = [
-    { slug: 'backlog', title: 'Backlog', position: 0 },
-    { slug: 'inProgress', title: 'In Progress', position: 1 },
-    { slug: 'review', title: 'Review', position: 2 },
-    { slug: 'done', title: 'Done', position: 3 },
-  ];
-
-  await db.insert(kanbanColumns).values(columnData);
-
-  const taskData: (typeof kanbanTasks.$inferInsert)[] = [
-    { column_slug: 'backlog', title: 'Migrate to Stripe billing API', priority: 'high', assignee: 'Sarah Chen', due_date: '2026-04-08', position: 0 },
-    { column_slug: 'backlog', title: 'Add CSV export to reports', priority: 'medium', assignee: 'Marcus Rivera', due_date: '2026-04-12', position: 1 },
-    { column_slug: 'backlog', title: 'Update onboarding flow copy', priority: 'low', assignee: 'Priya Sharma', due_date: '2026-04-15', position: 2 },
-    { column_slug: 'backlog', title: 'Audit RBAC permissions', priority: 'medium', assignee: 'Jordan Kim', due_date: '2026-04-10', position: 3 },
-    { column_slug: 'inProgress', title: 'Refactor notification service', priority: 'high', assignee: 'Alex Turner', due_date: '2026-04-03', position: 0 },
-    { column_slug: 'inProgress', title: 'Build team invitation flow', priority: 'medium', assignee: 'Emily Nakamura', due_date: '2026-04-06', position: 1 },
-    { column_slug: 'inProgress', title: 'Fix timezone handling in scheduler', priority: 'high', assignee: 'Sarah Chen', due_date: '2026-04-04', position: 2 },
-    { column_slug: 'done', title: 'SSO integration with Okta', priority: 'high', assignee: 'Jordan Kim', due_date: '2026-03-22', position: 0 },
-    { column_slug: 'done', title: 'Dashboard analytics charts', priority: 'medium', assignee: 'Marcus Rivera', due_date: '2026-03-20', position: 1 },
-    { column_slug: 'done', title: 'Webhook retry mechanism', priority: 'low', assignee: 'Alex Turner', due_date: '2026-03-18', position: 2 },
-  ];
-
-  await db.insert(kanbanTasks).values(taskData);
-  console.log(`Seeded ${columnData.length} columns, ${taskData.length} tasks`);
-}
-
 async function seedUsers() {
   const demo = {
     email: 'admin@example.com',
@@ -98,7 +66,7 @@ async function seedNotifications(userId: string) {
     { title: 'New team member joined', body: 'Sarah Connor has joined the Engineering workspace.', actionId: 'view', actionLabel: 'View workspace' },
     { title: 'New product added', body: 'A new product "Dashboard Pro" has been added to the catalog.', actionId: 'view-product', actionLabel: 'View products' },
     { title: 'Billing cycle updated', body: 'Your Pro plan has been renewed. Next invoice on April 24, 2026.', actionId: 'billing', actionLabel: 'View billing' },
-    { title: 'Task assigned to you', body: 'You have been assigned "Update dashboard analytics" on the Kanban board.', actionId: 'open', actionLabel: 'Open kanban' },
+    { title: 'Task assigned to you', body: 'You have been assigned "Update dashboard analytics".', actionId: 'open', actionLabel: 'View details' },
     { title: 'Deploy successful', body: 'Production v2.4.1 deployed successfully at 14:32 UTC.', actionId: 'view', actionLabel: 'View deployment' },
     { title: 'New comment on ticket', body: 'Alex replied to your support ticket #4219.', actionId: 'open', actionLabel: 'View ticket' },
     { title: 'Performance alert', body: 'API response time exceeded 2s threshold in us-east-1.', actionId: 'view', actionLabel: 'View metrics' },
@@ -230,7 +198,6 @@ async function seedEmployees() {
 async function main() {
   faker.seed(42);
   await seedProducts();
-  await seedKanban();
   await seedMasterdata();
   await seedDemoUsers();
   await seedEmployees();

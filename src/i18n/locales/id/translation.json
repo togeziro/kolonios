@@ -4,7 +4,6 @@
     "dashboard": "Dasbor",
     "product": "Produk",
     "users": "Pengguna",
-    "kanban": "Kanban",
     "forms": "Formulir",
     "basicForm": "Formulir Dasar",
     "multiStepForm": "Formulir Multi-Langkah",
@@ -108,23 +107,6 @@
     "english": "Inggris",
     "indonesian": "Indonesia",
     "switchLanguage": "Ganti Bahasa"
-  },
-  "kanban": {
-    "title": "Papan Kanban",
-    "newTask": "Tugas Baru",
-    "createTask": "Buat Tugas",
-    "editTask": "Edit Tugas",
-    "taskTitle": "Judul Tugas",
-    "taskDescription": "Deskripsi Tugas",
-    "priority": "Prioritas",
-    "low": "Rendah",
-    "medium": "Sedang",
-    "high": "Tinggi",
-    "urgent": "Mendesak",
-    "todo": "Untuk Dilakukan",
-    "inProgress": "Sedang Dikerjakan",
-    "done": "Selesai",
-    "cancelled": "Dibatalkan"
   },
   "notifications": {
     "title": "Notifikasi",
