@@ -95,9 +95,9 @@ Auth uses **Better Auth** (DB-session based) via the `admin` plugin for RBAC. Se
 | tailwind-merge           | v3.5.0   | Tailwind class merging          |
 | cmdk                     | v1.1.1   | Command menu primitive          |
 | vaul                     | v1.1.2   | Drawer component                |
-| sonner                   | v1.7.4   | Toast notifications             |
-| input-otp                | v1.4.2   | OTP input                       |
-| react-resizable-panels   | v2.1.9   | Resizable panels                |
+| sonner                   | v2.0.7  | Toast notifications             |
+| input-otp                | v1.4.2  | OTP input                       |
+| react-resizable-panels   | v4.12.2 | Resizable panels                |
 | motion                   | v11.18.2 | Animations (Framer Motion v11+) |
 
 ### Forms & Validation
@@ -120,15 +120,15 @@ Auth uses **Better Auth** (DB-session based) via the `admin` plugin for RBAC. Se
 | Technology     | Version | Purpose                                      |
 | -------------- | ------- | -------------------------------------------- |
 | TanStack Table | v8.21.3 | Data tables (sorting, filtering, pagination) |
-| Recharts       | v2.15.4 | Charts (area, bar, pie)                      |
+| Recharts       | v3.10.0 | Charts (area, bar, pie)                      |
 | date-fns       | v4.1.0  | Date formatting                              |
 
 ### Styling & Themes
 
 | Technology        | Version | Purpose                            |
 | ----------------- | ------- | ---------------------------------- |
-| Tailwind CSS      | v4.2.2  | Utility-first CSS                  |
-| @tailwindcss/vite | v4.2.2  | Tailwind Vite plugin               |
+| Tailwind CSS      | v4.3.1  | Utility-first CSS                  |
+| @tailwindcss/vite | v4.3.1  | Tailwind Vite plugin               |
 | tw-animate-css    | v1.4.0  | CSS animation utilities            |
 | next-themes       | v0.4.6  | Theme provider (dark/light/system) |
 
@@ -172,7 +172,7 @@ Auth uses **Better Auth** (DB-session based) via the `admin` plugin for RBAC. Se
 
 | Technology      | Version | Purpose              |
 | --------------- | ------- | -------------------- |
-| @faker-js/faker | v9.9.0  | Seed data generation |
+| @faker-js/faker | v10.5.0 | Seed data generation |
 | uuid            | v11.1.0 | ID generation        |
 
 ### Database & ORM
@@ -190,7 +190,7 @@ Auth uses **Better Auth** (DB-session based) via the `admin` plugin for RBAC. Se
 | --------------------------- | ------- | ----------------------------------- |
 | Vitest                      | v4.1.10 | Unit & integration test runner      |
 | @testing-library/react      | v16.3.2 | React component testing             |
-| @testing-library/jest-dom   | v6.9.1  | DOM-specific matchers               |
+| @testing-library/jest-dom   | v7.0.0  | DOM-specific matchers               |
 | @testing-library/user-event | v14.6.1 | User interaction simulation         |
 | jsdom                       | v29.1.1 | DOM environment for Vitest          |
 | Playwright                  | v1.61.1 | End-to-end browser tests (Chromium) |

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Dependencies
+
+#### Major Updates
+- **Recharts** ^2.15.4 → ^3.10.0 — Major version upgrade with new components
+- **react-resizable-panels** ^2.1.9 → ^4.12.2 — Major version upgrade
+- **@types/node** ^22.12.0 → ^26.1.1 — TypeScript type definitions update
+- **@faker-js/faker** ^9.9.0 → ^10.5.0 — Fake data generator major update
+
+#### Minor Updates
+- **sonner** ^1.7.4 → ^2.0.7 — Toast notification library update
+- **vite-tsconfig-paths** ^5.1.4 → ^6.1.1 — Vite plugin for tsconfig paths
+- **@testing-library/jest-dom** ^6.9.1 → ^7.0.0 — Jest DOM matchers update
+
 ### Added
 
 - **Attendance schema** — New database tables for attendance management:

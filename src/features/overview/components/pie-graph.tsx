@@ -78,7 +78,9 @@ export function PieGraph() {
                 fontSize={12}
                 fontWeight={500}
                 fill='currentColor'
-                formatter={(value: number) => value.toString()}
+                formatter={(value) =>
+                  typeof value === 'number' ? value.toString() : String(value)
+                }
               />
             </Pie>
           </PieChart>
