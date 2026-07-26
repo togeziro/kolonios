@@ -18,11 +18,11 @@
 ### Added
 
 - **Attendance schema** — New database tables for attendance management:
-  - `locations` — Company office locations for geo-fencing (nama_lokasi, lat_kantor, long_kantor, radius)
-  - `shifts` — Employee shift definitions (nama_shift, jam_masuk, jam_keluar)
-  - `employee_shifts` — Daily attendance records (mapping shift with check-in/out times, coordinates)
-  - `leaves` — Leave request system (cuti) with types: annual, sick, personal, emergency
-  - `performance_reports` — Performance tracking (Laporan Kinerja)
+  - `locations` — Company office locations for geo-fencing (name, latitude, longitude, radius)
+  - `shifts` — Employee shift definitions (name, start_time, end_time)
+  - `employee_shifts` — Daily attendance records (check-in/out times, location locks)
+  - `leaves` — Leave request system with types: annual, sick, personal, emergency
+  - `performance_reports` — Performance tracking with score and running_average
   - `attendances` — Attendance history view
 
 - **Masterdata schema** — New tables for employee management:
@@ -36,6 +36,19 @@
   - `technician` role — Field worker equivalent to employee
 
 - **Attendance documentation** — New `ATTENDANCE.md` with schema docs, API patterns, and security guardrails
+
+- **Seed data for attendance module** — Extended `scripts/seed.ts` with:
+  - Default locations: Head Office, Branch Office 1 (with coordinates)
+  - Default shifts: Morning (08:00-17:00), Afternoon (13:00-22:00), Night (22:00-06:00)
+  - Default departments: Engineering, Operations, HR
+  - Default designations: Software Engineer, Senior Software Engineer, Operations Specialist, HR Specialist
+  - Demo users: admin, hr, employee, technician (all with `Password123!`)
+  - Employee records linked to all demo users
+
+- **Session helpers** — Updated `src/lib/auth/session.ts` with role-specific helpers:
+  - `requireHR()` — Requires admin or hr role
+  - `requireEmployee()` — Requires admin, hr, employee, or technician role
+  - `requireTechnician()` — Requires admin, hr, employee, or technician role
 
 ### Changed
 
@@ -121,6 +134,27 @@ All changes above are committed on `dev` (HEAD `1ed928a`).
 - **Kanban route module-load error** — "Failed to fetch dynamically imported module" on `/dashboard/kanban`. Root cause: stale Vite module graph cache from `src/components/ui/kanban.tsx` (1021-line monolith) being refactored into `src/components/ui/kanban/` (directory with `index.ts`). Vite still resolved `@/components/ui/kanban` imports to the old dead file path `/src/components/ui/kanban.tsx` (404), breaking the dynamic import chain for the kanban route component chunk. Fixed by restarting the Vite dev server to clear the resolution cache.
 
 All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+### Added
+
+- **Internationalization (i18n) with i18next** — Full i18n support using `i18next` + `react-i18next`:
+  - `src/i18n/config.ts` — i18n instance factory with SSR support, resources for EN/ID
+  - `src/i18n/provider.tsx` — `I18nProvider` component + `getServerSideI18n` for SSR
+  - `src/i18n/types.ts` — TypeScript type augmentation for typed translation keys
+  - `src/i18n/locales/en/translation.json` — English base translations (navigation, forms, auth, etc.)
+  - `src/i18n/locales/id/translation.json` — Indonesian translations
+  - `src/components/language-switcher.tsx` — Language dropdown selector in header
+  - `src/routes/__root.tsx` — SSR language detection via cookie + Accept-Language header, dynamic `<html lang>`
+  - `src/components/icons.tsx` — Added `globe` icon
+  - Dependencies: `i18next`, `react-i18next`, `i18next-browser-languagedetector`
+
+### Changed
+
+- **Language detection** — Cookie `i18next` → Accept-Language header → fallback `en`
+- **LanguageSwitcher** — Moved from app-sidebar dropdown menu to header (next to ThemeModeToggle)
+- **Removed CtaGithub** — Deleted `src/components/layout/cta-github.tsx` and removed from `header.tsx`
 
 ## [0.1.0]
 

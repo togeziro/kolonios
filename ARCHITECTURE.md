@@ -226,6 +226,32 @@ Pre-commit hook runs: `oxlint` → `oxfmt --check` → `tsc --noEmit` on every c
 | Nitro                         | Available for production builds                                             |
 | bun                           | Runtime & package manager                                                    |
 
+### Internationalization (i18n)
+
+| Technology               | Version | Purpose                          |
+| ------------------------ | ------- | -------------------------------- |
+| i18next                  | v26.x   | Core i18n framework              |
+| react-i18next            | v17.x   | React bindings for i18next       |
+| i18next-browser-languagedetector | v8.x | Client-side language detection   |
+
+**Structure:**
+- `src/i18n/config.ts` — i18n instance factory with SSR support
+- `src/i18n/provider.tsx` — `I18nProvider` component + `getServerSideI18n`
+- `src/i18n/types.ts` — TypeScript type augmentation
+- `src/i18n/locales/{en,id}/translation.json` — Translation files
+
+**Language detection:** Cookie `i18next` → Accept-Language header → fallback `en`
+
+**Usage:**
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+  return <h1>{t('navigation.dashboard')}</h1>;
+}
+```
+
 ## Known Cleanup (Selesai)
 
 Items from the 2026-07-23 audit, all resolved:

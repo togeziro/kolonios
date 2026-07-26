@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { ActiveThemeProvider } from '@/components/themes/active-theme';
 import ThemeProvider from '@/components/themes/theme-provider';
 import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
+import { I18nProvider } from '@/i18n/provider';
 
 import '@/styles/globals.css';
 
@@ -23,6 +24,21 @@ const getActiveTheme = createServerOnlyFn(async () => {
     return cookieValue;
   }
   return DEFAULT_THEME;
+});
+
+const getActiveLanguage = createServerOnlyFn(async () => {
+  const { getCookie, getRequestHeaders } = await import('@tanstack/react-start/server');
+  const cookieValue = getCookie('i18next');
+  if (cookieValue) {
+    return cookieValue;
+  }
+  const headers = getRequestHeaders() as unknown as Record<string, string | undefined>;
+  const acceptLanguage = headers['accept-language'];
+  if (acceptLanguage) {
+    const lang = acceptLanguage.split(',')[0]?.split('-')[0];
+    if (lang === 'id') return 'id';
+  }
+  return 'en';
 });
 
 export const Route = createRootRouteWithContext<{
@@ -42,16 +58,17 @@ export const Route = createRootRouteWithContext<{
   }),
   loader: async () => {
     const activeTheme = await getActiveTheme();
-    return { activeTheme };
+    const activeLanguage = await getActiveLanguage();
+    return { activeTheme, activeLanguage };
   },
   component: RootDocument
 });
 
 function RootDocument() {
-  const { activeTheme } = Route.useLoaderData();
+  const { activeTheme, activeLanguage } = Route.useLoaderData();
 
   return (
-    <html lang='en' suppressHydrationWarning data-theme={activeTheme}>
+    <html lang={activeLanguage} suppressHydrationWarning data-theme={activeTheme}>
       <head>
         <HeadContent />
         <script
@@ -75,8 +92,10 @@ function RootDocument() {
           enableColorScheme
         >
           <ActiveThemeProvider initialTheme={activeTheme}>
-            <Toaster />
-            <Outlet />
+            <I18nProvider initialLanguage={activeLanguage}>
+              <Toaster />
+              <Outlet />
+            </I18nProvider>
           </ActiveThemeProvider>
         </ThemeProvider>
         <TanStackRouterDevtools position='bottom-left' />

@@ -42,6 +42,7 @@ import {
   IconFileTypeXls,
   IconFileZip,
   IconFolder,
+  IconGlobe,
   IconGripVertical,
   IconHelpCircle,
   IconInfoCircle,
@@ -155,6 +156,7 @@ export const Icons = {
   dashboard: IconLayoutDashboard,
   kanban: IconLayoutKanban,
   panelLeft: IconLayoutSidebar,
+  globe: IconGlobe,
 
   // User
   user: IconUser,
