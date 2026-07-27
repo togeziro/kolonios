@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { myLeavesQueryOptions } from '../api/queries';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 

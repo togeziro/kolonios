@@ -1,11 +1,5 @@
 import { NavGroup } from '@/types';
 
-/**
- * Navigation configuration
- *
- * This configuration is used for both the sidebar navigation and Cmd+K bar.
- * Items are organized into groups, each rendered with a SidebarGroupLabel.
- */
 export const navGroups: NavGroup[] = [
   {
     label: 'Overview',
@@ -27,10 +21,18 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
-        title: 'Users',
-        url: '/dashboard/users',
-        icon: 'teams',
-        shortcut: ['u', 'u'],
+        title: 'Customers',
+        url: '/dashboard/customers',
+        icon: 'customer',
+        shortcut: ['c', 'c'],
+        isActive: false,
+        items: []
+      },
+      {
+        title: 'Employees',
+        url: '/dashboard/employees',
+        icon: 'employee',
+        shortcut: ['e', 'e'],
         isActive: false,
         items: []
       },
@@ -53,8 +55,16 @@ export const navGroups: NavGroup[] = [
     ]
   },
   {
-    label: 'Admin',
+    label: 'Settings',
     items: [
+      {
+        title: 'Users',
+        url: '/dashboard/users',
+        icon: 'teams',
+        shortcut: ['u', 'u'],
+        isActive: false,
+        items: []
+      },
       {
         title: 'Departments',
         url: '/dashboard/admin/departments',
@@ -118,25 +128,6 @@ export const navGroups: NavGroup[] = [
         icon: 'palette',
         isActive: false,
         items: []
-      }
-    ]
-  },
-  {
-    label: '',
-    items: [
-      {
-        title: 'Account',
-        url: '#',
-        icon: 'account',
-        isActive: true,
-        items: [
-          {
-            title: 'Notifications',
-            url: '/dashboard/notifications',
-            icon: 'notification',
-            shortcut: ['n', 'n']
-          }
-        ]
       }
     ]
   }

@@ -10,20 +10,16 @@ import {
   SheetTitle
 } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { createUserMutation, updateUserMutation } from '../api/mutations';
 import type { User } from '../api/types';
 import { toast } from 'sonner';
 import * as z from 'zod';
 import { userSchema, type UserFormValues } from '../schemas/user';
 import { AUTH_ROLE_OPTIONS, STATUS_OPTIONS } from './users-table/options';
-import { designationOptionsQueryOptions } from '@/features/masterdata/api/queries';
 
 export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) {
   const isEdit = !!user;
-
-  const { data: optionsData } = useQuery(designationOptionsQueryOptions());
-  const jobTitleOptions = optionsData?.options ?? [];
 
   const createMutation = useMutation({
     ...createUserMutation,
@@ -46,13 +42,10 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
 
   const form = useAppForm({
     defaultValues: {
-      first_name: user?.first_name ?? '',
-      last_name: user?.last_name ?? '',
+      name: user?.name ?? '',
       email: user?.email ?? '',
-      phone: user?.phone ?? '',
       role: user?.role ?? '',
-      status: user?.status ?? 'Active',
-      designation_id: ''
+      status: user?.status ?? 'Active'
     } as UserFormValues,
     validators: {
       onSubmit: userSchema
@@ -85,26 +78,15 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
         <div className='flex-1 overflow-auto'>
           <form.AppForm>
             <form.Form id='user-form-sheet' className='space-y-4'>
-              <div className='grid grid-cols-2 gap-4'>
-                <FormTextField
-                  name='first_name'
-                  label='First Name'
-                  required
-                  placeholder='John'
-                  validators={{
-                    onBlur: z.string().min(2, 'First name must be at least 2 characters')
-                  }}
-                />
-                <FormTextField
-                  name='last_name'
-                  label='Last Name'
-                  required
-                  placeholder='Doe'
-                  validators={{
-                    onBlur: z.string().min(2, 'Last name must be at least 2 characters')
-                  }}
-                />
-              </div>
+              <FormTextField
+                name='name'
+                label='Name'
+                required
+                placeholder='John Doe'
+                validators={{
+                  onBlur: z.string().min(2, 'Name must be at least 2 characters')
+                }}
+              />
 
               <FormTextField
                 name='email'
@@ -117,17 +99,6 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
                 }}
               />
 
-              <FormTextField
-                name='phone'
-                label='Phone'
-                required
-                type='tel'
-                placeholder='(555) 123-4567'
-                validators={{
-                  onBlur: z.string().min(1, 'Phone number is required')
-                }}
-              />
-
               <FormSelectField
                 name='role'
                 label='Access Level'
@@ -137,13 +108,6 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
                 validators={{
                   onBlur: z.string().min(1, 'Please select an access level')
                 }}
-              />
-
-              <FormSelectField
-                name='designation_id'
-                label='Job Title'
-                options={jobTitleOptions}
-                placeholder='Select job title'
               />
 
               <FormSelectField

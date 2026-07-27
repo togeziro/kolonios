@@ -1,9 +1,9 @@
 import { faker } from '@faker-js/faker';
 import { db } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
-import { products, notifications, employees, departments, designations, locations, shifts } from '../src/lib/db/schema';
+import { products, notifications, employees, departments, designations, locations, shifts, customers } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
-import { type NewEmployee, type NewDepartment, type NewDesignation, type NewLocation, type NewShift } from '../src/lib/db/schema';
+import { type NewEmployee, type NewDepartment, type NewDesignation, type NewLocation, type NewShift, type NewCustomer } from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const PRODUCT_CATEGORIES = [
@@ -17,7 +17,7 @@ const PRODUCT_CATEGORIES = [
   'Beauty Products'
 ] as const;
 
-const ROLES = ['admin', 'hr', 'employee', 'technician'] as const;
+const ROLES = ['admin', 'hr', 'employee', 'technician', 'customer'] as const;
 
 
 
@@ -176,23 +176,99 @@ async function seedDemoUsers() {
 
 async function seedEmployees() {
   const employeeData = [
-    { user_id: 'placeholder', employee_code: 'EMP001', full_name: 'Demo Admin', email: 'admin@example.com', department_id: 1, designation_id: 1 },
-    { user_id: 'placeholder', employee_code: 'EMP002', full_name: 'Demo HR', email: 'hr@example.com', department_id: 6, designation_id: 13 },
-    { user_id: 'placeholder', employee_code: 'EMP003', full_name: 'Demo Employee', email: 'employee@example.com', department_id: 3, designation_id: 7 },
-    { user_id: 'placeholder', employee_code: 'EMP004', full_name: 'Demo Technician', email: 'technician@example.com', department_id: 2, designation_id: 4 }
+    { employee_code: 'EMP001', full_name: 'Demo Admin', email: 'admin@example.com', department_code: 'ENG', designation_code: 'SR_NET' },
+    { employee_code: 'EMP002', full_name: 'Demo HR', email: 'hr@example.com', department_code: 'HR', designation_code: 'HR_SPEC' },
+    { employee_code: 'EMP003', full_name: 'Demo Employee', email: 'employee@example.com', department_code: 'SALES', designation_code: 'SALES_AGT' },
+    { employee_code: 'EMP004', full_name: 'Demo Technician', email: 'technician@example.com', department_code: 'OPS', designation_code: 'FLD_TECH' }
   ];
 
   const users = await db.select({ id: user.id, email: user.email }).from(user);
   const userMap = new Map(users.map(u => [u.email, u.id]));
 
-  const employeeRecords = employeeData.map((emp, i) => ({
-    ...emp,
-    user_id: userMap.get(emp.email) || `auto-${i}`
-  }));
+  const depts = await db.select({ id: departments.id, code: departments.code }).from(departments);
+  const deptMap = new Map(depts.map(d => [d.code, d.id]));
+
+  const desigs = await db.select({ id: designations.id, code: designations.code }).from(designations);
+  const desigMap = new Map(desigs.map(d => [d.code, d.id]));
+
+  const employeeRecords = employeeData.map(emp => {
+    const userId = userMap.get(emp.email);
+    if (!userId) throw new Error(`User not found for ${emp.email}`);
+    return {
+      id: userId,
+      employee_code: emp.employee_code,
+      full_name: emp.full_name,
+      email: emp.email,
+      birth_date: '1990-01-01',
+      department_id: deptMap.get(emp.department_code) ?? 0,
+      designation_id: desigMap.get(emp.designation_code) ?? 0,
+      join_date: '2024-01-01'
+    };
+  });
 
   await db.delete(employees);
   await db.insert(employees).values(employeeRecords);
   console.log(`Seeded ${employeeRecords.length} employee records`);
+}
+
+async function seedCustomers() {
+  const adminUsers = await db.select({ id: user.id, email: user.email }).from(user).where(eq(user.email, 'admin@example.com'));
+  const adminUser = adminUsers[0];
+  if (!adminUser) throw new Error('Admin user not found for created_by reference');
+
+  const customersToCreate = Array.from({ length: 10 }, (_, i) => ({
+    email: `customer${i + 1}@example.com`,
+    name: faker.person.fullName(),
+    password: 'Password123!',
+    role: 'customer' as const,
+    customer_code: `CUST-${String(i + 1).padStart(4, '0')}`,
+    phone: faker.phone.number({ style: 'international' }),
+    address: `${faker.location.streetAddress()}, ${faker.location.city()}`,
+    latitude: faker.location.latitude({ min: -6.5, max: -6.0 }),
+    longitude: faker.location.longitude({ min: 106.5, max: 107.0 }),
+    id_card_number: `3201${String(i + 1).padStart(12, '0')}`,
+    service_data: JSON.stringify({ pppoe_username: `cust${i + 1}`, pppoe_password: faker.internet.password() }),
+    billing_address: `${faker.location.streetAddress()}, ${faker.location.city()}`
+  }));
+
+  const customerRecords: NewCustomer[] = [];
+
+  for (const c of customersToCreate) {
+    try {
+      await (auth.api as any).createUser({
+        body: { email: c.email, name: c.name, password: c.password, role: c.role }
+      });
+    } catch (err: any) {
+      const msg = (err?.message ?? '').toLowerCase();
+      if (!msg.includes('already exists')) throw err;
+    }
+    const [userRow] = await db.select({ id: user.id }).from(user).where(eq(user.email, c.email)).limit(1);
+    if (userRow) {
+      customerRecords.push({
+        id: userRow.id,
+        customer_code: c.customer_code,
+        full_name: c.name,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        latitude: c.latitude,
+        longitude: c.longitude,
+        id_card_number: c.id_card_number,
+        id_card_photo: '',
+        service_data: c.service_data,
+        billing_address: c.billing_address,
+        notes: '',
+        status: 'active',
+        created_by: adminUser.id
+      });
+    }
+  }
+
+  if (customerRecords.length > 0) {
+    await db.delete(customers);
+    await db.insert(customers).values(customerRecords);
+  }
+  console.log(`Seeded ${customerRecords.length} customer records`);
 }
 
 async function main() {
@@ -201,6 +277,7 @@ async function main() {
   await seedMasterdata();
   await seedDemoUsers();
   await seedEmployees();
+  await seedCustomers();
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');

@@ -4,13 +4,10 @@ import { mapDbError } from '../errors';
 import type { UserFilters, UsersResponse, UserMutationPayload } from '@/features/users/api/types';
 
 function toUser(betterUser: any) {
-  const nameParts = (betterUser.name || '').split(' ');
   return {
-    id: Number.parseInt(betterUser.id, 10) || 0,
-    first_name: nameParts[0] || '',
-    last_name: nameParts.slice(1).join(' ') || '',
+    id: betterUser.id as string,
+    name: betterUser.name || '',
     email: betterUser.email || '',
-    phone: null as string | null,
     status: betterUser.banned ? 'Inactive' : 'Active',
     role: betterUser.role || 'user',
     created_at: betterUser.createdAt || new Date().toISOString(),
@@ -51,7 +48,7 @@ export async function createUser(data: UserMutationPayload) {
       body: {
         email: data.email,
         password: Math.random().toString(36).slice(-12),
-        name: `${data.first_name} ${data.last_name}`.trim(),
+        name: data.name,
         role: data.role || 'user'
       }
     });
@@ -62,24 +59,18 @@ export async function createUser(data: UserMutationPayload) {
   }
 }
 
-export async function updateUser(id: number, data: UserMutationPayload) {
+export async function updateUser(id: string, data: UserMutationPayload) {
   try {
     const { getRequestHeaders } = await import('@tanstack/react-start/server');
-    const headers = getRequestHeaders();
-    const usersList: any = await auth.api.listUsers({ headers, query: { limit: 1 } });
-    if (!usersList.users?.length) {
-      return { success: false, message: `User with ID ${id} not found` };
-    }
-
-    const targetId = usersList.users[0].id as string;
+    getRequestHeaders();
     const updated: any = await (auth.api as any).updateUser({
       body: {
-        name: `${data.first_name} ${data.last_name}`.trim(),
+        name: data.name,
         role: data.role || 'user',
         banned: data.status === 'Inactive' || undefined,
         banReason: data.status === 'Inactive' ? 'Deactivated by admin' : undefined
       },
-      params: { userId: targetId }
+      params: { userId: id }
     });
 
     return { success: true, message: 'User updated successfully', user: toUser(updated) };
@@ -88,17 +79,11 @@ export async function updateUser(id: number, data: UserMutationPayload) {
   }
 }
 
-export async function deleteUser(id: number) {
+export async function deleteUser(id: string) {
   try {
     const { getRequestHeaders } = await import('@tanstack/react-start/server');
-    const headers = getRequestHeaders();
-    const usersList: any = await auth.api.listUsers({ headers, query: { limit: 1 } });
-    if (!usersList.users?.length) {
-      return { success: false, message: `User with ID ${id} not found` };
-    }
-
-    const targetId = usersList.users[0].id as string;
-    await auth.api.removeUser({ body: { userId: targetId } });
+    getRequestHeaders();
+    await auth.api.removeUser({ body: { userId: id } });
     return { success: true, message: 'User deleted successfully' };
   } catch (e) {
     mapDbError(e, 'users.deleteUser');

@@ -2,8 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { createServerOnlyFn } from '@tanstack/react-start';
-
+import { createIsomorphicFn } from '@tanstack/react-start';
 import { Toaster } from '@/components/ui/sonner';
 import { ActiveThemeProvider } from '@/components/themes/active-theme';
 import ThemeProvider from '@/components/themes/theme-provider';
@@ -17,29 +16,53 @@ const META_THEME_COLORS = {
   dark: '#09090b'
 };
 
-const getActiveTheme = createServerOnlyFn(async () => {
-  const { getCookie } = await import('@tanstack/react-start/server');
-  const cookieValue = getCookie('active_theme');
-  if (cookieValue && THEMES.some((t) => t.value === cookieValue)) {
-    return cookieValue;
-  }
-  return DEFAULT_THEME;
-});
+function readCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match?.[1];
+}
 
-const getActiveLanguage = createServerOnlyFn(async () => {
-  const { getCookie, getRequestHeaders } = await import('@tanstack/react-start/server');
-  const cookieValue = getCookie('i18next');
-  if (cookieValue) {
-    return cookieValue;
-  }
-  const headers = getRequestHeaders() as unknown as Record<string, string | undefined>;
-  const acceptLanguage = headers['accept-language'];
-  if (acceptLanguage) {
-    const lang = acceptLanguage.split(',')[0]?.split('-')[0];
+const getActiveTheme = createIsomorphicFn()
+  .server(async () => {
+    const { getCookie } = await import('@tanstack/react-start/server');
+    const cookieValue = getCookie('active_theme');
+    if (cookieValue && THEMES.some((t) => t.value === cookieValue)) {
+      return cookieValue;
+    }
+    return DEFAULT_THEME;
+  })
+  .client(async () => {
+    const cookieValue = readCookie('active_theme');
+    if (cookieValue && THEMES.some((t) => t.value === cookieValue)) {
+      return cookieValue;
+    }
+    return DEFAULT_THEME;
+  });
+
+const getActiveLanguage = createIsomorphicFn()
+  .server(async () => {
+    const { getCookie, getRequestHeaders } = await import('@tanstack/react-start/server');
+    const cookieValue = getCookie('i18next');
+    if (cookieValue) {
+      return cookieValue;
+    }
+    const headers = getRequestHeaders() as unknown as Record<string, string | undefined>;
+    const acceptLanguage = headers['accept-language'];
+    if (acceptLanguage) {
+      const lang = acceptLanguage.split(',')[0]?.split('-')[0];
+      if (lang === 'id') return 'id';
+    }
+    return 'en';
+  })
+  .client(async () => {
+    const cookieValue = readCookie('i18next');
+    if (cookieValue) {
+      return cookieValue;
+    }
+    const lang = navigator.language?.split('-')[0];
     if (lang === 'id') return 'id';
-  }
-  return 'en';
-});
+    return 'en';
+  });
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;

@@ -56,3 +56,14 @@ export const technician = ac.newRole({
   shift: ['read'],
   location: ['read']
 });
+
+export const customer = ac.newRole({
+  user: ['read', 'update'],
+  attendance: [],
+  leave: [],
+  employee: [],
+  department: [],
+  designation: [],
+  shift: [],
+  location: []
+});

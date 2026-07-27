@@ -12,7 +12,7 @@ export const createUserMutation = mutationOptions({
 });
 
 export const updateUserMutation = mutationOptions({
-  mutationFn: ({ id, values }: { id: number; values: UserMutationPayload }) =>
+  mutationFn: ({ id, values }: { id: string; values: UserMutationPayload }) =>
     updateUserFn({ data: { id, values } }),
   onSuccess: () => {
     getQueryClient().invalidateQueries({ queryKey: userKeys.all });
@@ -20,7 +20,7 @@ export const updateUserMutation = mutationOptions({
 });
 
 export const deleteUserMutation = mutationOptions({
-  mutationFn: (id: number) => deleteUserFn({ data: id }),
+  mutationFn: (id: string) => deleteUserFn({ data: id }),
   onSuccess: () => {
     getQueryClient().invalidateQueries({ queryKey: userKeys.all });
   }

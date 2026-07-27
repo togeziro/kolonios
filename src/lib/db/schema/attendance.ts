@@ -125,6 +125,47 @@ export const performanceReports = pgTable('performance_reports', {
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });
 
+import { relations } from 'drizzle-orm';
+import { user } from '../auth-schema';
+
+export const locationRelations = relations(locations, ({ many }) => ({
+  employeeShifts: many(employeeShifts)
+}));
+
+export const shiftRelations = relations(shifts, ({ many }) => ({
+  employeeShifts: many(employeeShifts),
+  leaves: many(leaves)
+}));
+
+export const employeeShiftRelations = relations(employeeShifts, ({ one }) => ({
+  user: one(user, {
+    fields: [employeeShifts.user_id],
+    references: [user.id]
+  }),
+  shift: one(shifts, {
+    fields: [employeeShifts.shift_id],
+    references: [shifts.id]
+  })
+}));
+
+export const leaveRelations = relations(leaves, ({ one }) => ({
+  user: one(user, {
+    fields: [leaves.user_id],
+    references: [user.id]
+  }),
+  shift: one(shifts, {
+    fields: [leaves.shift_id],
+    references: [shifts.id]
+  })
+}));
+
+export const performanceReportRelations = relations(performanceReports, ({ one }) => ({
+  user: one(user, {
+    fields: [performanceReports.user_id],
+    references: [user.id]
+  })
+}));
+
 export type Location = typeof locations.$inferSelect;
 export type NewLocation = typeof locations.$inferInsert;
 

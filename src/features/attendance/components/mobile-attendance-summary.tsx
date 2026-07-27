@@ -4,19 +4,13 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
-import {
-  myAttendanceQueryOptions,
-  locationsQueryOptions,
-  shiftsQueryOptions
-} from '../api/queries';
+import { myAttendanceQueryOptions } from '../api/queries';
 import { checkInFn, checkOutFn } from '../api/service';
 
 export default function MobileAttendanceSummary() {
   const queryClient = useQueryClient();
 
   const { data: todayData } = useQuery(myAttendanceQueryOptions());
-  const { data: locationsData } = useQuery(locationsQueryOptions());
-  const { data: shiftsData } = useQuery(shiftsQueryOptions());
 
   const attendance = todayData?.attendance;
   const record = attendance?.attendance;
@@ -24,7 +18,7 @@ export default function MobileAttendanceSummary() {
   const isCheckedOut = !!record?.check_out_time;
   const status = record?.attendance_status ?? 'pending';
 
-  const checkInMutation = useMutation({
+  const _checkInMutation = useMutation({
     mutationFn: () => checkInFn({ data: {} }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });

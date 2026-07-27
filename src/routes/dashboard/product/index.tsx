@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import type { QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import PageContainer from '@/components/layout/page-container';

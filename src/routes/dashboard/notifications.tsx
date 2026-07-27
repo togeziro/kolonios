@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router';
-import type { QueryClient } from '@tanstack/react-query';
 import NotificationsPage from '@/features/notifications/components/notifications-page';
 import { notificationListQueryOptions } from '@/features/notifications/api/queries';
 

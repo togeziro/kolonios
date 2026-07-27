@@ -1,9 +1,7 @@
 export type User = {
-  id: number;
-  first_name: string;
-  last_name: string;
+  id: string;
+  name: string;
   email: string;
-  phone: string | null;
   status: string;
   role: string;
   created_at: string;
@@ -29,11 +27,8 @@ export type UsersResponse = {
 };
 
 export type UserMutationPayload = {
-  first_name: string;
-  last_name: string;
+  name: string;
   email: string;
-  phone: string;
   role: string;
   status: string;
-  designation_id?: string;
 };

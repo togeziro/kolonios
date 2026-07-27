@@ -9,15 +9,13 @@ import { AUTH_ROLE_OPTIONS } from './options';
 export const columns: ColumnDef<User>[] = [
   {
     id: 'name',
-    accessorFn: (row) => `${row.first_name} ${row.last_name}`,
+    accessorKey: 'name',
     header: ({ column }: { column: Column<User, unknown> }) => (
       <DataTableColumnHeader column={column} title='Name' />
     ),
     cell: ({ row }) => (
       <div className='flex flex-col'>
-        <span className='font-medium'>
-          {row.original.first_name} {row.original.last_name}
-        </span>
+        <span className='font-medium'>{row.original.name}</span>
         <span className='text-muted-foreground text-xs'>{row.original.email}</span>
       </div>
     ),
@@ -28,10 +26,6 @@ export const columns: ColumnDef<User>[] = [
       icon: Icons.text
     },
     enableColumnFilter: true
-  },
-  {
-    accessorKey: 'phone',
-    header: 'PHONE'
   },
   {
     id: 'role',

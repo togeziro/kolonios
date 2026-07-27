@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { productSchema, type ProductFormValues } from './product';
+import { productSchema } from './product';
 
 describe('product form validation', () => {
   it('rejects missing image file', () => {

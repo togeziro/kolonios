@@ -9,13 +9,11 @@ export const userFiltersSchema: z.ZodType<UserFilters> = z.object({
   sort: z.string().optional()
 });
 
-export const userIdSchema = z.coerce.number().int().positive();
+export const userIdSchema = z.string();
 
 export const userMutationSchema: z.ZodType<UserMutationPayload> = z.object({
-  first_name: z.string().min(1),
-  last_name: z.string().min(1),
+  name: z.string().min(1),
   email: z.string().email(),
-  phone: z.string(),
   role: z.string().min(1),
   status: z.string().min(1)
 });
