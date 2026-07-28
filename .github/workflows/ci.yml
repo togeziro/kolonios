@@ -30,7 +30,7 @@ jobs:
       NODE_OPTIONS: '--max-old-space-size=4096'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: oven-sh/setup-bun@v2
         with:
