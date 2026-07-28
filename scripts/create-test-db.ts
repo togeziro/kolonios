@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process';
 import postgres from 'postgres';
 
 const TEST_DB = 'kolonios_test';
-const ADMIN_URL = process.env.DATABASE_URL || 'postgres://tanstack:tanstack@localhost:5432/kolonios';
+const ADMIN_URL = process.env.DATABASE_ADMIN_URL || 'postgres://tanstack:tanstack@localhost:5432/kolonios';
 const TEST_URL = `postgres://tanstack:tanstack@localhost:5432/${TEST_DB}`;
 
 async function main() {
