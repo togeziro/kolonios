@@ -4,7 +4,7 @@ import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 
 export default function ProductListingPage() {
   return (
-    <Suspense fallback={<LoadingSkeleton rows={3} />}>
+    <Suspense fallback={<LoadingSkeleton rows={['h-10', 'h-96', 'h-10']} />}>
       <ProductTable />
     </Suspense>
   );
