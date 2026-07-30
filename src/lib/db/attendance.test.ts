@@ -1,0 +1,287 @@
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  calculateDistance,
+  getLocations,
+  getShifts,
+  createLeaveRequest,
+  getMyLeaves,
+  getPerformanceStats,
+  getAttendanceSummary,
+  getEmployeeAttendance,
+  getAttendanceHistory
+} from './attendance';
+import { resetAllTables, seedLocation, seedShift } from '@/test-utils/db';
+import { db } from '@/lib/db';
+import { employeeShifts, performanceReports } from './schema/attendance';
+
+const TEST_USER_ID = 'test-user-att-123';
+
+describe('calculateDistance (Haversine)', () => {
+  it('returns 0 for the same coordinates', () => {
+    expect(calculateDistance(40.7128, -74.006, 40.7128, -74.006)).toBe(0);
+  });
+
+  it('calculates distance between NYC and LA (~3940 km)', () => {
+    const d = calculateDistance(40.7128, -74.006, 34.0522, -118.2437);
+    expect(d).toBeGreaterThan(3900_000);
+    expect(d).toBeLessThan(4000_000);
+  });
+
+  it('calculates a short distance (~111 km per degree latitude)', () => {
+    const d = calculateDistance(0, 0, 1, 0);
+    expect(d).toBeGreaterThan(110_000);
+    expect(d).toBeLessThan(112_000);
+  });
+
+  it('handles negative coordinates (southern hemisphere)', () => {
+    const d = calculateDistance(-33.8688, 151.2093, -37.8136, 144.9631);
+    expect(d).toBeGreaterThan(700_000);
+    expect(d).toBeLessThan(750_000);
+  });
+});
+
+describe('attendance data access (integration)', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  afterAll(async () => {
+    await resetAllTables();
+  });
+
+  describe('locations', () => {
+    it('returns empty when no active locations exist', async () => {
+      const res = await getLocations();
+      expect(res.success).toBe(true);
+      expect(res.locations).toHaveLength(0);
+    });
+
+    it('returns active locations', async () => {
+      await seedLocation({ name: 'Office A' });
+      await seedLocation({ name: 'Office B', status: 'inactive' });
+
+      const res = await getLocations();
+      expect(res.success).toBe(true);
+      expect(res.locations).toHaveLength(1);
+      expect(res.locations[0].name).toBe('Office A');
+    });
+  });
+
+  describe('shifts', () => {
+    it('returns empty when no active shifts exist', async () => {
+      const res = await getShifts();
+      expect(res.success).toBe(true);
+      expect(res.shifts).toHaveLength(0);
+    });
+
+    it('returns active shifts', async () => {
+      await seedShift({ name: 'Morning' });
+      await seedShift({ name: 'Night', status: 'inactive' as const });
+
+      const res = await getShifts();
+      expect(res.success).toBe(true);
+      expect(res.shifts).toHaveLength(1);
+      expect(res.shifts[0].name).toBe('Morning');
+    });
+  });
+
+  describe('leave requests', () => {
+    it('creates a leave request and calculates total days', async () => {
+      const res = await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'annual',
+        startDate: '2026-08-01',
+        endDate: '2026-08-05',
+        reason: 'Vacation'
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.leave).toBeDefined();
+      expect(res.leave!.total_days).toBe(5);
+      expect(res.leave!.leave_type).toBe('annual');
+      expect(res.leave!.status).toBe('pending');
+    });
+
+    it('calculates 1 day for same start and end date', async () => {
+      const res = await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'sick',
+        startDate: '2026-08-01',
+        endDate: '2026-08-01'
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.leave!.total_days).toBe(1);
+    });
+
+    it('lists my leaves with pagination', async () => {
+      await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'annual',
+        startDate: '2026-08-01',
+        endDate: '2026-08-03'
+      });
+      await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'sick',
+        startDate: '2026-09-01',
+        endDate: '2026-09-02'
+      });
+
+      const res = await getMyLeaves(TEST_USER_ID, { page: 1, limit: 10 });
+      expect(res.success).toBe(true);
+      expect(res.total).toBe(2);
+      expect(res.leaves).toHaveLength(2);
+    });
+
+    it('does not return leaves for another user', async () => {
+      await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'annual',
+        startDate: '2026-08-01',
+        endDate: '2026-08-03'
+      });
+
+      const res = await getMyLeaves('other-user-456', {});
+      expect(res.success).toBe(true);
+      expect(res.total).toBe(0);
+    });
+
+    it('filters leaves by status', async () => {
+      await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'annual',
+        startDate: '2026-08-01',
+        endDate: '2026-08-03'
+      });
+
+      const res = await getMyLeaves(TEST_USER_ID, { status: 'pending' });
+      expect(res.success).toBe(true);
+      expect(res.total).toBe(1);
+
+      const rejected = await getMyLeaves(TEST_USER_ID, { status: 'approved' });
+      expect(rejected.total).toBe(0);
+    });
+
+    it('filters leaves by leave type', async () => {
+      await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'annual',
+        startDate: '2026-08-01',
+        endDate: '2026-08-03'
+      });
+      await createLeaveRequest(TEST_USER_ID, {
+        leaveType: 'sick',
+        startDate: '2026-09-01',
+        endDate: '2026-09-01'
+      });
+
+      const annual = await getMyLeaves(TEST_USER_ID, { leaveType: 'annual' });
+      expect(annual.total).toBe(1);
+
+      const sick = await getMyLeaves(TEST_USER_ID, { leaveType: 'sick' });
+      expect(sick.total).toBe(1);
+    });
+  });
+
+  describe('performance stats', () => {
+    it('returns empty for a user with no reports', async () => {
+      const res = await getPerformanceStats(TEST_USER_ID);
+      expect(res.success).toBe(true);
+      expect(res.reports).toHaveLength(0);
+    });
+
+    it('returns reports ordered by date ascending', async () => {
+      await db.insert(performanceReports).values([
+        { user_id: TEST_USER_ID, date: '2026-07-02', score: '85' },
+        { user_id: TEST_USER_ID, date: '2026-07-01', score: '90' }
+      ]);
+
+      const res = await getPerformanceStats(TEST_USER_ID);
+      expect(res.success).toBe(true);
+      expect(res.reports).toHaveLength(2);
+      expect(res.reports![0].date).toBe('2026-07-01');
+      expect(res.reports![1].date).toBe('2026-07-02');
+    });
+
+    it('does not return reports for another user', async () => {
+      await db
+        .insert(performanceReports)
+        .values([{ user_id: 'other-user-456', date: '2026-07-01', score: '90' }]);
+
+      const res = await getPerformanceStats(TEST_USER_ID);
+      expect(res.reports).toHaveLength(0);
+    });
+  });
+
+  describe('attendance summary', () => {
+    it('returns zero totals when no records exist', async () => {
+      const res = await getAttendanceSummary(TEST_USER_ID);
+      expect(res.success).toBe(true);
+      expect(res.summary.total).toBe(0);
+      expect(res.summary.present).toBe(0);
+    });
+
+    it('counts present, late, and absent statuses', async () => {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      await db.insert(employeeShifts).values([
+        { user_id: TEST_USER_ID, date: `${currentMonth}-01`, attendance_status: 'present' },
+        { user_id: TEST_USER_ID, date: `${currentMonth}-02`, attendance_status: 'late' },
+        { user_id: TEST_USER_ID, date: `${currentMonth}-03`, attendance_status: 'absent' },
+        { user_id: TEST_USER_ID, date: `${currentMonth}-04`, attendance_status: 'present' }
+      ]);
+
+      const res = await getAttendanceSummary(TEST_USER_ID);
+      expect(res.success).toBe(true);
+      expect(res.summary.total).toBe(4);
+      expect(res.summary.present).toBe(3);
+      expect(res.summary.late).toBe(1);
+      expect(res.summary.absent).toBe(1);
+    });
+  });
+
+  describe('employee attendance', () => {
+    it('returns null when no attendance exists for today', async () => {
+      const res = await getEmployeeAttendance(TEST_USER_ID);
+      expect(res.success).toBe(true);
+      expect(res.attendance).toBeNull();
+    });
+
+    it('returns an attendance record for a given date', async () => {
+      await db.insert(employeeShifts).values({
+        user_id: TEST_USER_ID,
+        date: '2026-07-30',
+        check_in_time: '09:00',
+        attendance_status: 'present'
+      });
+
+      const res = await getEmployeeAttendance(TEST_USER_ID, '2026-07-30');
+      expect(res.success).toBe(true);
+      expect(res.attendance).not.toBeNull();
+      expect(res.attendance!.attendance.check_in_time).toBe('09:00');
+    });
+  });
+
+  describe('attendance history', () => {
+    it('returns empty history with pagination metadata', async () => {
+      const res = await getAttendanceHistory(TEST_USER_ID, { page: 1, limit: 10 });
+      expect(res.success).toBe(true);
+      expect(res.total).toBe(0);
+      expect(res.records).toHaveLength(0);
+    });
+
+    it('filters by month and year', async () => {
+      await db.insert(employeeShifts).values([
+        { user_id: TEST_USER_ID, date: '2026-07-01', attendance_status: 'present' },
+        { user_id: TEST_USER_ID, date: '2026-07-15', attendance_status: 'present' },
+        { user_id: TEST_USER_ID, date: '2026-08-01', attendance_status: 'late' }
+      ]);
+
+      const res = await getAttendanceHistory(TEST_USER_ID, { month: 7, year: 2026 });
+      expect(res.total).toBe(2);
+    });
+
+    it('filters by status', async () => {
+      await db.insert(employeeShifts).values([
+        { user_id: TEST_USER_ID, date: '2026-07-01', attendance_status: 'present' },
+        { user_id: TEST_USER_ID, date: '2026-07-02', attendance_status: 'late' }
+      ]);
+
+      const res = await getAttendanceHistory(TEST_USER_ID, { status: 'late' });
+      expect(res.total).toBe(1);
+    });
+  });
+});
