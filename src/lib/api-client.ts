@@ -1,7 +1,7 @@
-const BASE_URL = '/api';
+import { API_PREFIX } from '@/lib/api/version';
 
 export async function apiClient<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
+  const res = await fetch(`${API_PREFIX}${endpoint}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options
   });
