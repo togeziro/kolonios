@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireRole } from '@/lib/auth/session';
+import { checkRateLimit } from '@/lib/rate-limit';
 import {
   attendanceCheckInSchema,
   attendanceCheckOutSchema,
@@ -13,6 +14,7 @@ export const checkInFn = createServerFn({ method: 'POST' })
   .validator(attendanceCheckInSchema)
   .handler(async ({ data }) => {
     const session = await requireRole('employee');
+    await checkRateLimit(`checkin:${session.user.id}`);
     const { checkIn } = await import('@/lib/db/attendance');
     return checkIn(session.user.id, data);
   });
