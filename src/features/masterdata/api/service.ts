@@ -1,6 +1,14 @@
 import { createServerFn } from '@tanstack/react-start';
-import { z } from 'zod';
 import { requireRole } from '@/lib/auth/session';
+import {
+  departmentCreateSchema,
+  departmentUpdateSchema,
+  departmentDeleteSchema,
+  designationFilterSchema,
+  designationCreateSchema,
+  designationUpdateSchema,
+  designationDeleteSchema
+} from './validation';
 
 export const getDepartmentsFn = createServerFn({ method: 'GET' }).handler(async () => {
   await requireRole('admin');
@@ -9,13 +17,7 @@ export const getDepartmentsFn = createServerFn({ method: 'GET' }).handler(async 
 });
 
 export const createDepartmentFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      name: z.string().min(1),
-      code: z.string().min(1).max(10),
-      description: z.string().optional()
-    })
-  )
+  .validator(departmentCreateSchema)
   .handler(async ({ data }) => {
     await requireRole('admin');
     const { createDepartment } = await import('@/lib/db/masterdata');
@@ -23,15 +25,7 @@ export const createDepartmentFn = createServerFn({ method: 'POST' })
   });
 
 export const updateDepartmentFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      id: z.coerce.number().int().positive(),
-      name: z.string().min(1).optional(),
-      code: z.string().min(1).max(10).optional(),
-      description: z.string().optional(),
-      is_active: z.boolean().optional()
-    })
-  )
+  .validator(departmentUpdateSchema)
   .handler(async ({ data: { id, ...data } }) => {
     await requireRole('admin');
     const { updateDepartment } = await import('@/lib/db/masterdata');
@@ -39,7 +33,7 @@ export const updateDepartmentFn = createServerFn({ method: 'POST' })
   });
 
 export const deleteDepartmentFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ id: z.coerce.number().int().positive() }))
+  .validator(departmentDeleteSchema)
   .handler(async ({ data: { id } }) => {
     await requireRole('admin');
     const { deleteDepartment } = await import('@/lib/db/masterdata');
@@ -47,7 +41,7 @@ export const deleteDepartmentFn = createServerFn({ method: 'POST' })
   });
 
 export const getDesignationsFn = createServerFn({ method: 'GET' })
-  .validator(z.object({ department_id: z.coerce.number().int().positive().optional() }).optional())
+  .validator(designationFilterSchema)
   .handler(async ({ data }) => {
     await requireRole('admin');
     const { getDesignations } = await import('@/lib/db/masterdata');
@@ -55,15 +49,7 @@ export const getDesignationsFn = createServerFn({ method: 'GET' })
   });
 
 export const createDesignationFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      name: z.string().min(1),
-      code: z.string().min(1).max(10),
-      department_id: z.coerce.number().int().positive().optional(),
-      description: z.string().optional(),
-      base_salary: z.coerce.number().positive().optional()
-    })
-  )
+  .validator(designationCreateSchema)
   .handler(async ({ data }) => {
     await requireRole('admin');
     const { createDesignation } = await import('@/lib/db/masterdata');
@@ -71,17 +57,7 @@ export const createDesignationFn = createServerFn({ method: 'POST' })
   });
 
 export const updateDesignationFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      id: z.coerce.number().int().positive(),
-      name: z.string().min(1).optional(),
-      code: z.string().min(1).max(10).optional(),
-      department_id: z.coerce.number().int().positive().nullable().optional(),
-      description: z.string().optional(),
-      base_salary: z.coerce.number().positive().optional(),
-      is_active: z.boolean().optional()
-    })
-  )
+  .validator(designationUpdateSchema)
   .handler(async ({ data: { id, ...data } }) => {
     await requireRole('admin');
     const { updateDesignation } = await import('@/lib/db/masterdata');
@@ -89,7 +65,7 @@ export const updateDesignationFn = createServerFn({ method: 'POST' })
   });
 
 export const deleteDesignationFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ id: z.coerce.number().int().positive() }))
+  .validator(designationDeleteSchema)
   .handler(async ({ data: { id } }) => {
     await requireRole('admin');
     const { deleteDesignation } = await import('@/lib/db/masterdata');
