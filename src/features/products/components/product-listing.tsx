@@ -1,17 +1,10 @@
 import { Suspense } from 'react';
 import { ProductTable } from './product-tables';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 
 export default function ProductListingPage() {
   return (
-    <Suspense
-      fallback={
-        <div className='flex flex-1 animate-pulse flex-col gap-4'>
-          <div className='bg-muted h-10 w-full rounded' />
-          <div className='bg-muted h-96 w-full rounded-lg' />
-          <div className='bg-muted h-10 w-full rounded' />
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingSkeleton rows={3} />}>
       <ProductTable />
     </Suspense>
   );
