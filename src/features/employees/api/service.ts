@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { requireRole } from '@/lib/auth/session';
 import { withRequestContext } from '@/lib/request-id';
+import { withAudit } from '@/lib/audit';
 import { employeeFiltersSchema, employeeIdSchema, employeeMutationSchema } from './validation';
 
 export const listEmployeesFn = createServerFn({ method: 'GET' })
@@ -29,11 +30,21 @@ export const createEmployeeFn = createServerFn({ method: 'POST' })
   .validator(employeeMutationSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('hr');
+      const session = await requireRole('hr');
       const { createEmployee } = await import('@/lib/db/employees');
-      const { requireSession } = await import('@/lib/auth/session');
-      const session = await requireSession();
-      return createEmployee({ ...data, created_by: session.user.id });
+      const created = await createEmployee({ ...data, created_by: session.user.id });
+      await withAudit(
+        session.user.id,
+        {
+          action: 'employee.create',
+          entityType: 'employee',
+          entityId: created.employee.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
     })
   );
 
@@ -48,9 +59,22 @@ export const updateEmployeeFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
-      await requireRole('hr');
-      const { updateEmployee } = await import('@/lib/db/employees');
-      return updateEmployee(id, values);
+      const session = await requireRole('hr');
+      const { updateEmployee, getEmployeeById } = await import('@/lib/db/employees');
+      const before = await getEmployeeById(id);
+      const updated = await updateEmployee(id, values);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'employee.update',
+          entityType: 'employee',
+          entityId: id,
+          before,
+          after: updated
+        },
+        async () => undefined
+      );
+      return updated;
     })
   );
 
@@ -58,8 +82,21 @@ export const deleteEmployeeFn = createServerFn({ method: 'POST' })
   .validator(employeeIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      await requireRole('hr');
-      const { deleteEmployee } = await import('@/lib/db/employees');
-      return deleteEmployee(id);
+      const session = await requireRole('hr');
+      const { deleteEmployee, getEmployeeById } = await import('@/lib/db/employees');
+      const before = await getEmployeeById(id);
+      const deleted = await deleteEmployee(id);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'employee.delete',
+          entityType: 'employee',
+          entityId: id,
+          before,
+          after: null
+        },
+        async () => undefined
+      );
+      return deleted;
     })
   );
