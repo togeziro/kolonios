@@ -25,7 +25,7 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 - **Notification Center** — Bell icon badge, popover preview, full page with tabs, PostgreSQL-backed via Drizzle + React Query
 - **Attendance** — Check-in/out with geo-fencing (Haversine), today's status, attendance history; leave requests with type/date selection, leave history
 - **Masterdata** — Full CRUD for departments and designations with dialog-based forms
-- **Mobile Dashboard** — Responsive mobile layout for staff: bottom nav, FAB check-in, circular progress, swipeable tasks
+- **Mobile Dashboard** — Responsive mobile layout for staff: 5-tab bottom nav, attendance shortcut FAB, task lists
 - **RBAC** — 4 roles (admin, hr, employee, technician) with per-module permissions enforced at the RPC boundary
 - **Forms** — Basic, multi-step, sheet/dialog, and advanced patterns with TanStack Form + Zod
 - **Command Palette** — Cmd+K navigation via kbar
@@ -75,7 +75,7 @@ Directional buckets, not a strict timeline.
 - [x] Build attendance dashboard components (check-in card, history table, leave form)
 - [x] Add leave management (cuti) with request form and history
 - [x] Implement performance tracking (Laporan Kinerja) API
-- [x] Mobile staff dashboard with circular progress, bottom nav, FAB check-in
+- [x] Mobile staff dashboard with task lists, 5-tab bottom nav, attendance shortcut FAB
 
 **Masterdata Module (complete)**
 - [x] Extend RBAC roles: `admin`, `hr`, `employee`, `technician`

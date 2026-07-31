@@ -78,7 +78,7 @@ Tap the avatar in `MobileHeader` to open a dropdown with user info (name, email)
 
 - All components use Tailwind CSS v4
 - Animations via `motion` (Framer Motion v11+)
-- `MobileShell` has `pb-20` to account for the fixed bottom nav height
+- `MobileShell` has `pb-[calc(5rem+env(safe-area-inset-bottom))]` to account for the fixed bottom nav height
 - `BottomNav` has `bg-background/80` with `backdrop-blur-lg` frosted glass effect
 - FAB uses `spring` animation for natural bounce on mount/unmount
 
