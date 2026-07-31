@@ -1,3 +1,7 @@
+// Fine-grained permission matrix (better-auth access plugin).
+// Currently NOT consulted at the server-function boundary — guards use
+// requireRole/requireMinRole in src/lib/auth/session.ts. Reserved for
+// per-entity action checks in future modules (e.g. payroll).
 import { createAccessControl } from 'better-auth/plugins/access';
 
 const statements = {

@@ -1,8 +1,8 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 
-type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'user';
+export type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'customer' | 'user';
 
-const validRoles: Role[] = ['admin', 'hr', 'employee', 'technician', 'user'];
+const validRoles: Role[] = ['admin', 'hr', 'employee', 'technician', 'customer', 'user'];
 
 export async function requireSession() {
   const { auth } = await import('./auth.server');
@@ -28,30 +28,52 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
   });
 });
 
+// Exact-set membership. requireRole('employee') does NOT admit 'technician'
+// and vice versa — they are distinct roles with distinct call sites.
+// `user` and `customer` pass for any authenticated session (self-service roles).
+const roleSets: Record<'admin' | 'hr' | 'employee' | 'technician', Role[]> = {
+  admin: ['admin'],
+  hr: ['admin', 'hr'],
+  employee: ['admin', 'hr', 'employee'],
+  technician: ['admin', 'hr', 'technician']
+};
+
 export async function requireRole(role: Role) {
   if (!validRoles.includes(role)) {
     throw new Error(`Invalid role: ${role}`);
   }
   const session = await requireSession();
   const userRole = session.user.role as Role;
+  const set = roleSets[role as keyof typeof roleSets];
+  if (set && !set.includes(userRole)) {
+    throw new Error(`Forbidden: ${role} access required`);
+  }
+  return session;
+}
 
-  const adminRoles = ['admin'];
-  const hrRoles = ['admin', 'hr'];
-  const employeeRoles = ['admin', 'hr', 'employee', 'technician'];
+// Hierarchical guard: the session user must be AT LEAST `min`.
+// Tiers: employee ≡ technician < hr < admin.
+// Use requireMinRole('employee') for self-service actions that both
+// employees and technicians may perform (e.g. attendance check-in).
+const tierOf: Record<Role, number> = {
+  employee: 1,
+  technician: 1,
+  hr: 2,
+  admin: 3,
+  user: 0,
+  customer: 0
+};
 
-  if (role === 'admin' && !adminRoles.includes(userRole)) {
-    throw new Error('Forbidden: Admin access required');
-  }
-  if (role === 'hr' && !hrRoles.includes(userRole)) {
-    throw new Error('Forbidden: HR access required');
-  }
-  if (role === 'employee' && !employeeRoles.includes(userRole)) {
-    throw new Error('Forbidden: Employee access required');
-  }
-  if (role === 'technician' && !employeeRoles.includes(userRole)) {
-    throw new Error('Forbidden: Technician access required');
-  }
+const tierLabel: Record<number, string> = { 1: 'employee', 2: 'hr', 3: 'admin' };
 
+export async function requireMinRole(min: 'employee' | 'hr' | 'admin') {
+  const session = await requireSession();
+  const userRole = session.user.role as Role;
+  const userTier = tierOf[userRole] ?? 0;
+  const minTier = tierOf[min];
+  if (userTier < minTier) {
+    throw new Error(`Forbidden: ${tierLabel[minTier]} role required`);
+  }
   return session;
 }
 
