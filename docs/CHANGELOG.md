@@ -10,6 +10,12 @@
 - Coverage baseline enforced (70% lines/branches/functions/statements).
 - i18n enforcement: key-parity check + hardcoded-string scanner wired into lint/CI.
 
+### Mobile Work Dashboard
+
+- **Driver-style home** — Assigned-first My Work + eligibility-gated Available Jobs pool (department, designation, location, skill); transactional `takeTask` claim with capacity limit; ineligible tasks listed without actions
+- **Navigation** — Bottom nav now Home | My Work | Attendance | Leave | Profile; FAB is an attendance shortcut (no implicit check-in)
+- **Mobile screens** — Attendance/leave history as card lists on mobile (tables on desktop); leave request via bottom sheet; profile screen with month summary
+
 ## [Unreleased — 2026-07-30]
 
 ### Audit
