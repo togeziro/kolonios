@@ -8,74 +8,113 @@ imports to prevent the `postgres` driver from leaking into the client bundle.
 
 ### RPC boundary guarantees
 
-- **Authentication**: every endpoint calls `requireSession()` (or
-  `requireRole('admin')` for product/user writes) at the top of its handler,
+- **Authentication**: every endpoint calls `requireSession()`, `requireRole(...)`
+  or `requireMinRole(...)` at the top of its handler (`src/lib/auth/session.ts`),
   so endpoints cannot be called unauthenticated — independent of route guards.
 - **Input validation**: every endpoint uses a Zod schema from
   `src/features/<feature>/api/validation.ts` via `@tanstack/zod-adapter`'s
-  `zodValidator`. Schemas are typed `z.ZodType<ExistingType>` so they cannot
-  drift from the request types.
+  `zodValidator` (or `z.coerce` for string→number ids).
 - **Error mapping**: `lib/db/*.ts` wraps DB calls in `mapDbError`
   (`src/lib/errors.ts`); intentional errors throw `DomainError` and pass
-  through, unexpected errors become a generic message.
+  through, unexpected errors become a generic message and are logged to
+  pino + Sentry with a `request_id` tag.
+- **Request correlation**: every handler runs inside
+  `withRequestContext(...)` (`src/lib/request-id.ts`); the response carries
+  an `x-request-id` header echoed from the client (or generated).
+
+Role legend: **user** = any authenticated session; **staff** = employee or
+technician (via `requireMinRole('employee')`); **hr** = admin or hr;
+**admin** = admin only.
 
 ### Products
 
-| Function           | Method | Payload                  | Returns                |
-| ------------------ | ------ | ------------------------ | ---------------------- |
-| `getProductsFn`    | GET    | `ProductFilters`         | `ProductsResponse`     |
-| `getProductByIdFn` | GET    | `number` (id)            | `ProductByIdResponse`  |
-| `createProductFn`  | POST   | `ProductMutationPayload` | `Product`              |
-| `updateProductFn`  | POST   | `{ id, values }`         | `Product`              |
-| `deleteProductFn`  | POST   | `number` (id)            | `{ success, message }` |
+| Function           | Method | Required role | Payload                  | Returns                |
+| ------------------ | ------ | ------------- | ------------------------ | ---------------------- |
+| `getProductsFn`    | GET    | user          | `ProductFilters`         | `ProductsResponse`     |
+| `getProductByIdFn` | GET    | user          | `number` (id)            | `ProductByIdResponse`  |
+| `createProductFn`  | POST   | admin         | `ProductMutationPayload` | `Product`              |
+| `updateProductFn`  | POST   | admin         | `{ id, values }`         | `Product`              |
+| `deleteProductFn`  | POST   | admin         | `number` (id)            | `{ success, message }` |
 
 ### Users
 
-| Function       | Method | Payload               | Returns                |
-| -------------- | ------ | --------------------- | ---------------------- |
-| `getUsersFn`   | GET    | `UserFilters`         | `UsersResponse`        |
-| `createUserFn` | POST   | `UserMutationPayload` | `User`                 |
-| `updateUserFn` | POST   | `{ id, values }`      | `User`                 |
-| `deleteUserFn` | POST   | `number` (id)         | `{ success, message }` |
+| Function       | Method | Required role | Payload               | Returns                |
+| -------------- | ------ | ------------- | --------------------- | ---------------------- |
+| `getUsersFn`   | GET    | admin         | `UserFilters`         | `UsersResponse`        |
+| `createUserFn` | POST   | admin         | `UserMutationPayload` | `User` (+ audit)       |
+| `updateUserFn` | POST   | admin         | `{ id, values }`      | `User` (+ audit)       |
+| `deleteUserFn` | POST   | admin         | `number` (id)         | `{ success, message }` (+ audit) |
+
+### Employees
+
+| Function            | Method | Required role | Payload                     | Returns                |
+| ------------------- | ------ | ------------- | --------------------------- | ---------------------- |
+| `listEmployeesFn`   | GET    | user          | `EmployeeFilters`           | `EmployeesResponse`    |
+| `getEmployeeByIdFn` | GET    | user          | `employeeIdSchema` (id)     | `EmployeeByIdResponse` |
+| `createEmployeeFn`  | POST   | hr            | `EmployeeMutationPayload`   | `Employee` (+ audit)   |
+| `updateEmployeeFn`  | POST   | hr            | `{ id, values }`            | `Employee` (+ audit)   |
+| `deleteEmployeeFn`  | POST   | hr            | `employeeIdSchema` (id)     | `{ success, message }` (+ audit) |
+
+### Customers
+
+| Function            | Method | Required role | Payload                     | Returns                |
+| ------------------- | ------ | ------------- | --------------------------- | ---------------------- |
+| `listCustomersFn`   | GET    | user          | `CustomerFilters`           | `CustomersResponse`    |
+| `getCustomerByIdFn` | GET    | user          | `customerIdSchema` (id)     | `CustomerByIdResponse` |
+| `createCustomerFn`  | POST   | admin         | `CustomerMutationPayload`   | `Customer` (+ audit)   |
+| `updateCustomerFn`  | POST   | admin         | `{ id, values }`            | `Customer` (+ audit)   |
+| `deleteCustomerFn`  | POST   | admin         | `customerIdSchema` (id)     | `{ success, message }` (+ audit) |
 
 ### Notifications
 
-| Function               | Method | Payload                  | Returns                |
-| ---------------------- | ------ | ------------------------ | ---------------------- |
-| `getNotificationsFn`   | GET    | —                        | `NotificationItem[]`   |
-| `markAsReadFn`         | POST   | `{ id: number }`         | `{ success: boolean }` |
-| `markAllAsReadFn`      | POST   | —                        | `{ success: boolean }` |
-| `addNotificationFn`    | POST   | `AddNotificationPayload` | `NotificationItem`     |
-| `removeNotificationFn` | POST   | `{ id: number }`         | `{ success: boolean }` |
+| Function               | Method | Required role | Payload                  | Returns                |
+| ---------------------- | ------ | ------------- | ------------------------ | ---------------------- |
+| `getNotificationsFn`   | GET    | user          | —                        | `NotificationsResponse`|
+| `markAsReadFn`         | POST   | user          | `{ id: string }`         | `{ success: boolean }` |
+| `markAllAsReadFn`      | POST   | user          | —                        | `{ success: boolean }` |
+| `addNotificationFn`    | POST   | user          | `AddNotificationPayload` | `NotificationItem` (+ audit) |
+| `removeNotificationFn` | POST   | user          | `{ id: string }`         | `{ success: boolean }` (+ audit) |
+
+Polling: the query refetches every 30 s (see `docs/NOTIFICATIONS.md`).
 
 ### Attendance
 
-| Function              | Method | Payload                         | Returns              |
-| --------------------- | ------ | ------------------------------- | -------------------- |
-| `checkInFn`           | POST   | `AttendanceCheckInPayload`      | `EmployeeShift`      |
-| `checkOutFn`          | POST   | `AttendanceCheckOutPayload`     | `EmployeeShift`      |
-| `getMyAttendanceFn`   | GET    | —                               | `AttendanceResponse` |
-| `getAttendanceHistoryFn` | GET | `AttendanceFilters`           | `AttendanceHistoryResponse` |
-| `getMyLeavesFn`       | GET    | `LeaveFilters`                  | `LeaveListResponse`  |
-| `createLeaveRequestFn`| POST   | `LeaveRequestPayload`           | `Leave`              |
-| `getPerformanceStatsFn` | GET  | —                               | `PerformanceStatsResponse` |
-| `getLocationsFn`      | GET    | —                               | `Location[]`         |
-| `getShiftsFn`         | GET    | —                               | `Shift[]`            |
+| Function              | Method | Required role | Payload                         | Returns              |
+| --------------------- | ------ | ------------- | ------------------------------- | -------------------- |
+| `checkInFn`           | POST   | staff         | `AttendanceCheckInPayload`      | `EmployeeShift` (+ audit) |
+| `checkOutFn`          | POST   | staff         | `AttendanceCheckOutPayload`     | `EmployeeShift` (+ audit) |
+| `getMyAttendanceFn`   | GET    | staff         | `dateParamSchema`               | `AttendanceResponse` |
+| `getAttendanceHistoryFn` | GET | staff         | `AttendanceFilters`           | `AttendanceHistoryResponse` |
+| `getMyLeavesFn`       | GET    | staff         | `LeaveFilters`                  | `LeaveListResponse`  |
+| `createLeaveRequestFn`| POST   | staff         | `LeaveRequestPayload`           | `Leave`              |
+| `getPerformanceStatsFn` | GET  | staff         | —                               | `PerformanceStatsResponse` |
+| `getLocationsFn`      | GET    | staff         | —                               | `Location[]`         |
+| `getShiftsFn`         | GET    | staff         | —                               | `Shift[]`            |
 
 ### Masterdata
 
-| Function                  | Method | Payload                         | Returns              |
-| ------------------------- | ------ | ------------------------------- | -------------------- |
-| `getDepartmentsFn`        | GET    | —                               | `Department[]`       |
-| `createDepartmentFn`      | POST   | `DepartmentMutationPayload`     | `Department`         |
-| `updateDepartmentFn`      | POST   | `{ id, values }`                | `Department`         |
-| `deleteDepartmentFn`      | POST   | `{ id }`                        | `{ success }`        |
-| `getDesignationsFn`       | GET    | `{ department_id? }`            | `Designation[]`      |
-| `createDesignationFn`     | POST   | `DesignationMutationPayload`    | `Designation`        |
-| `updateDesignationFn`     | POST   | `{ id, values }`                | `Designation`        |
-| `deleteDesignationFn`     | POST   | `{ id }`                        | `{ success }`        |
-| `getDesignationOptionsFn` | GET    | —                               | `DesignationOption[]`|
+| Function                  | Method | Required role | Payload                         | Returns              |
+| ------------------------- | ------ | ------------- | ------------------------------- | -------------------- |
+| `getDepartmentsFn`        | GET    | admin         | —                               | `Department[]`       |
+| `createDepartmentFn`      | POST   | admin         | `DepartmentMutationPayload`     | `Department` (+ audit) |
+| `updateDepartmentFn`      | POST   | admin         | `{ id, values }`                | `Department` (+ audit) |
+| `deleteDepartmentFn`      | POST   | admin         | `{ id }`                        | `{ success }` (+ audit) |
+| `getDesignationsFn`       | GET    | admin         | `{ department_id? }`            | `Designation[]`      |
+| `createDesignationFn`     | POST   | admin         | `DesignationMutationPayload`    | `Designation` (+ audit) |
+| `updateDesignationFn`     | POST   | admin         | `{ id, values }`                | `Designation` (+ audit) |
+| `deleteDesignationFn`     | POST   | admin         | `{ id }`                        | `{ success }` (+ audit) |
+| `getDesignationOptionsFn` | GET    | staff         | —                               | `DesignationOption[]`|
+| `getAuditLogFn`           | GET    | admin         | `{ page?, perPage?, action? }`  | `{ total, rows }`    |
 
+### RBAC guard semantics
+
+- `requireRole(role)` — exact-set membership (see `src/lib/auth/session.ts`).
+  `employee` and `technician` are distinct; neither implies the other.
+- `requireMinRole('employee' | 'hr' | 'admin')` — hierarchical
+  (employee ≡ technician < hr < admin).
+- `requireRole('user')` / `requireRole('customer')` — any authenticated session.
+- The fine-grained `createAccessControl` matrix in `src/lib/auth/permissions.ts`
+  is reserved for future per-entity checks and is not yet consulted.
 ## Authentication
 
 Uses **Better Auth** v1, a DB-session-based auth system integrated directly with Drizzle ORM and TanStack Start.
@@ -84,7 +123,7 @@ Uses **Better Auth** v1, a DB-session-based auth system integrated directly with
 
 | File                          | Purpose                                        |
 | ----------------------------- | ---------------------------------------------- |
-| `src/lib/auth/auth.ts`        | Auth server config (plugins, callbacks)        |
+| `src/lib/auth/auth.server.ts` | Auth server config (plugins, callbacks)        |
 | `src/lib/auth/auth-client.ts` | Client-side auth helpers                       |
 | `src/lib/auth/session.ts`     | `getSession()` / `ensureSession()`             |
 | `src/lib/auth/permissions.ts` | RBAC access control with `createAccessControl` |
