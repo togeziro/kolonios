@@ -12,23 +12,28 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { requireRole } from '@/lib/auth/session';
+import { withRequestContext } from '@/lib/request-id';
 import { userFiltersSchema, userIdSchema, userMutationSchema } from './validation';
 
 export const getUsersFn = createServerFn({ method: 'GET' })
   .validator(userFiltersSchema)
-  .handler(async ({ data }) => {
-    await requireRole('admin');
-    const { getUsers } = await import('@/lib/db/users');
-    return getUsers(data);
-  });
+  .handler(async ({ data }) =>
+    withRequestContext(async () => {
+      await requireRole('admin');
+      const { getUsers } = await import('@/lib/db/users');
+      return getUsers(data);
+    })
+  );
 
 export const createUserFn = createServerFn({ method: 'POST' })
   .validator(userMutationSchema)
-  .handler(async ({ data }) => {
-    await requireRole('admin');
-    const { createUser } = await import('@/lib/db/users');
-    return createUser(data);
-  });
+  .handler(async ({ data }) =>
+    withRequestContext(async () => {
+      await requireRole('admin');
+      const { createUser } = await import('@/lib/db/users');
+      return createUser(data);
+    })
+  );
 
 export const updateUserFn = createServerFn({ method: 'POST' })
   .validator(
@@ -39,16 +44,20 @@ export const updateUserFn = createServerFn({ method: 'POST' })
       })
     )
   )
-  .handler(async ({ data: { id, values } }) => {
-    await requireRole('admin');
-    const { updateUser } = await import('@/lib/db/users');
-    return updateUser(id, values);
-  });
+  .handler(async ({ data: { id, values } }) =>
+    withRequestContext(async () => {
+      await requireRole('admin');
+      const { updateUser } = await import('@/lib/db/users');
+      return updateUser(id, values);
+    })
+  );
 
 export const deleteUserFn = createServerFn({ method: 'POST' })
   .validator(userIdSchema)
-  .handler(async ({ data: id }) => {
-    await requireRole('admin');
-    const { deleteUser } = await import('@/lib/db/users');
-    return deleteUser(id);
-  });
+  .handler(async ({ data: id }) =>
+    withRequestContext(async () => {
+      await requireRole('admin');
+      const { deleteUser } = await import('@/lib/db/users');
+      return deleteUser(id);
+    })
+  );
