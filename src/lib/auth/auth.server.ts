@@ -19,5 +19,16 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true
   },
-  plugins: [admin(), tanstackStartCookies()]
+  plugins: [admin(), tanstackStartCookies()],
+  rateLimit: {
+    enabled: true,
+    window: Number(process.env.AUTH_RATE_LIMIT_WINDOW || 60),
+    max: Number(process.env.AUTH_RATE_LIMIT_MAX || 100),
+    customRules: {
+      '/sign-in/email': {
+        window: Number(process.env.AUTH_RATE_LIMIT_WINDOW || 60),
+        max: Number(process.env.AUTH_RATE_LIMIT_MAX_SIGNIN || 5)
+      }
+    }
+  }
 });

@@ -119,6 +119,8 @@ Polling: the query refetches every 30 s (see `docs/NOTIFICATIONS.md`).
 
 Uses **Better Auth** v1, a DB-session-based auth system integrated directly with Drizzle ORM and TanStack Start.
 
+Better Auth's built-in rate limiter is enabled on auth endpoints: sign-in (`/api/v1/auth/sign-in/email`) allows 5 attempts per 60 s, all other auth endpoints 100 per 60 s. Tunable via `AUTH_RATE_LIMIT_WINDOW`, `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_MAX_SIGNIN` (see `.env.example`).
+
 ### Key Files
 
 | File                          | Purpose                                        |
