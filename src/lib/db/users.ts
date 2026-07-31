@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth.server';
 import { mapDbError } from '../errors';
+import { db } from './index';
+import { user } from './auth-schema';
 import type { UserFilters, UsersResponse, UserMutationPayload } from '@/features/users/api/types';
 
 function toUser(betterUser: any) {
@@ -87,5 +90,14 @@ export async function deleteUser(id: string) {
     return { success: true, message: 'User deleted successfully' };
   } catch (e) {
     mapDbError(e, 'users.deleteUser');
+  }
+}
+
+export async function getUserForAudit(id: string) {
+  try {
+    const rows = await db.select().from(user).where(eq(user.id, id)).limit(1);
+    return rows[0] ?? null;
+  } catch (e) {
+    mapDbError(e, 'users.getUserForAudit');
   }
 }

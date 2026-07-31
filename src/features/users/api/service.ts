@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { requireRole } from '@/lib/auth/session';
 import { withRequestContext } from '@/lib/request-id';
+import { withAudit } from '@/lib/audit';
 import { userFiltersSchema, userIdSchema, userMutationSchema } from './validation';
 
 export const getUsersFn = createServerFn({ method: 'GET' })
@@ -29,9 +30,21 @@ export const createUserFn = createServerFn({ method: 'POST' })
   .validator(userMutationSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      const session = await requireRole('admin');
       const { createUser } = await import('@/lib/db/users');
-      return createUser(data);
+      const created = await createUser(data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'user.create',
+          entityType: 'user',
+          entityId: created.user.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
     })
   );
 
@@ -46,9 +59,22 @@ export const updateUserFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
-      const { updateUser } = await import('@/lib/db/users');
-      return updateUser(id, values);
+      const session = await requireRole('admin');
+      const { updateUser, getUserForAudit } = await import('@/lib/db/users');
+      const before = await getUserForAudit(id);
+      const updated = await updateUser(id, values);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'user.update',
+          entityType: 'user',
+          entityId: id,
+          before,
+          after: updated
+        },
+        async () => undefined
+      );
+      return updated;
     })
   );
 
@@ -56,8 +82,21 @@ export const deleteUserFn = createServerFn({ method: 'POST' })
   .validator(userIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
-      const { deleteUser } = await import('@/lib/db/users');
-      return deleteUser(id);
+      const session = await requireRole('admin');
+      const { deleteUser, getUserForAudit } = await import('@/lib/db/users');
+      const before = await getUserForAudit(id);
+      const deleted = await deleteUser(id);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'user.delete',
+          entityType: 'user',
+          entityId: id,
+          before,
+          after: null
+        },
+        async () => undefined
+      );
+      return deleted;
     })
   );
