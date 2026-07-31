@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { db } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
-import { products, notifications, employees, departments, designations, locations, shifts, customers } from '../src/lib/db/schema';
+import { products, notifications, employees, departments, designations, locations, shifts, customers, tasks, taskRequirements, employeeSkills } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
 import { type NewEmployee, type NewDepartment, type NewDesignation, type NewLocation, type NewShift, type NewCustomer } from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -86,6 +86,10 @@ async function seedNotifications(userId: string) {
 }
 
 async function seedMasterdata() {
+  await db.delete(taskRequirements);
+  await db.delete(employeeSkills);
+  await db.delete(tasks);
+  await db.delete(employees);
   await db.delete(locations);
   await db.delete(shifts);
   await db.delete(departments);
@@ -191,6 +195,9 @@ async function seedEmployees() {
   const desigs = await db.select({ id: designations.id, code: designations.code }).from(designations);
   const desigMap = new Map(desigs.map(d => [d.code, d.id]));
 
+  const locs = await db.select({ id: locations.id, name: locations.name }).from(locations);
+  const locMap = new Map(locs.map((l) => [l.name, l.id]));
+
   const employeeRecords = employeeData.map(emp => {
     const userId = userMap.get(emp.email);
     if (!userId) throw new Error(`User not found for ${emp.email}`);
@@ -202,6 +209,7 @@ async function seedEmployees() {
       birth_date: '1990-01-01',
       department_id: deptMap.get(emp.department_code) ?? 0,
       designation_id: desigMap.get(emp.designation_code) ?? 0,
+      location_id: emp.email === 'technician@example.com' ? (locMap.get('Branch Office 1') ?? null) : (locMap.get('Head Office') ?? null),
       join_date: '2024-01-01'
     };
   });
@@ -271,6 +279,105 @@ async function seedCustomers() {
   console.log(`Seeded ${customerRecords.length} customer records`);
 }
 
+async function seedTasks() {
+  await db.delete(taskRequirements);
+  await db.delete(employeeSkills);
+  await db.delete(tasks);
+
+  const users = await db.select({ id: user.id, email: user.email }).from(user);
+  const byEmail = new Map(users.map((u) => [u.email, u.id]));
+  const adminId = byEmail.get('admin@example.com');
+  const techId = byEmail.get('technician@example.com');
+  const empId = byEmail.get('employee@example.com');
+  if (!adminId || !techId || !empId) throw new Error('Demo users not found for tasks seed');
+
+  const depts = await db.select({ id: departments.id, code: departments.code }).from(departments);
+  const deptMap = new Map(depts.map((d) => [d.code, d.id]));
+  const desigs = await db.select({ id: designations.id, code: designations.code }).from(designations);
+  const desigMap = new Map(desigs.map((d) => [d.code, d.id]));
+  const locs = await db.select({ id: locations.id, name: locations.name }).from(locations);
+  const locMap = new Map(locs.map((l) => [l.name, l.id]));
+
+  await db.insert(employeeSkills).values([
+    { user_id: techId, skill: 'Fiber Optic' },
+    { user_id: techId, skill: 'Networking' },
+    { user_id: empId, skill: 'Customer Care' }
+  ]);
+
+  const due = (days: number) => new Date(Date.now() + days * 86400000);
+
+  const [, t2, t3, t4, t5] = await db
+    .insert(tasks)
+    .values([
+      {
+        title: 'Fix network room 201',
+        description: 'Switch port 12 is down — replace the faulty switch and verify link.',
+        task_type: 'maintenance',
+        status: 'assigned',
+        priority: 'high',
+        location_id: locMap.get('Branch Office 1') ?? null,
+        due_at: due(1),
+        estimated_minutes: 120,
+        assigned_to: techId,
+        created_by: adminId
+      },
+      {
+        title: 'Install Fiber Router — Kemang',
+        description: 'New customer install at Branch Office 1. Two-hour window.',
+        task_type: 'installation',
+        status: 'available',
+        priority: 'high',
+        location_id: locMap.get('Branch Office 1') ?? null,
+        due_at: due(2),
+        estimated_minutes: 120,
+        created_by: adminId
+      },
+      {
+        title: 'Network audit — Head Office',
+        description: 'Monthly switch and cabling audit across the main floor.',
+        task_type: 'audit',
+        status: 'available',
+        priority: 'medium',
+        location_id: locMap.get('Head Office') ?? null,
+        due_at: due(3),
+        estimated_minutes: 240,
+        created_by: adminId
+      },
+      {
+        title: 'Fiber cable repair — corridor 3',
+        description: 'Customer complaint: weak signal. Trace and repair the drop cable.',
+        task_type: 'maintenance',
+        status: 'available',
+        priority: 'medium',
+        location_id: locMap.get('Branch Office 1') ?? null,
+        due_at: due(1),
+        estimated_minutes: 90,
+        created_by: adminId
+      },
+      {
+        title: 'Customer visit follow-up',
+        description: 'Follow up on the renewal quote sent to customer 7.',
+        task_type: 'sales',
+        status: 'available',
+        priority: 'low',
+        location_id: locMap.get('Head Office') ?? null,
+        due_at: due(4),
+        estimated_minutes: 60,
+        created_by: adminId
+      }
+    ])
+    .returning();
+
+  await db.insert(taskRequirements).values([
+    { task_id: t2.id, designation_id: desigMap.get('FLD_TECH'), skill: 'Fiber Optic' },
+    { task_id: t3.id, department_id: deptMap.get('ENG'), skill: 'Networking' },
+    { task_id: t4.id, designation_id: desigMap.get('FLD_TECH') },
+    { task_id: t5.id, department_id: deptMap.get('SALES'), skill: 'Customer Care' }
+  ]);
+
+  console.log('Seeded 5 tasks, 4 task requirements, 3 employee skills');
+}
+
 async function main() {
   faker.seed(42);
   await seedProducts();
@@ -278,6 +385,7 @@ async function main() {
   await seedDemoUsers();
   await seedEmployees();
   await seedCustomers();
+  await seedTasks();
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');
