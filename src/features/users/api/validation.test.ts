@@ -35,10 +35,14 @@ describe('userMutationSchema', () => {
     expect(userMutationSchema.safeParse(valid).success).toBe(true);
   });
 
+  it('accepts a role group id in the payload', () => {
+    expect(userMutationSchema.safeParse({ ...valid, role_group_id: 'rg-1' }).success).toBe(true);
+    expect(userMutationSchema.safeParse({ ...valid, role: undefined }).success).toBe(true);
+  });
+
   it('rejects missing or invalid fields', () => {
     expect(userMutationSchema.safeParse({ ...valid, name: '' }).success).toBe(false);
     expect(userMutationSchema.safeParse({ ...valid, email: 'nope' }).success).toBe(false);
-    expect(userMutationSchema.safeParse({ ...valid, role: '' }).success).toBe(false);
     expect(userMutationSchema.safeParse({ ...valid, status: '' }).success).toBe(false);
   });
 });

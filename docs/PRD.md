@@ -26,13 +26,13 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 - **Attendance** — Check-in/out with geo-fencing (Haversine), today's status, attendance history; leave requests with type/date selection, leave history
 - **Masterdata** — Full CRUD for departments and designations with dialog-based forms
 - **Mobile Dashboard** — Responsive mobile layout for staff: 5-tab bottom nav, attendance shortcut FAB, task lists
-- **RBAC** — 4 roles (admin, hr, employee, technician) with per-module permissions enforced at the RPC boundary
+- **RBAC (role groups)** — Customizable role groups (Administrator, HR, Employee, Technician, + custom) with per-module permission toggles from the UI; the same permission map drives the sidebar and every server function via `requirePermission(module, action)`
 - **Forms** — Basic, multi-step, sheet/dialog, and advanced patterns with TanStack Form + Zod
 - **Command Palette** — Cmd+K navigation via kbar
 - **Multi-Theme Support** — 10+ themes with light/dark/system switching
 - **Pre-commit Hooks** — oxlint, oxfmt --check, tsc on staged files
 - **Testing** — Vitest + Testing Library unit & integration tests plus Playwright E2E
-- **Authentication** — Better Auth email + password with DB sessions, RBAC (admin plugin), route protection
+- **Authentication** — Better Auth email + password with DB sessions, RBAC (admin plugin) + DB-backed role groups, route protection
 - **Mobile Work Dashboard** — Driver-style home for staff: assigned tasks first, eligibility-gated available-jobs pool (department/designation/location/skill), transactional task claiming, attendance status strip, 5-tab bottom nav, profile screen
 
 ## Technical Requirements
@@ -48,7 +48,7 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 
 The server-function boundary is hardened at every endpoint:
 
-- **Authentication at the boundary** — every endpoint calls `requireSession()` (or `requireRole('admin')` for product/user writes) inside the handler, so endpoints cannot be reached unauthenticated over HTTP — independent of route guards (`beforeLoad`).
+- **Authentication at the boundary** — every endpoint calls `requireSession()` (or `requirePermission(module, action)` for module access, e.g. `products.add` for product writes) inside the handler, so endpoints cannot be reached unauthenticated or unpermitted over HTTP — independent of route guards (`beforeLoad`).
 - **Input validation** — every server-function input is validated at runtime with a Zod schema via `@tanstack/zod-adapter`'s `zodValidator`. Schemas use `z.ZodType<ExistingType>` so they cannot drift from the request types.
 - **Error mapping** — `lib/db/*.ts` wraps DB calls in `mapDbError`; unexpected errors become a generic message (no constraint/column names leak), while intentional `DomainError`s pass through.
 - **Notifications IDOR** — Resolved 2026-07-23. All notification queries are scoped by `user_id`.
@@ -86,6 +86,15 @@ Directional buckets, not a strict timeline.
 - [x] Tasks schema (tasks, task_requirements, employee_skills) with server-enforced eligibility
 - [x] Driver-style mobile home (My Work + Available Jobs) with FAB attendance shortcut
 - [x] Profile screen replacing the misleading Profile→notifications tab
+
+**Role Groups RBAC (complete)**
+- [x] `role_groups` + `user_role_groups` tables (JSONB permission matrix, is_admin flag)
+- [x] Role group CRUD UI + per-module permission toggles (`/dashboard/admin/role-groups`)
+- [x] Access Level (user form) = role group assignment; users table shows role group
+- [x] `requirePermission(module, action)` server guard reading DB role group permissions
+- [x] Client sidebar driven by the same permission map (`useRoleGroupPermissions`)
+- [x] All feature server functions migrated from `requireRole`/`requireMinRole` to `requirePermission`
+- [x] Legacy `requireRole`/`requireMinRole` retained for compatibility (no longer used by features)
 
 ### Next
 

@@ -6,12 +6,12 @@
 // imported dynamically inside each handler, so the `postgres` driver is
 // never bundled into the client. Every endpoint enforces a valid session
 // and validates its input at the RPC boundary. User read/write endpoints
-// are admin-scoped (Better Auth admin API), enforced via requireRole('admin').
+// are admin-scoped (Better Auth admin API), enforced via requirePermission('users', ...).
 
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
-import { requireRole } from '@/lib/auth/session';
+import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
@@ -21,7 +21,7 @@ export const getUsersFn = createServerFn({ method: 'GET' })
   .validator(userFiltersSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      await requirePermission('users', 'view');
       const { getUsers } = await import('@/lib/db/users');
       return getUsers(data);
     })
@@ -31,7 +31,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
   .validator(userMutationSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('users', 'add');
       await checkRateLimit(`write:${session.user.id}`);
       const { createUser } = await import('@/lib/db/users');
       const created = await createUser(data);
@@ -61,7 +61,7 @@ export const updateUserFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('users', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { updateUser, getUserForAudit } = await import('@/lib/db/users');
       const before = await getUserForAudit(id);
@@ -85,7 +85,7 @@ export const deleteUserFn = createServerFn({ method: 'POST' })
   .validator(userIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('users', 'delete');
       await checkRateLimit(`write:${session.user.id}`);
       const { deleteUser, getUserForAudit } = await import('@/lib/db/users');
       const before = await getUserForAudit(id);

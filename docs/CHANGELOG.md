@@ -1,6 +1,19 @@
 # Changelog
 
-## [Unreleased — 2026-07-31]
+## [Unreleased — 2026-08-01]
+
+### RBAC: Role Groups (DB-backed permission matrix)
+
+- **New tables** — `role_groups` (name, description, JSONB `permissions`, `is_admin`) + `user_role_groups` junction (`src/lib/db/schema/`); seeded with 4 groups (Administrator, HR, Employee, Technician).
+- **Role group management UI** — `/dashboard/admin/role-groups`: listing, create/edit form sheet, per-module permission toggles page, delete guard (prevents removing the last admin group).
+- **Access Level = role group** — user form assigns a role group instead of a raw role; users table shows the group name; `user.role` stays in sync via `mapRoleGroupToLegacyRole`.
+- **Server guard** — `requirePermission(module, action)` in `src/lib/auth/session.ts` resolves the caller's group permissions from the DB (admin role and `is_admin` groups bypass); pure `hasModulePermission` helper is unit-tested.
+- **Client parity** — `useRoleGroupPermissions` + nav filtering read the same permission map, so sidebar visibility can never drift from server enforcement.
+- **Migration** — all feature services (attendance, tasks, notifications, audit, users, employees, products, customers, role-groups, masterdata) now use `requirePermission` instead of `requireRole`/`requireMinRole`; legacy guards retained for compatibility.
+- **Tests** — 13 new unit tests for `hasModulePermission`/`requirePermission`; total 481 passing (52 files).
+- **Bug fix** — `resetAllTables` in `src/test-utils/db.ts` now clears `user_role_groups` before `role_groups` (FK violation); user schema tests updated for optional `role`/`role_group_id`.
+
+
 
 ### Audit
 

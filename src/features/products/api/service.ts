@@ -12,7 +12,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { withAudit } from '@/lib/audit';
-import { requireRole } from '@/lib/auth/session';
+import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { productFiltersSchema, productIdSchema, productMutationSchema } from './validation';
@@ -21,7 +21,7 @@ export const getProductsFn = createServerFn({ method: 'GET' })
   .validator(productFiltersSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('user');
+      await requirePermission('products', 'view');
       const { getProducts } = await import('@/lib/db/products');
       return getProducts(data);
     })
@@ -31,7 +31,7 @@ export const getProductByIdFn = createServerFn({ method: 'GET' })
   .validator(productIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      await requireRole('user');
+      await requirePermission('products', 'view');
       const { getProductById } = await import('@/lib/db/products');
       return getProductById(id);
     })
@@ -41,7 +41,7 @@ export const createProductFn = createServerFn({ method: 'POST' })
   .validator(productMutationSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('products', 'add');
       await checkRateLimit(`write:${session.user.id}`);
       const { createProduct } = await import('@/lib/db/products');
       const created = await createProduct(data);
@@ -71,7 +71,7 @@ export const updateProductFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('products', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { updateProduct, getProductById } = await import('@/lib/db/products');
       const before = await getProductById(id);
@@ -95,7 +95,7 @@ export const deleteProductFn = createServerFn({ method: 'POST' })
   .validator(productIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('products', 'delete');
       await checkRateLimit(`write:${session.user.id}`);
       const { deleteProduct, getProductById } = await import('@/lib/db/products');
       const before = await getProductById(id);

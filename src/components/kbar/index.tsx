@@ -4,11 +4,12 @@ import { useRouter } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import RenderResults from './render-result';
 import useThemeSwitching from './use-theme-switching';
-import { useFilteredNavGroups } from '@/hooks/use-nav';
+import { useFilteredNavGroups, useRoleGroupPermissions } from '@/hooks/use-nav';
 
 export default function KBar({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const filteredGroups = useFilteredNavGroups(navGroups);
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const filteredGroups = useFilteredNavGroups(navGroups, permissions, isAdmin);
 
   // These action are for the navigation
   const actions = useMemo(() => {

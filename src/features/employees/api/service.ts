@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
-import { requireRole } from '@/lib/auth/session';
+import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
@@ -11,7 +11,7 @@ export const listEmployeesFn = createServerFn({ method: 'GET' })
   .validator(employeeFiltersSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('user');
+      await requirePermission('employees', 'view');
       const { listEmployees } = await import('@/lib/db/employees');
       return listEmployees(data);
     })
@@ -21,7 +21,7 @@ export const getEmployeeByIdFn = createServerFn({ method: 'GET' })
   .validator(employeeIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      await requireRole('user');
+      await requirePermission('employees', 'view');
       const { getEmployeeById } = await import('@/lib/db/employees');
       return getEmployeeById(id);
     })
@@ -31,7 +31,7 @@ export const createEmployeeFn = createServerFn({ method: 'POST' })
   .validator(employeeMutationSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('hr');
+      const session = await requirePermission('employees', 'add');
       await checkRateLimit(`write:${session.user.id}`);
       const { createEmployee } = await import('@/lib/db/employees');
       const created = await createEmployee({ ...data, created_by: session.user.id });
@@ -61,7 +61,7 @@ export const updateEmployeeFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
-      const session = await requireRole('hr');
+      const session = await requirePermission('employees', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { updateEmployee, getEmployeeById } = await import('@/lib/db/employees');
       const before = await getEmployeeById(id);
@@ -85,7 +85,7 @@ export const deleteEmployeeFn = createServerFn({ method: 'POST' })
   .validator(employeeIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      const session = await requireRole('hr');
+      const session = await requirePermission('employees', 'delete');
       await checkRateLimit(`write:${session.user.id}`);
       const { deleteEmployee, getEmployeeById } = await import('@/lib/db/employees');
       const before = await getEmployeeById(id);

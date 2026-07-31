@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
-import { requireRole } from '@/lib/auth/session';
+import { requirePermission } from '@/lib/auth/session';
 import { withRequestContext } from '@/lib/request-id';
 
 const auditFiltersSchema = z.object({
@@ -28,7 +28,7 @@ export const getAuditLogFn = createServerFn({ method: 'GET' })
   .validator(zodValidator(auditFiltersSchema))
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      await requirePermission('audit_log', 'view');
       const { getAuditLog } = await import('@/lib/db/audit');
       const result = await getAuditLog(data);
       return {

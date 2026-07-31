@@ -16,6 +16,7 @@ cp env.example.txt .env
 bun run db:push    # apply DB schema
 bun run db:seed    # seed 20 products + 1 demo user + 8 notifications + kanban +
                    #       2 locations + 3 shifts + 6 departments + 13 designations +
+                   #       4 role groups (Administrator/HR/Employee/Technician) +
                    #       4 demo users + 4 employee records + customers
 bun run dev        # http://localhost:3000
 bun run build      # client + server bundles
@@ -30,6 +31,7 @@ All `bun run` scripts (lint, format, typecheck, db:*) are defined in `package.js
 - `src/features/customers/` — Customer CRUD with code generation
 - `src/features/employees/` — Employee CRUD with department joins
 - `src/features/masterdata/` — Departments & designations CRUD from UI
+- `src/features/role-groups/` — RBAC role groups (permission matrix UI + queries)
 - `src/routes/api/v1/` — Versioned API routes (`/api/v1/auth/$` for Better Auth)
 - `src/routes/dashboard/` — Conditional layout: `MobileShell` (mobile + staff role) vs sidebar layout
 - `src/components/layout/` — Shared layout: sidebar, header, mobile-shell, bottom-nav, mobile-header
@@ -37,6 +39,9 @@ All `bun run` scripts (lint, format, typecheck, db:*) are defined in `package.js
 ## Key files
 
 - `src/lib/auth/auth-client.ts` — Uses `better-auth/react` (React-ready `useSession` hook)
+- `src/lib/auth/session.ts` — `requireSession()` / `requirePermission(module, action)` / `hasModulePermission`
+- `src/lib/db/role-groups.ts` — Role group CRUD + `getUserRoleGroup`/`setUserRoleGroup` + `mapRoleGroupToLegacyRole`
+- `src/hooks/use-nav.ts` — `useRoleGroupPermissions` (client permission map + nav filtering)
 - `src/lib/db/attendance.ts` — Attendance data access with Haversine
 - `src/lib/db/customers.ts` — Customer CRUD + customer code generation
 - `src/lib/db/employees.ts` — Employee CRUD with joins

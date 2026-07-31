@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { navGroups } from '@/config/nav-config';
-import { useFilteredNavGroups } from '@/hooks/use-nav';
+import { useFilteredNavGroups, useRoleGroupPermissions } from '@/hooks/use-nav';
 import { authClient } from '@/lib/auth/auth-client';
 import { Link } from '@tanstack/react-router';
 import { useLocation, useRouter } from '@tanstack/react-router';
@@ -33,7 +33,8 @@ import {
 export default function AppSidebar() {
   const { pathname } = useLocation();
   const router = useRouter();
-  const filteredGroups = useFilteredNavGroups(navGroups);
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const filteredGroups = useFilteredNavGroups(navGroups, permissions, isAdmin);
 
   return (
     <Sidebar variant='inset' collapsible='icon'>

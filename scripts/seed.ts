@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { db } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
-import { products, notifications, employees, departments, designations, locations, shifts, customers, tasks, taskRequirements, employeeSkills } from '../src/lib/db/schema';
+import { products, notifications, employees, departments, designations, locations, shifts, customers, tasks, taskRequirements, employeeSkills, roleGroups, userRoleGroups } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
 import { type NewEmployee, type NewDepartment, type NewDesignation, type NewLocation, type NewShift, type NewCustomer } from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -378,6 +378,65 @@ async function seedTasks() {
   console.log('Seeded 5 tasks, 4 task requirements, 3 employee skills');
 }
 
+async function seedRoleGroups() {
+  const adminId = 'zzzrg-admin';
+  const techId = 'zzzrg-technician';
+  const hrId = 'zzzrg-hr';
+  const employeeId = 'zzzrg-employee';
+
+  const coreModules = {
+    overview: { view: true },
+    my_work: { view: true },
+    attendance: { view: true },
+    leave: { view: true },
+    profile: { view: true }
+  };
+
+  await db.delete(userRoleGroups);
+  await db.delete(roleGroups);
+
+  await db.insert(roleGroups).values([
+    { id: adminId, name: 'Administrator', description: 'Full system access', permissions: {}, is_admin: true },
+    { id: hrId, name: 'HR', description: 'Human resources access', permissions: {
+      ...coreModules,
+      employees: { view: true, add: true, edit: true, delete: true },
+      departments: { view: true, add: true, edit: true },
+      designations: { view: true, add: true, edit: true },
+      users: { view: true },
+      audit_log: { view: true }
+    }, is_admin: false },
+    { id: employeeId, name: 'Employee', description: 'Standard employee access', permissions: {
+      ...coreModules,
+      jobs: { view: true },
+      notifications: { view: true }
+    }, is_admin: false },
+    { id: techId, name: 'Technician', description: 'Field technician access', permissions: {
+      ...coreModules,
+      jobs: { view: true },
+      notifications: { view: true }
+    }, is_admin: false }
+  ]).onConflictDoNothing();
+
+  const users = await db.select({ id: user.id, email: user.email }).from(user);
+  const byEmail = new Map(users.map((u) => [u.email, u.id]));
+
+  const assignments = [
+    [byEmail.get('admin@example.com'), adminId, 'Administrator', 'admin@example.com'],
+    [byEmail.get('hr@example.com'), hrId, 'HR', 'hr@example.com'],
+    [byEmail.get('employee@example.com'), employeeId, 'Employee', 'employee@example.com'],
+    [byEmail.get('technician@example.com'), techId, 'Technician', 'technician@example.com']
+  ] as const;
+
+  for (const [userId, roleGroupId, name, email] of assignments) {
+    if (userId) {
+      await db.insert(userRoleGroups).values({ user_id: userId, role_group_id: roleGroupId }).onConflictDoNothing();
+      console.log(`Assigned ${name} role to ${email}`);
+    }
+  }
+
+  console.log('Seeded role groups');
+}
+
 async function main() {
   faker.seed(42);
   await seedProducts();
@@ -386,6 +445,7 @@ async function main() {
   await seedEmployees();
   await seedCustomers();
   await seedTasks();
+  await seedRoleGroups();
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');

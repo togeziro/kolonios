@@ -5,4 +5,6 @@ export * from './masterdata';
 export * from './tasks';
 export * from './customers';
 export * from './audit-log';
+export * from './role-groups';
+export * from './user-role-groups';
 export * from '../auth-schema';

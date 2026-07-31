@@ -19,11 +19,14 @@ import {
 import { tasks, taskRequirements, employeeSkills } from '@/lib/db/schema/tasks';
 import { user, session, account, verification } from '@/lib/db/auth-schema';
 import { auditLog } from '@/lib/db/schema/audit-log';
+import { roleGroups } from '@/lib/db/schema/role-groups';
+import { userRoleGroups } from '@/lib/db/schema/user-role-groups';
 import type { NewProduct } from '@/lib/db/schema/products';
 
 export async function resetDatabase() {
   await db.delete(notifications);
   await db.delete(products);
+  await db.delete(roleGroups);
 }
 
 export async function resetAllTables() {
@@ -42,6 +45,8 @@ export async function resetAllTables() {
   await db.delete(shifts);
   await db.delete(notifications);
   await db.delete(products);
+  await db.delete(userRoleGroups);
+  await db.delete(roleGroups);
   await db.delete(session);
   await db.delete(account);
   await db.delete(verification);

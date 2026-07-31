@@ -14,6 +14,7 @@ export const userIdSchema = z.string();
 export const userMutationSchema: z.ZodType<UserMutationPayload> = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  role: z.string().min(1),
+  role: z.string().optional(),
+  role_group_id: z.string().optional(),
   status: z.string().min(1)
 });

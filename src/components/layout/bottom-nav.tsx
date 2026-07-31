@@ -5,7 +5,6 @@ import { Icons } from '@/components/icons';
 const navItems = [
   { icon: Icons.dashboard, label: 'Home', to: '/dashboard/overview' },
   { icon: Icons.workspace, label: 'My Work', to: '/dashboard/my-work' },
-  { icon: Icons.clock, label: 'Attendance', to: '/dashboard/attendance' },
   { icon: Icons.calendar, label: 'Leave', to: '/dashboard/leave' },
   { icon: Icons.user, label: 'Profile', to: '/dashboard/profile' }
 ] as const;

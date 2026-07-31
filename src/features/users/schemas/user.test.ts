@@ -22,8 +22,12 @@ describe('user form validation', () => {
     expect(userSchema.safeParse({ ...valid, email: 'a@b.co' }).success).toBe(true);
   });
 
-  it('requires a role and status', () => {
-    expect(userSchema.safeParse({ ...valid, role: '' }).success).toBe(false);
+  it('accepts a role group id and derives role', () => {
+    expect(userSchema.safeParse({ ...valid, role_group_id: 'rg-123' }).success).toBe(true);
+    expect(userSchema.safeParse({ ...valid, role: undefined }).success).toBe(true);
+  });
+
+  it('requires a status', () => {
     expect(userSchema.safeParse({ ...valid, status: '' }).success).toBe(false);
   });
 });

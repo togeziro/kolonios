@@ -10,30 +10,15 @@ export const navGroups: NavGroup[] = [
         icon: 'dashboard',
         isActive: false,
         shortcut: ['d', 'd'],
+        module: 'overview',
         items: []
       },
       {
-        title: 'Product',
-        url: '/dashboard/product',
-        icon: 'product',
-        shortcut: ['p', 'p'],
+        title: 'My Work',
+        url: '/dashboard/my-work',
+        icon: 'workspace',
         isActive: false,
-        items: []
-      },
-      {
-        title: 'Customers',
-        url: '/dashboard/customers',
-        icon: 'customer',
-        shortcut: ['c', 'c'],
-        isActive: false,
-        items: []
-      },
-      {
-        title: 'Employees',
-        url: '/dashboard/employees',
-        icon: 'employee',
-        shortcut: ['e', 'e'],
-        isActive: false,
+        module: 'my_work',
         items: []
       },
       {
@@ -42,6 +27,7 @@ export const navGroups: NavGroup[] = [
         icon: 'clock',
         shortcut: ['a', 'a'],
         isActive: false,
+        module: 'attendance',
         items: []
       },
       {
@@ -50,6 +36,47 @@ export const navGroups: NavGroup[] = [
         icon: 'calendar',
         shortcut: ['l', 'l'],
         isActive: false,
+        module: 'leave',
+        items: []
+      },
+      {
+        title: 'Profile',
+        url: '/dashboard/profile',
+        icon: 'profile',
+        isActive: false,
+        module: 'profile',
+        items: []
+      }
+    ]
+  },
+  {
+    label: 'Management',
+    items: [
+      {
+        title: 'Product',
+        url: '/dashboard/product',
+        icon: 'product',
+        shortcut: ['p', 'p'],
+        isActive: false,
+        module: 'products',
+        items: []
+      },
+      {
+        title: 'Customers',
+        url: '/dashboard/customers',
+        icon: 'customer',
+        shortcut: ['c', 'c'],
+        isActive: false,
+        module: 'customers',
+        items: []
+      },
+      {
+        title: 'Employees',
+        url: '/dashboard/employees',
+        icon: 'employee',
+        shortcut: ['e', 'e'],
+        isActive: false,
+        module: 'employees',
         items: []
       }
     ]
@@ -63,6 +90,7 @@ export const navGroups: NavGroup[] = [
         icon: 'teams',
         shortcut: ['u', 'u'],
         isActive: false,
+        module: 'users',
         items: []
       },
       {
@@ -71,6 +99,7 @@ export const navGroups: NavGroup[] = [
         icon: 'workspace',
         shortcut: ['d', 'e'],
         isActive: false,
+        module: 'departments',
         items: []
       },
       {
@@ -79,6 +108,7 @@ export const navGroups: NavGroup[] = [
         icon: 'employee',
         shortcut: ['j', 't'],
         isActive: false,
+        module: 'designations',
         items: []
       },
       {
@@ -86,6 +116,15 @@ export const navGroups: NavGroup[] = [
         url: '/dashboard/admin/audit-log',
         icon: 'clock',
         isActive: false,
+        module: 'audit_log',
+        items: []
+      },
+      {
+        title: 'Role Groups',
+        url: '/dashboard/admin/role-groups',
+        icon: 'workspace',
+        isActive: false,
+        module: 'role_groups',
         items: []
       }
     ]

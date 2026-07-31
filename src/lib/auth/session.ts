@@ -1,8 +1,32 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
+import type { Permissions } from '@/features/role-groups/api/types';
 
 export type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'customer' | 'user';
 
 const validRoles: Role[] = ['admin', 'hr', 'employee', 'technician', 'customer', 'user'];
+
+export type PermissionAction = 'view' | 'add' | 'edit' | 'delete';
+
+export function hasModulePermission(
+  permissions: Permissions | undefined,
+  isAdmin: boolean,
+  module: string,
+  action: PermissionAction
+): boolean {
+  if (isAdmin) return true;
+  if (!permissions) return false;
+  return permissions[module]?.[action] === true;
+}
+
+export async function requirePermission(module: string, action: PermissionAction = 'view') {
+  const session = await requireSession();
+  if (session.user.role === 'admin') return session;
+  const { getUserRoleGroup } = await import('@/lib/db/role-groups');
+  const group = await getUserRoleGroup(session.user.id);
+  if (!group) throw new Error(`Forbidden: ${module}.${action} required`);
+  if (hasModulePermission(group.permissions, group.is_admin, module, action)) return session;
+  throw new Error(`Forbidden: ${module}.${action} required`);
+}
 
 export async function requireSession() {
   const { auth } = await import('./auth.server');

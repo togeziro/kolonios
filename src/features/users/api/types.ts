@@ -4,6 +4,8 @@ export type User = {
   email: string;
   status: string;
   role: string;
+  role_group_id: string | null;
+  role_group_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -29,6 +31,7 @@ export type UsersResponse = {
 export type UserMutationPayload = {
   name: string;
   email: string;
-  role: string;
+  role?: string;
+  role_group_id?: string;
   status: string;
 };

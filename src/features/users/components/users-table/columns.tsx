@@ -34,10 +34,10 @@ export const columns: ColumnDef<User>[] = [
     header: ({ column }: { column: Column<User, unknown> }) => (
       <DataTableColumnHeader column={column} title='Role' />
     ),
-    cell: ({ cell }) => {
+    cell: ({ row }) => {
       return (
         <Badge variant='outline' className='capitalize'>
-          {cell.getValue<User['role']>()}
+          {row.original.role_group_name || row.original.role}
         </Badge>
       );
     },

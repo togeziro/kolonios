@@ -10,16 +10,25 @@ import {
   SheetTitle
 } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { createUserMutation, updateUserMutation } from '../api/mutations';
 import type { User } from '../api/types';
 import { toast } from 'sonner';
 import * as z from 'zod';
 import { userSchema, type UserFormValues } from '../schemas/user';
-import { AUTH_ROLE_OPTIONS, STATUS_OPTIONS } from './users-table/options';
+import { STATUS_OPTIONS } from './users-table/options';
+import { roleGroupsQueryOptions } from '@/features/role-groups/api/queries';
 
 export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) {
   const isEdit = !!user;
+
+  const { data: rgData } = useQuery(roleGroupsQueryOptions());
+  const roleGroupsList =
+    (rgData as { role_groups?: { id: string; name: string }[] })?.role_groups ?? [];
+  const roleGroupOptions = [
+    { value: '', label: 'No role group' },
+    ...roleGroupsList.map((rg) => ({ value: rg.id, label: rg.name }))
+  ];
 
   const createMutation = useMutation({
     ...createUserMutation,
@@ -44,6 +53,7 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
     defaultValues: {
       name: user?.name ?? '',
       email: user?.email ?? '',
+      role_group_id: user?.role_group_id ?? '',
       role: user?.role ?? '',
       status: user?.status ?? 'Active'
     } as UserFormValues,
@@ -100,14 +110,11 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
               />
 
               <FormSelectField
-                name='role'
+                name='role_group_id'
                 label='Access Level'
                 required
-                options={AUTH_ROLE_OPTIONS}
+                options={roleGroupOptions}
                 placeholder='Select access level'
-                validators={{
-                  onBlur: z.string().min(1, 'Please select an access level')
-                }}
               />
 
               <FormSelectField

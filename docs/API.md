@@ -8,9 +8,11 @@ imports to prevent the `postgres` driver from leaking into the client bundle.
 
 ### RPC boundary guarantees
 
-- **Authentication**: every endpoint calls `requireSession()`, `requireRole(...)`
-  or `requireMinRole(...)` at the top of its handler (`src/lib/auth/session.ts`),
-  so endpoints cannot be called unauthenticated — independent of route guards.
+- **Authentication**: every endpoint calls `requireSession()` at the top of its
+  handler (`src/lib/auth/session.ts`), so endpoints cannot be called
+  unauthenticated — independent of route guards. Module endpoints add
+  `requirePermission(module, action)`, which resolves the caller's role-group
+  permission map from the DB.
 - **Input validation**: every endpoint uses a Zod schema from
   `src/features/<feature>/api/validation.ts` via `@tanstack/zod-adapter`'s
   `zodValidator` (or `z.coerce` for string→number ids).
@@ -22,99 +24,142 @@ imports to prevent the `postgres` driver from leaking into the client bundle.
   `withRequestContext(...)` (`src/lib/request-id.ts`); the response carries
   an `x-request-id` header echoed from the client (or generated).
 
-Role legend: **user** = any authenticated session; **staff** = employee or
-technician (via `requireMinRole('employee')`); **hr** = admin or hr;
-**admin** = admin only.
+The "Required permission" column uses `<module>.<action>` keys from the
+role-group permission matrix (`src/config/nav-config.ts` module keys). The
+`admin` role bypasses the matrix. Actions: `view`, `add`, `edit`, `delete`.
 
 ### Products
 
-| Function           | Method | Required role | Payload                  | Returns                |
-| ------------------ | ------ | ------------- | ------------------------ | ---------------------- |
-| `getProductsFn`    | GET    | user          | `ProductFilters`         | `ProductsResponse`     |
-| `getProductByIdFn` | GET    | user          | `number` (id)            | `ProductByIdResponse`  |
-| `createProductFn`  | POST   | admin         | `ProductMutationPayload` | `Product`              |
-| `updateProductFn`  | POST   | admin         | `{ id, values }`         | `Product`              |
-| `deleteProductFn`  | POST   | admin         | `number` (id)            | `{ success, message }` |
+| Function           | Method | Required permission | Payload                  | Returns                |
+| ------------------ | ------ | ------------------- | ------------------------ | ---------------------- |
+| `getProductsFn`    | GET    | `products.view`     | `ProductFilters`         | `ProductsResponse`     |
+| `getProductByIdFn` | GET    | `products.view`     | `number` (id)            | `ProductByIdResponse`  |
+| `createProductFn`  | POST   | `products.add`      | `ProductMutationPayload` | `Product`              |
+| `updateProductFn`  | POST   | `products.edit`     | `{ id, values }`         | `Product`              |
+| `deleteProductFn`  | POST   | `products.delete`   | `number` (id)            | `{ success, message }` |
 
 ### Users
 
-| Function       | Method | Required role | Payload               | Returns                |
-| -------------- | ------ | ------------- | --------------------- | ---------------------- |
-| `getUsersFn`   | GET    | admin         | `UserFilters`         | `UsersResponse`        |
-| `createUserFn` | POST   | admin         | `UserMutationPayload` | `User` (+ audit)       |
-| `updateUserFn` | POST   | admin         | `{ id, values }`      | `User` (+ audit)       |
-| `deleteUserFn` | POST   | admin         | `number` (id)         | `{ success, message }` (+ audit) |
+| Function       | Method | Required permission | Payload               | Returns                |
+| -------------- | ------ | ------------------- | --------------------- | ---------------------- |
+| `getUsersFn`   | GET    | `users.view`        | `UserFilters`         | `UsersResponse`        |
+| `createUserFn` | POST   | `users.add`         | `UserMutationPayload` | `User` (+ audit)       |
+| `updateUserFn` | POST   | `users.edit`        | `{ id, values }`      | `User` (+ audit)       |
+| `deleteUserFn` | POST   | `users.delete`      | `number` (id)         | `{ success, message }` (+ audit) |
+
+> `users.*` writes use the Better Auth admin API; the caller's own role-group
+> assignment is preserved (never self-demotion).
 
 ### Employees
 
-| Function            | Method | Required role | Payload                     | Returns                |
-| ------------------- | ------ | ------------- | --------------------------- | ---------------------- |
-| `listEmployeesFn`   | GET    | user          | `EmployeeFilters`           | `EmployeesResponse`    |
-| `getEmployeeByIdFn` | GET    | user          | `employeeIdSchema` (id)     | `EmployeeByIdResponse` |
-| `createEmployeeFn`  | POST   | hr            | `EmployeeMutationPayload`   | `Employee` (+ audit)   |
-| `updateEmployeeFn`  | POST   | hr            | `{ id, values }`            | `Employee` (+ audit)   |
-| `deleteEmployeeFn`  | POST   | hr            | `employeeIdSchema` (id)     | `{ success, message }` (+ audit) |
+| Function            | Method | Required permission | Payload                     | Returns                |
+| ------------------- | ------ | ------------------- | --------------------------- | ---------------------- |
+| `listEmployeesFn`   | GET    | `employees.view`    | `EmployeeFilters`           | `EmployeesResponse`    |
+| `getEmployeeByIdFn` | GET    | `employees.view`    | `employeeIdSchema` (id)     | `EmployeeByIdResponse` |
+| `createEmployeeFn`  | POST   | `employees.add`     | `EmployeeMutationPayload`   | `Employee` (+ audit)   |
+| `updateEmployeeFn`  | POST   | `employees.edit`    | `{ id, values }`            | `Employee` (+ audit)   |
+| `deleteEmployeeFn`  | POST   | `employees.delete`  | `employeeIdSchema` (id)     | `{ success, message }` (+ audit) |
 
 ### Customers
 
-| Function            | Method | Required role | Payload                     | Returns                |
-| ------------------- | ------ | ------------- | --------------------------- | ---------------------- |
-| `listCustomersFn`   | GET    | user          | `CustomerFilters`           | `CustomersResponse`    |
-| `getCustomerByIdFn` | GET    | user          | `customerIdSchema` (id)     | `CustomerByIdResponse` |
-| `createCustomerFn`  | POST   | admin         | `CustomerMutationPayload`   | `Customer` (+ audit)   |
-| `updateCustomerFn`  | POST   | admin         | `{ id, values }`            | `Customer` (+ audit)   |
-| `deleteCustomerFn`  | POST   | admin         | `customerIdSchema` (id)     | `{ success, message }` (+ audit) |
+| Function            | Method | Required permission | Payload                     | Returns                |
+| ------------------- | ------ | ------------------- | --------------------------- | ---------------------- |
+| `listCustomersFn`   | GET    | `customers.view`    | `CustomerFilters`           | `CustomersResponse`    |
+| `getCustomerByIdFn` | GET    | `customers.view`    | `customerIdSchema` (id)     | `CustomerByIdResponse` |
+| `createCustomerFn`  | POST   | `customers.add`     | `CustomerMutationPayload`   | `Customer` (+ audit)   |
+| `updateCustomerFn`  | POST   | `customers.edit`    | `{ id, values }`            | `Customer` (+ audit)   |
+| `deleteCustomerFn`  | POST   | `customers.delete`  | `customerIdSchema` (id)     | `{ success, message }` (+ audit) |
 
 ### Notifications
 
-| Function               | Method | Required role | Payload                  | Returns                |
-| ---------------------- | ------ | ------------- | ------------------------ | ---------------------- |
-| `getNotificationsFn`   | GET    | user          | —                        | `NotificationsResponse`|
-| `markAsReadFn`         | POST   | user          | `{ id: string }`         | `{ success: boolean }` |
-| `markAllAsReadFn`      | POST   | user          | —                        | `{ success: boolean }` |
-| `addNotificationFn`    | POST   | user          | `AddNotificationPayload` | `NotificationItem` (+ audit) |
-| `removeNotificationFn` | POST   | user          | `{ id: string }`         | `{ success: boolean }` (+ audit) |
+| Function               | Method | Required permission | Payload                  | Returns                |
+| ---------------------- | ------ | ------------------- | ------------------------ | ---------------------- |
+| `getNotificationsFn`   | GET    | `notifications.view`| —                        | `NotificationsResponse`|
+| `markAsReadFn`         | POST   | `notifications.view`| `{ id: string }`         | `{ success: boolean }` |
+| `markAllAsReadFn`      | POST   | `notifications.view`| —                        | `{ success: boolean }` |
+| `addNotificationFn`    | POST   | `notifications.view`| `AddNotificationPayload` | `NotificationItem` (+ audit) |
+| `removeNotificationFn` | POST   | `notifications.view`| `{ id: string }`         | `{ success: boolean }` (+ audit) |
+
+> All notification queries are scoped by `user_id` (IDOR-safe).
 
 Polling: the query refetches every 30 s (see `docs/NOTIFICATIONS.md`).
 
 ### Attendance
 
-| Function              | Method | Required role | Payload                         | Returns              |
-| --------------------- | ------ | ------------- | ------------------------------- | -------------------- |
-| `checkInFn`           | POST   | staff         | `AttendanceCheckInPayload`      | `EmployeeShift` (+ audit) |
-| `checkOutFn`          | POST   | staff         | `AttendanceCheckOutPayload`     | `EmployeeShift` (+ audit) |
-| `getMyAttendanceFn`   | GET    | staff         | `dateParamSchema`               | `AttendanceResponse` |
-| `getAttendanceHistoryFn` | GET | staff         | `AttendanceFilters`           | `AttendanceHistoryResponse` |
-| `getMyLeavesFn`       | GET    | staff         | `LeaveFilters`                  | `LeaveListResponse`  |
-| `createLeaveRequestFn`| POST   | staff         | `LeaveRequestPayload`           | `Leave`              |
-| `getPerformanceStatsFn` | GET  | staff         | —                               | `PerformanceStatsResponse` |
-| `getLocationsFn`      | GET    | staff         | —                               | `Location[]`         |
-| `getShiftsFn`         | GET    | staff         | —                               | `Shift[]`            |
+| Function              | Method | Required permission | Payload                         | Returns              |
+| --------------------- | ------ | ------------------- | ------------------------------- | -------------------- |
+| `checkInFn`           | POST   | `attendance.view`   | `AttendanceCheckInPayload`      | `EmployeeShift` (+ audit) |
+| `checkOutFn`          | POST   | `attendance.view`   | `AttendanceCheckOutPayload`     | `EmployeeShift` (+ audit) |
+| `getMyAttendanceFn`   | GET    | `attendance.view`   | `dateParamSchema`               | `AttendanceResponse` |
+| `getAttendanceHistoryFn` | GET | `attendance.view`   | `AttendanceFilters`           | `AttendanceHistoryResponse` |
+| `getMyLeavesFn`       | GET    | `leave.view`        | `LeaveFilters`                  | `LeaveListResponse`  |
+| `createLeaveRequestFn`| POST   | `leave.view`        | `LeaveRequestPayload`           | `Leave`              |
+| `getPerformanceStatsFn` | GET  | `attendance.view`   | —                               | `PerformanceStatsResponse` |
+| `getLocationsFn`      | GET    | `attendance.view`   | —                               | `Location[]`         |
+| `getShiftsFn`         | GET    | `attendance.view`   | —                               | `Shift[]`            |
+
+### Tasks
+
+| Function          | Method | Required permission | Payload             | Returns        |
+| ----------------- | ------ | ------------------- | ------------------- | -------------- |
+| `getMyTasksFn`    | GET    | `my_work.view`      | —                   | `MyTasksResponse` |
+| `getAvailableTasksFn` | GET | `jobs.view`        | `AvailableTaskFilters` | `AvailableTasksResponse` |
+| `getTaskDetailFn` | GET    | `my_work.view`      | `{ taskId }`        | `TaskDetailResponse` |
+| `takeTaskFn`      | POST   | `jobs.view`         | `{ taskId }`        | `TaskActionResponse` (+ audit) |
+| `completeTaskFn`  | POST   | `my_work.view`      | `{ taskId }`        | `TaskActionResponse` (+ audit) |
 
 ### Masterdata
 
-| Function                  | Method | Required role | Payload                         | Returns              |
-| ------------------------- | ------ | ------------- | ------------------------------- | -------------------- |
-| `getDepartmentsFn`        | GET    | admin         | —                               | `Department[]`       |
-| `createDepartmentFn`      | POST   | admin         | `DepartmentMutationPayload`     | `Department` (+ audit) |
-| `updateDepartmentFn`      | POST   | admin         | `{ id, values }`                | `Department` (+ audit) |
-| `deleteDepartmentFn`      | POST   | admin         | `{ id }`                        | `{ success }` (+ audit) |
-| `getDesignationsFn`       | GET    | admin         | `{ department_id? }`            | `Designation[]`      |
-| `createDesignationFn`     | POST   | admin         | `DesignationMutationPayload`    | `Designation` (+ audit) |
-| `updateDesignationFn`     | POST   | admin         | `{ id, values }`                | `Designation` (+ audit) |
-| `deleteDesignationFn`     | POST   | admin         | `{ id }`                        | `{ success }` (+ audit) |
-| `getDesignationOptionsFn` | GET    | staff         | —                               | `DesignationOption[]`|
-| `getAuditLogFn`           | GET    | admin         | `{ page?, perPage?, action? }`  | `{ total, rows }`    |
+| Function                  | Method | Required permission | Payload                         | Returns              |
+| ------------------------- | ------ | ------------------- | ------------------------------- | -------------------- |
+| `getDepartmentsFn`        | GET    | `departments.view`  | —                               | `Department[]`       |
+| `createDepartmentFn`      | POST   | `departments.add`   | `DepartmentMutationPayload`     | `Department` (+ audit) |
+| `updateDepartmentFn`      | POST   | `departments.edit`  | `{ id, values }`                | `Department` (+ audit) |
+| `deleteDepartmentFn`      | POST   | `departments.delete`| `{ id }`                        | `{ success }` (+ audit) |
+| `getDesignationsFn`       | GET    | `designations.view` | `{ department_id? }`            | `Designation[]`      |
+| `createDesignationFn`     | POST   | `designations.add`  | `DesignationMutationPayload`    | `Designation` (+ audit) |
+| `updateDesignationFn`     | POST   | `designations.edit` | `{ id, values }`                | `Designation` (+ audit) |
+| `deleteDesignationFn`     | POST   | `designations.delete` | `{ id }`                      | `{ success }` (+ audit) |
+| `getDesignationOptionsFn` | GET    | `designations.view` | —                               | `DesignationOption[]`|
+
+### Audit log
+
+| Function           | Method | Required permission | Payload                  | Returns         |
+| ------------------ | ------ | ------------------- | ------------------------ | --------------- |
+| `getAuditLogFn`    | GET    | `audit_log.view`    | `{ page?, perPage?, action? }` | `{ total, rows }` |
+
+### Role groups
+
+| Function              | Method | Required permission | Payload                 | Returns           |
+| --------------------- | ------ | ------------------- | ----------------------- | ----------------- |
+| `listRoleGroupsFn`    | GET    | `role_groups.view`  | —                       | `RoleGroup[]`     |
+| `getRoleGroupFn`      | GET    | `role_groups.view`  | `roleGroupIdSchema`     | `RoleGroupDetail` |
+| `createRoleGroupFn`   | POST   | `role_groups.add`   | `RoleGroupMutationPayload` | `RoleGroup` (+ audit) |
+| `updateRoleGroupFn`   | POST   | `role_groups.edit`  | `{ id, values }`        | `RoleGroup` (+ audit) |
+| `deleteRoleGroupFn`   | POST   | `role_groups.delete`| `roleGroupIdSchema`     | `{ success }` (+ audit) |
+
+Self-service (sidebar visibility — requires any session, no permission):
+
+| Function                    | Method | Guard          | Payload | Returns          |
+| --------------------------- | ------ | -------------- | ------- | ---------------- |
+| `getCurrentUserRoleGroupFn` | GET    | `requireSession` | —     | `CurrentUserRoleGroup` |
 
 ### RBAC guard semantics
 
-- `requireRole(role)` — exact-set membership (see `src/lib/auth/session.ts`).
-  `employee` and `technician` are distinct; neither implies the other.
-- `requireMinRole('employee' | 'hr' | 'admin')` — hierarchical
-  (employee ≡ technician < hr < admin).
-- `requireRole('user')` / `requireRole('customer')` — any authenticated session.
-- The fine-grained `createAccessControl` matrix in `src/lib/auth/permissions.ts`
-  is reserved for future per-entity checks and is not yet consulted.
+- `requirePermission(module, action)` — resolves the caller's role group
+  (`user_role_groups` → `role_groups`) and allows when: the legacy role is
+  `admin`, the group has `is_admin = true`, or
+  `permissions[module][action] === true`. Users with no role group are denied
+  (`Forbidden: <module>.<action> required`).
+- `hasModulePermission(permissions, isAdmin, module, action)` — pure, exported
+  version of the same check (unit-tested, used by the client sidebar).
+- Legacy guards (no longer used by feature services, kept for compatibility):
+  - `requireRole(role)` — exact-set membership (`employee` and `technician`
+    are distinct; neither implies the other).
+  - `requireMinRole('employee' | 'hr' | 'admin')` — hierarchical
+    (employee ≡ technician < hr < admin).
+- The `createAccessControl` matrix in `src/lib/auth/permissions.ts` is
+  retained but not consulted by server functions.
 
 ## Authentication
 
@@ -128,8 +173,9 @@ Better Auth's built-in rate limiter is enabled on auth endpoints: sign-in (`/api
 | ----------------------------- | ---------------------------------------------- |
 | `src/lib/auth/auth.server.ts` | Auth server config (plugins, callbacks)        |
 | `src/lib/auth/auth-client.ts` | Client-side auth helpers                       |
-| `src/lib/auth/session.ts`     | `getSession()` / `ensureSession()`             |
-| `src/lib/auth/permissions.ts` | RBAC access control with `createAccessControl` |
+| `src/lib/auth/session.ts`     | `requireSession()` / `requirePermission()` / `hasModulePermission()` |
+| `src/lib/auth/permissions.ts` | Legacy `createAccessControl` matrix (retained, not consulted) |
+| `src/lib/db/role-groups.ts`   | Role group CRUD + `getUserRoleGroup`/`setUserRoleGroup` + `mapRoleGroupToLegacyRole` |
 | `src/lib/db/auth-schema.ts`   | Drizzle schema for Better Auth tables          |
 | `src/routes/api/v1/auth/$.ts` | Catch-all API route for Better Auth            |
 
@@ -193,77 +239,72 @@ to `/auth/sign-in`.
 
 ### RBAC (Role-Based Access Control)
 
-Better Auth's `admin` plugin powers all role/permission checks:
+Authorization is **DB-backed role groups**: each user is assigned one role
+group (`user_role_groups` → `role_groups`), and the group's JSONB permission
+map drives both the server guards and the client sidebar.
 
-```ts
-// src/lib/auth/permissions.ts
-const statements = {
-  user: ['create', 'read', 'update', 'delete'],
-  attendance: ['create', 'read', 'update', 'delete'],
-  leave: ['create', 'read', 'update', 'delete'],
-  employee: ['read'],
-  department: ['read'],
-  designation: ['read'],
-  shift: ['read'],
-  location: ['read']
-};
+**Tables:**
 
-export const admin = ac.newRole({
-  user: ['create', 'read', 'update', 'delete'],
-  attendance: ['create', 'read', 'update', 'delete'],
-  leave: ['create', 'read', 'update', 'delete'],
-  employee: ['create', 'read', 'update', 'delete'],
-  department: ['create', 'read', 'update', 'delete'],
-  designation: ['create', 'read', 'update', 'delete'],
-  shift: ['create', 'read', 'update', 'delete'],
-  location: ['create', 'read', 'update', 'delete']
-});
+| Table | Purpose |
+| ----- | ------- |
+| `role_groups` | id, name (unique), description, `permissions` JSONB (`{ <module>: { view/add/edit/delete: bool } }`), `is_admin` bool, timestamps |
+| `user_role_groups` | `user_id` (PK) → `role_group_id` (FK) |
 
-export const hr = ac.newRole({
-  user: ['read'],
-  attendance: ['read', 'update'],
-  leave: ['create', 'read', 'update', 'delete'],
-  employee: ['read'],
-  department: ['read'],
-  designation: ['read'],
-  shift: ['read'],
-  location: ['read']
-});
-
-export const employee = ac.newRole({
-  user: ['read'],
-  attendance: ['create', 'read'],
-  leave: ['create', 'read'],
-  employee: ['read'],
-  department: ['read'],
-  designation: ['read'],
-  shift: ['read'],
-  location: ['read']
-});
-```
-
-**Role Requirements:**
-- `admin` — Full access to all modules
-- `hr` — Attendance corrections, leave management, employee read-only
-- `employee` / `technician` — Self-service attendance, leave requests, own data
-
-**Update to `requireRole()` function:**
+**Server guard:**
 
 ```ts
 // src/lib/auth/session.ts
-const allowedRoles = ['admin', 'hr', 'employee', 'technician', 'user'] as const;
-
-export async function requireRole(role: AllowedRole) {
+export async function requirePermission(
+  module: string,
+  action: PermissionAction // 'view' | 'add' | 'edit' | 'delete'
+): Promise<Session> {
   const session = await requireSession();
-  if (role === 'admin' && session.user.role !== 'admin') {
-    throw new Error('Forbidden: Admin access required');
+  const { permissions, isAdmin } = await getCurrentUserRoleGroup(session.user.id);
+  if (
+    session.user.role === 'admin' || // legacy admin bypass
+    isAdmin ||
+    hasModulePermission(permissions, isAdmin, module, action)
+  ) {
+    return session;
   }
-  if (role === 'hr' && !['admin', 'hr'].includes(session.user.role)) {
-    throw new Error('Forbidden: HR access required');
-  }
-  return session;
+  throw new Error(`Forbidden: ${module}.${action} required`);
 }
 ```
+
+**Pure check** (unit-tested, reused by the sidebar via `useRoleGroupPermissions`):
+
+```ts
+export function hasModulePermission(
+  permissions: Record<string, Record<string, boolean>>,
+  isAdmin: boolean,
+  module: string,
+  action: string
+): boolean {
+  return isAdmin || permissions[module]?.[action] === true;
+}
+```
+
+**Role-group semantics:**
+- Legacy role `admin` always bypasses the matrix.
+- A group with `is_admin = true` bypasses the matrix for all its members.
+- Otherwise the member must have the exact `permissions[module][action] === true`.
+- A user with **no** role group is denied (`Forbidden: <module>.<action> required`).
+- `user.role` stays in sync via `mapRoleGroupToLegacyRole`
+  (Administrator→admin, HR→hr, Employee→employee, Technician→technician,
+  custom→employee, empty→user) so legacy role checks keep working.
+
+**Seeded role groups** (via `scripts/seed.ts`):
+
+| Role group | is_admin | Grants |
+| ---------- | -------- | ------ |
+| Administrator | ✅ | Full system access (bypasses matrix) |
+| HR | — | employees add/edit/delete, departments add/edit, designations add/edit, users view, audit_log view, core modules (overview/my_work/attendance/leave/profile view) |
+| Employee | — | core modules (overview/my_work/attendance/leave/profile view) + jobs view + notifications view |
+| Technician | — | core modules (overview/my_work/attendance/leave/profile view) + jobs view + notifications view |
+
+Legacy guards `requireRole(role)` (exact set) and `requireMinRole(...)`
+(hierarchical) remain exported for compatibility but are no longer used by
+feature services.
 
 ### Configuration
 
@@ -293,12 +334,12 @@ export const auth = betterAuth({
 
 `scripts/seed.ts` seeds demo accounts (idempotent):
 
-| Email               | Password       | Role      |
-| ------------------- | -------------- | --------- |
-| `admin@example.com` | `Password123!` | admin     |
-| `hr@example.com`    | `Password123!` | hr        |
-| `employee@example.com` | `Password123!` | employee |
-| `technician@example.com` | `Password123!` | technician |
+| Email               | Password       | Role group |
+| ------------------- | -------------- | ---------- |
+| `admin@example.com` | `Password123!` | Administrator |
+| `hr@example.com`    | `Password123!` | HR |
+| `employee@example.com` | `Password123!` | Employee |
+| `technician@example.com` | `Password123!` | Technician |
 
 All demo accounts have linked employee records with seed masterdata.
 

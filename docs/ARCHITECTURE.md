@@ -39,6 +39,7 @@ src/
 │   │   ├── api/                # Types, server functions, queries, mutations
 │   │   ├── components/         # Feature-specific components
 │   │   └── utils/              # Feature-specific utilities
+│   └── role-groups/            # RBAC role group CRUD + permission matrix UI
 ├── lib/
 │   ├── auth/                   # Better Auth server + client config + permissions
 │   └── db/                     # Drizzle schema, migrations, data access
@@ -60,7 +61,7 @@ src/
 - **Server functions**: `createServerFn()` with `import()` inside handlers
 - **State management**: React Query for all server state (products, users, kanban, notifications, attendance, masterdata)
 - **DB access**: Server-only modules in `src/lib/db/`, never imported by client code
-- **RPC boundary authz**: Every `createServerFn` endpoint enforces a valid session at the boundary (not just the route `beforeLoad`): `requireSession()` for reads/mutations, `requireRole('admin')` for product/user writes, `requireEmployee()` for attendance self-service.
+- **RPC boundary authz**: Every `createServerFn` endpoint enforces a valid session at the boundary (not just the route `beforeLoad`) via `requireSession()`. Module endpoints additionally call `requirePermission(module, action)`, which resolves the caller's role-group permission map from the DB (`user_role_groups` → `role_groups.permissions`); legacy `requireRole`/`requireMinRole` still exist but are no longer used by features.
 - **Input validation**: Every server-function input is validated at runtime with a Zod schema via `@tanstack/zod-adapter`.
 - **Error mapping**: `lib/db/*.ts` functions are wrapped in `try/catch` using the shared `mapDbError`. Intentional domain errors throw `DomainError` (pass through); unexpected DB errors become a generic message.
 - **Mobile layout**: Conditional `MobileShell` renders when user is `employee`/`technician` and screen <768px; replaces sidebar/header with bottom nav + FAB.
@@ -72,14 +73,30 @@ src/
 
 ## Authentication Flow
 
-Auth uses **Better Auth** (DB-session based) via the `admin` plugin for RBAC. See [API.md](./API.md) for full details.
+Auth uses **Better Auth** (DB-session based) via the `admin` plugin for the base role/ban model. See [API.md](./API.md) for full details.
 
 1. Sign-in/sign-up forms call `authClient.signIn.email` / `authClient.signUp.email` directly
 2. Better Auth manages session cookies via the `tanstackStartCookies` plugin
 3. API handler at `/api/v1/auth/$` handles all Better Auth requests (GET/POST)
 4. Dashboard routes use `beforeLoad` guard — calls `auth.api.getSession({ headers })`, redirects to `/auth/sign-in` if unauthenticated
 5. Sign-out via `authClient.signOut()` clears the session
-6. RBAC is enforced via Better Auth `admin` plugin with `createAccessControl` roles
+6. Fine-grained authorization is DB-backed: each user is assigned a **role group** (`user_role_groups` → `role_groups`), whose JSONB permission map is consulted by `requirePermission(module, action)` at every server function and by the sidebar via `useRoleGroupPermissions`. Legacy roles (`user.role`) remain in sync via `mapRoleGroupToLegacyRole`, and the `admin` role always bypasses the matrix.
+
+## Permission model (role groups)
+
+| Concept | Location |
+| ------- | -------- |
+| `role_groups` table (id, name, description, permissions JSONB, is_admin) | `src/lib/db/schema/role-groups.ts` |
+| `user_role_groups` junction (user_id → role_group_id) | `src/lib/db/schema/user-role-groups.ts` |
+| CRUD + `getUserRoleGroup`/`setUserRoleGroup` + `mapRoleGroupToLegacyRole` | `src/lib/db/role-groups.ts` |
+| Pure check `hasModulePermission(permissions, isAdmin, module, action)` | `src/lib/auth/session.ts` |
+| Server guard `requirePermission(module, action)` | `src/lib/auth/session.ts` |
+| Client hook `useRoleGroupPermissions` + nav filtering | `src/hooks/use-nav.ts` |
+| Nav config with `module` keys per item | `src/config/nav-config.ts` |
+
+Permission keys are `<module>.<action>` pairs — e.g. `products.add`, `employees.view`, `audit_log.view` — with actions `view` / `add` / `edit` / `delete`. A role group with `is_admin = true` bypasses all checks. Module keys: `overview`, `my_work`, `jobs`, `attendance`, `leave`, `profile`, `products`, `customers`, `employees`, `users`, `departments`, `designations`, `audit_log`, `role_groups`, `notifications`.
+
+Because the client sidebar and server guards read the same map, UI visibility and server enforcement can never drift.
 
 ## Tech Stack
 

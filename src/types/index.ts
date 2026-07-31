@@ -19,6 +19,7 @@ export interface NavItem {
   description?: string;
   isActive?: boolean;
   items?: NavItem[];
+  module?: string;
   access?: PermissionCheck;
 }
 

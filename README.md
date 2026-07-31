@@ -29,14 +29,14 @@
 - **Customer management** — full CRUD with search, filter & pagination; auto-generated customer codes
 - **Employee management** — full CRUD with department joins and filtering
 - **Masterdata CRUD** — department and designation management from the UI (create/edit/delete)
-- **RBAC** — 4 roles (admin, hr, employee, technician) with per-module permissions, enforced inside every server function
+- **RBAC via role groups** — customizable role groups (Administrator, HR, Employee, Technician, + custom) with per-module permission toggles editable from the UI (`/dashboard/admin/role-groups`); the same permission map drives both the sidebar and every server function via `requirePermission(module, action)`
 - **Data tables** — TanStack Table with React Query route loaders, client-side cache, search, filter & pagination driven by URL search params
 - **Analytics overview** — Recharts cards with Suspense-based independent loading
 - **Notification center** — bell icon badge, popover preview, and full page view (PostgreSQL-backed)
 - **Command palette** — Cmd+K quick navigation
 - **Multi-theme support** — 10+ OKLCH themes with easy switching
-- **Hardened server-function RPC boundary** — `requireSession()`/`requireRole()` at the handler, Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
-- **Testing** — 443 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler, Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
+- **Testing** — 481 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
@@ -49,6 +49,7 @@
 | [Employees](/dashboard/employees) | Employee CRUD with department joins and filtering. |
 | [Departments](/dashboard/admin/departments) | CRUD management for company departments. |
 | [Job Titles](/dashboard/admin/designations) | CRUD for designations with department assignment and base salary. |
+| [Role Groups](/dashboard/admin/role-groups) | RBAC group management: per-module permission toggles for each role group. |
 | [Product List (Table)](/dashboard/product) | TanStack Table + React Query with URL search params for search, filter, pagination. |
 | [Create Product Form](/dashboard/product/new) | TanStack Form + Zod with `useMutation` and cache invalidation. |
 | [Users (Table)](/dashboard/users) | Users table with React Query + URL state pattern. |
@@ -81,6 +82,7 @@ src/
 │   ├── employees/                 # Employee CRUD with department joins
 │   ├── masterdata/                # Departments & designations CRUD
 │   ├── products/                  # Product listing, form, tables (React Query)
+│   ├── role-groups/               # RBAC role groups (permission matrix UI + queries)
 │   ├── users/                     # User management table (React Query)
 │   ├── notifications/             # Notification center (React Query + PostgreSQL)
 │   └── auth/                      # Auth components
@@ -127,7 +129,8 @@ Apply the schema and seed the database:
 ```bash
 bun run db:push    # apply the Drizzle schema to the database
 bun run db:seed    # seed 20 products, masterdata (2 locations, 3 shifts, 6 departments,
-                   #   13 designations), 4 demo users, 4 employee records, customers,
+                   #   13 designations), 4 role groups (Administrator/HR/Employee/Technician),
+                   #   4 demo users, 4 employee records, customers,
                    #   + 1 demo user with 8 notifications
 ```
 
@@ -203,7 +206,7 @@ nitro({ preset: 'vercel' });           // Vercel
 
 The server-function RPC boundary is hardened at every endpoint:
 
-- **Authentication**: every `createServerFn` handler calls `requireSession()` (or `requireRole(...)` for privileged writes) — enforcement is at the handler level, independent of route guards.
+- **Authentication**: every `createServerFn` handler calls `requireSession()` at the boundary; privileged endpoints additionally call `requirePermission(module, action)`, which reads the caller's role-group permission map from the DB — enforcement is at the handler level, independent of route guards.
 - **Input validation**: every endpoint validates input at runtime with a Zod schema via `@tanstack/zod-adapter`.
 - **Error mapping**: DB errors are wrapped by `mapDbError` — intentional domain errors pass through as `DomainError` (with a stable `code`); unexpected errors become generic messages (no column/constraint names leak).
 - **Rate limiting**: server functions are rate-limited; exceeding the limit returns **HTTP 429**.

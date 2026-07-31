@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { requireMinRole, requireRole } from '@/lib/auth/session';
+import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
@@ -15,7 +15,7 @@ import {
 
 export const getDepartmentsFn = createServerFn({ method: 'GET' }).handler(async () =>
   withRequestContext(async () => {
-    await requireRole('admin');
+    await requirePermission('departments', 'view');
     const { getDepartments } = await import('@/lib/db/masterdata');
     return getDepartments();
   })
@@ -25,7 +25,7 @@ export const createDepartmentFn = createServerFn({ method: 'POST' })
   .validator(departmentCreateSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('departments', 'add');
       await checkRateLimit(`write:${session.user.id}`);
       const { createDepartment } = await import('@/lib/db/masterdata');
       const created = await createDepartment(data);
@@ -48,7 +48,7 @@ export const updateDepartmentFn = createServerFn({ method: 'POST' })
   .validator(departmentUpdateSchema)
   .handler(async ({ data: { id, ...data } }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('departments', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { updateDepartment, getDepartmentById } = await import('@/lib/db/masterdata');
       const before = await getDepartmentById(id);
@@ -72,7 +72,7 @@ export const deleteDepartmentFn = createServerFn({ method: 'POST' })
   .validator(departmentDeleteSchema)
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('departments', 'delete');
       await checkRateLimit(`write:${session.user.id}`);
       const { deleteDepartment, getDepartmentById } = await import('@/lib/db/masterdata');
       const before = await getDepartmentById(id);
@@ -96,7 +96,7 @@ export const getDesignationsFn = createServerFn({ method: 'GET' })
   .validator(designationFilterSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      await requirePermission('designations', 'view');
       const { getDesignations } = await import('@/lib/db/masterdata');
       return getDesignations(data);
     })
@@ -106,7 +106,7 @@ export const createDesignationFn = createServerFn({ method: 'POST' })
   .validator(designationCreateSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('designations', 'add');
       await checkRateLimit(`write:${session.user.id}`);
       const { createDesignation } = await import('@/lib/db/masterdata');
       const created = await createDesignation(data);
@@ -129,7 +129,7 @@ export const updateDesignationFn = createServerFn({ method: 'POST' })
   .validator(designationUpdateSchema)
   .handler(async ({ data: { id, ...data } }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('designations', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { updateDesignation, getDesignationById } = await import('@/lib/db/masterdata');
       const before = await getDesignationById(id);
@@ -153,7 +153,7 @@ export const deleteDesignationFn = createServerFn({ method: 'POST' })
   .validator(designationDeleteSchema)
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
-      const session = await requireRole('admin');
+      const session = await requirePermission('designations', 'delete');
       await checkRateLimit(`write:${session.user.id}`);
       const { deleteDesignation, getDesignationById } = await import('@/lib/db/masterdata');
       const before = await getDesignationById(id);
@@ -175,7 +175,7 @@ export const deleteDesignationFn = createServerFn({ method: 'POST' })
 
 export const getDesignationOptionsFn = createServerFn({ method: 'GET' }).handler(async () =>
   withRequestContext(async () => {
-    await requireMinRole('employee');
+    await requirePermission('designations', 'view');
     const { getDesignationsAsOptions } = await import('@/lib/db/masterdata');
     return getDesignationsAsOptions();
   })

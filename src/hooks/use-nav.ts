@@ -1,31 +1,62 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useSession } from '@/lib/auth/auth-client';
 import type { NavItem, NavGroup } from '@/types';
+import type { Permissions, RoleGroup } from '@/features/role-groups/api/types';
 
-/**
- * Hook to filter navigation items
- * RBAC has been removed — returns all items as-is
- */
-export function useFilteredNavItems(items: NavItem[]) {
-  return useMemo(() => {
-    return items.map((item) => {
-      if (item.items && item.items.length > 0) {
-        return { ...item, items: [...item.items] };
-      }
-      return item;
-    });
-  }, [items]);
+function canAccessItem(item: NavItem, permissions?: Permissions, isAdmin?: boolean): boolean {
+  if (isAdmin) return true;
+  if (!permissions) return true;
+  if (!item.module) return true;
+  const mod = permissions[item.module];
+  return mod?.view === true;
 }
 
-/**
- * Hook to filter navigation groups
- */
-export function useFilteredNavGroups(groups: NavGroup[]) {
-  const allItems = useMemo(() => groups.flatMap((g) => g.items), [groups]);
-  const filteredItems = useFilteredNavItems(allItems);
+export function filterNavGroupsByRole(
+  groups: NavGroup[],
+  permissions?: Permissions,
+  isAdmin?: boolean
+): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canAccessItem(item, permissions, isAdmin))
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+export function useFilteredNavItems(
+  items: NavItem[],
+  permissions?: Permissions,
+  isAdmin?: boolean
+) {
+  return useMemo(() => {
+    return items
+      .filter((item) => canAccessItem(item, permissions, isAdmin))
+      .map((item) => {
+        if (item.items && item.items.length > 0) {
+          return { ...item, items: [...item.items] };
+        }
+        return item;
+      });
+  }, [items, permissions, isAdmin]);
+}
+
+export function useFilteredNavGroups(
+  groups: NavGroup[],
+  permissions?: Permissions,
+  isAdmin?: boolean
+) {
+  const filteredGroups = useMemo(
+    () => filterNavGroupsByRole(groups, permissions, isAdmin),
+    [groups, permissions, isAdmin]
+  );
+  const allItems = useMemo(() => filteredGroups.flatMap((g) => g.items), [filteredGroups]);
+  const filteredItems = useFilteredNavItems(allItems, permissions, isAdmin);
 
   return useMemo(() => {
     const filteredSet = new Set(filteredItems.map((item) => item.title));
-    return groups
+    return filteredGroups
       .map((group) => ({
         ...group,
         items: filteredItems.filter((item) =>
@@ -33,5 +64,25 @@ export function useFilteredNavGroups(groups: NavGroup[]) {
         )
       }))
       .filter((group) => group.items.length > 0);
-  }, [groups, filteredItems]);
+  }, [filteredGroups, filteredItems]);
+}
+
+export function useRoleGroupPermissions() {
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
+  const { data } = useQuery({
+    queryKey: ['current-user-role-group', userId] as const,
+    queryFn: async () => {
+      const { getCurrentUserRoleGroupFn } = await import('@/features/role-groups/api/current-user');
+      return getCurrentUserRoleGroupFn();
+    },
+    enabled: !!userId
+  });
+
+  const group = data as RoleGroup | null | undefined;
+  const isAdmin = group?.is_admin ?? false;
+  const permissions: Permissions = group?.permissions ?? {};
+
+  return { isAdmin, permissions };
 }
