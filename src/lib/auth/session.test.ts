@@ -10,14 +10,41 @@ vi.mock('./auth.server', () => ({
   }
 }));
 
+const getRequestHeadersMock = vi.hoisted(() => vi.fn(() => new Headers()));
+
 vi.mock('@tanstack/react-start/server', () => ({
-  getRequestHeaders: () => new Headers()
+  getRequestHeaders: getRequestHeadersMock
 }));
 
-import { requireRole, requireMinRole } from './session';
+import {
+  requireAdmin,
+  requireEmployee,
+  requireHR,
+  requireMinRole,
+  requireRole,
+  requireSession,
+  requireTechnician
+} from './session';
 import { auth } from './auth.server';
 
 const getSessionMock = vi.mocked(auth.api.getSession);
+
+describe('requireSession', () => {
+  beforeEach(() => {
+    getSessionMock.mockClear();
+  });
+
+  it('returns the session when authenticated', async () => {
+    const session = await requireSession();
+    expect(session).toEqual({ user: mockSessionUser });
+    expect(getRequestHeadersMock).toHaveBeenCalled();
+  });
+
+  it('throws when unauthenticated', async () => {
+    getSessionMock.mockResolvedValueOnce(null as never);
+    await expect(requireSession()).rejects.toThrow('Unauthorized');
+  });
+});
 
 describe('requireRole', () => {
   beforeEach(() => {
@@ -75,5 +102,43 @@ describe('requireMinRole', () => {
     } else {
       await expect(requireMinRole(min)).rejects.toThrow('Forbidden');
     }
+  });
+});
+
+describe('requireRole edge cases', () => {
+  beforeEach(() => {
+    mockSessionUser.role = 'admin';
+    getSessionMock.mockClear();
+  });
+
+  it('throws for unknown roles without hitting the session', async () => {
+    await expect(requireRole('superuser' as never)).rejects.toThrow('Invalid role: superuser');
+    expect(getSessionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('role wrappers', () => {
+  beforeEach(() => {
+    mockSessionUser.role = 'admin';
+    getSessionMock.mockClear();
+  });
+
+  it.each([
+    ['admin', requireAdmin],
+    ['hr', requireHR],
+    ['employee', requireEmployee],
+    ['technician', requireTechnician]
+  ] as const)('%s passes for an admin session', async (_name, guard) => {
+    await expect(guard()).resolves.toMatchObject({ user: { role: 'admin' } });
+  });
+
+  it('requireHR rejects an employee session', async () => {
+    mockSessionUser.role = 'employee';
+    await expect(requireHR()).rejects.toThrow('Forbidden');
+  });
+
+  it('requireMinRole rejects an unknown session role', async () => {
+    mockSessionUser.role = 'nope';
+    await expect(requireMinRole('employee')).rejects.toThrow('Forbidden');
   });
 });

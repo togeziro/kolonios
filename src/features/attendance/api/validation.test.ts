@@ -3,6 +3,7 @@ import {
   attendanceCheckInSchema,
   attendanceCheckOutSchema,
   attendanceFiltersSchema,
+  dateParamSchema,
   leaveRequestSchema,
   leaveFiltersSchema,
   leaveTypeSchema,
@@ -91,6 +92,13 @@ describe('attendanceFiltersSchema', () => {
     expect(attendanceFiltersSchema.safeParse({ month: 12 }).success).toBe(true);
     expect(attendanceFiltersSchema.safeParse({ month: 0 }).success).toBe(false);
     expect(attendanceFiltersSchema.safeParse({ month: 13 }).success).toBe(false);
+  });
+});
+
+describe('dateParamSchema', () => {
+  it('accepts a string or nothing', () => {
+    expect(dateParamSchema.parse('2026-07-31')).toBe('2026-07-31');
+    expect(dateParamSchema.parse(undefined)).toBeUndefined();
   });
 });
 

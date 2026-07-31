@@ -56,3 +56,6 @@ jobs:
 
       - name: Unit & integration tests
         run: bun run test:run
+
+      - name: Coverage threshold
+        run: bun run test:coverage

@@ -59,7 +59,13 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', '**/.output/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
-      include: ['src/lib/**', 'src/features/**/schemas/**', 'src/features/**/api/**']
+      include: ['src/lib/**', 'src/features/**/schemas/**', 'src/features/**/api/**'],
+      thresholds: {
+        lines: 70,
+        branches: 70,
+        functions: 70,
+        statements: 70
+      }
     }
   }
 });
