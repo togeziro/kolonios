@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { requireRole } from '@/lib/auth/session';
+import { requireMinRole } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
@@ -16,7 +16,7 @@ export const checkInFn = createServerFn({ method: 'POST' })
   .validator(attendanceCheckInSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('employee');
+      const session = await requireMinRole('employee');
       await checkRateLimit(`checkin:${session.user.id}`);
       const { checkIn } = await import('@/lib/db/attendance');
       const shift = await checkIn(session.user.id, data);
@@ -39,7 +39,7 @@ export const checkOutFn = createServerFn({ method: 'POST' })
   .validator(attendanceCheckOutSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('employee');
+      const session = await requireMinRole('employee');
       const { checkOut } = await import('@/lib/db/attendance');
       const shift = await checkOut(session.user.id, data);
       await withAudit(
@@ -61,7 +61,7 @@ export const getMyAttendanceFn = createServerFn({ method: 'GET' })
   .validator(dateParamSchema)
   .handler(async ({ data: date }) =>
     withRequestContext(async () => {
-      const session = await requireRole('employee');
+      const session = await requireMinRole('employee');
       const { getEmployeeAttendance } = await import('@/lib/db/attendance');
       return getEmployeeAttendance(session.user.id, date);
     })
@@ -71,7 +71,7 @@ export const getAttendanceHistoryFn = createServerFn({ method: 'GET' })
   .validator(attendanceFiltersSchema)
   .handler(async ({ data: filters }) =>
     withRequestContext(async () => {
-      const session = await requireRole('employee');
+      const session = await requireMinRole('employee');
       const { getAttendanceHistory } = await import('@/lib/db/attendance');
       return getAttendanceHistory(session.user.id, filters);
     })
@@ -81,7 +81,7 @@ export const getMyLeavesFn = createServerFn({ method: 'GET' })
   .validator(leaveFiltersSchema)
   .handler(async ({ data: filters }) =>
     withRequestContext(async () => {
-      const session = await requireRole('employee');
+      const session = await requireMinRole('employee');
       const { getMyLeaves } = await import('@/lib/db/attendance');
       return getMyLeaves(session.user.id, filters);
     })
@@ -91,7 +91,7 @@ export const createLeaveRequestFn = createServerFn({ method: 'POST' })
   .validator(leaveRequestSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      const session = await requireRole('employee');
+      const session = await requireMinRole('employee');
       const { createLeaveRequest } = await import('@/lib/db/attendance');
       return createLeaveRequest(session.user.id, data);
     })
@@ -99,7 +99,7 @@ export const createLeaveRequestFn = createServerFn({ method: 'POST' })
 
 export const getPerformanceStatsFn = createServerFn({ method: 'GET' }).handler(async () =>
   withRequestContext(async () => {
-    const session = await requireRole('employee');
+    const session = await requireMinRole('employee');
     const { getPerformanceStats } = await import('@/lib/db/attendance');
     return getPerformanceStats(session.user.id);
   })
@@ -107,7 +107,7 @@ export const getPerformanceStatsFn = createServerFn({ method: 'GET' }).handler(a
 
 export const getLocationsFn = createServerFn({ method: 'GET' }).handler(async () =>
   withRequestContext(async () => {
-    await requireRole('employee');
+    await requireMinRole('employee');
     const { getLocations } = await import('@/lib/db/attendance');
     return getLocations();
   })
@@ -115,7 +115,7 @@ export const getLocationsFn = createServerFn({ method: 'GET' }).handler(async ()
 
 export const getShiftsFn = createServerFn({ method: 'GET' }).handler(async () =>
   withRequestContext(async () => {
-    await requireRole('employee');
+    await requireMinRole('employee');
     const { getShifts } = await import('@/lib/db/attendance');
     return getShifts();
   })
@@ -123,7 +123,7 @@ export const getShiftsFn = createServerFn({ method: 'GET' }).handler(async () =>
 
 export const getAttendanceSummaryFn = createServerFn({ method: 'GET' }).handler(async () =>
   withRequestContext(async () => {
-    const session = await requireRole('employee');
+    const session = await requireMinRole('employee');
     const { getAttendanceSummary } = await import('@/lib/db/attendance');
     return getAttendanceSummary(session.user.id);
   })

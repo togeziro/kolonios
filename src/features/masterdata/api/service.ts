@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { requireRole } from '@/lib/auth/session';
+import { requireMinRole, requireRole } from '@/lib/auth/session';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
 import {
@@ -168,7 +168,7 @@ export const deleteDesignationFn = createServerFn({ method: 'POST' })
 
 export const getDesignationOptionsFn = createServerFn({ method: 'GET' }).handler(async () =>
   withRequestContext(async () => {
-    await requireRole('employee');
+    await requireMinRole('employee');
     const { getDesignationsAsOptions } = await import('@/lib/db/masterdata');
     return getDesignationsAsOptions();
   })
