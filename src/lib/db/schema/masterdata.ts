@@ -1,6 +1,7 @@
 import { pgTable, serial, text, timestamp, boolean, real, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { user } from '../auth-schema';
+import { locations } from './attendance';
 
 /**
  * Masterdata tables for employee management
@@ -47,6 +48,7 @@ export const employees = pgTable('employees', {
   id_number: text('id_number').notNull().default(''),
   department_id: integer('department_id').notNull(),
   designation_id: integer('designation_id').notNull(),
+  location_id: integer('location_id').references(() => locations.id),
   is_internship: boolean('is_internship').notNull().default(false),
   employment_status: text('employment_status').notNull().default('active'),
   join_date: text('join_date').notNull(),
@@ -69,6 +71,10 @@ export const employeeRelations = relations(employees, ({ one }) => ({
   designation: one(designations, {
     fields: [employees.designation_id],
     references: [designations.id]
+  }),
+  location: one(locations, {
+    fields: [employees.location_id],
+    references: [locations.id]
   })
 }));
 
