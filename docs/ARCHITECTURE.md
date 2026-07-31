@@ -309,3 +309,10 @@ Items from the 2026-07-23 audit, all resolved:
 | IDOR             | Notifications not owner-scoped                                 | ✅      |
 | Font unused      | `playfair-display`, `merriweather` not referenced by any theme | ✅      |
 | Lazy-load        | 11 fonts loaded upfront, only 1-2 active per theme             | ✅      |
+
+## File uploads (pattern)
+
+Uploads are validated with `validateUpload` (`src/lib/uploads.ts`) — a
+`DomainError('UPLOAD_INVALID')` is thrown for disallowed mime types or
+oversized files. Client-side accept/maxSize (react-dropzone) is UX only;
+server validation is the security boundary.
