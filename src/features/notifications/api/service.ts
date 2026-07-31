@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireSession } from '@/lib/auth/session';
 import { withRequestContext } from '@/lib/request-id';
+import { withAudit } from '@/lib/audit';
 import { markAsReadSchema, removeNotificationSchema, addNotificationSchema } from './validation';
 import type { AddNotificationPayload } from './types';
 
@@ -38,7 +39,19 @@ export const addNotificationFn = createServerFn({ method: 'POST' })
     withRequestContext(async () => {
       const session = await requireSession();
       const { addNotification } = await import('@/lib/db/notifications');
-      return addNotification({ ...data, userId: session.user.id });
+      const created = await addNotification({ ...data, userId: session.user.id });
+      await withAudit(
+        session.user.id,
+        {
+          action: 'notification.add',
+          entityType: 'notification',
+          entityId: created.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
     })
   );
 
@@ -49,6 +62,17 @@ export const removeNotificationFn = createServerFn({ method: 'POST' })
       const session = await requireSession();
       const { removeNotification } = await import('@/lib/db/notifications');
       await removeNotification(id, session.user.id);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'notification.remove',
+          entityType: 'notification',
+          entityId: String(id),
+          before: null,
+          after: null
+        },
+        async () => undefined
+      );
       return { success: true };
     })
   );

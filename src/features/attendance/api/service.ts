@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { requireRole } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
+import { withAudit } from '@/lib/audit';
 import {
   attendanceCheckInSchema,
   attendanceCheckOutSchema,
@@ -18,7 +19,19 @@ export const checkInFn = createServerFn({ method: 'POST' })
       const session = await requireRole('employee');
       await checkRateLimit(`checkin:${session.user.id}`);
       const { checkIn } = await import('@/lib/db/attendance');
-      return checkIn(session.user.id, data);
+      const shift = await checkIn(session.user.id, data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'attendance.checkin',
+          entityType: 'attendance',
+          entityId: session.user.id,
+          before: null,
+          after: shift
+        },
+        async () => undefined
+      );
+      return shift;
     })
   );
 
@@ -28,7 +41,19 @@ export const checkOutFn = createServerFn({ method: 'POST' })
     withRequestContext(async () => {
       const session = await requireRole('employee');
       const { checkOut } = await import('@/lib/db/attendance');
-      return checkOut(session.user.id, data);
+      const shift = await checkOut(session.user.id, data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'attendance.checkout',
+          entityType: 'attendance',
+          entityId: session.user.id,
+          before: null,
+          after: shift
+        },
+        async () => undefined
+      );
+      return shift;
     })
   );
 

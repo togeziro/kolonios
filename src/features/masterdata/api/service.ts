@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireRole } from '@/lib/auth/session';
 import { withRequestContext } from '@/lib/request-id';
+import { withAudit } from '@/lib/audit';
 import {
   departmentCreateSchema,
   departmentUpdateSchema,
@@ -23,9 +24,21 @@ export const createDepartmentFn = createServerFn({ method: 'POST' })
   .validator(departmentCreateSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      const session = await requireRole('admin');
       const { createDepartment } = await import('@/lib/db/masterdata');
-      return createDepartment(data);
+      const created = await createDepartment(data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'department.create',
+          entityType: 'department',
+          entityId: created.department.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
     })
   );
 
@@ -33,9 +46,22 @@ export const updateDepartmentFn = createServerFn({ method: 'POST' })
   .validator(departmentUpdateSchema)
   .handler(async ({ data: { id, ...data } }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
-      const { updateDepartment } = await import('@/lib/db/masterdata');
-      return updateDepartment(id, data);
+      const session = await requireRole('admin');
+      const { updateDepartment, getDepartmentById } = await import('@/lib/db/masterdata');
+      const before = await getDepartmentById(id);
+      const updated = await updateDepartment(id, data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'department.update',
+          entityType: 'department',
+          entityId: id,
+          before,
+          after: updated
+        },
+        async () => undefined
+      );
+      return updated;
     })
   );
 
@@ -43,9 +69,22 @@ export const deleteDepartmentFn = createServerFn({ method: 'POST' })
   .validator(departmentDeleteSchema)
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
-      const { deleteDepartment } = await import('@/lib/db/masterdata');
-      return deleteDepartment(id);
+      const session = await requireRole('admin');
+      const { deleteDepartment, getDepartmentById } = await import('@/lib/db/masterdata');
+      const before = await getDepartmentById(id);
+      const deleted = await deleteDepartment(id);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'department.delete',
+          entityType: 'department',
+          entityId: id,
+          before,
+          after: null
+        },
+        async () => undefined
+      );
+      return deleted;
     })
   );
 
@@ -63,9 +102,21 @@ export const createDesignationFn = createServerFn({ method: 'POST' })
   .validator(designationCreateSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      const session = await requireRole('admin');
       const { createDesignation } = await import('@/lib/db/masterdata');
-      return createDesignation(data);
+      const created = await createDesignation(data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'designation.create',
+          entityType: 'designation',
+          entityId: created.designation.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
     })
   );
 
@@ -73,9 +124,22 @@ export const updateDesignationFn = createServerFn({ method: 'POST' })
   .validator(designationUpdateSchema)
   .handler(async ({ data: { id, ...data } }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
-      const { updateDesignation } = await import('@/lib/db/masterdata');
-      return updateDesignation(id, data);
+      const session = await requireRole('admin');
+      const { updateDesignation, getDesignationById } = await import('@/lib/db/masterdata');
+      const before = await getDesignationById(id);
+      const updated = await updateDesignation(id, data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'designation.update',
+          entityType: 'designation',
+          entityId: id,
+          before,
+          after: updated
+        },
+        async () => undefined
+      );
+      return updated;
     })
   );
 
@@ -83,9 +147,22 @@ export const deleteDesignationFn = createServerFn({ method: 'POST' })
   .validator(designationDeleteSchema)
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
-      const { deleteDesignation } = await import('@/lib/db/masterdata');
-      return deleteDesignation(id);
+      const session = await requireRole('admin');
+      const { deleteDesignation, getDesignationById } = await import('@/lib/db/masterdata');
+      const before = await getDesignationById(id);
+      const deleted = await deleteDesignation(id);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'designation.delete',
+          entityType: 'designation',
+          entityId: id,
+          before,
+          after: null
+        },
+        async () => undefined
+      );
+      return deleted;
     })
   );
 
