@@ -80,6 +80,13 @@ export const navGroups: NavGroup[] = [
         shortcut: ['j', 't'],
         isActive: false,
         items: []
+      },
+      {
+        title: 'Audit Log',
+        url: '/dashboard/admin/audit-log',
+        icon: 'clock',
+        isActive: false,
+        items: []
       }
     ]
   }
