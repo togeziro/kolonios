@@ -4,13 +4,6 @@
     "dashboard": "Dasbor",
     "product": "Produk",
     "users": "Pengguna",
-    "forms": "Formulir",
-    "basicForm": "Formulir Dasar",
-    "multiStepForm": "Formulir Multi-Langkah",
-    "sheetDialog": "Sheet & Dialog",
-    "advancedPatterns": "Pola Lanjutan",
-    "reactQuery": "React Query",
-    "icons": "Ikon",
     "account": "Akun",
     "notifications": "Notifikasi"
   },
