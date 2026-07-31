@@ -17,7 +17,7 @@ export const checkInFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireMinRole('employee');
-      await checkRateLimit(`checkin:${session.user.id}`);
+      await checkRateLimit(`write:${session.user.id}`);
       const { checkIn } = await import('@/lib/db/attendance');
       const shift = await checkIn(session.user.id, data);
       await withAudit(
@@ -40,6 +40,7 @@ export const checkOutFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireMinRole('employee');
+      await checkRateLimit(`write:${session.user.id}`);
       const { checkOut } = await import('@/lib/db/attendance');
       const shift = await checkOut(session.user.id, data);
       await withAudit(
@@ -92,6 +93,7 @@ export const createLeaveRequestFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireMinRole('employee');
+      await checkRateLimit(`write:${session.user.id}`);
       const { createLeaveRequest } = await import('@/lib/db/attendance');
       return createLeaveRequest(session.user.id, data);
     })

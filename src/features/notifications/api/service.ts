@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireSession } from '@/lib/auth/session';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
 import { markAsReadSchema, removeNotificationSchema, addNotificationSchema } from './validation';
@@ -18,6 +19,7 @@ export const markAsReadFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
       const session = await requireSession();
+      await checkRateLimit(`write:${session.user.id}`);
       const { markAsRead } = await import('@/lib/db/notifications');
       await markAsRead(id, session.user.id);
       return { success: true };
@@ -27,6 +29,7 @@ export const markAsReadFn = createServerFn({ method: 'POST' })
 export const markAllAsReadFn = createServerFn({ method: 'POST' }).handler(async () =>
   withRequestContext(async () => {
     const session = await requireSession();
+    await checkRateLimit(`write:${session.user.id}`);
     const { markAllAsRead } = await import('@/lib/db/notifications');
     await markAllAsRead(session.user.id);
     return { success: true };
@@ -38,6 +41,7 @@ export const addNotificationFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }: { data: AddNotificationPayload }) =>
     withRequestContext(async () => {
       const session = await requireSession();
+      await checkRateLimit(`write:${session.user.id}`);
       const { addNotification } = await import('@/lib/db/notifications');
       const created = await addNotification({ ...data, userId: session.user.id });
       await withAudit(
@@ -60,6 +64,7 @@ export const removeNotificationFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
       const session = await requireSession();
+      await checkRateLimit(`write:${session.user.id}`);
       const { removeNotification } = await import('@/lib/db/notifications');
       await removeNotification(id, session.user.id);
       await withAudit(

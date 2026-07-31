@@ -12,6 +12,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { requireRole } from '@/lib/auth/session';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
 import { userFiltersSchema, userIdSchema, userMutationSchema } from './validation';
@@ -31,6 +32,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { createUser } = await import('@/lib/db/users');
       const created = await createUser(data);
       await withAudit(
@@ -60,6 +62,7 @@ export const updateUserFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { updateUser, getUserForAudit } = await import('@/lib/db/users');
       const before = await getUserForAudit(id);
       const updated = await updateUser(id, values);
@@ -83,6 +86,7 @@ export const deleteUserFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { deleteUser, getUserForAudit } = await import('@/lib/db/users');
       const before = await getUserForAudit(id);
       const deleted = await deleteUser(id);

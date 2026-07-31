@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireMinRole, requireRole } from '@/lib/auth/session';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { withAudit } from '@/lib/audit';
 import {
@@ -25,6 +26,7 @@ export const createDepartmentFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { createDepartment } = await import('@/lib/db/masterdata');
       const created = await createDepartment(data);
       await withAudit(
@@ -47,6 +49,7 @@ export const updateDepartmentFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: { id, ...data } }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { updateDepartment, getDepartmentById } = await import('@/lib/db/masterdata');
       const before = await getDepartmentById(id);
       const updated = await updateDepartment(id, data);
@@ -70,6 +73,7 @@ export const deleteDepartmentFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { deleteDepartment, getDepartmentById } = await import('@/lib/db/masterdata');
       const before = await getDepartmentById(id);
       const deleted = await deleteDepartment(id);
@@ -103,6 +107,7 @@ export const createDesignationFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { createDesignation } = await import('@/lib/db/masterdata');
       const created = await createDesignation(data);
       await withAudit(
@@ -125,6 +130,7 @@ export const updateDesignationFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: { id, ...data } }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { updateDesignation, getDesignationById } = await import('@/lib/db/masterdata');
       const before = await getDesignationById(id);
       const updated = await updateDesignation(id, data);
@@ -148,6 +154,7 @@ export const deleteDesignationFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: { id } }) =>
     withRequestContext(async () => {
       const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { deleteDesignation, getDesignationById } = await import('@/lib/db/masterdata');
       const before = await getDesignationById(id);
       const deleted = await deleteDesignation(id);

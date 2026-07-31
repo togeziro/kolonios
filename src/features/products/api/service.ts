@@ -12,6 +12,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { requireRole } from '@/lib/auth/session';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
 import { productFiltersSchema, productIdSchema, productMutationSchema } from './validation';
 
@@ -39,7 +40,8 @@ export const createProductFn = createServerFn({ method: 'POST' })
   .validator(productMutationSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { createProduct } = await import('@/lib/db/products');
       return createProduct(data);
     })
@@ -56,7 +58,8 @@ export const updateProductFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { updateProduct } = await import('@/lib/db/products');
       return updateProduct(id, values);
     })
@@ -66,7 +69,8 @@ export const deleteProductFn = createServerFn({ method: 'POST' })
   .validator(productIdSchema)
   .handler(async ({ data: id }) =>
     withRequestContext(async () => {
-      await requireRole('admin');
+      const session = await requireRole('admin');
+      await checkRateLimit(`write:${session.user.id}`);
       const { deleteProduct } = await import('@/lib/db/products');
       return deleteProduct(id);
     })

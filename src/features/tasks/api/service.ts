@@ -39,7 +39,7 @@ export const takeTaskFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireMinRole('employee');
-      await checkRateLimit(`tasks:${session.user.id}`);
+      await checkRateLimit(`write:${session.user.id}`);
       const { takeTask } = await import('@/lib/db/tasks');
       return takeTask(session.user.id, data.taskId);
     })
@@ -50,6 +50,7 @@ export const completeTaskFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       const session = await requireMinRole('employee');
+      await checkRateLimit(`write:${session.user.id}`);
       const { completeTask } = await import('@/lib/db/tasks');
       return completeTask(session.user.id, data.taskId);
     })
