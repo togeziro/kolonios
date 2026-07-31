@@ -115,6 +115,7 @@ Polling: the query refetches every 30 s (see `docs/NOTIFICATIONS.md`).
 - `requireRole('user')` / `requireRole('customer')` — any authenticated session.
 - The fine-grained `createAccessControl` matrix in `src/lib/auth/permissions.ts`
   is reserved for future per-entity checks and is not yet consulted.
+
 ## Authentication
 
 Uses **Better Auth** v1, a DB-session-based auth system integrated directly with Drizzle ORM and TanStack Start.
@@ -266,7 +267,7 @@ export async function requireRole(role: AllowedRole) {
 
 ### Configuration
 
-Auth config lives in `src/lib/auth/auth.ts`:
+Auth config lives in `src/lib/auth/auth.server.ts`:
 
 ```ts
 export const auth = betterAuth({

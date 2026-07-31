@@ -54,6 +54,6 @@ describe('formatBytes', () => {
 
   it('falls back to Bytes beyond the size table', () => {
     expect(formatBytes(1024 ** 5)).toBe('1 Bytes');
-    expect(formatBytes(1024 ** 5, { sizeType: 'accurate' })).toBe('1 Bytest');
+    expect(formatBytes(1024 ** 5, { sizeType: 'accurate' })).toBe('1 Bytes');
   });
 });
