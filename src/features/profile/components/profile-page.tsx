@@ -75,7 +75,10 @@ export default function ProfilePage() {
       </Card>
 
       <Card className='rounded-2xl'>
-        <Link to='/dashboard/notifications' className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'>
+        <Link
+          to='/dashboard/notifications'
+          className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
+        >
           <Icons.notification className='text-muted-foreground h-4 w-4' />
           Notifications
           <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />

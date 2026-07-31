@@ -12,9 +12,9 @@ describe('formatDate', () => {
   });
 
   it('honors custom options', () => {
-    expect(formatDate(new Date(2026, 6, 31), { month: 'short', day: '2-digit', year: '2-digit' })).toBe(
-      'Jul 31, 26'
-    );
+    expect(
+      formatDate(new Date(2026, 6, 31), { month: 'short', day: '2-digit', year: '2-digit' })
+    ).toBe('Jul 31, 26');
   });
 
   it('returns an empty string when the date is invalid', () => {
