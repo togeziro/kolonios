@@ -9,5 +9,9 @@ export const notificationKeys = {
 export const notificationListQueryOptions = () =>
   queryOptions({
     queryKey: notificationKeys.list(),
-    queryFn: () => getNotificationsFn()
+    queryFn: () => getNotificationsFn(),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: 'always',
+    staleTime: 15_000
   });
