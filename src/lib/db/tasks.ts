@@ -66,6 +66,9 @@ function unmetReasons(
   profile: Awaited<ReturnType<typeof getEligibilityProfile>>
 ): string[] {
   const reasons: string[] = [];
+  if (profile.employee?.status !== 'active') {
+    reasons.push('Your account is not active');
+  }
   for (const r of reqs) {
     if (r.department_id != null && profile.employee?.department_id !== r.department_id) {
       reasons.push('Requires a different department');
@@ -167,6 +170,20 @@ export async function takeTask(userId: string, taskId: number): Promise<TaskActi
       if (reasons.length > 0) {
         return { success: false, message: `Not eligible: ${reasons.join(', ')}` };
       }
+
+      // Serialize all concurrent claims by the same user on the user's own
+      // employees row: a concurrent takeTask for a *different* task must block
+      // here until this transaction commits, so the capacity re-count below
+      // sees the just-claimed task. (Locking the user's active task rows is not
+      // enough: under READ COMMITTED a blocked SELECT FOR UPDATE keeps its
+      // statement-start snapshot, so a task claimed concurrently on another row
+      // stays invisible to the re-count.)
+      await tx
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.id, userId))
+        .for('update')
+        .limit(1);
 
       const [{ count }] = await tx
         .select({ count: sql<number>`count(*)::int` })

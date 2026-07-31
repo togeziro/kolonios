@@ -140,6 +140,17 @@ describe('tasks data access (integration)', () => {
       expect(res.unavailable.map((t) => t.title).toSorted()).toEqual(['Desig miss', 'Loc miss']);
     });
 
+    it('excludes tasks when the employee account is inactive', async () => {
+      await seedEmployee(USER_A, { status: 'inactive' });
+      await seedTask({ title: 'Pool task', status: 'available', created_by: 'seed' });
+
+      const res = await getAvailableTasks(USER_A, {});
+      expect(res.success).toBe(true);
+      expect(res.tasks).toHaveLength(0);
+      expect(res.unavailable.map((t) => t.title)).toEqual(['Pool task']);
+      expect(res.unavailable[0].eligibilityReasons.join(', ')).toContain('not active');
+    });
+
     it('filters by priority and location when filters are passed', async () => {
       const { employee, department, designation, location } = await seedEmployee(USER_A);
       await seedTask({
@@ -214,6 +225,15 @@ describe('tasks data access (integration)', () => {
       expect(res.message).toContain('Not eligible');
     });
 
+    it('rejects an employee whose account is inactive', async () => {
+      await seedEmployee(USER_A, { status: 'inactive' });
+      const task = await seedTask({ title: 'Pool task', status: 'available', created_by: 'seed' });
+
+      const res = await takeTask(USER_A, task.id);
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('not active');
+    });
+
     it('rejects a task that is no longer available', async () => {
       await seedEmployee(USER_A);
       await seedEmployee(USER_B);
@@ -258,6 +278,36 @@ describe('tasks data access (integration)', () => {
       const res = await takeTask(USER_A, poolTask.id);
       expect(res.success).toBe(false);
       expect(res.message).toContain('Active task limit reached');
+    });
+
+    it('yields exactly one winner when a user near the limit races two different tasks', async () => {
+      await seedEmployee(USER_A);
+      for (let i = 0; i < MAX_ACTIVE_TASKS - 1; i++) {
+        await seedTask({
+          title: `Active ${i}`,
+          assigned_to: USER_A,
+          status: 'assigned',
+          created_by: 'seed'
+        });
+      }
+      const taskA = await seedTask({ title: 'Race A', status: 'available', created_by: 'seed' });
+      const taskB = await seedTask({ title: 'Race B', status: 'available', created_by: 'seed' });
+
+      const [r1, r2] = await Promise.allSettled([
+        takeTask(USER_A, taskA.id),
+        takeTask(USER_A, taskB.id)
+      ]);
+      const winners = [r1, r2].filter(
+        (r): r is PromiseFulfilledResult<{ success: boolean }> =>
+          r.status === 'fulfilled' && r.value.success
+      );
+      const losers = [r1, r2].filter(
+        (r): r is PromiseFulfilledResult<{ success: boolean; message: string }> =>
+          r.status === 'fulfilled' && !r.value.success
+      );
+      expect(winners).toHaveLength(1);
+      expect(losers).toHaveLength(1);
+      expect(losers[0].value.message).toContain('Active task limit reached');
     });
   });
 
