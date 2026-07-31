@@ -38,14 +38,6 @@ imports to prevent the `postgres` driver from leaking into the client bundle.
 | `updateUserFn` | POST   | `{ id, values }`      | `User`                 |
 | `deleteUserFn` | POST   | `number` (id)         | `{ success, message }` |
 
-### Kanban
-
-| Function     | Method | Payload           | Returns                  |
-| ------------ | ------ | ----------------- | ------------------------ |
-| `getBoardFn` | GET    | —                 | `Record<string, Task[]>` |
-| `addTaskFn`  | POST   | `AddTaskPayload`  | `Task`                   |
-| `moveTaskFn` | POST   | `MoveTaskPayload` | `{ success }`            |
-
 ### Notifications
 
 | Function               | Method | Payload                  | Returns                |
