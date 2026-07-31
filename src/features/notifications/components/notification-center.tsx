@@ -86,11 +86,11 @@ export function NotificationCenter() {
                   status={notification.status}
                   createdAt={notification.createdAt}
                   actions={notification.actions}
-                  onMarkAsRead={(id) => markAsRead(Number(id))}
+                  onMarkAsRead={(id) => markAsRead(id)}
                   onAction={(notifId, actionId) => {
                     const route = actionRoutes[actionId];
                     if (route) {
-                      markAsRead(Number(notifId));
+                      markAsRead(notifId);
                       router.navigate({ to: route });
                     }
                   }}

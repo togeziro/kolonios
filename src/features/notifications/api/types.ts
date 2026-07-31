@@ -16,9 +16,9 @@ export type AddNotificationPayload = {
 };
 
 export type MarkAsReadPayload = {
-  id: number;
+  id: string;
 };
 
 export type RemoveNotificationPayload = {
-  id: number;
+  id: string;
 };

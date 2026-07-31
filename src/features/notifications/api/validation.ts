@@ -2,11 +2,11 @@ import { z } from 'zod';
 import type { AddNotificationPayload } from './types';
 
 export const markAsReadSchema = z.object({
-  id: z.number().int().positive('id must be a positive number')
+  id: z.coerce.number().int().positive('id must be a positive number')
 });
 
 export const removeNotificationSchema = z.object({
-  id: z.number().int().positive('id must be a positive number')
+  id: z.coerce.number().int().positive('id must be a positive number')
 });
 
 export const addNotificationSchema: z.ZodType<AddNotificationPayload> = z.object({

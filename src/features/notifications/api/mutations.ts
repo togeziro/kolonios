@@ -5,7 +5,7 @@ import { notificationKeys } from './queries';
 import type { AddNotificationPayload } from './types';
 
 export const markAsReadMutation = mutationOptions({
-  mutationFn: (id: number) => markAsReadFn({ data: { id } }),
+  mutationFn: (id: string) => markAsReadFn({ data: { id } }),
   onSuccess: () => {
     getQueryClient().invalidateQueries({ queryKey: notificationKeys.all });
   },
@@ -35,7 +35,7 @@ export const addNotificationMutation = mutationOptions({
 });
 
 export const removeNotificationMutation = mutationOptions({
-  mutationFn: (id: number) => removeNotificationFn({ data: { id } }),
+  mutationFn: (id: string) => removeNotificationFn({ data: { id } }),
   onSuccess: () => {
     getQueryClient().invalidateQueries({ queryKey: notificationKeys.all });
   },
