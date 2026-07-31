@@ -8,13 +8,13 @@ describe('formatDate', () => {
   });
 
   it('formats a date with the default options', () => {
-    expect(formatDate(new Date('2026-07-31T00:00:00Z'))).toBe('July 31, 2026');
+    expect(formatDate(new Date(2026, 6, 31))).toBe('July 31, 2026');
   });
 
   it('honors custom options', () => {
-    expect(
-      formatDate('2026-07-31T00:00:00Z', { month: 'short', day: '2-digit', year: '2-digit' })
-    ).toBe('Jul 31, 26');
+    expect(formatDate(new Date(2026, 6, 31), { month: 'short', day: '2-digit', year: '2-digit' })).toBe(
+      'Jul 31, 26'
+    );
   });
 
   it('returns an empty string when the date is invalid', () => {
