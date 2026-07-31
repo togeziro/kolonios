@@ -4,11 +4,20 @@
 
 ### Audit
 
-- **Follow-up repository audit** — Spec at
-  `docs/superpowers/specs/2026-07-31-follow-up-audit-design.md`; the
-  2026-07-30 plan is archived (`docs/audit/2026-07-30-repository-audit-archive.md`).
-- Coverage baseline enforced (70% lines/branches/functions/statements).
-- i18n enforcement: key-parity check + hardcoded-string scanner wired into lint/CI.
+- **Follow-up repository audit completed** — spec
+  `docs/superpowers/specs/2026-07-31-follow-up-audit-design.md`; summary
+  `docs/audit/2026-07-31-follow-up-summary.md`. Health score 79 → 87.
+- Removed demo/showcase pages (forms, react-query, elements) from routes and nav.
+- Notifications: 30 s polling via React Query; delivery design documented.
+- Sentry integration (DSN-gated) + `x-request-id` correlation middleware.
+- `audit_log` table + `withAudit()` on admin/staff writes + `/dashboard/admin/audit-log`.
+- RBAC: `requireRole` exact sets (employee/technician split), `requireMinRole`, customer role.
+- API.md rewritten: all 42 server functions with required roles.
+- i18n enforcement: `i18n:check` key parity + hardcoded-string scanner (baseline allowlist).
+- 70% coverage threshold enforced in CI.
+- Better Auth rate limiting + per-user write rate limits.
+- `src/lib/uploads.ts` validation helper for future upload features.
+- Notification id payloads now use string ids with server-side coercion.
 
 ### Mobile Work Dashboard
 

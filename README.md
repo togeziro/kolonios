@@ -11,7 +11,7 @@
 
 # Kolonios
 
-**Kolonios** is a production-ready **ISP / property management admin dashboard** built with **TanStack Start** (React 19 + Vite 7 + Nitro), **shadcn/ui**, **Tailwind CSS v4**, **Better Auth**, and **PostgreSQL (Drizzle ORM)**. It provides attendance tracking with geo-fencing, customer and employee management, masterdata CRUD, inventory (products), a kanban board, and a notification center behind a type-safe, feature-based codebase.
+**Kolonios** is a production-ready **ISP / property management admin dashboard** built with **TanStack Start** (React 19 + Vite 7 + Nitro), **shadcn/ui**, **Tailwind CSS v4**, **Better Auth**, and **PostgreSQL (Drizzle ORM)**. It provides attendance tracking with geo-fencing, customer and employee management, masterdata CRUD, inventory (products), and a notification center behind a type-safe, feature-based codebase.
 
 ## Tech Stack
 
@@ -32,12 +32,11 @@
 - **RBAC** — 4 roles (admin, hr, employee, technician) with per-module permissions, enforced inside every server function
 - **Data tables** — TanStack Table with React Query route loaders, client-side cache, search, filter & pagination driven by URL search params
 - **Analytics overview** — Recharts cards with Suspense-based independent loading
-- **Kanban board** — drag-n-drop tasks (dnd-kit + PostgreSQL via Drizzle ORM)
 - **Notification center** — bell icon badge, popover preview, and full page view (PostgreSQL-backed)
 - **Command palette** — Cmd+K quick navigation
 - **Multi-theme support** — 10+ OKLCH themes with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requireRole()` at the handler, Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
-- **Testing** — 239+ Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Testing** — 443 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
@@ -53,10 +52,7 @@
 | [Product List (Table)](/dashboard/product) | TanStack Table + React Query with URL search params for search, filter, pagination. |
 | [Create Product Form](/dashboard/product/new) | TanStack Form + Zod with `useMutation` and cache invalidation. |
 | [Users (Table)](/dashboard/users) | Users table with React Query + URL state pattern. |
-| [React Query Demo](/dashboard/react-query) | Pokemon API showcase of route loader + `useSuspenseQuery` with client-side cache. |
-| [Kanban Board](/dashboard/kanban) | Drag-n-drop task board (dnd-kit, PostgreSQL-backed). |
 | [Notifications](/dashboard/notifications) | Notification center with bell badge, popover preview, and full page with tabs. |
-| [Forms](/dashboard/forms/basic) | Basic, Multi-step, Sheet/Dialog, and Advanced form patterns with TanStack Form + Zod. |
 | [Not Found](/notfound) | Custom 404 page via TanStack Router's `defaultNotFoundComponent`. |
 
 ## Feature-based Organization
@@ -68,13 +64,13 @@ src/
 │   ├── index.tsx                  # Home (auth redirect)
 │   ├── auth/                      # Auth pages (sign-in, sign-up)
 │   ├── dashboard.tsx              # Dashboard layout (sidebar/header or MobileShell)
-│   ├── dashboard/                 # Dashboard pages (overview, attendance, leave,
-│   │                              #   customers, employees, admin, product, users,
-│   │                              #   react-query, kanban, notifications, forms)
+│   ├── dashboard/                 # Dashboard pages (overview, attendance, customers,
+│   │                              #   employees, product, users, admin, my-work, jobs,
+│   │                              #   leave, notifications, profile)
 │   └── api/v1/                    # Versioned API routes (/api/v1/auth/$ for Better Auth)
 │
 ├── components/                    # Shared components
-│   ├── ui/                        # UI primitives (buttons, inputs, skeletons, kanban, etc.)
+│   ├── ui/                        # UI primitives (buttons, inputs, skeletons, etc.)
 │   ├── layout/                    # Layout components (header, sidebar, mobile-shell, bottom-nav)
 │   ├── themes/                    # Theme system (selector, mode toggle, config)
 │   └── kbar/                      # Command+K interface
@@ -86,10 +82,8 @@ src/
 │   ├── masterdata/                # Departments & designations CRUD
 │   ├── products/                  # Product listing, form, tables (React Query)
 │   ├── users/                     # User management table (React Query)
-│   ├── kanban/                    # Drag-drop task board
 │   ├── notifications/             # Notification center (React Query + PostgreSQL)
-│   ├── auth/                      # Auth components
-│   └── forms/                     # Form showcases
+│   └── auth/                      # Auth components
 │
 ├── lib/                           # Core utilities
 │   ├── api/                       # Versioned API helpers (/api/v1)
