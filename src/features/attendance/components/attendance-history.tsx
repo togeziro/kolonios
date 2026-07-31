@@ -20,6 +20,23 @@ import {
   SelectValue
 } from '@/components/ui/select';
 
+function formatDuration(inTime?: string | null, outTime?: string | null): string | null {
+  if (!inTime || !outTime) return null;
+  const [ih, im] = inTime.split(':').map(Number);
+  const [oh, om] = outTime.split(':').map(Number);
+  const mins = oh * 60 + om - (ih * 60 + im);
+  if (mins <= 0) return null;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+const historyStatusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  present: 'default',
+  late: 'secondary',
+  absent: 'destructive',
+  excused: 'outline',
+  pending: 'outline'
+};
+
 export default function AttendanceHistory() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -76,40 +93,68 @@ export default function AttendanceHistory() {
             No attendance records found
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Shift</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Check Out</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className='hidden md:block'>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Shift</TableHead>
+                    <TableHead>Check In</TableHead>
+                    <TableHead>Check Out</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {records.map(({ attendance, shift }) => (
+                    <TableRow key={attendance.id}>
+                      <TableCell>{attendance.date}</TableCell>
+                      <TableCell>{shift ? shift.name : '-'}</TableCell>
+                      <TableCell>{attendance.check_in_time ?? '-'}</TableCell>
+                      <TableCell>{attendance.check_out_time ?? '-'}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            attendance.attendance_status === 'present'
+                              ? 'default'
+                              : attendance.attendance_status === 'late'
+                                ? 'secondary'
+                                : 'outline'
+                          }
+                        >
+                          {attendance.attendance_status ?? 'pending'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className='space-y-2 md:hidden'>
               {records.map(({ attendance, shift }) => (
-                <TableRow key={attendance.id}>
-                  <TableCell>{attendance.date}</TableCell>
-                  <TableCell>{shift ? shift.name : '-'}</TableCell>
-                  <TableCell>{attendance.check_in_time ?? '-'}</TableCell>
-                  <TableCell>{attendance.check_out_time ?? '-'}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        attendance.attendance_status === 'present'
-                          ? 'default'
-                          : attendance.attendance_status === 'late'
-                            ? 'secondary'
-                            : 'outline'
-                      }
-                    >
-                      {attendance.attendance_status ?? 'pending'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+                <Card key={attendance.id} className='flex items-center gap-3 rounded-xl p-3.5'>
+                  <div className='min-w-0 flex-1'>
+                    <p className='text-sm font-semibold'>{attendance.date}</p>
+                    <p className='text-muted-foreground truncate text-[11px]'>
+                      {shift ? shift.name : 'No shift'} ·{' '}
+                      {formatDuration(attendance.check_in_time, attendance.check_out_time) ?? '—'}
+                    </p>
+                    <p className='text-muted-foreground text-[11px]'>
+                      {attendance.check_in_time ?? '--:--'} – {attendance.check_out_time ?? '--:--'}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      historyStatusVariant[attendance.attendance_status ?? 'pending'] ?? 'outline'
+                    }
+                    className='h-5 rounded-full px-2 text-[10px]'
+                  >
+                    {attendance.attendance_status ?? 'pending'}
+                  </Badge>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

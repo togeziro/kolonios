@@ -28,6 +28,13 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
   cancelled: 'outline'
 };
 
+const statusFilters = [
+  { value: '', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' }
+] as const;
+
 export default function LeaveHistory() {
   const [statusFilter, setStatusFilter] = useState<string>('');
 
@@ -53,7 +60,22 @@ export default function LeaveHistory() {
         </CardTitle>
       </CardHeader>
       <CardContent className='space-y-4'>
-        <div className='flex gap-2'>
+        <div className='flex gap-2 md:hidden'>
+          {statusFilters.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setStatusFilter(f.value)}
+              className={`h-9 rounded-full px-3 text-xs font-medium ${
+                (statusFilter || '') === f.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className='hidden gap-2 md:flex'>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className='w-36'>
               <SelectValue placeholder='All Status' />
@@ -77,34 +99,64 @@ export default function LeaveHistory() {
             No leave requests found
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Start</TableHead>
-                <TableHead>End</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Reason</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className='hidden md:block'>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Start</TableHead>
+                    <TableHead>End</TableHead>
+                    <TableHead>Days</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leaves.map((leave) => (
+                    <TableRow key={leave.id}>
+                      <TableCell className='capitalize'>{leave.leave_type}</TableCell>
+                      <TableCell>{leave.start_date}</TableCell>
+                      <TableCell>{leave.end_date}</TableCell>
+                      <TableCell>{leave.total_days}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusColors[leave.status ?? 'cancelled'] ?? 'outline'}>
+                          {leave.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className='max-w-40 truncate'>{leave.reason ?? '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className='space-y-2 md:hidden'>
               {leaves.map((leave) => (
-                <TableRow key={leave.id}>
-                  <TableCell className='capitalize'>{leave.leave_type}</TableCell>
-                  <TableCell>{leave.start_date}</TableCell>
-                  <TableCell>{leave.end_date}</TableCell>
-                  <TableCell>{leave.total_days}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusColors[leave.status ?? 'cancelled'] ?? 'outline'}>
+                <Card key={leave.id} className='rounded-xl p-3.5'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <p className='min-w-0 flex-1 truncate text-sm font-semibold capitalize'>
+                      {leave.leave_type} leave
+                    </p>
+                    <Badge
+                      variant={statusColors[leave.status ?? 'cancelled'] ?? 'outline'}
+                      className='h-5 rounded-full px-2 text-[10px]'
+                    >
                       {leave.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell className='max-w-40 truncate'>{leave.reason ?? '-'}</TableCell>
-                </TableRow>
+                  </div>
+                  <p className='text-muted-foreground mt-1 text-[11px]'>
+                    {leave.start_date} – {leave.end_date} · {leave.total_days} day
+                    {leave.total_days !== 1 ? 's' : ''}
+                  </p>
+                  {leave.reason && (
+                    <p className='text-muted-foreground mt-0.5 truncate text-[11px]'>
+                      {leave.reason}
+                    </p>
+                  )}
+                </Card>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
