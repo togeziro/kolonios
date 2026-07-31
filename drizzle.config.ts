@@ -6,6 +6,7 @@ export default defineConfig({
     './src/lib/db/schema/notifications.ts',
     './src/lib/db/schema/attendance.ts',
     './src/lib/db/schema/masterdata.ts',
+    './src/lib/db/schema/customers.ts',
     './src/lib/db/auth-schema.ts'
   ],
   out: './src/lib/db/migrations',

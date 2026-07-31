@@ -715,9 +715,7 @@
         "departments_code_unique": {
           "name": "departments_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -793,9 +791,7 @@
         "designations_code_unique": {
           "name": "designations_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -944,12 +940,8 @@
           "name": "employees_id_user_id_fk",
           "tableFrom": "employees",
           "tableTo": "user",
-          "columnsFrom": [
-            "id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -959,9 +951,7 @@
         "employees_employee_code_unique": {
           "name": "employees_employee_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "employee_code"
-          ]
+          "columns": ["employee_code"]
         }
       },
       "policies": {},
@@ -1092,12 +1082,8 @@
           "name": "customers_id_user_id_fk",
           "tableFrom": "customers",
           "tableTo": "user",
-          "columnsFrom": [
-            "id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1105,12 +1091,8 @@
           "name": "customers_created_by_user_id_fk",
           "tableFrom": "customers",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1120,16 +1102,12 @@
         "customers_customer_code_unique": {
           "name": "customers_customer_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "customer_code"
-          ]
+          "columns": ["customer_code"]
         },
         "customers_id_card_number_unique": {
           "name": "customers_id_card_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id_card_number"
-          ]
+          "columns": ["id_card_number"]
         }
       },
       "policies": {},
@@ -1242,12 +1220,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1340,12 +1314,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1355,9 +1325,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -1446,9 +1414,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -1541,60 +1507,32 @@
     "public.notification_status": {
       "name": "notification_status",
       "schema": "public",
-      "values": [
-        "unread",
-        "read",
-        "archived"
-      ]
+      "values": ["unread", "read", "archived"]
     },
     "public.attendance_status": {
       "name": "attendance_status",
       "schema": "public",
-      "values": [
-        "present",
-        "late",
-        "absent",
-        "excused",
-        "pending"
-      ]
+      "values": ["present", "late", "absent", "excused", "pending"]
     },
     "public.leave_status": {
       "name": "leave_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected",
-        "cancelled"
-      ]
+      "values": ["pending", "approved", "rejected", "cancelled"]
     },
     "public.leave_type": {
       "name": "leave_type",
       "schema": "public",
-      "values": [
-        "annual",
-        "sick",
-        "personal",
-        "emergency",
-        "maternity",
-        "paternity"
-      ]
+      "values": ["annual", "sick", "personal", "emergency", "maternity", "paternity"]
     },
     "public.shift_status": {
       "name": "shift_status",
       "schema": "public",
-      "values": [
-        "active",
-        "inactive"
-      ]
+      "values": ["active", "inactive"]
     },
     "public.shift_type": {
       "name": "shift_type",
       "schema": "public",
-      "values": [
-        "fixed",
-        "flexible"
-      ]
+      "values": ["fixed", "flexible"]
     }
   },
   "schemas": {},
