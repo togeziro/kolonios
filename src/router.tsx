@@ -26,6 +26,20 @@ export function createRouter() {
         <h2 className='font-heading my-2 text-2xl font-bold'>Something&apos;s missing</h2>
         <p>Sorry, the page you are looking for doesn&apos;t exist or has been moved.</p>
       </div>
+    ),
+    defaultErrorComponent: ({ error }) => (
+      <div className='flex h-full flex-col items-center justify-center gap-4 p-8 text-center'>
+        <h1 className='text-2xl font-bold'>Something went wrong</h1>
+        <p className='text-muted-foreground max-w-md text-sm'>
+          An unexpected error occurred. Try reloading the page, and if the problem persists contact
+          support.
+        </p>
+        {import.meta.env.DEV ? (
+          <pre className='max-w-full overflow-auto text-left text-xs'>
+            {error instanceof Error ? error.message : String(error)}
+          </pre>
+        ) : null}
+      </div>
     )
   });
 
