@@ -11,6 +11,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
+import { withAudit } from '@/lib/audit';
 import { requireRole } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withRequestContext } from '@/lib/request-id';
@@ -43,7 +44,19 @@ export const createProductFn = createServerFn({ method: 'POST' })
       const session = await requireRole('admin');
       await checkRateLimit(`write:${session.user.id}`);
       const { createProduct } = await import('@/lib/db/products');
-      return createProduct(data);
+      const created = await createProduct(data);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'product.create',
+          entityType: 'product',
+          entityId: created.product.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
     })
   );
 
@@ -60,8 +73,21 @@ export const updateProductFn = createServerFn({ method: 'POST' })
     withRequestContext(async () => {
       const session = await requireRole('admin');
       await checkRateLimit(`write:${session.user.id}`);
-      const { updateProduct } = await import('@/lib/db/products');
-      return updateProduct(id, values);
+      const { updateProduct, getProductById } = await import('@/lib/db/products');
+      const before = await getProductById(id);
+      const updated = await updateProduct(id, values);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'product.update',
+          entityType: 'product',
+          entityId: id,
+          before,
+          after: updated
+        },
+        async () => undefined
+      );
+      return updated;
     })
   );
 
@@ -71,7 +97,20 @@ export const deleteProductFn = createServerFn({ method: 'POST' })
     withRequestContext(async () => {
       const session = await requireRole('admin');
       await checkRateLimit(`write:${session.user.id}`);
-      const { deleteProduct } = await import('@/lib/db/products');
-      return deleteProduct(id);
+      const { deleteProduct, getProductById } = await import('@/lib/db/products');
+      const before = await getProductById(id);
+      const deleted = await deleteProduct(id);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'product.delete',
+          entityType: 'product',
+          entityId: id,
+          before,
+          after: null
+        },
+        async () => undefined
+      );
+      return deleted;
     })
   );
