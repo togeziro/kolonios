@@ -120,3 +120,11 @@ export const getShiftsFn = createServerFn({ method: 'GET' }).handler(async () =>
     return getShifts();
   })
 );
+
+export const getAttendanceSummaryFn = createServerFn({ method: 'GET' }).handler(async () =>
+  withRequestContext(async () => {
+    const session = await requireRole('employee');
+    const { getAttendanceSummary } = await import('@/lib/db/attendance');
+    return getAttendanceSummary(session.user.id);
+  })
+);

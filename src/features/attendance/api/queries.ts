@@ -5,7 +5,8 @@ import {
   getMyLeavesFn,
   getPerformanceStatsFn,
   getLocationsFn,
-  getShiftsFn
+  getShiftsFn,
+  getAttendanceSummaryFn
 } from './service';
 import type { AttendanceFilters, LeaveFilters } from './types';
 
@@ -53,4 +54,10 @@ export const shiftsQueryOptions = () =>
   queryOptions({
     queryKey: attendanceKeys.shifts(),
     queryFn: () => getShiftsFn()
+  });
+
+export const attendanceSummaryQueryOptions = () =>
+  queryOptions({
+    queryKey: [...attendanceKeys.all, 'summary'] as const,
+    queryFn: () => getAttendanceSummaryFn()
   });
