@@ -8,7 +8,8 @@ const ROOTS = ['src/routes', 'src/features'];
 const IGNORED_DIRS = new Set(['api', 'validation', 'schemas', 'lib', 'types']);
 const IGNORED_ATTRS = new Set([
   'aria-hidden', 'className', 'id', 'name', 'type', 'value', 'href', 'target',
-  'role', 'tabIndex', 'autoComplete', 'dir', 'alt', 'src'
+  'role', 'tabIndex', 'autoComplete', 'dir', 'alt', 'src',
+  'variant', 'size', 'to', 'form', 'asChild'
 ]);
 const SKIP_DIRECTIVE = '// i18n:skip';
 const BASELINE = join(process.cwd(), 'scripts/i18n-hardcoded-baseline.txt');

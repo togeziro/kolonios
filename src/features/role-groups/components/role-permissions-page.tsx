@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,6 +13,7 @@ import type { Permissions } from '../api/types';
 import { toast } from 'sonner';
 
 export default function RolePermissionsPage() {
+  const { t } = useTranslation();
   const { id } = useParams({ from: '/dashboard/admin/role-groups/$id' });
   const { data, isLoading } = useQuery(roleGroupByIdQueryOptions(id));
   const group = (
@@ -38,8 +40,8 @@ export default function RolePermissionsPage() {
 
   const { mutate: save, isPending } = useMutation({
     ...updateRoleGroupMutation,
-    onSuccess: () => toast.success('Permissions saved'),
-    onError: () => toast.error('Failed to save permissions')
+    onSuccess: () => toast.success(t('roleGroups.saved')),
+    onError: () => toast.error(t('roleGroups.saveFailed'))
   });
 
   const toggleModule = useCallback((mod: string, enabled: boolean) => {
@@ -76,9 +78,10 @@ export default function RolePermissionsPage() {
     });
   };
 
-  if (isLoading) return <div className='py-8 text-center text-muted-foreground'>Loading...</div>;
+  if (isLoading)
+    return <div className='py-8 text-center text-muted-foreground'>{t('common.loading')}</div>;
   if (!group)
-    return <div className='py-8 text-center text-muted-foreground'>Role group not found</div>;
+    return <div className='py-8 text-center text-muted-foreground'>{t('roleGroups.notFound')}</div>;
 
   const isAdmin = group.is_admin;
 
@@ -89,16 +92,18 @@ export default function RolePermissionsPage() {
           <div className='flex items-center gap-2'>
             <Button variant='ghost' size='sm' asChild>
               <Link to='/dashboard/admin/role-groups'>
-                <Icons.chevronLeft className='h-4 w-4' /> Back
+                <Icons.chevronLeft className='h-4 w-4' /> {t('common.back')}
               </Link>
             </Button>
           </div>
-          <h2 className='mt-2 text-xl font-bold'>Role: {group.name}</h2>
-          <p className='text-muted-foreground text-sm'>Configure module access for this role</p>
+          <h2 className='mt-2 text-xl font-bold'>
+            {`${t('roleGroups.role')}:`} {group.name}
+          </h2>
+          <p className='text-muted-foreground text-sm'>{t('roleGroups.configureAccess')}</p>
         </div>
         <Button onClick={handleSave} disabled={isPending || isAdmin}>
           <Icons.check className='mr-2 h-4 w-4' />
-          Save Changes
+          {t('roleGroups.saveChanges')}
         </Button>
       </div>
 
@@ -106,11 +111,19 @@ export default function RolePermissionsPage() {
         <table className='w-full'>
           <thead>
             <tr className='border-b bg-muted/50'>
-              <th className='px-4 py-3 text-left text-sm font-medium'>Module</th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>View</th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>Add</th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>Edit</th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>Delete</th>
+              <th className='px-4 py-3 text-left text-sm font-medium'>{t('roleGroups.module')}</th>
+              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
+                {t('roleGroups.view')}
+              </th>
+              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
+                {t('roleGroups.add')}
+              </th>
+              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
+                {t('roleGroups.edit')}
+              </th>
+              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
+                {t('roleGroups.delete')}
+              </th>
             </tr>
           </thead>
           <tbody>

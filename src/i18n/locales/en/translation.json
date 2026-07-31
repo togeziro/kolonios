@@ -80,7 +80,15 @@
     "phoneRequired": "Phone number is required",
     "roleRequired": "Please select a role",
     "statusRequired": "Please select a status",
-    "addUser": "Add User"
+    "addUser": "Add User",
+    "name": "Name",
+    "namePlaceholder": "John Doe",
+    "accessLevel": "Access Level",
+    "selectAccessLevel": "Select access level",
+    "noRoleGroup": "No role group",
+    "nameMin": "Name must be at least 2 characters",
+    "newDescription": "Fill in the details to create a new user.",
+    "editDescription": "Update the user details below."
   },
   "auth": {
     "signIn": "Sign In",
@@ -139,5 +147,28 @@
     "previous": "Previous",
     "first": "First",
     "last": "Last"
+  },
+  "roleGroups": {
+    "title": "Role Groups",
+    "role": "Role",
+    "description": "Description",
+    "type": "Type",
+    "fullAccess": "Full Access",
+    "custom": "Custom",
+    "permissions": "Permissions",
+    "deleted": "Role group deleted",
+    "deleteFailed": "Failed to delete role group",
+    "empty": "No role groups yet. Create one to get started.",
+    "notFound": "Role group not found",
+    "configureAccess": "Configure module access for this role",
+    "saveChanges": "Save Changes",
+    "module": "Module",
+    "view": "View",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "saved": "Permissions saved",
+    "saveFailed": "Failed to save permissions",
+    "actions": "Actions"
   }
 }

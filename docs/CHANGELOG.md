@@ -2,6 +2,30 @@
 
 ## [Unreleased — 2026-08-01]
 
+### API Documentation (OpenAPI + Redoc)
+
+- **Zod → OpenAPI** — added `zod-openapi`; `src/lib/api/openapi.ts` is a typed
+  registry of 32 operations that reuses the actual request/response Zod schemas
+  from `src/features/*/api/validation.ts`, so docs and runtime validation share
+  one source of truth.
+- **Redoc** — `@redocly/cli` bundles the spec into `public/api-docs.html`
+  (self-contained, works offline on a local VPS). `bun run api:docs` generates
+  both `openapi.json` and the HTML; `bun run build` runs it automatically.
+- `requirePermission` now loads the caller's role group via `createServerOnlyFn`,
+  which strips the `@/lib/db/role-groups` (and `postgres`) import from the
+  client bundle. **Fixes a production build regression** introduced in the
+  role-groups commit where the `postgres` driver leaked into the client bundle
+  (`"performance" is not exported by __vite-browser-external`).
+- **i18n debt cleared** — role-group listing/permissions pages and the user
+  form sheet now use `useTranslation` (28 new keys, en+id). The hardcoded-string
+  scanner also ignores non-user-facing component props (`variant`, `size`, `to`,
+  `form`, `asChild`), cutting the baseline 522 → 421 entries.
+- **Versioned migrations** — added `scripts/baseline-migrations.ts` +
+  `db:baseline` to adopt versioned migrations on the `db:push`-created dev DB;
+  migration `0003_daily_exodus` versions `role_groups` + `user_role_groups`.
+
+## [Unreleased — 2026-08-01]
+
 ### RBAC: Role Groups (DB-backed permission matrix)
 
 - **New tables** — `role_groups` (name, description, JSONB `permissions`, `is_admin`) + `user_role_groups` junction (`src/lib/db/schema/`); seeded with 4 groups (Administrator, HR, Employee, Technician).

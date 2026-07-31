@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { createUserMutation, updateUserMutation } from '../api/mutations';
 import type { User } from '../api/types';
 import { toast } from 'sonner';
@@ -20,33 +21,34 @@ import { STATUS_OPTIONS } from './users-table/options';
 import { roleGroupsQueryOptions } from '@/features/role-groups/api/queries';
 
 export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) {
+  const { t } = useTranslation();
   const isEdit = !!user;
 
   const { data: rgData } = useQuery(roleGroupsQueryOptions());
   const roleGroupsList =
     (rgData as { role_groups?: { id: string; name: string }[] })?.role_groups ?? [];
   const roleGroupOptions = [
-    { value: '', label: 'No role group' },
+    { value: '', label: t('user.noRoleGroup') },
     ...roleGroupsList.map((rg) => ({ value: rg.id, label: rg.name }))
   ];
 
   const createMutation = useMutation({
     ...createUserMutation,
     onSuccess: () => {
-      toast.success('User created successfully');
+      toast.success(t('user.created'));
       onOpenChange(false);
       form.reset();
     },
-    onError: () => toast.error('Failed to create user')
+    onError: () => toast.error(t('user.createFailed'))
   });
 
   const updateMutation = useMutation({
     ...updateUserMutation,
     onSuccess: () => {
-      toast.success('User updated successfully');
+      toast.success(t('user.updated'));
       onOpenChange(false);
     },
-    onError: () => toast.error('Failed to update user')
+    onError: () => toast.error(t('user.updateFailed'))
   });
 
   const form = useAppForm({
@@ -77,11 +79,9 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='flex flex-col'>
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit User' : 'New User'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('user.edit') : t('user.new')}</SheetTitle>
           <SheetDescription>
-            {isEdit
-              ? 'Update the user details below.'
-              : 'Fill in the details to create a new user.'}
+            {isEdit ? t('user.editDescription') : t('user.newDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -90,41 +90,41 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
             <form.Form id='user-form-sheet' className='space-y-4'>
               <FormTextField
                 name='name'
-                label='Name'
+                label={t('user.name')}
                 required
-                placeholder='John Doe'
+                placeholder={t('user.namePlaceholder')}
                 validators={{
-                  onBlur: z.string().min(2, 'Name must be at least 2 characters')
+                  onBlur: z.string().min(2, t('user.nameMin'))
                 }}
               />
 
               <FormTextField
                 name='email'
-                label='Email'
+                label={t('user.email')}
                 required
                 type='email'
-                placeholder='john@example.com'
+                placeholder={t('user.johnEmail')}
                 validators={{
-                  onBlur: z.string().email('Please enter a valid email')
+                  onBlur: z.string().email(t('user.emailRequired'))
                 }}
               />
 
               <FormSelectField
                 name='role_group_id'
-                label='Access Level'
+                label={t('user.accessLevel')}
                 required
                 options={roleGroupOptions}
-                placeholder='Select access level'
+                placeholder={t('user.selectAccessLevel')}
               />
 
               <FormSelectField
                 name='status'
-                label='Status'
+                label={t('user.status')}
                 required
                 options={STATUS_OPTIONS}
-                placeholder='Select status'
+                placeholder={t('user.selectStatus')}
                 validators={{
-                  onBlur: z.string().min(1, 'Please select a status')
+                  onBlur: z.string().min(1, t('user.statusRequired'))
                 }}
               />
             </form.Form>
@@ -133,10 +133,10 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
 
         <SheetFooter>
           <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type='submit' form='user-form-sheet' isLoading={isPending}>
-            <Icons.check /> {isEdit ? 'Update User' : 'Create User'}
+            <Icons.check /> {isEdit ? t('user.updateUser') : t('user.createUser')}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -151,12 +151,13 @@ interface UserFormSheetProps {
 }
 
 export function UserFormSheetTrigger() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <Icons.add className='mr-2 h-4 w-4' /> Add User
+        <Icons.add className='mr-2 h-4 w-4' /> {t('user.addUser')}
       </Button>
       <UserFormSheet open={open} onOpenChange={setOpen} />
     </>

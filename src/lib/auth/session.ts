@@ -1,4 +1,4 @@
-import { createMiddleware, createServerFn } from '@tanstack/react-start';
+import { createMiddleware, createServerFn, createServerOnlyFn } from '@tanstack/react-start';
 import type { Permissions } from '@/features/role-groups/api/types';
 
 export type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'customer' | 'user';
@@ -18,11 +18,19 @@ export function hasModulePermission(
   return permissions[module]?.[action] === true;
 }
 
+// Server-only: fetches the caller's role group from the DB. Wrapped in
+// `createServerOnlyFn` so the `@/lib/db/role-groups` import (and the
+// `postgres` driver behind it) is stripped from the client bundle instead of
+// being pulled in via this module.
+const loadRoleGroup = createServerOnlyFn(async (userId: string) => {
+  const { getUserRoleGroup } = await import('@/lib/db/role-groups');
+  return getUserRoleGroup(userId);
+});
+
 export async function requirePermission(module: string, action: PermissionAction = 'view') {
   const session = await requireSession();
   if (session.user.role === 'admin') return session;
-  const { getUserRoleGroup } = await import('@/lib/db/role-groups');
-  const group = await getUserRoleGroup(session.user.id);
+  const group = await loadRoleGroup(session.user.id);
   if (!group) throw new Error(`Forbidden: ${module}.${action} required`);
   if (hasModulePermission(group.permissions, group.is_admin, module, action)) return session;
   throw new Error(`Forbidden: ${module}.${action} required`);

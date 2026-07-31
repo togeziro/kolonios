@@ -1,5 +1,10 @@
 # API Documentation
 
+> **Interactive docs:** build once with `bun run api:docs` (or `bun run build`,
+> which runs it automatically), then open `/api-docs.html` (spec at
+> `/openapi.json`) — a Redoc-rendered OpenAPI 3.1 document generated from the
+> same Zod schemas used for runtime validation.
+
 ## Server Functions
 
 All server functions are defined in `src/features/<feature>/api/service.ts`

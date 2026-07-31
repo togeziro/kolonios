@@ -161,6 +161,25 @@ bun run db:migrate    # drizzle-kit migration runner
 bun run db:migrate:run # apply pending migrations programmatically (scripts/migrate.ts)
 ```
 
+> Switching an existing `db:push`-created database to versioned migrations:
+> run `bun run db:baseline` once (records current migrations as applied), then
+> use `db:generate` → `db:migrate:run` for all future changes.
+
+### API Documentation (OpenAPI + Redoc)
+
+The API surface is generated from the Zod validation schemas and rendered as
+interactive docs via Redoc:
+
+```bash
+bun run api:docs    # writes public/openapi.json + public/api-docs.html
+```
+
+`bun run build` regenerates the docs automatically. After building, the docs
+are served at `/api-docs.html` (the spec itself at `/openapi.json`). The
+operation registry lives in `src/lib/api/openapi.ts`; each operation reuses
+the actual request/response Zod schemas from `src/features/*/api/validation.ts`,
+so documentation and runtime validation never drift.
+
 ### Testing
 
 ```bash

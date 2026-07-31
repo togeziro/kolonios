@@ -80,7 +80,15 @@
     "phoneRequired": "Nomor telepon wajib diisi",
     "roleRequired": "Silakan pilih peran",
     "statusRequired": "Silakan pilih status",
-    "addUser": "Tambah Pengguna"
+    "addUser": "Tambah Pengguna",
+    "name": "Nama",
+    "namePlaceholder": "John Doe",
+    "accessLevel": "Tingkat Akses",
+    "selectAccessLevel": "Pilih tingkat akses",
+    "noRoleGroup": "Tanpa grup peran",
+    "nameMin": "Nama minimal 2 karakter",
+    "newDescription": "Isi detail untuk membuat pengguna baru.",
+    "editDescription": "Perbarui detail pengguna di bawah ini."
   },
   "auth": {
     "signIn": "Masuk",
@@ -139,5 +147,28 @@
     "previous": "Sebelumnya",
     "first": "Pertama",
     "last": "Terakhir"
+  },
+  "roleGroups": {
+    "title": "Grup Peran",
+    "role": "Peran",
+    "description": "Deskripsi",
+    "type": "Tipe",
+    "fullAccess": "Akses Penuh",
+    "custom": "Kustom",
+    "permissions": "Izin",
+    "deleted": "Grup peran dihapus",
+    "deleteFailed": "Gagal menghapus grup peran",
+    "empty": "Belum ada grup peran. Buat satu untuk memulai.",
+    "notFound": "Grup peran tidak ditemukan",
+    "configureAccess": "Atur akses modul untuk peran ini",
+    "saveChanges": "Simpan Perubahan",
+    "module": "Modul",
+    "view": "Lihat",
+    "add": "Tambah",
+    "edit": "Edit",
+    "delete": "Hapus",
+    "saved": "Izin disimpan",
+    "saveFailed": "Gagal menyimpan izin",
+    "actions": "Aksi"
   }
 }
