@@ -95,7 +95,23 @@ export async function deleteUser(id: string) {
 
 export async function getUserForAudit(id: string) {
   try {
-    const rows = await db.select().from(user).where(eq(user.id, id)).limit(1);
+    const rows = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        image: user.image,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        role: user.role,
+        banned: user.banned,
+        banReason: user.banReason,
+        banExpires: user.banExpires
+      })
+      .from(user)
+      .where(eq(user.id, id))
+      .limit(1);
     return rows[0] ?? null;
   } catch (e) {
     mapDbError(e, 'users.getUserForAudit');
