@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
 import { getQueryClient, setQueryClient } from './query-client';
 
@@ -10,6 +10,12 @@ describe('getQueryClient', () => {
 });
 
 describe('setQueryClient', () => {
+  const original = getQueryClient();
+
+  afterEach(() => {
+    setQueryClient(original);
+  });
+
   it('replaces the singleton', () => {
     const replacement = new QueryClient();
     setQueryClient(replacement);

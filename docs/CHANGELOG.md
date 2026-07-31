@@ -12,7 +12,7 @@
 - Sentry integration (DSN-gated) + `x-request-id` correlation middleware.
 - `audit_log` table + `withAudit()` on admin/staff writes + `/dashboard/admin/audit-log`.
 - RBAC: `requireRole` exact sets (employee/technician split), `requireMinRole`, customer role.
-- API.md rewritten: all 42 server functions with required roles.
+- API.md rewritten: all 43 server functions with required roles.
 - i18n enforcement: `i18n:check` key parity + hardcoded-string scanner (baseline allowlist).
 - 70% coverage threshold enforced in CI.
 - Better Auth rate limiting + per-user write rate limits.
