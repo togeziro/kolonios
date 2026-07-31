@@ -16,6 +16,7 @@ import {
   locations,
   shifts
 } from '@/lib/db/schema/attendance';
+import { tasks, taskRequirements, employeeSkills } from '@/lib/db/schema/tasks';
 import { user, session, account, verification } from '@/lib/db/auth-schema';
 import { auditLog } from '@/lib/db/schema/audit-log';
 import type { NewProduct } from '@/lib/db/schema/products';
@@ -30,6 +31,9 @@ export async function resetAllTables() {
   await db.delete(employeeShifts);
   await db.delete(leaves);
   await db.delete(performanceReports);
+  await db.delete(employeeSkills);
+  await db.delete(taskRequirements);
+  await db.delete(tasks);
   await db.delete(customers);
   await db.delete(employees);
   await db.delete(designations);
@@ -125,4 +129,69 @@ export async function seedProducts(rows: Partial<NewProduct>[]) {
     .insert(products)
     .values(rows.map((r) => makeProduct(r)))
     .returning();
+}
+
+let taskCreatorSeq = 0;
+let employeeSeq = 0;
+
+export async function seedEmployee(
+  userId: string,
+  overrides: Partial<typeof employees.$inferInsert> = {}
+) {
+  await seedUser(userId);
+  const dept = await seedDepartment({ code: `EMP-DEPT-${++employeeSeq}` });
+  const desig = await seedDesignation(dept.id, { code: `EMP-DSG-${employeeSeq}` });
+  const loc = await seedLocation();
+  const [employee] = await db
+    .insert(employees)
+    .values({
+      id: userId,
+      employee_code: `EMP-${userId}`,
+      full_name: 'Test Employee',
+      email: `${userId}@test.com`,
+      birth_date: '1990-01-01',
+      department_id: dept.id,
+      designation_id: desig.id,
+      location_id: loc.id,
+      join_date: '2024-01-01',
+      ...overrides
+    })
+    .returning();
+  return { employee, department: dept, designation: desig, location: loc };
+}
+
+export async function seedTask(overrides: Partial<typeof tasks.$inferInsert> = {}) {
+  const { created_by, ...rest } = overrides;
+  let createdBy = created_by;
+  if (!createdBy || createdBy === 'seed') {
+    createdBy = `task-creator-${++taskCreatorSeq}`;
+    await seedUser(createdBy, { role: 'admin' });
+  }
+  const [task] = await db
+    .insert(tasks)
+    .values({
+      title: 'Test Task',
+      description: '',
+      status: 'available',
+      priority: 'medium',
+      created_by: createdBy,
+      ...rest
+    })
+    .returning();
+  return task;
+}
+
+export async function seedTaskRequirement(
+  taskId: number,
+  overrides: Partial<typeof taskRequirements.$inferInsert> = {}
+) {
+  const [req] = await db
+    .insert(taskRequirements)
+    .values({ task_id: taskId, ...overrides })
+    .returning();
+  return req;
+}
+
+export async function seedEmployeeSkill(userId: string, skill: string) {
+  await db.insert(employeeSkills).values({ user_id: userId, skill });
 }
