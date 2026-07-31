@@ -275,6 +275,23 @@ function MyComponent() {
 }
 ```
 
+## Error & loading states (per-route standard)
+
+Every dashboard route must provide:
+
+1. **Loading state** — `pendingComponent` on the route (or the router's
+   `defaultPendingComponent` spinner is fine) and `<LoadingSkeleton />`
+   (src/components/skeletons) for data lists.
+2. **Error state** — the router-level `defaultErrorComponent` catches
+   unhandled route errors. For routes needing a bespoke UI, use
+   `errorComponent` on the route or wrap a section in
+   `<ErrorBoundary fallback={...}>` from src/components/error-boundary.tsx.
+3. **Reporting** — `ErrorBoundary.componentDidCatch` and `mapDbError` both
+   report to Sentry (DSN-gated) and include `request_id` tags.
+
+New routes MUST follow this pattern rather than inventing inline spinners
+or `console.error` handlers.
+
 ## Known Cleanup (Selesai)
 
 Items from the 2026-07-23 audit, all resolved:

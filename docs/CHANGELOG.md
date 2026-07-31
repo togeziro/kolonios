@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased — 2026-07-31]
+
+### Audit
+
+- **Follow-up repository audit** — Spec at
+  `docs/superpowers/specs/2026-07-31-follow-up-audit-design.md`; the
+  2026-07-30 plan is archived (`docs/audit/2026-07-30-repository-audit-archive.md`).
+- Coverage baseline enforced (70% lines/branches/functions/statements).
+- i18n enforcement: key-parity check + hardcoded-string scanner wired into lint/CI.
+
 ## [Unreleased — 2026-07-30]
 
 ### Audit

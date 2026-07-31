@@ -17,6 +17,7 @@ import {
   shifts
 } from '@/lib/db/schema/attendance';
 import { user, session, account, verification } from '@/lib/db/auth-schema';
+import { auditLog } from '@/lib/db/schema/audit-log';
 import type { NewProduct } from '@/lib/db/schema/products';
 
 export async function resetDatabase() {
@@ -25,6 +26,7 @@ export async function resetDatabase() {
 }
 
 export async function resetAllTables() {
+  await db.delete(auditLog);
   await db.delete(employeeShifts);
   await db.delete(leaves);
   await db.delete(performanceReports);
@@ -51,6 +53,19 @@ export async function seedUser(id: string, overrides: Partial<typeof user.$infer
     emailVerified: true,
     ...overrides
   });
+}
+
+export async function seedAuditRow(overrides: Partial<typeof auditLog.$inferInsert> = {}) {
+  const [row] = await db
+    .insert(auditLog)
+    .values({
+      actorUserId: 'test-admin',
+      action: 'test.action',
+      entityType: 'test',
+      ...overrides
+    })
+    .returning();
+  return row;
 }
 
 export async function seedDepartment(overrides: Partial<typeof departments.$inferInsert> = {}) {
