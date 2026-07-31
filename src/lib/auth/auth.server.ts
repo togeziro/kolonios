@@ -5,6 +5,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start';
 import { db } from '@/lib/db';
 
 export const auth = betterAuth({
+  basePath: '/api/v1/auth',
   baseURL: process.env.BETTER_AUTH_URL
     ? process.env.BETTER_AUTH_URL
     : {
