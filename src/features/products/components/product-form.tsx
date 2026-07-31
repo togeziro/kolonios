@@ -69,8 +69,7 @@ export default function ProductForm({
     }
   });
 
-  const { FormTextField, FormSelectField, FormTextareaField, FormFileUploadField } =
-    useFormFields<ProductFormValues>();
+  const { FormTextField, FormSelectField, FormTextareaField } = useFormFields<ProductFormValues>();
 
   return (
     <Card className='mx-auto w-full'>
@@ -80,14 +79,6 @@ export default function ProductForm({
       <CardContent>
         <form.AppForm>
           <form.Form className='space-y-8'>
-            <FormFileUploadField
-              name='image'
-              label='Product Image'
-              description='Upload a product image'
-              maxSize={5 * 1024 * 1024}
-              maxFiles={4}
-            />
-
             <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
               <FormTextField
                 name='name'

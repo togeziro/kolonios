@@ -6,7 +6,6 @@ export { CheckboxField } from './checkbox-field';
 export { SwitchField } from './switch-field';
 export { RadioGroupField } from './radio-group-field';
 export { SliderField } from './slider-field';
-export { FileUploadField } from './file-upload-field';
 
 export { ComboboxField } from './combobox-field';
 export { TagsField } from './tags-field';
@@ -20,4 +19,3 @@ export { FormCheckboxField } from './checkbox-field';
 export { FormSwitchField } from './switch-field';
 export { FormRadioGroupField } from './radio-group-field';
 export { FormSliderField } from './slider-field';
-export { FormFileUploadField } from './file-upload-field';

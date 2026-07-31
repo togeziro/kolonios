@@ -27,15 +27,13 @@ import {
   SwitchField,
   RadioGroupField,
   SliderField,
-  FileUploadField,
   FormTextField,
   FormTextareaField,
   FormSelectField,
   FormCheckboxField,
   FormSwitchField,
   FormRadioGroupField,
-  FormSliderField,
-  FormFileUploadField
+  FormSliderField
 } from '@/components/forms/fields';
 import { cn } from '@/lib/utils';
 import {
@@ -148,8 +146,7 @@ const { useAppForm, withForm, withFieldGroup } = createFormHook({
     CheckboxField,
     SwitchField,
     RadioGroupField,
-    SliderField,
-    FileUploadField
+    SliderField
   },
   formComponents: {
     // Layout & actions
@@ -168,8 +165,7 @@ const { useAppForm, withForm, withFieldGroup } = createFormHook({
     CheckboxField: FormCheckboxField,
     SwitchField: FormSwitchField,
     RadioGroupField: FormRadioGroupField,
-    SliderField: FormSliderField,
-    FileUploadField: FormFileUploadField
+    SliderField: FormSliderField
   }
 });
 
@@ -202,8 +198,7 @@ function useFormFields<TValues extends Record<string, unknown>>() {
     FormCheckboxField: FormCheckboxField as unknown as Typed<typeof FormCheckboxField>,
     FormSwitchField: FormSwitchField as unknown as Typed<typeof FormSwitchField>,
     FormRadioGroupField: FormRadioGroupField as unknown as Typed<typeof FormRadioGroupField>,
-    FormSliderField: FormSliderField as unknown as Typed<typeof FormSliderField>,
-    FormFileUploadField: FormFileUploadField as unknown as Typed<typeof FormFileUploadField>
+    FormSliderField: FormSliderField as unknown as Typed<typeof FormSliderField>
   };
 }
 
