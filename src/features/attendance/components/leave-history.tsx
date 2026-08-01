@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { useTranslation } from 'react-i18next';
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   approved: 'default',
@@ -29,13 +30,14 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
 };
 
 const statusFilters = [
-  { value: '', label: 'All' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' }
+  { value: '', labelKey: 'common.all' },
+  { value: 'pending', labelKey: 'attendance.pending' },
+  { value: 'approved', labelKey: 'attendance.approved' },
+  { value: 'rejected', labelKey: 'attendance.rejected' }
 ] as const;
 
 export default function LeaveHistory() {
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<string>('');
 
   const filterStatus: LeaveStatus | undefined =
@@ -56,7 +58,7 @@ export default function LeaveHistory() {
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Icons.calendar className='h-5 w-5' />
-          Leave History
+          {t('attendance.leaveHistory')}
         </CardTitle>
       </CardHeader>
       <CardContent className='space-y-4'>
@@ -71,21 +73,21 @@ export default function LeaveHistory() {
                   : 'bg-muted text-muted-foreground'
               }`}
             >
-              {f.label}
+              {t(f.labelKey)}
             </button>
           ))}
         </div>
         <div className='hidden gap-2 md:flex'>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className='w-36'>
-              <SelectValue placeholder='All Status' />
+              <SelectValue placeholder={t('attendance.allStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='all'>All Status</SelectItem>
-              <SelectItem value='pending'>Pending</SelectItem>
-              <SelectItem value='approved'>Approved</SelectItem>
-              <SelectItem value='rejected'>Rejected</SelectItem>
-              <SelectItem value='cancelled'>Cancelled</SelectItem>
+              <SelectItem value='all'>{t('attendance.allStatus')}</SelectItem>
+              <SelectItem value='pending'>{t('attendance.pending')}</SelectItem>
+              <SelectItem value='approved'>{t('attendance.approved')}</SelectItem>
+              <SelectItem value='rejected'>{t('attendance.rejected')}</SelectItem>
+              <SelectItem value='cancelled'>{t('attendance.cancelled')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -96,7 +98,7 @@ export default function LeaveHistory() {
           </div>
         ) : leaves.length === 0 ? (
           <div className='py-8 text-center text-sm text-muted-foreground'>
-            No leave requests found
+            {t('attendance.noLeaveRequests')}
           </div>
         ) : (
           <>
@@ -104,12 +106,12 @@ export default function LeaveHistory() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Start</TableHead>
-                    <TableHead>End</TableHead>
-                    <TableHead>Days</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead>{t('attendance.type')}</TableHead>
+                    <TableHead>{t('attendance.start')}</TableHead>
+                    <TableHead>{t('attendance.end')}</TableHead>
+                    <TableHead>{t('attendance.days')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead>{t('attendance.reason')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -135,7 +137,7 @@ export default function LeaveHistory() {
                 <Card key={leave.id} className='rounded-xl p-3.5'>
                   <div className='flex items-center justify-between gap-2'>
                     <p className='min-w-0 flex-1 truncate text-sm font-semibold capitalize'>
-                      {leave.leave_type} leave
+                      {leave.leave_type} {t('attendance.leaveSuffix')}
                     </p>
                     <Badge
                       variant={statusColors[leave.status ?? 'cancelled'] ?? 'outline'}
@@ -145,8 +147,8 @@ export default function LeaveHistory() {
                     </Badge>
                   </div>
                   <p className='text-muted-foreground mt-1 text-[11px]'>
-                    {leave.start_date} – {leave.end_date} · {leave.total_days} day
-                    {leave.total_days !== 1 ? 's' : ''}
+                    {leave.start_date} – {leave.end_date} ·{' '}
+                    {t('attendance.dayCount', { count: leave.total_days })}
                   </p>
                   {leave.reason && (
                     <p className='text-muted-foreground mt-0.5 truncate text-[11px]'>

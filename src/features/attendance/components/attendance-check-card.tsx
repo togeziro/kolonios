@@ -10,8 +10,10 @@ import {
   shiftsQueryOptions
 } from '../api/queries';
 import { checkInFn, checkOutFn } from '../api/service';
+import { useTranslation } from 'react-i18next';
 
 export default function AttendanceCheckCard() {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedLocation, setSelectedLocation] = useState<number | null>(null);
   const [selectedShift, setSelectedShift] = useState<number | null>(null);
@@ -56,10 +58,10 @@ export default function AttendanceCheckCard() {
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Icons.clock className='h-5 w-5' />
-          Today&apos;s Attendance
+          {t('attendance.todayAttendance')}
         </CardTitle>
         <CardDescription>
-          {new Date().toLocaleDateString('en-US', {
+          {new Date().toLocaleDateString(i18n.language === 'id' ? 'id-ID' : 'en-US', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -70,7 +72,7 @@ export default function AttendanceCheckCard() {
       <CardContent className='space-y-4'>
         {status && (
           <div className='flex items-center gap-2'>
-            <span className='text-sm text-muted-foreground'>Status:</span>
+            <span className='text-sm text-muted-foreground'>{t('attendance.statusLabel')}</span>
             <Badge
               variant={
                 status === 'present' ? 'default' : status === 'late' ? 'secondary' : 'outline'
@@ -83,13 +85,13 @@ export default function AttendanceCheckCard() {
 
         {isCheckedIn && (
           <div className='text-sm text-muted-foreground'>
-            Check-in: {attendance!.attendance!.check_in_time}
+            {t('attendance.checkInLabel')} {attendance!.attendance!.check_in_time}
           </div>
         )}
 
         {isCheckedOut && (
           <div className='text-sm text-muted-foreground'>
-            Check-out: {attendance!.attendance!.check_out_time}
+            {t('attendance.checkOutLabel')} {attendance!.attendance!.check_out_time}
           </div>
         )}
 
@@ -135,7 +137,7 @@ export default function AttendanceCheckCard() {
               ) : (
                 <Icons.login className='mr-2 h-4 w-4' />
               )}
-              Check In
+              {t('attendance.checkIn')}
             </Button>
           </div>
         )}
@@ -152,7 +154,7 @@ export default function AttendanceCheckCard() {
             ) : (
               <Icons.logout className='mr-2 h-4 w-4' />
             )}
-            Check Out
+            {t('attendance.checkOut')}
           </Button>
         )}
       </CardContent>

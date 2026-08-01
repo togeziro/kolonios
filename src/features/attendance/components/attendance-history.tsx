@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { useTranslation } from 'react-i18next';
 
 function formatDuration(inTime?: string | null, outTime?: string | null): string | null {
   if (!inTime || !outTime) return null;
@@ -38,6 +39,7 @@ const historyStatusVariant: Record<string, 'default' | 'secondary' | 'destructiv
 };
 
 export default function AttendanceHistory() {
+  const { t } = useTranslation();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -53,14 +55,14 @@ export default function AttendanceHistory() {
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Icons.calendar className='h-5 w-5' />
-          Attendance History
+          {t('attendance.historyTitle')}
         </CardTitle>
       </CardHeader>
       <CardContent className='space-y-4'>
         <div className='flex gap-2'>
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
             <SelectTrigger className='w-32'>
-              <SelectValue placeholder='Month' />
+              <SelectValue placeholder={t('attendance.monthPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -72,7 +74,7 @@ export default function AttendanceHistory() {
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
             <SelectTrigger className='w-24'>
-              <SelectValue placeholder='Year' />
+              <SelectValue placeholder={t('attendance.yearPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 3 }, (_, i) => now.getFullYear() - i).map((y) => (
@@ -90,7 +92,7 @@ export default function AttendanceHistory() {
           </div>
         ) : records.length === 0 ? (
           <div className='py-8 text-center text-sm text-muted-foreground'>
-            No attendance records found
+            {t('attendance.noRecords')}
           </div>
         ) : (
           <>
@@ -98,11 +100,11 @@ export default function AttendanceHistory() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Shift</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t('common.date')}</TableHead>
+                    <TableHead>{t('attendance.shift')}</TableHead>
+                    <TableHead>{t('attendance.checkIn')}</TableHead>
+                    <TableHead>{t('attendance.checkOut')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

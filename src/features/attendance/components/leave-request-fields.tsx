@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const leaveTypes: { value: LeaveType; label: string }[] = [
   { value: 'annual', label: 'Annual Leave' },
@@ -26,6 +27,7 @@ const leaveTypes: { value: LeaveType; label: string }[] = [
 ] as const;
 
 export default function LeaveRequestFields() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [leaveType, setLeaveType] = useState<string>('');
   const [startDate, setStartDate] = useState('');
@@ -44,18 +46,18 @@ export default function LeaveRequestFields() {
       }),
     onSuccess: (res) => {
       if (res?.success) {
-        toast.success('Leave request submitted');
+        toast.success(t('attendance.leaveSubmitted'));
         setLeaveType('');
         setStartDate('');
         setEndDate('');
         setReason('');
         queryClient.invalidateQueries({ queryKey: ['attendance', 'leaves'] });
       } else {
-        toast.error(res?.message ?? 'Failed to submit leave request');
+        toast.error(res?.message ?? t('attendance.leaveSubmitFailed'));
       }
     },
     onError: () => {
-      toast.error('Failed to submit leave request');
+      toast.error(t('attendance.leaveSubmitFailed'));
     }
   });
 
@@ -66,10 +68,10 @@ export default function LeaveRequestFields() {
   return (
     <div className='space-y-4'>
       <div className='space-y-2'>
-        <Label>Leave Type</Label>
+        <Label>{t('attendance.leaveType')}</Label>
         <Select value={leaveType} onValueChange={(v: string) => setLeaveType(v)}>
           <SelectTrigger>
-            <SelectValue placeholder='Select leave type' />
+            <SelectValue placeholder={t('attendance.selectLeaveType')} />
           </SelectTrigger>
           <SelectContent>
             {leaveTypes.map((t) => (
@@ -83,7 +85,7 @@ export default function LeaveRequestFields() {
 
       <div className='grid grid-cols-2 gap-4'>
         <div className='space-y-2'>
-          <Label>Start Date</Label>
+          <Label>{t('attendance.startDate')}</Label>
           <Input
             type='date'
             value={startDate}
@@ -92,7 +94,7 @@ export default function LeaveRequestFields() {
           />
         </div>
         <div className='space-y-2'>
-          <Label>End Date</Label>
+          <Label>{t('attendance.endDate')}</Label>
           <Input
             type='date'
             value={endDate}
@@ -103,9 +105,9 @@ export default function LeaveRequestFields() {
       </div>
 
       <div className='space-y-2'>
-        <Label>Reason</Label>
+        <Label>{t('attendance.reason')}</Label>
         <Textarea
-          placeholder='Optional reason for leave'
+          placeholder={t('attendance.reasonPlaceholder')}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
@@ -118,7 +120,7 @@ export default function LeaveRequestFields() {
         ) : (
           <Icons.send className='mr-2 h-4 w-4' />
         )}
-        Submit Leave Request
+        {t('attendance.submitLeaveRequest')}
       </Button>
     </div>
   );

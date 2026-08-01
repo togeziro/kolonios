@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { performanceStatsQueryOptions } from '../api/queries';
+import { useTranslation } from 'react-i18next';
 
 export default function PerformanceSnapshot() {
+  const { t } = useTranslation();
   const { data } = useQuery(performanceStatsQueryOptions());
   const reports = data?.reports ?? [];
   if (reports.length === 0) return null;
@@ -11,7 +13,9 @@ export default function PerformanceSnapshot() {
   return (
     <div className='px-4'>
       <Card className='rounded-2xl p-4'>
-        <p className='text-muted-foreground text-[11px] font-medium uppercase'>Your performance</p>
+        <p className='text-muted-foreground text-[11px] font-medium uppercase'>
+          {t('attendance.yourPerformance')}
+        </p>
         <p className='mt-1 text-lg font-semibold tabular-nums'>{latest.score ?? '—'}%</p>
         <p className='text-muted-foreground text-xs'>{latest.date}</p>
       </Card>
