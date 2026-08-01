@@ -6,6 +6,7 @@ import EmployeeListingPage from '@/features/employees/components/employee-listin
 import { employeesQueryOptions } from '@/features/employees/api/queries';
 import { parseSortingState } from '@/lib/parsers';
 import { EmployeeFormSheetTrigger } from '@/features/employees/components/employee-form-sheet';
+import { useTranslation } from 'react-i18next';
 
 const employeesSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -58,10 +59,11 @@ export const Route = createFileRoute('/dashboard/employees')({
 });
 
 function EmployeesPage() {
+  const { t } = useTranslation();
   return (
     <PageContainer
-      pageTitle='Employees'
-      pageDescription='Manage employees and view performance reports.'
+      pageTitle={t('employee.titlePlural')}
+      pageDescription={t('employee.pageDescription')}
       pageHeaderAction={<EmployeeFormSheetTrigger />}
     >
       <EmployeeListingPage />

@@ -9,8 +9,10 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 
 export function EmployeePerformance() {
+  const { t } = useTranslation();
   const { data } = useSuspenseQuery(performanceStatsQueryOptions());
 
   const reports = data?.reports ?? [];
@@ -18,23 +20,23 @@ export function EmployeePerformance() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Performance Reports</CardTitle>
+        <CardTitle>{t('employee.performance')}</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Running Average</TableHead>
-              <TableHead>Notes</TableHead>
+              <TableHead>{t('common.date')}</TableHead>
+              <TableHead>{t('employee.score')}</TableHead>
+              <TableHead>{t('employee.runningAverage')}</TableHead>
+              <TableHead>{t('employee.notes')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {reports.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className='text-center text-muted-foreground'>
-                  No performance reports available.
+                  {t('employee.noPerformance')}
                 </TableCell>
               </TableRow>
             ) : (

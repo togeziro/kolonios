@@ -16,6 +16,7 @@ import { createEmployeeMutation, updateEmployeeMutation } from '../api/mutations
 import type { Employee } from '../api/types';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { STATUS_OPTIONS, EMPLOYMENT_STATUS_OPTIONS } from './employee-tables/options';
 import {
   departmentsQueryOptions,
@@ -23,6 +24,7 @@ import {
 } from '@/features/masterdata/api/queries';
 
 export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeFormSheetProps) {
+  const { t } = useTranslation();
   const isEdit = !!employee;
 
   const { data: deptData } = useSuspenseQuery(departmentsQueryOptions());
@@ -31,21 +33,21 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
   const createMutation = useMutation(
     mergeMutationCallbacks(createEmployeeMutation, {
       onSuccess: () => {
-        toast.success('Employee created successfully');
+        toast.success(t('employee.created'));
         onOpenChange(false);
         form.reset();
       },
-      onError: () => toast.error('Failed to create employee')
+      onError: () => toast.error(t('employee.createFailed'))
     })
   );
 
   const updateMutation = useMutation(
     mergeMutationCallbacks(updateEmployeeMutation, {
       onSuccess: () => {
-        toast.success('Employee updated successfully');
+        toast.success(t('employee.updated'));
         onOpenChange(false);
       },
-      onError: () => toast.error('Failed to update employee')
+      onError: () => toast.error(t('employee.updateFailed'))
     })
   );
 
@@ -113,11 +115,9 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='flex flex-col sm:max-w-lg'>
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Employee' : 'New Employee'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('employee.edit') : t('employee.new')}</SheetTitle>
           <SheetDescription>
-            {isEdit
-              ? 'Update the employee details below.'
-              : 'Fill in the details to create a new employee.'}
+            {isEdit ? t('employee.editDescription') : t('employee.newDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -125,97 +125,119 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
           <form.AppForm>
             <form.Form id='employee-form-sheet' className='space-y-4'>
               <div className='space-y-2'>
-                <h4 className='text-sm font-medium text-muted-foreground'>Personal</h4>
+                <h4 className='text-sm font-medium text-muted-foreground'>
+                  {t('employee.personal')}
+                </h4>
                 <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
                   <FormTextField
                     name='full_name'
-                    label='Full Name'
+                    label={t('employee.fullName')}
                     required
-                    placeholder='John Doe'
+                    placeholder={t('employee.namePlaceholder')}
                   />
 
-                  <FormTextField name='nickname' label='Nickname' placeholder='Johnny' />
+                  <FormTextField
+                    name='nickname'
+                    label={t('employee.nickname')}
+                    placeholder={t('employee.nicknamePlaceholder')}
+                  />
 
                   <FormTextField
                     name='email'
-                    label='Email'
+                    label={t('employee.email')}
                     required
                     type='email'
-                    placeholder='john@example.com'
+                    placeholder={t('employee.emailPlaceholder')}
                   />
 
-                  <FormTextField name='phone' label='Phone' placeholder='+1234567890' />
+                  <FormTextField
+                    name='phone'
+                    label={t('employee.phone')}
+                    placeholder='+1234567890'
+                  />
 
-                  <FormTextField name='birth_place' label='Birth Place' placeholder='City' />
+                  <FormTextField
+                    name='birth_place'
+                    label={t('employee.birthPlace')}
+                    placeholder={t('employee.cityPlaceholder')}
+                  />
 
                   <FormTextField
                     name='birth_date'
-                    label='Birth Date'
+                    label={t('employee.birthDate')}
                     required
-                    placeholder='YYYY-MM-DD'
+                    placeholder={t('employee.datePlaceholder')}
                   />
 
                   <FormTextField
                     name='address'
-                    label='Address'
-                    placeholder='Street, city, postal code'
+                    label={t('employee.address')}
+                    placeholder={t('employee.addressPlaceholder')}
                   />
 
                   <FormTextField
                     name='id_number'
-                    label='ID Number (KTP)'
-                    placeholder='National ID number'
+                    label={t('employee.idNumber')}
+                    placeholder={t('employee.idNumberPlaceholder')}
                   />
                 </div>
               </div>
 
               <div className='space-y-2'>
-                <h4 className='text-sm font-medium text-muted-foreground'>Employment</h4>
+                <h4 className='text-sm font-medium text-muted-foreground'>
+                  {t('employee.employment')}
+                </h4>
                 <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
                   <FormSelectField
                     name='department_id'
-                    label='Department'
+                    label={t('employee.department')}
                     required
                     options={deptOptions}
-                    placeholder='Select department'
+                    placeholder={t('employee.selectDepartment')}
                   />
 
                   <FormSelectField
                     name='designation_id'
-                    label='Designation'
+                    label={t('employee.designation')}
                     required
                     options={designationOptions}
-                    placeholder='Select designation'
+                    placeholder={t('employee.selectDesignation')}
                   />
 
                   <FormTextField
                     name='join_date'
-                    label='Join Date'
+                    label={t('employee.joinDate')}
                     required
-                    placeholder='YYYY-MM-DD'
+                    placeholder={t('employee.datePlaceholder')}
                   />
 
                   <FormSelectField
                     name='employment_status'
-                    label='Employment Status'
+                    label={t('employee.employmentStatus')}
                     options={EMPLOYMENT_STATUS_OPTIONS}
-                    placeholder='Select status'
+                    placeholder={t('employee.selectStatus')}
                   />
 
-                  <FormCheckboxField name='is_internship' label='Internship' />
+                  <FormCheckboxField name='is_internship' label={t('employee.internship')} />
 
                   {!isInternship && (
-                    <FormTextField name='leave_date' label='Leave Date' placeholder='YYYY-MM-DD' />
+                    <FormTextField
+                      name='leave_date'
+                      label={t('employee.leaveDate')}
+                      placeholder={t('employee.datePlaceholder')}
+                    />
                   )}
                 </div>
               </div>
 
               <div className='space-y-2'>
-                <h4 className='text-sm font-medium text-muted-foreground'>Salary</h4>
+                <h4 className='text-sm font-medium text-muted-foreground'>
+                  {t('employee.salary')}
+                </h4>
                 <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
                   <FormTextField
                     name='base_salary'
-                    label='Base Salary'
+                    label={t('employee.baseSalary')}
                     type='number'
                     placeholder='5000000'
                   />
@@ -225,10 +247,10 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
               {isEdit && (
                 <FormSelectField
                   name='status'
-                  label='Status'
+                  label={t('employee.status')}
                   required
                   options={STATUS_OPTIONS}
-                  placeholder='Select status'
+                  placeholder={t('employee.selectStatus')}
                 />
               )}
             </form.Form>
@@ -237,10 +259,10 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
 
         <SheetFooter>
           <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type='submit' form='employee-form-sheet' isLoading={isPending}>
-            <Icons.check /> {isEdit ? 'Update Employee' : 'Create Employee'}
+            <Icons.check /> {isEdit ? t('employee.updateEmployee') : t('employee.createEmployee')}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -274,12 +296,13 @@ type EmployeeFormValues = {
 };
 
 export function EmployeeFormSheetTrigger() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <Icons.add className='mr-2 h-4 w-4' /> Add Employee
+        <Icons.add className='mr-2 h-4 w-4' /> {t('employee.add')}
       </Button>
       <EmployeeFormSheet open={open} onOpenChange={setOpen} />
     </>

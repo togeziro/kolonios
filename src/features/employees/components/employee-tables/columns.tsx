@@ -11,7 +11,7 @@ export const columns: ColumnDef<Employee>[] = [
     id: 'employee_code',
     accessorKey: 'employee_code',
     header: ({ column }: { column: Column<Employee, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Code' />
+      <DataTableColumnHeader column={column} title='common.code' />
     ),
     cell: ({ cell }) => (
       <div className='font-medium'>{cell.getValue<Employee['employee_code']>()}</div>
@@ -28,7 +28,7 @@ export const columns: ColumnDef<Employee>[] = [
     id: 'full_name',
     accessorKey: 'full_name',
     header: ({ column }: { column: Column<Employee, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Name' />
+      <DataTableColumnHeader column={column} title='common.name' />
     ),
     cell: ({ row }) => (
       <div className='flex flex-col'>
@@ -48,7 +48,7 @@ export const columns: ColumnDef<Employee>[] = [
     id: 'department_name',
     accessorKey: 'department_name',
     header: ({ column }: { column: Column<Employee, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Department' />
+      <DataTableColumnHeader column={column} title='employee.department' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Employee['department_name']>()}</div>
   },
@@ -56,13 +56,15 @@ export const columns: ColumnDef<Employee>[] = [
     id: 'designation_name',
     accessorKey: 'designation_name',
     header: ({ column }: { column: Column<Employee, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Designation' />
+      <DataTableColumnHeader column={column} title='employee.designation' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Employee['designation_name']>()}</div>
   },
   {
     accessorKey: 'phone',
-    header: 'PHONE',
+    header: ({ column }: { column: Column<Employee, unknown> }) => (
+      <DataTableColumnHeader column={column} title='common.phone' />
+    ),
     cell: ({ cell }) => <div>{cell.getValue<Employee['phone']>()}</div>
   },
   {
@@ -70,7 +72,7 @@ export const columns: ColumnDef<Employee>[] = [
     accessorKey: 'status',
     enableSorting: false,
     header: ({ column }: { column: Column<Employee, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Status' />
+      <DataTableColumnHeader column={column} title='employee.status' />
     ),
     cell: ({ cell }) => {
       const status = cell.getValue<Employee['status']>();
@@ -86,7 +88,9 @@ export const columns: ColumnDef<Employee>[] = [
   },
   {
     accessorKey: 'created_at',
-    header: 'CREATED AT',
+    header: ({ column }: { column: Column<Employee, unknown> }) => (
+      <DataTableColumnHeader column={column} title='table.createdAt' />
+    ),
     cell: ({ cell }) => {
       const date = cell.getValue<Employee['created_at']>();
       return <div>{new Date(date).toLocaleDateString()}</div>;
