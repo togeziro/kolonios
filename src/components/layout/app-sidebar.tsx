@@ -31,6 +31,25 @@ import {
   SidebarRail
 } from '@/components/ui/sidebar';
 
+const navTitleKeys: Record<string, string> = {
+  Overview: 'navigation.overview',
+  Dashboard: 'navigation.dashboard',
+  'My Work': 'navigation.myWork',
+  Attendance: 'navigation.attendance',
+  Leave: 'navigation.leave',
+  Profile: 'navigation.profile',
+  Management: 'navigation.management',
+  Product: 'navigation.product',
+  Customers: 'navigation.customers',
+  Employees: 'navigation.employees',
+  Settings: 'navigation.settings',
+  Users: 'navigation.users',
+  Departments: 'navigation.departments',
+  'Job Titles': 'navigation.jobTitles',
+  'Audit Log': 'navigation.auditLog',
+  'Role Groups': 'navigation.roleGroups'
+};
+
 export default function AppSidebar() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -62,7 +81,9 @@ export default function AppSidebar() {
       <SidebarContent className='overflow-x-hidden'>
         {filteredGroups.map((group) => (
           <SidebarGroup key={group.label || 'ungrouped'} className='py-0'>
-            {group.label && <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>}
+            {group.label && (
+              <SidebarGroupLabel>{t(navTitleKeys[group.label] ?? group.label)}</SidebarGroupLabel>
+            )}
             <SidebarMenu>
               {group.items.map((item) => {
                 const Icon = item.icon ? Icons[item.icon] : Icons.logo;
@@ -75,9 +96,12 @@ export default function AppSidebar() {
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={t(item.title)} isActive={pathname === item.url}>
+                        <SidebarMenuButton
+                          tooltip={t(navTitleKeys[item.title] ?? item.title)}
+                          isActive={pathname === item.url}
+                        >
                           {item.icon && <Icon />}
-                          <span>{t(item.title)}</span>
+                          <span>{t(navTitleKeys[item.title] ?? item.title)}</span>
                           <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
@@ -87,7 +111,7 @@ export default function AppSidebar() {
                             <SidebarMenuSubItem key={subItem.title}>
                               <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                                 <Link to={subItem.url}>
-                                  <span>{t(subItem.title)}</span>
+                                  <span>{t(navTitleKeys[subItem.title] ?? subItem.title)}</span>
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
@@ -100,12 +124,12 @@ export default function AppSidebar() {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
-                      tooltip={t(item.title)}
+                      tooltip={t(navTitleKeys[item.title] ?? item.title)}
                       isActive={pathname === item.url}
                     >
                       <Link to={item.url}>
                         <Icon />
-                        <span>{t(item.title)}</span>
+                        <span>{t(navTitleKeys[item.title] ?? item.title)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -145,7 +169,7 @@ export default function AppSidebar() {
                     onClick={() => router.navigate({ to: '/dashboard/notifications' })}
                   >
                     <Icons.notification className='mr-2 h-4 w-4' />
-                    Notifications
+                    {t('notifications.title')}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
@@ -156,7 +180,7 @@ export default function AppSidebar() {
                   }}
                 >
                   <Icons.logout className='mr-2 h-4 w-4' />
-                  Sign out
+                  {t('common.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
