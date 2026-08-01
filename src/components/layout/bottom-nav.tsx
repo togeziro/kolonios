@@ -1,15 +1,17 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Icons } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 
 const navItems = [
-  { icon: Icons.dashboard, label: 'Home', to: '/dashboard/overview' },
-  { icon: Icons.workspace, label: 'My Work', to: '/dashboard/my-work' },
-  { icon: Icons.calendar, label: 'Leave', to: '/dashboard/leave' },
-  { icon: Icons.user, label: 'Profile', to: '/dashboard/profile' }
+  { icon: Icons.dashboard, labelKey: 'navigation.home', to: '/dashboard/overview' },
+  { icon: Icons.workspace, labelKey: 'navigation.myWork', to: '/dashboard/my-work' },
+  { icon: Icons.calendar, labelKey: 'navigation.leave', to: '/dashboard/leave' },
+  { icon: Icons.user, labelKey: 'navigation.profile', to: '/dashboard/profile' }
 ] as const;
 
 export function BottomNav() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const reduceMotion = useReducedMotion();
 
@@ -22,7 +24,7 @@ export function BottomNav() {
     >
       <Link
         to='/dashboard/attendance'
-        aria-label='Go to attendance'
+        aria-label={t('navigation.goToAttendance')}
         className='bg-primary text-primary-foreground absolute -top-6 left-1/2 z-10 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full shadow-lg'
       >
         {reduceMotion ? (
@@ -57,7 +59,7 @@ export function BottomNav() {
                   isActive ? 'text-primary font-semibold' : 'text-muted-foreground'
                 }`}
               >
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </Link>
           );

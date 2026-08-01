@@ -4,8 +4,10 @@ import { useRouter } from '@tanstack/react-router';
 import { useSession, signOut } from '@/lib/auth/auth-client';
 import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useTranslation } from 'react-i18next';
 
 export function MobileHeader() {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -30,9 +32,9 @@ export function MobileHeader() {
     .slice(0, 2);
 
   const hour = new Date().getHours();
-  let greeting = 'Good evening';
-  if (hour < 12) greeting = 'Good morning';
-  else if (hour < 18) greeting = 'Good afternoon';
+  let greeting = t('navigation.goodEvening');
+  if (hour < 12) greeting = t('navigation.goodMorning');
+  else if (hour < 18) greeting = t('navigation.goodAfternoon');
 
   async function handleLogout() {
     setOpen(false);
@@ -79,7 +81,7 @@ export function MobileHeader() {
                 className='hover:bg-muted flex w-full items-center gap-2 px-3 py-2.5 text-sm'
               >
                 <Icons.logout className='h-4 w-4' />
-                Sign out
+                {t('common.signOut')}
               </button>
             </motion.div>
           )}

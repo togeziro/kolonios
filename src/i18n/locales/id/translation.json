@@ -5,7 +5,24 @@
     "product": "Produk",
     "users": "Pengguna",
     "account": "Akun",
-    "notifications": "Notifikasi"
+    "notifications": "Notifikasi",
+    "home": "Beranda",
+    "myWork": "Pekerjaan Saya",
+    "attendance": "Absensi",
+    "leave": "Cuti",
+    "profile": "Profil",
+    "management": "Manajemen",
+    "customers": "Pelanggan",
+    "employees": "Karyawan",
+    "settings": "Pengaturan",
+    "departments": "Departemen",
+    "jobTitles": "Jabatan",
+    "auditLog": "Log Audit",
+    "roleGroups": "Grup Peran",
+    "goToAttendance": "Ke absensi",
+    "goodMorning": "Selamat pagi",
+    "goodAfternoon": "Selamat siang",
+    "goodEvening": "Selamat malam"
   },
   "common": {
     "cancel": "Batal",
@@ -32,7 +49,8 @@
     "close": "Tutup",
     "confirm": "Konfirmasi",
     "noAccess": "Anda tidak memiliki akses ke halaman ini.",
-    "openMenu": "Buka menu"
+    "openMenu": "Buka menu",
+    "signOut": "Keluar"
   },
   "customer": {
     "title": "Pelanggan",

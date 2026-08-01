@@ -5,7 +5,24 @@
     "product": "Product",
     "users": "Users",
     "account": "Account",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "home": "Home",
+    "myWork": "My Work",
+    "attendance": "Attendance",
+    "leave": "Leave",
+    "profile": "Profile",
+    "management": "Management",
+    "customers": "Customers",
+    "employees": "Employees",
+    "settings": "Settings",
+    "departments": "Departments",
+    "jobTitles": "Job Titles",
+    "auditLog": "Audit Log",
+    "roleGroups": "Role Groups",
+    "goToAttendance": "Go to attendance",
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening"
   },
   "common": {
     "cancel": "Cancel",
@@ -32,7 +49,8 @@
     "close": "Close",
     "confirm": "Confirm",
     "noAccess": "You do not have access to this page.",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "signOut": "Sign out"
   },
   "customer": {
     "title": "Customer",

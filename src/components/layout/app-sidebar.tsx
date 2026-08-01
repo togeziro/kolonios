@@ -13,6 +13,7 @@ import { authClient } from '@/lib/auth/auth-client';
 import { Link } from '@tanstack/react-router';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Icons } from '../icons';
 import {
   Sidebar,
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/sidebar';
 
 export default function AppSidebar() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const router = useRouter();
   const { isAdmin, permissions } = useRoleGroupPermissions();
@@ -48,7 +50,9 @@ export default function AppSidebar() {
                 </div>
                 <div className='grid flex-1 text-left text-sm leading-tight'>
                   <span className='truncate font-semibold'>TanStack Start</span>
-                  <span className='text-muted-foreground truncate text-xs'>Dashboard</span>
+                  <span className='text-muted-foreground truncate text-xs'>
+                    {t('navigation.dashboard')}
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -58,7 +62,7 @@ export default function AppSidebar() {
       <SidebarContent className='overflow-x-hidden'>
         {filteredGroups.map((group) => (
           <SidebarGroup key={group.label || 'ungrouped'} className='py-0'>
-            {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+            {group.label && <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>}
             <SidebarMenu>
               {group.items.map((item) => {
                 const Icon = item.icon ? Icons[item.icon] : Icons.logo;
@@ -71,9 +75,9 @@ export default function AppSidebar() {
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={item.title} isActive={pathname === item.url}>
+                        <SidebarMenuButton tooltip={t(item.title)} isActive={pathname === item.url}>
                           {item.icon && <Icon />}
-                          <span>{item.title}</span>
+                          <span>{t(item.title)}</span>
                           <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
@@ -83,7 +87,7 @@ export default function AppSidebar() {
                             <SidebarMenuSubItem key={subItem.title}>
                               <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                                 <Link to={subItem.url}>
-                                  <span>{subItem.title}</span>
+                                  <span>{t(subItem.title)}</span>
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
@@ -96,12 +100,12 @@ export default function AppSidebar() {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
-                      tooltip={item.title}
+                      tooltip={t(item.title)}
                       isActive={pathname === item.url}
                     >
                       <Link to={item.url}>
                         <Icon />
-                        <span>{item.title}</span>
+                        <span>{t(item.title)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

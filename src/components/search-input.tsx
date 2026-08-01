@@ -1,8 +1,10 @@
 import { useKBar } from 'kbar';
 import { Icons } from '@/components/icons';
 import { Button } from './ui/button';
+import { useTranslation } from 'react-i18next';
 
 export default function SearchInput() {
+  const { t } = useTranslation();
   const { query } = useKBar();
   return (
     <div className='w-full space-y-2'>
@@ -12,7 +14,7 @@ export default function SearchInput() {
         onClick={query.toggle}
       >
         <Icons.search className='mr-2 h-4 w-4' />
-        Search...
+        {t('common.search')}
         <kbd className='bg-muted pointer-events-none absolute top-[0.3rem] right-[0.3rem] hidden h-6 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 select-none sm:flex'>
           <span className='text-xs'>⌘</span>K
         </kbd>
