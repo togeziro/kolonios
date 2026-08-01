@@ -302,6 +302,7 @@
     "newLeaveRequest": "New Leave Request",
     "noLeaveRequests": "No leave requests found",
     "noRecords": "No attendance records found",
+    "noShift": "No shift",
     "pageDescription": "Check in and out, view your attendance history",
     "pageTitle": "Attendance",
     "pending": "Pending",

@@ -19,7 +19,7 @@ export default function AuthCard({
   linkText,
   children
 }: AuthCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <>
       <div className='mx-auto flex w-full flex-col justify-center space-y-8 sm:w-[350px]'>
@@ -43,7 +43,7 @@ export default function AuthCard({
         <div className='text-sm'>{t('auth.copyright', { year: new Date().getFullYear() })}</div>
         <div className='flex items-center gap-1 text-sm'>
           <IconWorld className='size-4 text-muted-foreground' />
-          ENG
+          {i18n.language.toUpperCase()}
         </div>
       </div>
     </>

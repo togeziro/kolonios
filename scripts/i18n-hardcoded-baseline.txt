@@ -1,9 +1,7 @@
 src/features/attendance/components/attendance-check-card.tsx:125
-src/features/attendance/components/attendance-history.tsx:141
-src/features/attendance/components/attendance-history.tsx:145
+src/features/attendance/components/attendance-history.tsx:146
 src/features/attendance/components/leave-history.tsx:150
 src/features/attendance/components/mobile-leave-request-sheet.tsx:25
-src/features/auth/components/auth-card.tsx:46
 src/features/customers/components/customer-form-sheet.tsx:137
 src/features/customers/components/customer-form-sheet.tsx:145
 src/features/customers/components/customer-tables/cell-action.tsx:57

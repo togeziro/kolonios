@@ -138,7 +138,8 @@ export default function AttendanceHistory() {
                   <div className='min-w-0 flex-1'>
                     <p className='text-sm font-semibold'>{attendance.date}</p>
                     <p className='text-muted-foreground truncate text-[11px]'>
-                      {shift ? shift.name : 'No shift'} ·{' '}
+                      {shift ? shift.name : t('attendance.noShift')}
+                      {' · '}
                       {formatDuration(attendance.check_in_time, attendance.check_out_time) ?? '—'}
                     </p>
                     <p className='text-muted-foreground text-[11px]'>
