@@ -52,6 +52,11 @@
     "openMenu": "Open menu",
     "signOut": "Sign out"
   },
+  "confirm": {
+    "deleteTitle": "Are you sure?",
+    "deleteDescription": "This action cannot be undone.",
+    "deleteConfirm": "Continue"
+  },
   "customer": {
     "title": "Customer",
     "new": "New Customer",
@@ -298,6 +303,12 @@
     "leaveSubmitFailed": "Failed to submit leave request",
     "leaveSuffix": "leave",
     "leaveType": "Leave Type",
+    "leaveTypeAnnual": "Annual Leave",
+    "leaveTypeEmergency": "Emergency Leave",
+    "leaveTypeMaternity": "Maternity Leave",
+    "leaveTypePaternity": "Paternity Leave",
+    "leaveTypePersonal": "Personal Leave",
+    "leaveTypeSick": "Sick Leave",
     "monthPlaceholder": "Month",
     "newLeaveRequest": "New Leave Request",
     "noLeaveRequests": "No leave requests found",
@@ -474,7 +485,8 @@
     "selectedCount": "{{count}} selected",
     "selectDateRange": "Select date range",
     "selectDate": "Select date",
-    "reset": "Reset"
+    "reset": "Reset",
+    "resetFilters": "Reset filters"
   },
   "roleGroups": {
     "title": "Role Groups",

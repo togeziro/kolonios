@@ -52,6 +52,11 @@
     "openMenu": "Buka menu",
     "signOut": "Keluar"
   },
+  "confirm": {
+    "deleteTitle": "Apakah Anda yakin?",
+    "deleteDescription": "Tindakan ini tidak dapat dibatalkan.",
+    "deleteConfirm": "Lanjutkan"
+  },
   "customer": {
     "title": "Pelanggan",
     "new": "Pelanggan Baru",
@@ -298,6 +303,12 @@
     "leaveSubmitFailed": "Gagal mengirim pengajuan cuti",
     "leaveSuffix": "cuti",
     "leaveType": "Tipe Cuti",
+    "leaveTypeAnnual": "Cuti Tahunan",
+    "leaveTypeEmergency": "Cuti Darurat",
+    "leaveTypeMaternity": "Cuti Melahirkan",
+    "leaveTypePaternity": "Cuti Ayah",
+    "leaveTypePersonal": "Cuti Pribadi",
+    "leaveTypeSick": "Cuti Sakit",
     "monthPlaceholder": "Bulan",
     "newLeaveRequest": "Pengajuan Cuti Baru",
     "noLeaveRequests": "Tidak ada pengajuan cuti",
@@ -474,7 +485,8 @@
     "selectedCount": "{{count}} dipilih",
     "selectDateRange": "Pilih rentang tanggal",
     "selectDate": "Pilih tanggal",
-    "reset": "Atur Ulang"
+    "reset": "Atur Ulang",
+    "resetFilters": "Atur ulang filter"
   },
   "roleGroups": {
     "title": "Grup Peran",

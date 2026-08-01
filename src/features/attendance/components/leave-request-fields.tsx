@@ -18,12 +18,12 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
 const leaveTypes: { value: LeaveType; label: string }[] = [
-  { value: 'annual', label: 'Annual Leave' },
-  { value: 'sick', label: 'Sick Leave' },
-  { value: 'personal', label: 'Personal Leave' },
-  { value: 'emergency', label: 'Emergency Leave' },
-  { value: 'maternity', label: 'Maternity Leave' },
-  { value: 'paternity', label: 'Paternity Leave' }
+  { value: 'annual', label: 'attendance.leaveTypeAnnual' },
+  { value: 'sick', label: 'attendance.leaveTypeSick' },
+  { value: 'personal', label: 'attendance.leaveTypePersonal' },
+  { value: 'emergency', label: 'attendance.leaveTypeEmergency' },
+  { value: 'maternity', label: 'attendance.leaveTypeMaternity' },
+  { value: 'paternity', label: 'attendance.leaveTypePaternity' }
 ] as const;
 
 export default function LeaveRequestFields() {
@@ -74,9 +74,9 @@ export default function LeaveRequestFields() {
             <SelectValue placeholder={t('attendance.selectLeaveType')} />
           </SelectTrigger>
           <SelectContent>
-            {leaveTypes.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
+            {leaveTypes.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.label)}
               </SelectItem>
             ))}
           </SelectContent>
