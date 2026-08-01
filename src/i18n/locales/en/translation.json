@@ -285,9 +285,37 @@
     "title": "Notifications",
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No notifications yet",
+    "newCount": "{{count}} new",
+    "noNotificationsPage": "No notifications",
+    "pageTitle": "Notifications",
+    "pageDescription": "View and manage all your notifications.",
+    "allCount": "All ({{count}})",
+    "unreadCount": "Unread ({{count}})",
+    "readCount": "Read ({{count}})",
     "unread": "Unread",
     "read": "Read",
     "archived": "Archived"
+  },
+  "audit": {
+    "pageTitle": "Audit Log",
+    "pageDescription": "Record of administrative actions (who changed what and when)",
+    "filterByAction": "Filter by action (e.g. employee.create)",
+    "recordedActions": "{{count}} recorded action(s)",
+    "time": "Time",
+    "actor": "Actor",
+    "action": "Action",
+    "entity": "Entity",
+    "id": "ID",
+    "noEntries": "No audit entries yet."
+  },
+  "profile": {
+    "thisMonth": "This month",
+    "present": "Present",
+    "late": "Late",
+    "absent": "Absent",
+    "activeTasks": "Active tasks",
+    "notifications": "Notifications",
+    "signOut": "Sign out"
   },
   "overview": {
     "totalRevenue": "Total Revenue",

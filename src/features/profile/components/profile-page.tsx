@@ -8,8 +8,10 @@ import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { attendanceSummaryQueryOptions } from '@/features/attendance/api/queries';
 import { myTasksQueryOptions } from '@/features/tasks/api/queries';
+import { useTranslation } from 'react-i18next';
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const router = useRouter();
   const { data: summaryData } = useQuery(attendanceSummaryQueryOptions());
@@ -53,23 +55,25 @@ export default function ProfilePage() {
       </div>
 
       <Card className='rounded-2xl p-4'>
-        <p className='text-muted-foreground mb-2 text-[11px] font-medium uppercase'>This month</p>
+        <p className='text-muted-foreground mb-2 text-[11px] font-medium uppercase'>
+          {t('profile.thisMonth')}
+        </p>
         <div className='flex justify-around text-center'>
           <div>
             <p className='text-lg font-semibold tabular-nums'>{summary?.present ?? '—'}</p>
-            <p className='text-muted-foreground text-[11px]'>Present</p>
+            <p className='text-muted-foreground text-[11px]'>{t('profile.present')}</p>
           </div>
           <div>
             <p className='text-lg font-semibold tabular-nums'>{summary?.late ?? '—'}</p>
-            <p className='text-muted-foreground text-[11px]'>Late</p>
+            <p className='text-muted-foreground text-[11px]'>{t('profile.late')}</p>
           </div>
           <div>
             <p className='text-lg font-semibold tabular-nums'>{summary?.absent ?? '—'}</p>
-            <p className='text-muted-foreground text-[11px]'>Absent</p>
+            <p className='text-muted-foreground text-[11px]'>{t('profile.absent')}</p>
           </div>
           <div>
             <p className='text-lg font-semibold tabular-nums'>{inProgress}</p>
-            <p className='text-muted-foreground text-[11px]'>Active tasks</p>
+            <p className='text-muted-foreground text-[11px]'>{t('profile.activeTasks')}</p>
           </div>
         </div>
       </Card>
@@ -80,7 +84,7 @@ export default function ProfilePage() {
           className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
         >
           <Icons.notification className='text-muted-foreground h-4 w-4' />
-          Notifications
+          {t('profile.notifications')}
           <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
         </Link>
         <hr />
@@ -89,7 +93,7 @@ export default function ProfilePage() {
           className='hover:bg-muted flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left text-sm'
         >
           <Icons.logout className='text-muted-foreground h-4 w-4' />
-          Sign out
+          {t('profile.signOut')}
           <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
         </button>
       </Card>

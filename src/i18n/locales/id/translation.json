@@ -285,9 +285,37 @@
     "title": "Notifikasi",
     "markAllAsRead": "Tandai semua sebagai dibaca",
     "noNotifications": "Belum ada notifikasi",
+    "newCount": "{{count}} baru",
+    "noNotificationsPage": "Tidak ada notifikasi",
+    "pageTitle": "Notifikasi",
+    "pageDescription": "Lihat dan kelola semua notifikasi Anda.",
+    "allCount": "Semua ({{count}})",
+    "unreadCount": "Belum dibaca ({{count}})",
+    "readCount": "Dibaca ({{count}})",
     "unread": "Belum dibaca",
     "read": "Dibaca",
     "archived": "Diarsipkan"
+  },
+  "audit": {
+    "pageTitle": "Log Audit",
+    "pageDescription": "Catatan aksi administratif (siapa mengubah apa dan kapan)",
+    "filterByAction": "Filter berdasarkan aksi (mis. employee.create)",
+    "recordedActions": "{{count}} aksi tercatat",
+    "time": "Waktu",
+    "actor": "Pelaku",
+    "action": "Aksi",
+    "entity": "Entitas",
+    "id": "ID",
+    "noEntries": "Belum ada entri audit."
+  },
+  "profile": {
+    "thisMonth": "Bulan ini",
+    "present": "Hadir",
+    "late": "Terlambat",
+    "absent": "Absen",
+    "activeTasks": "Tugas aktif",
+    "notifications": "Notifikasi",
+    "signOut": "Keluar"
   },
   "overview": {
     "totalRevenue": "Total Pendapatan",

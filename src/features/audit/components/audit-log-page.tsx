@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { auditLogQueryOptions } from '../api/queries';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 export function AuditLogPage() {
+  const { t } = useTranslation();
   const [action, setAction] = useState('');
   const [search, setSearch] = useState('');
 
@@ -22,23 +24,25 @@ export function AuditLogPage() {
         <Input
           value={action}
           onChange={(e) => setAction(e.target.value)}
-          placeholder='Filter by action (e.g. employee.create)'
+          placeholder={t('audit.filterByAction')}
           className='max-w-sm'
         />
         <Button variant='outline' onClick={() => setSearch(action)} disabled={isFetching}>
           {isFetching ? 'Loading...' : 'Apply'}
         </Button>
       </div>
-      <p className='text-muted-foreground text-sm'>{total} recorded action(s)</p>
+      <p className='text-muted-foreground text-sm'>
+        {t('audit.recordedActions', { count: total })}
+      </p>
       <div className='rounded-lg border'>
         <table className='w-full text-left text-sm'>
           <thead className='bg-muted/50 text-muted-foreground'>
             <tr>
-              <th className='p-3 font-medium'>Time</th>
-              <th className='p-3 font-medium'>Actor</th>
-              <th className='p-3 font-medium'>Action</th>
-              <th className='p-3 font-medium'>Entity</th>
-              <th className='p-3 font-medium'>ID</th>
+              <th className='p-3 font-medium'>{t('audit.time')}</th>
+              <th className='p-3 font-medium'>{t('audit.actor')}</th>
+              <th className='p-3 font-medium'>{t('audit.action')}</th>
+              <th className='p-3 font-medium'>{t('audit.entity')}</th>
+              <th className='p-3 font-medium'>{t('audit.id')}</th>
             </tr>
           </thead>
           <tbody className='divide-y'>
@@ -56,7 +60,7 @@ export function AuditLogPage() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={5} className='text-muted-foreground p-6 text-center'>
-                  No audit entries yet.
+                  {t('audit.noEntries')}
                 </td>
               </tr>
             )}
