@@ -6,6 +6,7 @@ import CustomerListingPage from '@/features/customers/components/customer-listin
 import { customersQueryOptions } from '@/features/customers/api/queries';
 import { parseSortingState } from '@/lib/parsers';
 import { CustomerFormSheetTrigger } from '@/features/customers/components/customer-form-sheet';
+import { useTranslation } from 'react-i18next';
 
 const customersSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -51,10 +52,11 @@ export const Route = createFileRoute('/dashboard/customers')({
 });
 
 function CustomersPage() {
+  const { t } = useTranslation();
   return (
     <PageContainer
-      pageTitle='Customers'
-      pageDescription='Manage customers (React Query + search params table pattern.)'
+      pageTitle={t('customer.titlePlural')}
+      pageDescription={t('customer.pageDescription')}
       pageHeaderAction={<CustomerFormSheetTrigger />}
     >
       <CustomerListingPage />

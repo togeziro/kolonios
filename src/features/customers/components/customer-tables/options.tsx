@@ -1,4 +1,4 @@
 export const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' }
+  { value: 'active', label: 'customer.statusActive' },
+  { value: 'inactive', label: 'customer.statusInactive' }
 ];

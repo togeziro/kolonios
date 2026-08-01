@@ -14,6 +14,7 @@ import { Icons } from '@/components/icons';
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { CustomerFormSheet } from '../customer-form-sheet';
 
 interface CellActionProps {
@@ -21,17 +22,18 @@ interface CellActionProps {
 }
 
 export function CellAction({ data }: CellActionProps) {
+  const { t } = useTranslation();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   const deleteMutation = useMutation(
     mergeMutationCallbacks(deleteCustomerMutation, {
       onSuccess: () => {
-        toast.success('Customer deleted successfully');
+        toast.success(t('customer.deleted'));
         setDeleteOpen(false);
       },
       onError: () => {
-        toast.error('Failed to delete customer');
+        toast.error(t('customer.deleteFailed'));
       }
     })
   );
@@ -48,17 +50,17 @@ export function CellAction({ data }: CellActionProps) {
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant='ghost' className='h-8 w-8 p-0'>
-            <span className='sr-only'>Open menu</span>
+            <span className='sr-only'>{t('common.openMenu')}</span>
             <Icons.ellipsis className='h-4 w-4' />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
-            <Icons.edit className='mr-2 h-4 w-4' /> Update
+            <Icons.edit className='mr-2 h-4 w-4' /> {t('common.update')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
-            <Icons.trash className='mr-2 h-4 w-4' /> Delete
+            <Icons.trash className='mr-2 h-4 w-4' /> {t('common.delete')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

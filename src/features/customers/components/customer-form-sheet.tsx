@@ -16,29 +16,31 @@ import { createCustomerMutation, updateCustomerMutation } from '../api/mutations
 import type { Customer } from '../api/types';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { STATUS_OPTIONS } from './customer-tables/options';
 
 export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerFormSheetProps) {
+  const { t } = useTranslation();
   const isEdit = !!customer;
 
   const createMutation = useMutation(
     mergeMutationCallbacks(createCustomerMutation, {
       onSuccess: () => {
-        toast.success('Customer created successfully');
+        toast.success(t('customer.created'));
         onOpenChange(false);
         form.reset();
       },
-      onError: () => toast.error('Failed to create customer')
+      onError: () => toast.error(t('customer.createFailed'))
     })
   );
 
   const updateMutation = useMutation(
     mergeMutationCallbacks(updateCustomerMutation, {
       onSuccess: () => {
-        toast.success('Customer updated successfully');
+        toast.success(t('customer.updated'));
         onOpenChange(false);
       },
-      onError: () => toast.error('Failed to update customer')
+      onError: () => toast.error(t('customer.updateFailed'))
     })
   );
 
@@ -90,7 +92,7 @@ export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerForm
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='flex flex-col sm:max-w-lg'>
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Customer' : 'New Customer'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('customer.edit') : t('customer.new')}</SheetTitle>
           <SheetDescription>
             {isEdit
               ? 'Update the customer details below.'
@@ -102,27 +104,37 @@ export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerForm
           <form.AppForm>
             <form.Form id='customer-form-sheet' className='space-y-4'>
               <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-                <FormTextField name='full_name' label='Full Name' required placeholder='John Doe' />
+                <FormTextField
+                  name='full_name'
+                  label={t('customer.fullName')}
+                  required
+                  placeholder={t('customer.namePlaceholder')}
+                />
 
                 <FormTextField
                   name='email'
-                  label='Email'
+                  label={t('customer.email')}
                   required
                   type='email'
-                  placeholder='john@example.com'
+                  placeholder={t('customer.emailPlaceholder')}
                 />
 
-                <FormTextField name='phone' label='Phone' required placeholder='+1234567890' />
+                <FormTextField
+                  name='phone'
+                  label={t('customer.phone')}
+                  required
+                  placeholder='+1234567890'
+                />
 
                 <FormTextField
                   name='id_card_number'
-                  label='ID Card Number'
-                  placeholder='ID card number'
+                  label={t('customer.idCardNumber')}
+                  placeholder={t('customer.idCardPlaceholder')}
                 />
 
                 <FormTextField
                   name='latitude'
-                  label='Latitude'
+                  label={t('customer.latitude')}
                   type='number'
                   step='any'
                   placeholder='-6.2088'
@@ -130,7 +142,7 @@ export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerForm
 
                 <FormTextField
                   name='longitude'
-                  label='Longitude'
+                  label={t('customer.longitude')}
                   type='number'
                   step='any'
                   placeholder='106.8456'
@@ -139,36 +151,36 @@ export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerForm
 
               <FormTextField
                 name='address'
-                label='Address'
-                placeholder='Street, city, postal code'
+                label={t('customer.address')}
+                placeholder={t('customer.addressPlaceholder')}
               />
 
               <FormTextField
                 name='billing_address'
-                label='Billing Address'
-                placeholder='Billing address if different'
+                label={t('customer.billingAddress')}
+                placeholder={t('customer.billingAddressPlaceholder')}
               />
 
               <FormTextareaField
                 name='notes'
-                label='Notes'
-                placeholder='Additional notes...'
+                label={t('customer.notes')}
+                placeholder={t('customer.notesPlaceholder')}
                 rows={2}
               />
 
               <FormTextareaField
                 name='service_data'
-                label='Service Data (JSON)'
-                placeholder='{"pppoe_username": "user1", "plan": "100Mbps"}'
+                label={t('customer.serviceData')}
+                placeholder={t('customer.serviceDataPlaceholder')}
                 rows={3}
               />
 
               <FormSelectField
                 name='status'
-                label='Status'
+                label={t('customer.status')}
                 required
                 options={STATUS_OPTIONS}
-                placeholder='Select status'
+                placeholder={t('customer.selectStatus')}
               />
             </form.Form>
           </form.AppForm>
@@ -176,7 +188,7 @@ export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerForm
 
         <SheetFooter>
           <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type='submit' form='customer-form-sheet' isLoading={isPending}>
             <Icons.check /> {isEdit ? 'Update Customer' : 'Create Customer'}
@@ -210,12 +222,13 @@ type CustomerFormValues = {
 };
 
 export function CustomerFormSheetTrigger() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <Icons.add className='mr-2 h-4 w-4' /> Add Customer
+        <Icons.add className='mr-2 h-4 w-4' /> {t('customer.add')}
       </Button>
       <CustomerFormSheet open={open} onOpenChange={setOpen} />
     </>
