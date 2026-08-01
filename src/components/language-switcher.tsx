@@ -26,6 +26,10 @@ export function LanguageSwitcher() {
 
   const changeLanguage = (lng: SupportedLanguage) => {
     i18n.changeLanguage(lng);
+    document.cookie = `i18next=${lng}; path=/; max-age=31536000; SameSite=Lax; ${
+      window.location.protocol === 'https:' ? 'Secure;' : ''
+    }`;
+    document.documentElement.lang = lng;
   };
 
   return (

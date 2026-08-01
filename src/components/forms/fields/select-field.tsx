@@ -1,4 +1,5 @@
 import { useStore } from '@tanstack/react-form';
+import { useTranslation } from 'react-i18next';
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ export function SelectField({
   options,
   placeholder = 'Select an option'
 }: SelectFieldProps) {
+  const { t } = useTranslation();
   const field = useFieldContext();
   const isTouched = useStore(field.store, (s) => s.meta.isTouched);
   const isValid = useStore(field.store, (s) => s.meta.isValid);
@@ -57,7 +59,7 @@ export function SelectField({
           <SelectContent>
             {options.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+                {t(opt.label)}
               </SelectItem>
             ))}
           </SelectContent>

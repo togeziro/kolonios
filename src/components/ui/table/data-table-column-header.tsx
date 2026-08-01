@@ -1,4 +1,5 @@
 import type { Column } from '@tanstack/react-table';
+import { useTranslation } from 'react-i18next';
 import { Icons } from '@/components/icons';
 
 import {
@@ -24,8 +25,10 @@ export function DataTableColumnHeader<TData, TValue>({
   className,
   ...props
 }: DataTableColumnHeaderProps<TData, TValue>) {
+  const { t } = useTranslation();
+
   if (!column.getCanSort() && !column.getCanHide()) {
-    return <div className={cn(className)}>{title}</div>;
+    return <div className={cn(className)}>{t(title)}</div>;
   }
 
   return (
@@ -37,7 +40,7 @@ export function DataTableColumnHeader<TData, TValue>({
         )}
         {...props}
       >
-        {title}
+        {t(title)}
         {column.getCanSort() &&
           (column.getIsSorted() === 'desc' ? (
             <ChevronDownIcon />
@@ -56,7 +59,7 @@ export function DataTableColumnHeader<TData, TValue>({
               onClick={() => column.toggleSorting(false)}
             >
               <ChevronUpIcon />
-              Asc
+              {t('table.sortAsc')}
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               className='[&_svg]:text-muted-foreground relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto'
@@ -64,7 +67,7 @@ export function DataTableColumnHeader<TData, TValue>({
               onClick={() => column.toggleSorting(true)}
             >
               <ChevronDownIcon />
-              Desc
+              {t('table.sortDesc')}
             </DropdownMenuCheckboxItem>
             {column.getIsSorted() && (
               <DropdownMenuItem
@@ -72,7 +75,7 @@ export function DataTableColumnHeader<TData, TValue>({
                 onClick={() => column.clearSorting()}
               >
                 <Cross2Icon />
-                Reset
+                {t('table.reset')}
               </DropdownMenuItem>
             )}
           </>
@@ -84,7 +87,7 @@ export function DataTableColumnHeader<TData, TValue>({
             onClick={() => column.toggleVisibility(false)}
           >
             <Icons.eyeOff />
-            Hide
+            {t('table.hide')}
           </DropdownMenuCheckboxItem>
         )}
       </DropdownMenuContent>

@@ -1,4 +1,5 @@
 import type { Table } from '@tanstack/react-table';
+import { useTranslation } from 'react-i18next';
 import { Icons } from '@/components/icons';
 
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ interface DataTableViewOptionsProps<TData> {
 }
 
 export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps<TData>) {
+  const { t } = useTranslation();
+
   const columns = React.useMemo(
     () =>
       table
@@ -32,21 +35,21 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          aria-label='Toggle columns'
+          aria-label={t('table.toggleColumns')}
           variant='outline'
           size='sm'
           className='ml-auto hidden h-8 lg:flex'
         >
           <Icons.adjustments />
-          View
+          {t('table.view')}
           <CaretSortIcon className='ml-auto opacity-50' />
         </Button>
       </PopoverTrigger>
       <PopoverContent align='end' className='w-44 p-0'>
         <Command>
-          <CommandInput placeholder='Search columns...' />
+          <CommandInput placeholder={t('table.searchColumns')} />
           <CommandList>
-            <CommandEmpty>No columns found.</CommandEmpty>
+            <CommandEmpty>{t('table.noColumnsFound')}</CommandEmpty>
             <CommandGroup>
               {columns.map((column) => (
                 <CommandItem

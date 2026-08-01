@@ -22,7 +22,8 @@
     "add": "Tambah",
     "remove": "Hapus",
     "close": "Tutup",
-    "confirm": "Konfirmasi"
+    "confirm": "Konfirmasi",
+    "noAccess": "Anda tidak memiliki akses ke halaman ini."
   },
   "product": {
     "title": "Produk",
@@ -146,7 +147,22 @@
     "next": "Berikutnya",
     "previous": "Sebelumnya",
     "first": "Pertama",
-    "last": "Terakhir"
+    "last": "Terakhir",
+    "rowsSelected": "{{selected}} dari {{total}} baris dipilih.",
+    "rowsTotal": "{{total}} baris total.",
+    "pageOf": "Halaman {{page}} dari {{total}}",
+    "goToFirstPage": "Ke halaman pertama",
+    "goToPreviousPage": "Ke halaman sebelumnya",
+    "goToNextPage": "Ke halaman berikutnya",
+    "goToLastPage": "Ke halaman terakhir",
+    "toggleColumns": "Alihkan kolom",
+    "view": "Lihat",
+    "searchColumns": "Cari kolom...",
+    "noColumnsFound": "Tidak ada kolom ditemukan.",
+    "selectedCount": "{{count}} dipilih",
+    "selectDateRange": "Pilih rentang tanggal",
+    "selectDate": "Pilih tanggal",
+    "reset": "Atur Ulang"
   },
   "roleGroups": {
     "title": "Grup Peran",

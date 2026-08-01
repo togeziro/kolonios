@@ -22,7 +22,8 @@
     "add": "Add",
     "remove": "Remove",
     "close": "Close",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "noAccess": "You do not have access to this page."
   },
   "product": {
     "title": "Product",
@@ -146,7 +147,22 @@
     "next": "Next",
     "previous": "Previous",
     "first": "First",
-    "last": "Last"
+    "last": "Last",
+    "rowsSelected": "{{selected}} of {{total}} row(s) selected.",
+    "rowsTotal": "{{total}} row(s) total.",
+    "pageOf": "Page {{page}} of {{total}}",
+    "goToFirstPage": "Go to first page",
+    "goToPreviousPage": "Go to previous page",
+    "goToNextPage": "Go to next page",
+    "goToLastPage": "Go to last page",
+    "toggleColumns": "Toggle columns",
+    "view": "View",
+    "searchColumns": "Search columns...",
+    "noColumnsFound": "No columns found.",
+    "selectedCount": "{{count}} selected",
+    "selectDateRange": "Select date range",
+    "selectDate": "Select date",
+    "reset": "Reset"
   },
   "roleGroups": {
     "title": "Role Groups",
