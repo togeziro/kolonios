@@ -9,13 +9,13 @@
   pagination, dropdowns, modals/sheets, auth pages, notifications, attendance,
   tasks, masterdata, role groups, profile) migrated from hardcoded JSX text to
   `useTranslation()`/`t()` calls backed by `src/i18n/locales/{en,id}/translation.json`
-  (509 keys, key-parity enforced by `bun run i18n:check`).
+  (510 keys, key-parity enforced by `bun run i18n:check`).
 - **Language persistence fixed** — the i18next cookie is now read during SSR so
   a hard refresh keeps the selected language; `<html lang>` reflects it.
 - **Codebase remains English-only** — Indonesian appears only as values in
   `id/translation.json`; keys, identifiers, and comments stay English.
 - **Baseline regenerated** — hardcoded-string scanner allowlist
-  (`scripts/i18n-hardcoded-baseline.txt`) trimmed 522 → 117 entries; the
+  (`scripts/i18n-hardcoded-baseline.txt`) trimmed 522 → 115 entries; the
   remainder are legal pages (terms/privacy/about, intentionally never touched),
   non-translatable component/chart props, column-header translation keys, and
   demo placeholders. `bun run i18n:hardcoded` passes against the new baseline.
