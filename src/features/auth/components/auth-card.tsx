@@ -1,5 +1,6 @@
 import { IconWorld } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 
 interface AuthCardProps {
   title: string;
@@ -18,6 +19,7 @@ export default function AuthCard({
   linkText,
   children
 }: AuthCardProps) {
+  const { t } = useTranslation();
   return (
     <>
       <div className='mx-auto flex w-full flex-col justify-center space-y-8 sm:w-[350px]'>
@@ -38,7 +40,7 @@ export default function AuthCard({
       </div>
 
       <div className='absolute bottom-5 flex w-full justify-between px-10'>
-        <div className='text-sm'>© {new Date().getFullYear()}, TanStack Dashboard.</div>
+        <div className='text-sm'>{t('auth.copyright', { year: new Date().getFullYear() })}</div>
         <div className='flex items-center gap-1 text-sm'>
           <IconWorld className='size-4 text-muted-foreground' />
           ENG

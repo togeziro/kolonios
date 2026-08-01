@@ -8,6 +8,7 @@ import { authClient } from '@/lib/auth/auth-client';
 import { useRouter } from '@tanstack/react-router';
 import { useTransition, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import * as z from 'zod';
 
 const formSchema = z
@@ -23,6 +24,7 @@ const formSchema = z
   });
 
 export default function RegisterForm() {
+  const { t } = useTranslation();
   const [loading, startTransition] = useTransition();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +64,7 @@ export default function RegisterForm() {
           children={(field) => (
             <field.FieldSet>
               <field.Field>
-                <field.FieldLabel htmlFor={field.name}>Name</field.FieldLabel>
+                <field.FieldLabel htmlFor={field.name}>{t('auth.name')}</field.FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -70,7 +72,7 @@ export default function RegisterForm() {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder='John Doe'
+                  placeholder={t('auth.namePlaceholder')}
                   disabled={loading}
                   aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
                 />
@@ -84,7 +86,7 @@ export default function RegisterForm() {
           children={(field) => (
             <field.FieldSet>
               <field.Field>
-                <field.FieldLabel htmlFor={field.name}>Email Address</field.FieldLabel>
+                <field.FieldLabel htmlFor={field.name}>{t('auth.emailAddress')}</field.FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -92,7 +94,7 @@ export default function RegisterForm() {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder='you@example.com'
+                  placeholder={t('auth.emailPlaceholder')}
                   autoComplete='email'
                   disabled={loading}
                   aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
@@ -109,7 +111,7 @@ export default function RegisterForm() {
               field={field}
               show={showPassword}
               onToggle={() => setShowPassword(!showPassword)}
-              label='Password'
+              label={t('auth.password')}
               loading={loading}
               autoComplete='new-password'
             />
@@ -122,14 +124,14 @@ export default function RegisterForm() {
               field={field}
               show={showConfirmPassword}
               onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
-              label='Confirm Password'
+              label={t('auth.confirmPassword')}
               loading={loading}
               autoComplete='new-password'
             />
           )}
         />
         <Button disabled={loading} className='ml-auto w-full' type='submit'>
-          Create Account
+          {t('auth.createAccount')}
         </Button>
       </form.Form>
     </form.AppForm>

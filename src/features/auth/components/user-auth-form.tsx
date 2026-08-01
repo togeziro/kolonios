@@ -9,6 +9,7 @@ import { authClient } from '@/lib/auth/auth-client';
 import { useRouter } from '@tanstack/react-router';
 import { useTransition, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import * as z from 'zod';
 
 const formSchema = z.object({
@@ -18,6 +19,7 @@ const formSchema = z.object({
 });
 
 export default function UserAuthForm() {
+  const { t } = useTranslation();
   const [loading, startTransition] = useTransition();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +41,7 @@ export default function UserAuthForm() {
           rememberMe: value.remember
         });
         if (error) {
-          toast.error(error.message || 'Sign in failed');
+          toast.error(error.message || t('auth.signInFailed'));
         } else {
           router.navigate({ to: '/dashboard/overview' });
         }
@@ -55,7 +57,7 @@ export default function UserAuthForm() {
           children={(field) => (
             <field.FieldSet>
               <field.Field>
-                <field.FieldLabel htmlFor={field.name}>Email Address</field.FieldLabel>
+                <field.FieldLabel htmlFor={field.name}>{t('auth.emailAddress')}</field.FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -63,7 +65,7 @@ export default function UserAuthForm() {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder='you@example.com'
+                  placeholder={t('auth.emailPlaceholder')}
                   autoComplete='email'
                   disabled={loading}
                   aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
@@ -80,7 +82,7 @@ export default function UserAuthForm() {
               field={field}
               show={showPassword}
               onToggle={() => setShowPassword(!showPassword)}
-              label='Password'
+              label={t('auth.password')}
               loading={loading}
               autoComplete='current-password'
             />
@@ -99,13 +101,13 @@ export default function UserAuthForm() {
                 htmlFor={field.name}
                 className='text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
               >
-                Remember me for 30 days
+                {t('auth.rememberMe30')}
               </label>
             </div>
           )}
         />
         <Button disabled={loading} className='ml-auto w-full' type='submit'>
-          Login
+          {t('auth.login')}
         </Button>
       </form.Form>
     </form.AppForm>
