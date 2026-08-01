@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 interface DepartmentForm {
   id?: number;
@@ -37,6 +38,7 @@ interface DepartmentForm {
 const emptyForm: DepartmentForm = { name: '', code: '', description: '' };
 
 export default function DepartmentManagePage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<DepartmentForm>(emptyForm);
@@ -52,14 +54,14 @@ export default function DepartmentManagePage() {
       }),
     onSuccess: (res) => {
       if (res?.success) {
-        toast.success('Department created');
+        toast.success(t('masterdata.departmentCreated'));
         queryClient.invalidateQueries({ queryKey: ['masterdata', 'departments'] });
         closeDialog();
       } else {
-        toast.error(res?.message ?? 'Failed to create');
+        toast.error(res?.message ?? t('masterdata.departmentCreateFailed'));
       }
     },
-    onError: () => toast.error('Failed to create department')
+    onError: () => toast.error(t('masterdata.departmentCreateFailed'))
   });
 
   const updateMutation = useMutation({
@@ -74,27 +76,27 @@ export default function DepartmentManagePage() {
       }),
     onSuccess: (res) => {
       if (res?.success) {
-        toast.success('Department updated');
+        toast.success(t('masterdata.departmentUpdated'));
         queryClient.invalidateQueries({ queryKey: ['masterdata', 'departments'] });
         closeDialog();
       } else {
-        toast.error(res?.message ?? 'Failed to update');
+        toast.error(res?.message ?? t('masterdata.departmentUpdateFailed'));
       }
     },
-    onError: () => toast.error('Failed to update department')
+    onError: () => toast.error(t('masterdata.departmentUpdateFailed'))
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteDepartmentFn({ data: { id } }),
     onSuccess: (res) => {
       if (res?.success) {
-        toast.success('Department deleted');
+        toast.success(t('masterdata.departmentDeleted'));
         queryClient.invalidateQueries({ queryKey: ['masterdata', 'departments'] });
       } else {
-        toast.error(res?.message ?? 'Failed to delete');
+        toast.error(res?.message ?? t('masterdata.departmentDeleteFailed'));
       }
     },
-    onError: () => toast.error('Failed to delete department')
+    onError: () => toast.error(t('masterdata.departmentDeleteFailed'))
   });
 
   function openEdit(dept: (typeof departments)[number]) {
@@ -123,10 +125,10 @@ export default function DepartmentManagePage() {
         <CardHeader className='flex flex-row items-center justify-between'>
           <CardTitle className='flex items-center gap-2'>
             <Icons.workspace className='h-5 w-5' />
-            Departments
+            {t('masterdata.departmentsTitle')}
           </CardTitle>
           <Button onClick={openCreate}>
-            <Icons.add className='mr-2 h-4 w-4' /> Add Department
+            <Icons.add className='mr-2 h-4 w-4' /> {t('masterdata.addDepartment')}
           </Button>
         </CardHeader>
         <CardContent>
@@ -136,17 +138,17 @@ export default function DepartmentManagePage() {
             </div>
           ) : departments.length === 0 ? (
             <div className='py-8 text-center text-sm text-muted-foreground'>
-              No departments found
+              {t('masterdata.noDepartments')}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='w-24'>Actions</TableHead>
+                  <TableHead>{t('common.code')}</TableHead>
+                  <TableHead>{t('common.name')}</TableHead>
+                  <TableHead>{t('masterdata.description')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead className='w-24'>{t('table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,7 +161,7 @@ export default function DepartmentManagePage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={dept.is_active ? 'default' : 'secondary'}>
-                        {dept.is_active ? 'Active' : 'Inactive'}
+                        {dept.is_active ? t('common.active') : t('common.inactive')}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -171,7 +173,7 @@ export default function DepartmentManagePage() {
                           variant='ghost'
                           size='icon'
                           onClick={() => {
-                            if (confirm('Delete this department?')) {
+                            if (confirm(t('masterdata.deleteDepartmentConfirm'))) {
                               deleteMutation.mutate(dept.id);
                             }
                           }}
@@ -191,32 +193,36 @@ export default function DepartmentManagePage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isEdit ? 'Edit Department' : 'New Department'}</DialogTitle>
+            <DialogTitle>
+              {isEdit ? t('masterdata.editDepartment') : t('masterdata.newDepartment')}
+            </DialogTitle>
             <DialogDescription>
-              {isEdit ? 'Update department details' : 'Add a new department'}
+              {isEdit
+                ? t('masterdata.departmentEditDescription')
+                : t('masterdata.departmentAddDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
             <div className='space-y-2'>
-              <Label>Code *</Label>
+              <Label>{t('masterdata.codeRequired')}</Label>
               <Input
-                placeholder='e.g. ENG'
+                placeholder={t('masterdata.codePlaceholder')}
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
               />
             </div>
             <div className='space-y-2'>
-              <Label>Name *</Label>
+              <Label>{t('masterdata.nameRequired')}</Label>
               <Input
-                placeholder='e.g. Engineering'
+                placeholder={t('masterdata.namePlaceholder')}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
             <div className='space-y-2'>
-              <Label>Description</Label>
+              <Label>{t('masterdata.description')}</Label>
               <Textarea
-                placeholder='Optional description'
+                placeholder={t('masterdata.descriptionPlaceholder')}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
@@ -224,12 +230,12 @@ export default function DepartmentManagePage() {
           </div>
           <DialogFooter>
             <Button variant='outline' onClick={closeDialog}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => {
                 if (!form.name || !form.code) {
-                  toast.error('Name and code are required');
+                  toast.error(t('masterdata.nameAndCodeRequired'));
                   return;
                 }
                 if (isEdit) {
@@ -245,7 +251,7 @@ export default function DepartmentManagePage() {
               ) : (
                 <Icons.check className='mr-2 h-4 w-4' />
               )}
-              {isEdit ? 'Update' : 'Create'}
+              {isEdit ? t('common.update') : t('common.create')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -32,6 +32,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 interface DesignationForm {
   id?: number;
@@ -51,6 +52,7 @@ const emptyForm: DesignationForm = {
 };
 
 export default function DesignationManagePage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<DesignationForm>(emptyForm);
@@ -92,14 +94,14 @@ export default function DesignationManagePage() {
       }),
     onSuccess: (res) => {
       if (res?.success) {
-        toast.success('Designation created');
+        toast.success(t('masterdata.designationCreated'));
         queryClient.invalidateQueries({ queryKey: ['masterdata', 'designations'] });
         closeDialog();
       } else {
-        toast.error(res?.message ?? 'Failed to create');
+        toast.error(res?.message ?? t('masterdata.designationCreateFailed'));
       }
     },
-    onError: () => toast.error('Failed to create designation')
+    onError: () => toast.error(t('masterdata.designationCreateFailed'))
   });
 
   const updateMutation = useMutation({
@@ -116,27 +118,27 @@ export default function DesignationManagePage() {
       }),
     onSuccess: (res) => {
       if (res?.success) {
-        toast.success('Designation updated');
+        toast.success(t('masterdata.designationUpdated'));
         queryClient.invalidateQueries({ queryKey: ['masterdata', 'designations'] });
         closeDialog();
       } else {
-        toast.error(res?.message ?? 'Failed to update');
+        toast.error(res?.message ?? t('masterdata.designationUpdateFailed'));
       }
     },
-    onError: () => toast.error('Failed to update designation')
+    onError: () => toast.error(t('masterdata.designationUpdateFailed'))
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteDesignationFn({ data: { id } }),
     onSuccess: (res) => {
       if (res?.success) {
-        toast.success('Designation deleted');
+        toast.success(t('masterdata.designationDeleted'));
         queryClient.invalidateQueries({ queryKey: ['masterdata', 'designations'] });
       } else {
-        toast.error(res?.message ?? 'Failed to delete');
+        toast.error(res?.message ?? t('masterdata.designationDeleteFailed'));
       }
     },
-    onError: () => toast.error('Failed to delete designation')
+    onError: () => toast.error(t('masterdata.designationDeleteFailed'))
   });
 
   function openEdit(item: (typeof displayData)[number]) {
@@ -172,10 +174,10 @@ export default function DesignationManagePage() {
         <CardHeader className='flex flex-row items-center justify-between'>
           <CardTitle className='flex items-center gap-2'>
             <Icons.employee className='h-5 w-5' />
-            Job Titles / Designations
+            {t('masterdata.jobTitlesTitle')}
           </CardTitle>
           <Button onClick={openCreate}>
-            <Icons.add className='mr-2 h-4 w-4' /> Add Job Title
+            <Icons.add className='mr-2 h-4 w-4' /> {t('masterdata.addJobTitle')}
           </Button>
         </CardHeader>
         <CardContent>
@@ -185,18 +187,18 @@ export default function DesignationManagePage() {
             </div>
           ) : displayData.length === 0 ? (
             <div className='py-8 text-center text-sm text-muted-foreground'>
-              No job titles found
+              {t('masterdata.noJobTitles')}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Base Salary</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='w-24'>Actions</TableHead>
+                  <TableHead>{t('common.code')}</TableHead>
+                  <TableHead>{t('common.name')}</TableHead>
+                  <TableHead>{t('masterdata.department')}</TableHead>
+                  <TableHead>{t('masterdata.baseSalaryRp')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead className='w-24'>{t('table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -222,7 +224,7 @@ export default function DesignationManagePage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                          {item.is_active ? 'Active' : 'Inactive'}
+                          {item.is_active ? t('common.active') : t('common.inactive')}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -234,7 +236,7 @@ export default function DesignationManagePage() {
                             variant='ghost'
                             size='icon'
                             onClick={() => {
-                              if (confirm('Delete this designation?')) {
+                              if (confirm(t('masterdata.deleteDesignationConfirm'))) {
                                 deleteMutation.mutate(item.id);
                               }
                             }}
@@ -255,30 +257,34 @@ export default function DesignationManagePage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isEdit ? 'Edit Job Title' : 'New Job Title'}</DialogTitle>
+            <DialogTitle>
+              {isEdit ? t('masterdata.editJobTitle') : t('masterdata.newJobTitle')}
+            </DialogTitle>
             <DialogDescription>
-              {isEdit ? 'Update job title details' : 'Add a new job title'}
+              {isEdit
+                ? t('masterdata.jobTitleEditDescription')
+                : t('masterdata.jobTitleAddDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
             <div className='space-y-2'>
-              <Label>Code *</Label>
+              <Label>{t('masterdata.codeRequired')}</Label>
               <Input
-                placeholder='e.g. FLD_TECH'
+                placeholder={t('masterdata.codePlaceholder')}
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
               />
             </div>
             <div className='space-y-2'>
-              <Label>Name *</Label>
+              <Label>{t('masterdata.nameRequired')}</Label>
               <Input
-                placeholder='e.g. Field Technician'
+                placeholder={t('masterdata.namePlaceholder')}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
             <div className='space-y-2'>
-              <Label>Department</Label>
+              <Label>{t('masterdata.department')}</Label>
               <Select
                 value={form.department_id ? String(form.department_id) : ''}
                 onValueChange={(v) =>
@@ -286,10 +292,10 @@ export default function DesignationManagePage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder='Select department' />
+                  <SelectValue placeholder={t('employee.selectDepartment')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='none'>No department</SelectItem>
+                  <SelectItem value='none'>{t('masterdata.noDepartment')}</SelectItem>
                   {departments.map((d) => (
                     <SelectItem key={d.id} value={String(d.id)}>
                       {d.name}
@@ -299,18 +305,18 @@ export default function DesignationManagePage() {
               </Select>
             </div>
             <div className='space-y-2'>
-              <Label>Base Salary (Rp)</Label>
+              <Label>{t('masterdata.baseSalaryRp')}</Label>
               <Input
                 type='number'
-                placeholder='Optional base salary'
+                placeholder={t('masterdata.baseSalaryPlaceholder')}
                 value={form.base_salary}
                 onChange={(e) => setForm({ ...form, base_salary: e.target.value })}
               />
             </div>
             <div className='space-y-2'>
-              <Label>Description</Label>
+              <Label>{t('masterdata.description')}</Label>
               <Input
-                placeholder='Optional description'
+                placeholder={t('masterdata.descriptionPlaceholder')}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
@@ -318,12 +324,12 @@ export default function DesignationManagePage() {
           </div>
           <DialogFooter>
             <Button variant='outline' onClick={closeDialog}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => {
                 if (!form.name || !form.code) {
-                  toast.error('Name and code are required');
+                  toast.error(t('masterdata.nameAndCodeRequired'));
                   return;
                 }
                 if (isEdit) {
@@ -339,7 +345,7 @@ export default function DesignationManagePage() {
               ) : (
                 <Icons.check className='mr-2 h-4 w-4' />
               )}
-              {isEdit ? 'Update' : 'Create'}
+              {isEdit ? t('common.update') : t('common.create')}
             </Button>
           </DialogFooter>
         </DialogContent>
