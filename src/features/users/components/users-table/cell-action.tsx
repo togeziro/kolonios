@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { deleteUserMutation } from '../../api/mutations';
 import type { User } from '../../api/types';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { Icons } from '@/components/icons';
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
@@ -23,16 +24,17 @@ export function CellAction({ data }: CellActionProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
-  const deleteMutation = useMutation({
-    ...deleteUserMutation,
-    onSuccess: () => {
-      toast.success('User deleted successfully');
-      setDeleteOpen(false);
-    },
-    onError: () => {
-      toast.error('Failed to delete user');
-    }
-  });
+  const deleteMutation = useMutation(
+    mergeMutationCallbacks(deleteUserMutation, {
+      onSuccess: () => {
+        toast.success('User deleted successfully');
+        setDeleteOpen(false);
+      },
+      onError: () => {
+        toast.error('Failed to delete user');
+      }
+    })
+  );
 
   return (
     <>

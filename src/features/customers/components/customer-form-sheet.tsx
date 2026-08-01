@@ -14,30 +14,33 @@ import { Icons } from '@/components/icons';
 import { useMutation } from '@tanstack/react-query';
 import { createCustomerMutation, updateCustomerMutation } from '../api/mutations';
 import type { Customer } from '../api/types';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import { STATUS_OPTIONS } from './customer-tables/options';
 
 export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerFormSheetProps) {
   const isEdit = !!customer;
 
-  const createMutation = useMutation({
-    ...createCustomerMutation,
-    onSuccess: () => {
-      toast.success('Customer created successfully');
-      onOpenChange(false);
-      form.reset();
-    },
-    onError: () => toast.error('Failed to create customer')
-  });
+  const createMutation = useMutation(
+    mergeMutationCallbacks(createCustomerMutation, {
+      onSuccess: () => {
+        toast.success('Customer created successfully');
+        onOpenChange(false);
+        form.reset();
+      },
+      onError: () => toast.error('Failed to create customer')
+    })
+  );
 
-  const updateMutation = useMutation({
-    ...updateCustomerMutation,
-    onSuccess: () => {
-      toast.success('Customer updated successfully');
-      onOpenChange(false);
-    },
-    onError: () => toast.error('Failed to update customer')
-  });
+  const updateMutation = useMutation(
+    mergeMutationCallbacks(updateCustomerMutation, {
+      onSuccess: () => {
+        toast.success('Customer updated successfully');
+        onOpenChange(false);
+      },
+      onError: () => toast.error('Failed to update customer')
+    })
+  );
 
   const form = useAppForm({
     defaultValues: {

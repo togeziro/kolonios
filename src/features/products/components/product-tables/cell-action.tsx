@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { deleteProductMutation } from '../../api/mutations';
 import type { Product } from '../../api/types';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { Icons } from '@/components/icons';
 import { useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -23,16 +24,17 @@ export function CellAction({ data }: CellActionProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  const deleteMutation = useMutation({
-    ...deleteProductMutation,
-    onSuccess: () => {
-      toast.success('Product deleted successfully');
-      setOpen(false);
-    },
-    onError: () => {
-      toast.error('Failed to delete product');
-    }
-  });
+  const deleteMutation = useMutation(
+    mergeMutationCallbacks(deleteProductMutation, {
+      onSuccess: () => {
+        toast.success('Product deleted successfully');
+        setOpen(false);
+      },
+      onError: () => {
+        toast.error('Failed to delete product');
+      }
+    })
+  );
 
   return (
     <>

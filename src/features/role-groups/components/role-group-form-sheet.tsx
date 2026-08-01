@@ -16,6 +16,7 @@ import { Icons } from '@/components/icons';
 import { useMutation } from '@tanstack/react-query';
 import { createRoleGroupMutation, updateRoleGroupMutation } from '../api/mutations';
 import type { RoleGroup } from '../api/types';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
@@ -34,23 +35,25 @@ interface RoleGroupFormSheetProps {
 export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormSheetProps) {
   const isEdit = !!group;
 
-  const createMutation = useMutation({
-    ...createRoleGroupMutation,
-    onSuccess: () => {
-      toast.success('Role group created');
-      onOpenChange(false);
-    },
-    onError: () => toast.error('Failed to create role group')
-  });
+  const createMutation = useMutation(
+    mergeMutationCallbacks(createRoleGroupMutation, {
+      onSuccess: () => {
+        toast.success('Role group created');
+        onOpenChange(false);
+      },
+      onError: () => toast.error('Failed to create role group')
+    })
+  );
 
-  const updateMutation = useMutation({
-    ...updateRoleGroupMutation,
-    onSuccess: () => {
-      toast.success('Role group updated');
-      onOpenChange(false);
-    },
-    onError: () => toast.error('Failed to update role group')
-  });
+  const updateMutation = useMutation(
+    mergeMutationCallbacks(updateRoleGroupMutation, {
+      onSuccess: () => {
+        toast.success('Role group updated');
+        onOpenChange(false);
+      },
+      onError: () => toast.error('Failed to update role group')
+    })
+  );
 
   const form = useForm({
     defaultValues: {

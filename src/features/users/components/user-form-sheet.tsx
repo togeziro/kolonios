@@ -14,11 +14,14 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { createUserMutation, updateUserMutation } from '../api/mutations';
 import type { User } from '../api/types';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import * as z from 'zod';
 import { userSchema, type UserFormValues } from '../schemas/user';
 import { STATUS_OPTIONS } from './users-table/options';
 import { roleGroupsQueryOptions } from '@/features/role-groups/api/queries';
+
+const NO_ROLE_GROUP = 'none';
 
 export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) {
   const { t } = useTranslation();
@@ -28,34 +31,36 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
   const roleGroupsList =
     (rgData as { role_groups?: { id: string; name: string }[] })?.role_groups ?? [];
   const roleGroupOptions = [
-    { value: '', label: t('user.noRoleGroup') },
+    { value: NO_ROLE_GROUP, label: t('user.noRoleGroup') },
     ...roleGroupsList.map((rg) => ({ value: rg.id, label: rg.name }))
   ];
 
-  const createMutation = useMutation({
-    ...createUserMutation,
-    onSuccess: () => {
-      toast.success(t('user.created'));
-      onOpenChange(false);
-      form.reset();
-    },
-    onError: () => toast.error(t('user.createFailed'))
-  });
+  const createMutation = useMutation(
+    mergeMutationCallbacks(createUserMutation, {
+      onSuccess: () => {
+        toast.success(t('user.created'));
+        onOpenChange(false);
+        form.reset();
+      },
+      onError: () => toast.error(t('user.createFailed'))
+    })
+  );
 
-  const updateMutation = useMutation({
-    ...updateUserMutation,
-    onSuccess: () => {
-      toast.success(t('user.updated'));
-      onOpenChange(false);
-    },
-    onError: () => toast.error(t('user.updateFailed'))
-  });
+  const updateMutation = useMutation(
+    mergeMutationCallbacks(updateUserMutation, {
+      onSuccess: () => {
+        toast.success(t('user.updated'));
+        onOpenChange(false);
+      },
+      onError: () => toast.error(t('user.updateFailed'))
+    })
+  );
 
   const form = useAppForm({
     defaultValues: {
       name: user?.name ?? '',
       email: user?.email ?? '',
-      role_group_id: user?.role_group_id ?? '',
+      role_group_id: user?.role_group_id ?? 'none',
       role: user?.role ?? '',
       status: user?.status ?? 'Active'
     } as UserFormValues,
@@ -63,10 +68,14 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
       onSubmit: userSchema
     },
     onSubmit: async ({ value }) => {
+      const payload = {
+        ...value,
+        role_group_id: value.role_group_id === 'none' ? undefined : value.role_group_id
+      };
       if (isEdit) {
-        await updateMutation.mutateAsync({ id: user.id, values: value });
+        await updateMutation.mutateAsync({ id: user.id, values: payload });
       } else {
-        await createMutation.mutateAsync(value);
+        await createMutation.mutateAsync(payload);
       }
     }
   });

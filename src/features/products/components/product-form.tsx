@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createProductMutation, updateProductMutation } from '../api/mutations';
 import type { Product } from '../api/types';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { toast } from 'sonner';
@@ -20,27 +21,29 @@ export default function ProductForm({
   const router = useRouter();
   const isEdit = !!initialData;
 
-  const createMutation = useMutation({
-    ...createProductMutation,
-    onSuccess: () => {
-      toast.success('Product created successfully');
-      router.navigate({ to: '/dashboard/product' });
-    },
-    onError: () => {
-      toast.error('Failed to create product');
-    }
-  });
+  const createMutation = useMutation(
+    mergeMutationCallbacks(createProductMutation, {
+      onSuccess: () => {
+        toast.success('Product created successfully');
+        router.navigate({ to: '/dashboard/product' });
+      },
+      onError: () => {
+        toast.error('Failed to create product');
+      }
+    })
+  );
 
-  const updateMutation = useMutation({
-    ...updateProductMutation,
-    onSuccess: () => {
-      toast.success('Product updated successfully');
-      router.navigate({ to: '/dashboard/product' });
-    },
-    onError: () => {
-      toast.error('Failed to update product');
-    }
-  });
+  const updateMutation = useMutation(
+    mergeMutationCallbacks(updateProductMutation, {
+      onSuccess: () => {
+        toast.success('Product updated successfully');
+        router.navigate({ to: '/dashboard/product' });
+      },
+      onError: () => {
+        toast.error('Failed to update product');
+      }
+    })
+  );
 
   const form = useAppForm({
     defaultValues: {

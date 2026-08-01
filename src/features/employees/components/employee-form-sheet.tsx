@@ -14,6 +14,7 @@ import { Icons } from '@/components/icons';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createEmployeeMutation, updateEmployeeMutation } from '../api/mutations';
 import type { Employee } from '../api/types';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import { STATUS_OPTIONS, EMPLOYMENT_STATUS_OPTIONS } from './employee-tables/options';
 import {
@@ -27,24 +28,26 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
   const { data: deptData } = useSuspenseQuery(departmentsQueryOptions());
   const { data: desigData } = useSuspenseQuery(designationOptionsQueryOptions());
 
-  const createMutation = useMutation({
-    ...createEmployeeMutation,
-    onSuccess: () => {
-      toast.success('Employee created successfully');
-      onOpenChange(false);
-      form.reset();
-    },
-    onError: () => toast.error('Failed to create employee')
-  });
+  const createMutation = useMutation(
+    mergeMutationCallbacks(createEmployeeMutation, {
+      onSuccess: () => {
+        toast.success('Employee created successfully');
+        onOpenChange(false);
+        form.reset();
+      },
+      onError: () => toast.error('Failed to create employee')
+    })
+  );
 
-  const updateMutation = useMutation({
-    ...updateEmployeeMutation,
-    onSuccess: () => {
-      toast.success('Employee updated successfully');
-      onOpenChange(false);
-    },
-    onError: () => toast.error('Failed to update employee')
-  });
+  const updateMutation = useMutation(
+    mergeMutationCallbacks(updateEmployeeMutation, {
+      onSuccess: () => {
+        toast.success('Employee updated successfully');
+        onOpenChange(false);
+      },
+      onError: () => toast.error('Failed to update employee')
+    })
+  );
 
   const form = useAppForm({
     defaultValues: {

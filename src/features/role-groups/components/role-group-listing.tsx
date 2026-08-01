@@ -7,17 +7,19 @@ import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { roleGroupsQueryOptions } from '../api/queries';
 import { deleteRoleGroupMutation } from '../api/mutations';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import type { RoleGroup } from '../api/types';
 
 export default function RoleGroupListingPage() {
   const { t } = useTranslation();
   const { data, isLoading } = useQuery(roleGroupsQueryOptions());
-  const { mutate: deleteGroup } = useMutation({
-    ...deleteRoleGroupMutation,
-    onSuccess: () => toast.success(t('roleGroups.deleted')),
-    onError: () => toast.error(t('roleGroups.deleteFailed'))
-  });
+  const { mutate: deleteGroup } = useMutation(
+    mergeMutationCallbacks(deleteRoleGroupMutation, {
+      onSuccess: () => toast.success(t('roleGroups.deleted')),
+      onError: () => toast.error(t('roleGroups.deleteFailed'))
+    })
+  );
 
   const groups = (data as { role_groups?: RoleGroup[] } | undefined)?.role_groups ?? [];
 

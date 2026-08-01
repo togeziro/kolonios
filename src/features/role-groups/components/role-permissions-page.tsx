@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Icons } from '@/components/icons';
 import { roleGroupByIdQueryOptions } from '../api/queries';
 import { updateRoleGroupMutation } from '../api/mutations';
+import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { MODULES } from '../modules';
 import type { Permissions } from '../api/types';
 import { toast } from 'sonner';
@@ -38,11 +39,12 @@ export default function RolePermissionsPage() {
     }
   }, [group]);
 
-  const { mutate: save, isPending } = useMutation({
-    ...updateRoleGroupMutation,
-    onSuccess: () => toast.success(t('roleGroups.saved')),
-    onError: () => toast.error(t('roleGroups.saveFailed'))
-  });
+  const { mutate: save, isPending } = useMutation(
+    mergeMutationCallbacks(updateRoleGroupMutation, {
+      onSuccess: () => toast.success(t('roleGroups.saved')),
+      onError: () => toast.error(t('roleGroups.saveFailed'))
+    })
+  );
 
   const toggleModule = useCallback((mod: string, enabled: boolean) => {
     setPermissions((prev) => {
