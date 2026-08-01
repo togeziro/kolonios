@@ -52,6 +52,8 @@
     "updated": "Customer updated successfully",
     "createFailed": "Failed to create customer",
     "updateFailed": "Failed to update customer",
+    "createCustomer": "Create Customer",
+    "updateCustomer": "Update Customer",
     "deleted": "Customer deleted successfully",
     "deleteFailed": "Failed to delete customer",
     "statusActive": "Active",
@@ -64,7 +66,9 @@
     "notesPlaceholder": "Additional notes...",
     "serviceDataPlaceholder": "{\"pppoe_username\": \"user1\", \"plan\": \"100Mbps\"}",
     "titlePlural": "Customers",
-    "pageDescription": "Manage customers (React Query + search params table pattern.)"
+    "pageDescription": "Manage customers (React Query + search params table pattern.)",
+    "newDescription": "Fill in the details to create a new customer.",
+    "editDescription": "Update the customer details below."
   },
   "product": {
     "title": "Product",

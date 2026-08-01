@@ -52,6 +52,8 @@
     "updated": "Pelanggan berhasil diperbarui",
     "createFailed": "Gagal membuat pelanggan",
     "updateFailed": "Gagal memperbarui pelanggan",
+    "createCustomer": "Buat Pelanggan",
+    "updateCustomer": "Perbarui Pelanggan",
     "deleted": "Pelanggan berhasil dihapus",
     "deleteFailed": "Gagal menghapus pelanggan",
     "statusActive": "Aktif",
@@ -64,7 +66,9 @@
     "notesPlaceholder": "Catatan tambahan...",
     "serviceDataPlaceholder": "{\"pppoe_username\": \"user1\", \"plan\": \"100Mbps\"}",
     "titlePlural": "Pelanggan",
-    "pageDescription": "Kelola pelanggan (pola tabel React Query + search params)"
+    "pageDescription": "Kelola pelanggan (pola tabel React Query + search params)",
+    "newDescription": "Isi detail untuk membuat pelanggan baru.",
+    "editDescription": "Perbarui detail pelanggan di bawah ini."
   },
   "product": {
     "title": "Produk",

@@ -94,9 +94,7 @@ export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerForm
         <SheetHeader>
           <SheetTitle>{isEdit ? t('customer.edit') : t('customer.new')}</SheetTitle>
           <SheetDescription>
-            {isEdit
-              ? 'Update the customer details below.'
-              : 'Fill in the details to create a new customer.'}
+            {isEdit ? t('customer.editDescription') : t('customer.newDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -191,7 +189,7 @@ export function CustomerFormSheet({ customer, open, onOpenChange }: CustomerForm
             {t('common.cancel')}
           </Button>
           <Button type='submit' form='customer-form-sheet' isLoading={isPending}>
-            <Icons.check /> {isEdit ? 'Update Customer' : 'Create Customer'}
+            <Icons.check /> {isEdit ? t('customer.updateCustomer') : t('customer.createCustomer')}
           </Button>
         </SheetFooter>
       </SheetContent>
