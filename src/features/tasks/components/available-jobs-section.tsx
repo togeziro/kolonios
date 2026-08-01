@@ -38,7 +38,7 @@ export default function AvailableJobsSection() {
                       onClick={() => takeTask.mutate(task.id)}
                       disabled={takeTask.isPending}
                     >
-                      {takeTask.isPending ? 'Taking…' : 'Take'}
+                      {takeTask.isPending ? t('task.taking') : t('task.takeTask')}
                     </Button>
                   }
                 />
