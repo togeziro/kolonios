@@ -1,5 +1,9 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { createDocument, type ZodOpenApiOperationObject, type ZodOpenApiPathsObject } from 'zod-openapi';
+import {
+  createDocument,
+  type ZodOpenApiOperationObject,
+  type ZodOpenApiPathsObject
+} from 'zod-openapi';
 import { operations, openApiInfo } from '../src/lib/api/openapi';
 import { z } from 'zod';
 

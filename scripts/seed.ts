@@ -1,9 +1,30 @@
 import { faker } from '@faker-js/faker';
-import { db } from '../src/lib/db';
+import { db, client as dbClient } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
-import { products, notifications, employees, departments, designations, locations, shifts, customers, tasks, taskRequirements, employeeSkills, roleGroups, userRoleGroups } from '../src/lib/db/schema';
+import {
+  products,
+  notifications,
+  employees,
+  departments,
+  designations,
+  locations,
+  shifts,
+  customers,
+  tasks,
+  taskRequirements,
+  employeeSkills,
+  roleGroups,
+  userRoleGroups
+} from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
-import { type NewEmployee, type NewDepartment, type NewDesignation, type NewLocation, type NewShift, type NewCustomer } from '../src/lib/db/schema';
+import {
+  type NewEmployee,
+  type NewDepartment,
+  type NewDesignation,
+  type NewLocation,
+  type NewShift,
+  type NewCustomer
+} from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const PRODUCT_CATEGORIES = [
@@ -19,8 +40,6 @@ const PRODUCT_CATEGORIES = [
 
 const ROLES = ['admin', 'hr', 'employee', 'technician', 'customer'] as const;
 
-
-
 async function seedProducts(count = 20) {
   const rows = Array.from({ length: count }, (_, i) => ({
     photo_url: `https://api.slingacademy.com/public/sample-products/${i + 1}.png`,
@@ -34,7 +53,6 @@ async function seedProducts(count = 20) {
   await db.insert(products).values(rows);
   console.log(`Seeded ${rows.length} products`);
 }
-
 
 async function seedUsers() {
   const demo = {
@@ -52,7 +70,11 @@ async function seedUsers() {
     const msg = (err?.message ?? '').toLowerCase();
     if (msg.includes('already exists')) {
       console.log(`Demo user ${demo.email} already exists (skipped)`);
-      const [existing] = await db.select({ id: user.id }).from(user).where(eq(user.email, demo.email)).limit(1);
+      const [existing] = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, demo.email))
+        .limit(1);
       return existing?.id;
     }
     throw err;
@@ -63,22 +85,64 @@ async function seedNotifications(userId: string) {
   await db.delete(notifications);
 
   const notificationTemplates = [
-    { title: 'New team member joined', body: 'Sarah Connor has joined the Engineering workspace.', actionId: 'view', actionLabel: 'View workspace' },
-    { title: 'New product added', body: 'A new product "Dashboard Pro" has been added to the catalog.', actionId: 'view-product', actionLabel: 'View products' },
-    { title: 'Billing cycle updated', body: 'Your Pro plan has been renewed. Next invoice on April 24, 2026.', actionId: 'billing', actionLabel: 'View billing' },
-    { title: 'Task assigned to you', body: 'You have been assigned "Update dashboard analytics".', actionId: 'open', actionLabel: 'View details' },
-    { title: 'Deploy successful', body: 'Production v2.4.1 deployed successfully at 14:32 UTC.', actionId: 'view', actionLabel: 'View deployment' },
-    { title: 'New comment on ticket', body: 'Alex replied to your support ticket #4219.', actionId: 'open', actionLabel: 'View ticket' },
-    { title: 'Performance alert', body: 'API response time exceeded 2s threshold in us-east-1.', actionId: 'view', actionLabel: 'View metrics' },
-    { title: 'Weekly report ready', body: 'Your weekly team analytics report for Jun 29 — Jul 5 is ready.', actionId: 'view', actionLabel: 'View report' }
+    {
+      title: 'New team member joined',
+      body: 'Sarah Connor has joined the Engineering workspace.',
+      actionId: 'view',
+      actionLabel: 'View workspace'
+    },
+    {
+      title: 'New product added',
+      body: 'A new product "Dashboard Pro" has been added to the catalog.',
+      actionId: 'view-product',
+      actionLabel: 'View products'
+    },
+    {
+      title: 'Billing cycle updated',
+      body: 'Your Pro plan has been renewed. Next invoice on April 24, 2026.',
+      actionId: 'billing',
+      actionLabel: 'View billing'
+    },
+    {
+      title: 'Task assigned to you',
+      body: 'You have been assigned "Update dashboard analytics".',
+      actionId: 'open',
+      actionLabel: 'View details'
+    },
+    {
+      title: 'Deploy successful',
+      body: 'Production v2.4.1 deployed successfully at 14:32 UTC.',
+      actionId: 'view',
+      actionLabel: 'View deployment'
+    },
+    {
+      title: 'New comment on ticket',
+      body: 'Alex replied to your support ticket #4219.',
+      actionId: 'open',
+      actionLabel: 'View ticket'
+    },
+    {
+      title: 'Performance alert',
+      body: 'API response time exceeded 2s threshold in us-east-1.',
+      actionId: 'view',
+      actionLabel: 'View metrics'
+    },
+    {
+      title: 'Weekly report ready',
+      body: 'Your weekly team analytics report for Jun 29 — Jul 5 is ready.',
+      actionId: 'view',
+      actionLabel: 'View report'
+    }
   ];
 
   const rows = notificationTemplates.map((t, i) => ({
     title: t.title,
     body: t.body,
     user_id: userId,
-    status: i < 6 ? 'unread' as const : 'read' as const,
-    actions: [{ id: t.actionId, label: t.actionLabel, type: 'redirect' as const, style: 'primary' as const }]
+    status: i < 6 ? ('unread' as const) : ('read' as const),
+    actions: [
+      { id: t.actionId, label: t.actionLabel, type: 'redirect' as const, style: 'primary' as const }
+    ]
   }));
 
   await db.insert(notifications).values(rows);
@@ -96,17 +160,47 @@ async function seedMasterdata() {
   await db.delete(designations);
 
   const locationData = [
-    { name: 'Head Office', latitude: -6.2088, longitude: 106.8456, radius: 50, description: 'Main office Jakarta' },
-    { name: 'Branch Office 1', latitude: -6.5000, longitude: 106.8000, radius: 50, description: 'Bandung Branch' }
+    {
+      name: 'Head Office',
+      latitude: -6.2088,
+      longitude: 106.8456,
+      radius: 50,
+      description: 'Main office Jakarta'
+    },
+    {
+      name: 'Branch Office 1',
+      latitude: -6.5,
+      longitude: 106.8,
+      radius: 50,
+      description: 'Bandung Branch'
+    }
   ] satisfies NewLocation[];
 
   await db.insert(locations).values(locationData);
   console.log(`Seeded ${locationData.length} locations`);
 
   const shiftData = [
-    { name: 'Morning Shift', start_time: '08:00', end_time: '17:00', type: 'fixed' as const, status: 'active' as const },
-    { name: 'Afternoon Shift', start_time: '13:00', end_time: '22:00', type: 'fixed' as const, status: 'active' as const },
-    { name: 'Night Shift', start_time: '22:00', end_time: '06:00', type: 'fixed' as const, status: 'active' as const }
+    {
+      name: 'Morning Shift',
+      start_time: '08:00',
+      end_time: '17:00',
+      type: 'fixed' as const,
+      status: 'active' as const
+    },
+    {
+      name: 'Afternoon Shift',
+      start_time: '13:00',
+      end_time: '22:00',
+      type: 'fixed' as const,
+      status: 'active' as const
+    },
+    {
+      name: 'Night Shift',
+      start_time: '22:00',
+      end_time: '06:00',
+      type: 'fixed' as const,
+      status: 'active' as const
+    }
   ] satisfies NewShift[];
 
   await db.insert(shifts).values(shiftData);
@@ -124,20 +218,71 @@ async function seedMasterdata() {
   await db.insert(departments).values(departmentData);
   console.log(`Seeded ${departmentData.length} departments`);
 
-  const engId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'ENG')).limit(1))[0]?.id;
-  const opsId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'OPS')).limit(1))[0]?.id;
-  const salesId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'SALES')).limit(1))[0]?.id;
-  const csId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'CS')).limit(1))[0]?.id;
-  const finId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'FIN')).limit(1))[0]?.id;
-  const hrId = (await db.select({ id: departments.id }).from(departments).where(eq(departments.code, 'HR')).limit(1))[0]?.id;
+  const engId = (
+    await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.code, 'ENG'))
+      .limit(1)
+  )[0]?.id;
+  const opsId = (
+    await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.code, 'OPS'))
+      .limit(1)
+  )[0]?.id;
+  const salesId = (
+    await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.code, 'SALES'))
+      .limit(1)
+  )[0]?.id;
+  const csId = (
+    await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.code, 'CS'))
+      .limit(1)
+  )[0]?.id;
+  const finId = (
+    await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.code, 'FIN'))
+      .limit(1)
+  )[0]?.id;
+  const hrId = (
+    await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.code, 'HR'))
+      .limit(1)
+  )[0]?.id;
 
   const designationData = [
     { name: 'NOC Engineer', code: 'NOC_ENGR', department_id: engId, base_salary: 5000000 },
     { name: 'Network Engineer', code: 'NET_ENGR', department_id: engId, base_salary: 7000000 },
-    { name: 'Senior Network Engineer', code: 'SR_NET', department_id: engId, base_salary: 10000000 },
+    {
+      name: 'Senior Network Engineer',
+      code: 'SR_NET',
+      department_id: engId,
+      base_salary: 10000000
+    },
     { name: 'Field Technician', code: 'FLD_TECH', department_id: opsId, base_salary: 4500000 },
-    { name: 'Senior Field Technician', code: 'SR_TECH', department_id: opsId, base_salary: 6000000 },
-    { name: 'Installation Specialist', code: 'INSTALL', department_id: opsId, base_salary: 4500000 },
+    {
+      name: 'Senior Field Technician',
+      code: 'SR_TECH',
+      department_id: opsId,
+      base_salary: 6000000
+    },
+    {
+      name: 'Installation Specialist',
+      code: 'INSTALL',
+      department_id: opsId,
+      base_salary: 4500000
+    },
     { name: 'Sales Agent', code: 'SALES_AGT', department_id: salesId, base_salary: 4000000 },
     { name: 'Sales Supervisor', code: 'SALES_SUP', department_id: salesId, base_salary: 7000000 },
     { name: 'Customer Service Rep', code: 'CS_REP', department_id: csId, base_salary: 4000000 },
@@ -153,52 +298,99 @@ async function seedMasterdata() {
 
 async function seedDemoUsers() {
   const demoAccounts = [
-    { email: 'admin@example.com', name: 'Demo Admin', password: 'Password123!', role: 'admin' as const },
+    {
+      email: 'admin@example.com',
+      name: 'Demo Admin',
+      password: 'Password123!',
+      role: 'admin' as const
+    },
     { email: 'hr@example.com', name: 'Demo HR', password: 'Password123!', role: 'hr' as const },
-    { email: 'employee@example.com', name: 'Demo Employee', password: 'Password123!', role: 'employee' as const },
-    { email: 'technician@example.com', name: 'Demo Technician', password: 'Password123!', role: 'technician' as const }
+    {
+      email: 'employee@example.com',
+      name: 'Demo Employee',
+      password: 'Password123!',
+      role: 'employee' as const
+    },
+    {
+      email: 'technician@example.com',
+      name: 'Demo Technician',
+      password: 'Password123!',
+      role: 'technician' as const
+    }
   ];
 
-  await Promise.all(demoAccounts.map(async (demo) => {
-    try {
-      const created = await (auth.api as any).createUser({
-        body: { email: demo.email, name: demo.name, password: demo.password, role: demo.role }
-      });
-      console.log(`Seeded ${demo.role} user ${demo.email}`);
-      return created.id as string;
-    } catch (err: any) {
-      const msg = (err?.message ?? '').toLowerCase();
-      if (msg.includes('already exists')) {
-        console.log(`${demo.role} user ${demo.email} already exists (skipped)`);
-        const [existing] = await db.select({ id: user.id }).from(user).where(eq(user.email, demo.email)).limit(1);
-        return existing?.id;
+  await Promise.all(
+    demoAccounts.map(async (demo) => {
+      try {
+        const created = await (auth.api as any).createUser({
+          body: { email: demo.email, name: demo.name, password: demo.password, role: demo.role }
+        });
+        console.log(`Seeded ${demo.role} user ${demo.email}`);
+        return created.id as string;
+      } catch (err: any) {
+        const msg = (err?.message ?? '').toLowerCase();
+        if (msg.includes('already exists')) {
+          console.log(`${demo.role} user ${demo.email} already exists (skipped)`);
+          const [existing] = await db
+            .select({ id: user.id })
+            .from(user)
+            .where(eq(user.email, demo.email))
+            .limit(1);
+          return existing?.id;
+        }
+        throw err;
       }
-      throw err;
-    }
-  }));
+    })
+  );
 }
 
 async function seedEmployees() {
   const employeeData = [
-    { employee_code: 'EMP001', full_name: 'Demo Admin', email: 'admin@example.com', department_code: 'ENG', designation_code: 'SR_NET' },
-    { employee_code: 'EMP002', full_name: 'Demo HR', email: 'hr@example.com', department_code: 'HR', designation_code: 'HR_SPEC' },
-    { employee_code: 'EMP003', full_name: 'Demo Employee', email: 'employee@example.com', department_code: 'SALES', designation_code: 'SALES_AGT' },
-    { employee_code: 'EMP004', full_name: 'Demo Technician', email: 'technician@example.com', department_code: 'OPS', designation_code: 'FLD_TECH' }
+    {
+      employee_code: 'EMP001',
+      full_name: 'Demo Admin',
+      email: 'admin@example.com',
+      department_code: 'ENG',
+      designation_code: 'SR_NET'
+    },
+    {
+      employee_code: 'EMP002',
+      full_name: 'Demo HR',
+      email: 'hr@example.com',
+      department_code: 'HR',
+      designation_code: 'HR_SPEC'
+    },
+    {
+      employee_code: 'EMP003',
+      full_name: 'Demo Employee',
+      email: 'employee@example.com',
+      department_code: 'SALES',
+      designation_code: 'SALES_AGT'
+    },
+    {
+      employee_code: 'EMP004',
+      full_name: 'Demo Technician',
+      email: 'technician@example.com',
+      department_code: 'OPS',
+      designation_code: 'FLD_TECH'
+    }
   ];
 
   const users = await db.select({ id: user.id, email: user.email }).from(user);
-  const userMap = new Map(users.map(u => [u.email, u.id]));
+  const userMap = new Map(users.map((u) => [u.email, u.id]));
 
   const depts = await db.select({ id: departments.id, code: departments.code }).from(departments);
-  const deptMap = new Map(depts.map(d => [d.code, d.id]));
+  const deptMap = new Map(depts.map((d) => [d.code, d.id]));
 
-  const desigs = await db.select({ id: designations.id, code: designations.code }).from(designations);
-  const desigMap = new Map(desigs.map(d => [d.code, d.id]));
+  const desigs = await db
+    .select({ id: designations.id, code: designations.code })
+    .from(designations);
+  const desigMap = new Map(desigs.map((d) => [d.code, d.id]));
 
   const locs = await db.select({ id: locations.id, name: locations.name }).from(locations);
   const locMap = new Map(locs.map((l) => [l.name, l.id]));
 
-  const employeeRecords = employeeData.map(emp => {
+  const employeeRecords = employeeData.map((emp) => {
     const userId = userMap.get(emp.email);
     if (!userId) throw new Error(`User not found for ${emp.email}`);
     return {
@@ -209,7 +401,10 @@ async function seedEmployees() {
       birth_date: '1990-01-01',
       department_id: deptMap.get(emp.department_code) ?? 0,
       designation_id: desigMap.get(emp.designation_code) ?? 0,
-      location_id: emp.email === 'technician@example.com' ? (locMap.get('Branch Office 1') ?? null) : (locMap.get('Head Office') ?? null),
+      location_id:
+        emp.email === 'technician@example.com'
+          ? (locMap.get('Branch Office 1') ?? null)
+          : (locMap.get('Head Office') ?? null),
       join_date: '2024-01-01'
     };
   });
@@ -220,7 +415,10 @@ async function seedEmployees() {
 }
 
 async function seedCustomers() {
-  const adminUsers = await db.select({ id: user.id, email: user.email }).from(user).where(eq(user.email, 'admin@example.com'));
+  const adminUsers = await db
+    .select({ id: user.id, email: user.email })
+    .from(user)
+    .where(eq(user.email, 'admin@example.com'));
   const adminUser = adminUsers[0];
   if (!adminUser) throw new Error('Admin user not found for created_by reference');
 
@@ -235,7 +433,10 @@ async function seedCustomers() {
     latitude: faker.location.latitude({ min: -6.5, max: -6.0 }),
     longitude: faker.location.longitude({ min: 106.5, max: 107.0 }),
     id_card_number: `3201${String(i + 1).padStart(12, '0')}`,
-    service_data: JSON.stringify({ pppoe_username: `cust${i + 1}`, pppoe_password: faker.internet.password() }),
+    service_data: JSON.stringify({
+      pppoe_username: `cust${i + 1}`,
+      pppoe_password: faker.internet.password()
+    }),
     billing_address: `${faker.location.streetAddress()}, ${faker.location.city()}`
   }));
 
@@ -250,7 +451,11 @@ async function seedCustomers() {
       const msg = (err?.message ?? '').toLowerCase();
       if (!msg.includes('already exists')) throw err;
     }
-    const [userRow] = await db.select({ id: user.id }).from(user).where(eq(user.email, c.email)).limit(1);
+    const [userRow] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, c.email))
+      .limit(1);
     if (userRow) {
       customerRecords.push({
         id: userRow.id,
@@ -293,7 +498,9 @@ async function seedTasks() {
 
   const depts = await db.select({ id: departments.id, code: departments.code }).from(departments);
   const deptMap = new Map(depts.map((d) => [d.code, d.id]));
-  const desigs = await db.select({ id: designations.id, code: designations.code }).from(designations);
+  const desigs = await db
+    .select({ id: designations.id, code: designations.code })
+    .from(designations);
   const desigMap = new Map(desigs.map((d) => [d.code, d.id]));
   const locs = await db.select({ id: locations.id, name: locations.name }).from(locations);
   const locMap = new Map(locs.map((l) => [l.name, l.id]));
@@ -395,27 +602,54 @@ async function seedRoleGroups() {
   await db.delete(userRoleGroups);
   await db.delete(roleGroups);
 
-  await db.insert(roleGroups).values([
-    { id: adminId, name: 'Administrator', description: 'Full system access', permissions: {}, is_admin: true },
-    { id: hrId, name: 'HR', description: 'Human resources access', permissions: {
-      ...coreModules,
-      employees: { view: true, add: true, edit: true, delete: true },
-      departments: { view: true, add: true, edit: true },
-      designations: { view: true, add: true, edit: true },
-      users: { view: true },
-      audit_log: { view: true }
-    }, is_admin: false },
-    { id: employeeId, name: 'Employee', description: 'Standard employee access', permissions: {
-      ...coreModules,
-      jobs: { view: true },
-      notifications: { view: true }
-    }, is_admin: false },
-    { id: techId, name: 'Technician', description: 'Field technician access', permissions: {
-      ...coreModules,
-      jobs: { view: true },
-      notifications: { view: true }
-    }, is_admin: false }
-  ]).onConflictDoNothing();
+  await db
+    .insert(roleGroups)
+    .values([
+      {
+        id: adminId,
+        name: 'Administrator',
+        description: 'Full system access',
+        permissions: {},
+        is_admin: true
+      },
+      {
+        id: hrId,
+        name: 'HR',
+        description: 'Human resources access',
+        permissions: {
+          ...coreModules,
+          employees: { view: true, add: true, edit: true, delete: true },
+          departments: { view: true, add: true, edit: true },
+          designations: { view: true, add: true, edit: true },
+          users: { view: true },
+          audit_log: { view: true }
+        },
+        is_admin: false
+      },
+      {
+        id: employeeId,
+        name: 'Employee',
+        description: 'Standard employee access',
+        permissions: {
+          ...coreModules,
+          jobs: { view: true },
+          notifications: { view: true }
+        },
+        is_admin: false
+      },
+      {
+        id: techId,
+        name: 'Technician',
+        description: 'Field technician access',
+        permissions: {
+          ...coreModules,
+          jobs: { view: true },
+          notifications: { view: true }
+        },
+        is_admin: false
+      }
+    ])
+    .onConflictDoNothing();
 
   const users = await db.select({ id: user.id, email: user.email }).from(user);
   const byEmail = new Map(users.map((u) => [u.email, u.id]));
@@ -429,7 +663,10 @@ async function seedRoleGroups() {
 
   for (const [userId, roleGroupId, name, email] of assignments) {
     if (userId) {
-      await db.insert(userRoleGroups).values({ user_id: userId, role_group_id: roleGroupId }).onConflictDoNothing();
+      await db
+        .insert(userRoleGroups)
+        .values({ user_id: userId, role_group_id: roleGroupId })
+        .onConflictDoNothing();
       console.log(`Assigned ${name} role to ${email}`);
     }
   }
@@ -437,7 +674,7 @@ async function seedRoleGroups() {
   console.log('Seeded role groups');
 }
 
-async function main() {
+export async function seedDatabase() {
   faker.seed(42);
   await seedProducts();
   await seedMasterdata();
@@ -449,10 +686,14 @@ async function main() {
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');
-  process.exit(0);
+  await dbClient.end();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase()
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    })
+    .then(() => process.exit(0));
+}

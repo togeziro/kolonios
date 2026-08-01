@@ -7,9 +7,25 @@ const WRITE_BASELINE = process.argv.includes('--write-baseline');
 const ROOTS = ['src/routes', 'src/features'];
 const IGNORED_DIRS = new Set(['api', 'validation', 'schemas', 'lib', 'types']);
 const IGNORED_ATTRS = new Set([
-  'aria-hidden', 'className', 'id', 'name', 'type', 'value', 'href', 'target',
-  'role', 'tabIndex', 'autoComplete', 'dir', 'alt', 'src',
-  'variant', 'size', 'to', 'form', 'asChild'
+  'aria-hidden',
+  'className',
+  'id',
+  'name',
+  'type',
+  'value',
+  'href',
+  'target',
+  'role',
+  'tabIndex',
+  'autoComplete',
+  'dir',
+  'alt',
+  'src',
+  'variant',
+  'size',
+  'to',
+  'form',
+  'asChild'
 ]);
 const SKIP_DIRECTIVE = '// i18n:skip';
 const BASELINE = join(process.cwd(), 'scripts/i18n-hardcoded-baseline.txt');
@@ -27,7 +43,9 @@ function walk(dir: string) {
 }
 for (const root of ROOTS) walk(root);
 
-const baseline = existsSync(BASELINE) ? new Set(readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean)) : new Set<string>();
+const baseline = existsSync(BASELINE)
+  ? new Set(readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean))
+  : new Set<string>();
 const found = new Map<string, string>(); // "file:line" -> message
 
 for (const file of files) {
@@ -52,7 +70,10 @@ for (const file of files) {
         !/^[\d\s,.%+-]+$/.test(value)
       ) {
         const { line } = sf.getLineAndCharacterOfPosition(node.getStart());
-        found.set(`${file}:${line + 1}`, `hardcoded string in ${name}="..." — use useTranslation()`);
+        found.set(
+          `${file}:${line + 1}`,
+          `hardcoded string in ${name}="..." — use useTranslation()`
+        );
       }
     }
     ts.forEachChild(node, walkAst);

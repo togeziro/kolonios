@@ -161,6 +161,11 @@ bun run db:migrate    # drizzle-kit migration runner
 bun run db:migrate:run # apply pending migrations programmatically (scripts/migrate.ts)
 ```
 
+> `db:migrate:run` auto-seeds the database when the `user` table is empty, so
+> demo accounts (`admin@example.com` / `Password123!`, etc.) always exist after
+> applying migrations to a fresh database. Run `bun run db:seed` manually only
+> to force a re-seed.
+
 > Switching an existing `db:push`-created database to versioned migrations:
 > run `bun run db:baseline` once (records current migrations as applied), then
 > use `db:generate` → `db:migrate:run` for all future changes.

@@ -8,8 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const target =
-  'node_modules/@tanstack/start-server-core/dist/esm/createStartHandler.js';
+const target = 'node_modules/@tanstack/start-server-core/dist/esm/createStartHandler.js';
 
 const sentinel = 'const isSplat = foundRoute';
 const oldLine = 'const isExactMatch = foundRoute && routeParams["**"] === void 0;';
