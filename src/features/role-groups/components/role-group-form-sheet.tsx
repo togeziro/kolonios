@@ -96,9 +96,7 @@ export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormS
         <SheetHeader>
           <SheetTitle>{isEdit ? t('roleGroups.editRole') : t('roleGroups.newRole')}</SheetTitle>
           <SheetDescription>
-            {isEdit
-              ? 'Update the role group details.'
-              : 'Create a new role group and configure its permissions next.'}
+            {isEdit ? t('roleGroups.editDescription') : t('roleGroups.newDescription')}
           </SheetDescription>
         </SheetHeader>
 
