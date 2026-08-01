@@ -11,7 +11,7 @@ export const columns: ColumnDef<User>[] = [
     id: 'name',
     accessorKey: 'name',
     header: ({ column }: { column: Column<User, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Name' />
+      <DataTableColumnHeader column={column} title='common.name' />
     ),
     cell: ({ row }) => (
       <div className='flex flex-col'>
@@ -32,7 +32,7 @@ export const columns: ColumnDef<User>[] = [
     accessorKey: 'role',
     enableSorting: false,
     header: ({ column }: { column: Column<User, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Role' />
+      <DataTableColumnHeader column={column} title='user.role' />
     ),
     cell: ({ row }) => {
       return (
@@ -50,7 +50,9 @@ export const columns: ColumnDef<User>[] = [
   },
   {
     accessorKey: 'status',
-    header: 'STATUS',
+    header: ({ column }: { column: Column<User, unknown> }) => (
+      <DataTableColumnHeader column={column} title='user.status' />
+    ),
     cell: ({ cell }) => {
       const status = cell.getValue<User['status']>();
       const variant =

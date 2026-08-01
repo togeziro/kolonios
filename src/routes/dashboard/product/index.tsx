@@ -8,6 +8,7 @@ import { productsQueryOptions } from '@/features/products/api/queries';
 import { parseSortingState } from '@/lib/parsers';
 import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 
 const productSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -46,17 +47,18 @@ export const Route = createFileRoute('/dashboard/product/')({
 });
 
 function ProductPage() {
+  const { t } = useTranslation();
   return (
     <PageContainer
-      pageTitle='Products'
-      pageDescription='Manage products (React Query + search params table pattern.)'
+      pageTitle={t('product.titlePlural')}
+      pageDescription={t('product.pageDescription')}
       pageHeaderAction={
         <Link
           to='/dashboard/product/$productId'
           params={{ productId: 'new' }}
           className={cn(buttonVariants(), 'text-xs md:text-sm')}
         >
-          <Icons.add className='mr-2 h-4 w-4' /> Add New
+          <Icons.add className='mr-2 h-4 w-4' /> {t('product.addNew')}
         </Link>
       }
     >

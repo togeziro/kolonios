@@ -19,6 +19,7 @@ import type { RoleGroup } from '../api/types';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import * as z from 'zod';
+import { useTranslation } from 'react-i18next';
 
 const roleGroupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -33,25 +34,26 @@ interface RoleGroupFormSheetProps {
 }
 
 export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormSheetProps) {
+  const { t } = useTranslation();
   const isEdit = !!group;
 
   const createMutation = useMutation(
     mergeMutationCallbacks(createRoleGroupMutation, {
       onSuccess: () => {
-        toast.success('Role group created');
+        toast.success(t('roleGroups.created'));
         onOpenChange(false);
       },
-      onError: () => toast.error('Failed to create role group')
+      onError: () => toast.error(t('roleGroups.createFailed'))
     })
   );
 
   const updateMutation = useMutation(
     mergeMutationCallbacks(updateRoleGroupMutation, {
       onSuccess: () => {
-        toast.success('Role group updated');
+        toast.success(t('roleGroups.updated'));
         onOpenChange(false);
       },
-      onError: () => toast.error('Failed to update role group')
+      onError: () => toast.error(t('roleGroups.updateFailed'))
     })
   );
 
@@ -92,7 +94,7 @@ export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormS
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='flex flex-col'>
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Role Group' : 'New Role Group'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('roleGroups.editRole') : t('roleGroups.newRole')}</SheetTitle>
           <SheetDescription>
             {isEdit
               ? 'Update the role group details.'
@@ -112,12 +114,12 @@ export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormS
             <form.Field name='name'>
               {(field) => (
                 <div className='space-y-2'>
-                  <Label htmlFor='name'>Role Name</Label>
+                  <Label htmlFor='name'>{t('roleGroups.roleName')}</Label>
                   <Input
                     id='name'
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder='Technician'
+                    placeholder={t('roleGroups.roleNamePlaceholder')}
                   />
                   {field.state.meta.errors?.length ? (
                     <p className='text-xs text-destructive'>{String(field.state.meta.errors[0])}</p>
@@ -129,12 +131,12 @@ export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormS
             <form.Field name='description'>
               {(field) => (
                 <div className='space-y-2'>
-                  <Label htmlFor='description'>Description</Label>
+                  <Label htmlFor='description'>{t('roleGroups.description')}</Label>
                   <Input
                     id='description'
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder='Field technician role'
+                    placeholder={t('roleGroups.descriptionPlaceholder')}
                   />
                 </div>
               )}
@@ -149,9 +151,9 @@ export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormS
                     onCheckedChange={(checked) => field.handleChange(!!checked)}
                   />
                   <div>
-                    <Label htmlFor='is_admin'>Full Admin Access</Label>
+                    <Label htmlFor='is_admin'>{t('roleGroups.fullAdminAccess')}</Label>
                     <p className='text-xs text-muted-foreground'>
-                      Grants automatic access to all modules
+                      {t('roleGroups.adminAccessDescription')}
                     </p>
                   </div>
                 </div>
@@ -162,10 +164,10 @@ export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormS
 
         <SheetFooter>
           <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type='submit' form='role-group-form' disabled={isPending}>
-            <Icons.check /> {isEdit ? 'Update' : 'Create'}
+            <Icons.check /> {isEdit ? t('common.update') : t('common.create')}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -174,12 +176,13 @@ export function RoleGroupFormSheet({ group, open, onOpenChange }: RoleGroupFormS
 }
 
 export function RoleGroupFormSheetTrigger() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <Icons.add className='mr-2 h-4 w-4' /> Add Role
+        <Icons.add className='mr-2 h-4 w-4' /> {t('roleGroups.addRole')}
       </Button>
       <RoleGroupFormSheet open={open} onOpenChange={setOpen} />
     </>

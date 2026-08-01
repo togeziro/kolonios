@@ -7,6 +7,7 @@ import { usersQueryOptions } from '@/features/users/api/queries';
 import { parseSortingState } from '@/lib/parsers';
 import { UserFormSheetTrigger } from '@/features/users/components/user-form-sheet';
 import { usersInfoContent } from '@/features/users/info-content';
+import { useTranslation } from 'react-i18next';
 
 const usersSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -46,10 +47,11 @@ export const Route = createFileRoute('/dashboard/users')({
 });
 
 function UsersPage() {
+  const { t } = useTranslation();
   return (
     <PageContainer
-      pageTitle='Users'
-      pageDescription='Manage users (React Query + search params table pattern.)'
+      pageTitle={t('user.titlePlural')}
+      pageDescription={t('user.pageDescription')}
       infoContent={usersInfoContent}
       pageHeaderAction={<UserFormSheetTrigger />}
     >

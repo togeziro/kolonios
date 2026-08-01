@@ -9,7 +9,9 @@ import { CATEGORY_OPTIONS } from './options';
 export const columns: ColumnDef<Product>[] = [
   {
     accessorKey: 'photo_url',
-    header: 'IMAGE',
+    header: ({ column }: { column: Column<Product, unknown> }) => (
+      <DataTableColumnHeader column={column} title='product.image' />
+    ),
     cell: ({ row }) => {
       return (
         <div className='relative aspect-square'>
@@ -26,7 +28,7 @@ export const columns: ColumnDef<Product>[] = [
     id: 'name',
     accessorKey: 'name',
     header: ({ column }: { column: Column<Product, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Name' />
+      <DataTableColumnHeader column={column} title='common.name' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Product['name']>()}</div>,
     meta: {
@@ -42,7 +44,7 @@ export const columns: ColumnDef<Product>[] = [
     accessorKey: 'category',
     enableSorting: false,
     header: ({ column }: { column: Column<Product, unknown> }) => (
-      <DataTableColumnHeader column={column} title='Category' />
+      <DataTableColumnHeader column={column} title='product.category' />
     ),
     cell: ({ cell }) => {
       const category = cell.getValue<Product['category']>();
@@ -62,11 +64,15 @@ export const columns: ColumnDef<Product>[] = [
   },
   {
     accessorKey: 'price',
-    header: 'PRICE'
+    header: ({ column }: { column: Column<Product, unknown> }) => (
+      <DataTableColumnHeader column={column} title='product.price' />
+    )
   },
   {
     accessorKey: 'description',
-    header: 'DESCRIPTION'
+    header: ({ column }: { column: Column<Product, unknown> }) => (
+      <DataTableColumnHeader column={column} title='product.description' />
+    )
   },
 
   {
