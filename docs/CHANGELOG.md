@@ -1,5 +1,47 @@
 # Changelog
 
+## [Unreleased]
+
+### Full UI i18n migration (12-task plan)
+
+- **All functional UI is now translatable EN/ID** — every user-facing string in
+  the dashboard (navigation, overview cards, table headers/rows, forms, toasts,
+  pagination, dropdowns, modals/sheets, auth pages, notifications, attendance,
+  tasks, masterdata, role groups, profile) migrated from hardcoded JSX text to
+  `useTranslation()`/`t()` calls backed by `src/i18n/locales/{en,id}/translation.json`
+  (509 keys, key-parity enforced by `bun run i18n:check`).
+- **Language persistence fixed** — the i18next cookie is now read during SSR so
+  a hard refresh keeps the selected language; `<html lang>` reflects it.
+- **Codebase remains English-only** — Indonesian appears only as values in
+  `id/translation.json`; keys, identifiers, and comments stay English.
+- **Baseline regenerated** — hardcoded-string scanner allowlist
+  (`scripts/i18n-hardcoded-baseline.txt`) trimmed 522 → 117 entries; the
+  remainder are legal pages (terms/privacy/about, intentionally never touched),
+  non-translatable component/chart props, column-header translation keys, and
+  demo placeholders. `bun run i18n:hardcoded` passes against the new baseline.
+
+## [Unreleased — 2026-08-01]
+
+### Reliability & CRUD refetch fixes
+
+- **Mutation callbacks now chain** — new `mergeMutationCallbacks(options, extra)`
+  helper (`src/lib/mutation-options.ts`) composes `onSuccess`/`onError` instead
+  of overriding the base options. 11 CRUD components (role-groups, users,
+  employees, products, customers) had `useMutation({ ...base, onSuccess })`
+  spread overrides that silently replaced the base `onSuccess`, so
+  `invalidateQueries()` never ran and lists stayed stale until manual refresh.
+  Fix verified with 4 unit tests (TanStack Query v5 `onSuccess` signature).
+- **User form role group `''` value fixed** — Radix `Select.Item` forbids an
+  empty-string value; the "No role group" option now uses a `NO_ROLE_GROUP =
+  'none'` sentinel that converts back to `undefined` on submit, fixing the
+  console error when editing a user without a role group.
+- **Auto-seed on fresh migrations** — `db:migrate:run` now seeds the database
+  automatically when no data exists, so a fresh checkout works with just
+  `db:push`/`db:migrate:run` (no manual `db:seed`).
+- **CI fixes** — `format:check` restored to a non-flaky job and coverage
+  threshold CI step fixed; oxfmt now formats `scripts/**` (lint-staged no
+  longer fails on script files).
+
 ## [Unreleased — 2026-08-01]
 
 ### API Documentation (OpenAPI + Redoc)
