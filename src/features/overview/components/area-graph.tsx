@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 
 const chartData = [
@@ -38,17 +39,19 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function AreaGraph() {
+  const { t } = useTranslation();
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          Dotted Area Chart
+          {t('overview.areaChartTitle')}
           <Badge variant='outline'>
             <Icons.trendingUp />
             -5.2%
           </Badge>
         </CardTitle>
-        <CardDescription>Showing total visitors for the last 6 months</CardDescription>
+        <CardDescription>{t('overview.areaChartSubtitle')}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>

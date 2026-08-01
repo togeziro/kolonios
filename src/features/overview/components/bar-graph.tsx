@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 
 const chartData = [
   { month: 'January', desktop: 186, mobile: 80 },
@@ -31,17 +32,19 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function BarGraph() {
+  const { t } = useTranslation();
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          Bar Chart - Multiple
+          {t('overview.barChartTitle')}
           <Badge variant='outline'>
             <Icons.trendingDown />
             -5.2%
           </Badge>
         </CardTitle>
-        <CardDescription>January - June 2025</CardDescription>
+        <CardDescription>{t('overview.barChartSubtitle')}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 
 const chartData = [
   { browser: 'chrome', visitors: 275, fill: 'var(--color-chrome)' },
@@ -45,17 +46,19 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function PieGraph() {
+  const { t } = useTranslation();
+
   return (
     <Card className='flex h-full flex-col'>
       <CardHeader className='items-center pb-0'>
         <CardTitle>
-          Pie Chart
+          {t('overview.pieChartTitle')}
           <Badge variant='outline'>
             <Icons.trendingUp />
             +5.2%
           </Badge>
         </CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardDescription>{t('overview.pieChartSubtitle')}</CardDescription>
       </CardHeader>
       <CardContent className='flex flex-1 items-center justify-center pb-0'>
         <ChartContainer
