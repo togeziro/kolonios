@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import {
   Sheet,
@@ -24,6 +25,7 @@ export default function TaskDetailSheet({
 }) {
   const takeTask = useTakeTask();
   const completeTask = useCompleteTask();
+  const { t } = useTranslation();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -71,7 +73,7 @@ export default function TaskDetailSheet({
                   ) : (
                     <Icons.check className='mr-2 h-4 w-4' />
                   )}
-                  Take Task
+                  {t('task.takeTask')}
                 </Button>
               )}
               {task.status === 'in_progress' && (
@@ -86,13 +88,13 @@ export default function TaskDetailSheet({
                   ) : (
                     <Icons.check className='mr-2 h-4 w-4' />
                   )}
-                  Mark Complete
+                  {t('task.markComplete')}
                 </Button>
               )}
               {task.status === 'assigned' && (
                 <Link to='/dashboard/my-work' className='block'>
                   <Button variant='outline' className='w-full'>
-                    Open My Work
+                    {t('task.openMyWork')}
                   </Button>
                 </Link>
               )}

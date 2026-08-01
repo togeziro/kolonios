@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -8,6 +9,7 @@ import TaskCard from './task-card';
 import NotAvailableSection from './not-available-section';
 
 export default function AvailableJobsSection() {
+  const { t } = useTranslation();
   const { data } = useQuery(availableTasksQueryOptions());
   const tasks = data?.tasks ?? [];
   const takeTask = useTakeTask();
@@ -15,15 +17,13 @@ export default function AvailableJobsSection() {
   return (
     <div className='px-4'>
       <div className='mb-3 flex items-center justify-between'>
-        <h2 className='text-sm font-semibold'>Available Jobs</h2>
+        <h2 className='text-sm font-semibold'>{t('task.availableJobs')}</h2>
         <Link to='/dashboard/jobs' className='text-primary text-xs font-medium'>
-          See all
+          {t('task.seeAll')}
         </Link>
       </div>
       {tasks.length === 0 ? (
-        <p className='text-muted-foreground py-2 text-sm'>
-          No jobs available right now — check back later
-        </p>
+        <p className='text-muted-foreground py-2 text-sm'>{t('task.noJobsAvailable')}</p>
       ) : (
         <ScrollArea className='w-full pb-2'>
           <div className='flex gap-3'>

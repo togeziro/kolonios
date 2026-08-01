@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useSearch, useNavigate, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Route as JobsRoute } from '@/routes/dashboard/jobs/index';
@@ -17,6 +18,7 @@ import TaskCard from './task-card';
 import type { TaskPriority } from '../api/types';
 
 export default function JobsPage() {
+  const { t } = useTranslation();
   const { locationId, priority } = useSearch({ from: JobsRoute.id });
   const navigate = useNavigate();
   const filters = {
@@ -35,9 +37,11 @@ export default function JobsPage() {
   return (
     <div className='space-y-4 p-4'>
       <div className='flex items-center justify-between'>
-        <h2 className='text-sm font-semibold'>Available Jobs ({tasks.length})</h2>
+        <h2 className='text-sm font-semibold'>
+          {t('task.availableJobsCount', { count: tasks.length })}
+        </h2>
         <button onClick={() => setFilters({})} className='text-muted-foreground text-xs'>
-          Clear filters
+          {t('task.clearFilters')}
         </button>
       </div>
       <div className='flex gap-2'>
@@ -51,10 +55,10 @@ export default function JobsPage() {
           }
         >
           <SelectTrigger className='w-32'>
-            <SelectValue placeholder='Location' />
+            <SelectValue placeholder={t('task.location')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value='all'>All locations</SelectItem>
+            <SelectItem value='all'>{t('task.allLocations')}</SelectItem>
             {locationsData?.locations.map((loc) => (
               <SelectItem key={loc.id} value={String(loc.id)}>
                 {loc.name}
@@ -72,13 +76,13 @@ export default function JobsPage() {
           }
         >
           <SelectTrigger className='w-28'>
-            <SelectValue placeholder='Priority' />
+            <SelectValue placeholder={t('task.priority')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value='all'>All priorities</SelectItem>
-            <SelectItem value='low'>Low</SelectItem>
-            <SelectItem value='medium'>Medium</SelectItem>
-            <SelectItem value='high'>High</SelectItem>
+            <SelectItem value='all'>{t('task.allPriorities')}</SelectItem>
+            <SelectItem value='low'>{t('task.low')}</SelectItem>
+            <SelectItem value='medium'>{t('task.medium')}</SelectItem>
+            <SelectItem value='high'>{t('task.high')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -88,7 +92,7 @@ export default function JobsPage() {
         </div>
       ) : tasks.length === 0 ? (
         <p className='text-muted-foreground py-8 text-center text-sm'>
-          No jobs available right now — check back later
+          {t('task.noJobsAvailable')}
         </p>
       ) : (
         <div className='space-y-2.5'>
@@ -103,7 +107,7 @@ export default function JobsPage() {
                   onClick={() => takeTask.mutate(task.id)}
                   disabled={takeTask.isPending}
                 >
-                  {takeTask.isPending ? 'Taking…' : 'Take Task'}
+                  {takeTask.isPending ? t('task.taking') : t('task.takeTask')}
                 </Button>
               }
             />

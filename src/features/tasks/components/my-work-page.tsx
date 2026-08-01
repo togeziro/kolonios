@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import TaskCard from './task-card';
 import TaskDetailSheet from './task-detail-sheet';
 
 export default function MyWorkPage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery(myTasksQueryOptions());
   const tasks = data?.tasks ?? [];
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -18,9 +20,11 @@ export default function MyWorkPage() {
   return (
     <div className='space-y-6 p-4'>
       <div>
-        <h2 className='mb-3 text-sm font-semibold'>In Progress ({inProgress.length})</h2>
+        <h2 className='mb-3 text-sm font-semibold'>
+          {t('task.inProgressCount', { count: inProgress.length })}
+        </h2>
         {inProgress.length === 0 ? (
-          <p className='text-muted-foreground text-sm'>Nothing in progress</p>
+          <p className='text-muted-foreground text-sm'>{t('task.nothingInProgress')}</p>
         ) : (
           <div className='space-y-2.5'>
             {inProgress.map((task) => (
@@ -34,7 +38,7 @@ export default function MyWorkPage() {
                     className='w-full'
                     onClick={() => setSelectedId(task.id)}
                   >
-                    Open
+                    {t('task.open')}
                   </Button>
                 }
               />
@@ -43,9 +47,11 @@ export default function MyWorkPage() {
         )}
       </div>
       <div>
-        <h2 className='mb-3 text-sm font-semibold'>Assigned ({assigned.length})</h2>
+        <h2 className='mb-3 text-sm font-semibold'>
+          {t('task.assignedCount', { count: assigned.length })}
+        </h2>
         {assigned.length === 0 ? (
-          <p className='text-muted-foreground text-sm'>No assigned tasks</p>
+          <p className='text-muted-foreground text-sm'>{t('task.noAssignedTasks')}</p>
         ) : (
           <div className='space-y-2.5'>
             {assigned.map((task) => (
@@ -59,7 +65,7 @@ export default function MyWorkPage() {
                     className='w-full'
                     onClick={() => setSelectedId(task.id)}
                   >
-                    Open
+                    {t('task.open')}
                   </Button>
                 }
               />

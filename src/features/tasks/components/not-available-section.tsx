@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -5,6 +6,7 @@ import { Icons } from '@/components/icons';
 import { availableTasksQueryOptions } from '../api/queries';
 
 export default function NotAvailableSection() {
+  const { t } = useTranslation();
   const { data } = useQuery(availableTasksQueryOptions());
   const unavailable = data?.unavailable ?? [];
   const [open, setOpen] = useState(false);
@@ -17,7 +19,7 @@ export default function NotAvailableSection() {
         <Icons.chevronRight
           className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-90' : ''}`}
         />
-        Not available for you ({unavailable.length})
+        {t('task.notAvailableCount', { count: unavailable.length })}
       </CollapsibleTrigger>
       <CollapsibleContent className='mt-2 space-y-1.5'>
         {unavailable.slice(0, 3).map((task) => (

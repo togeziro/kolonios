@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +8,7 @@ import TaskCard from './task-card';
 import TaskDetailSheet from './task-detail-sheet';
 
 export default function MyWorkSection() {
+  const { t } = useTranslation();
   const { data } = useQuery(myTasksQueryOptions());
   const tasks = data?.tasks ?? [];
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -15,13 +17,13 @@ export default function MyWorkSection() {
   return (
     <div className='px-4'>
       <div className='mb-3 flex items-center justify-between'>
-        <h2 className='text-sm font-semibold'>My Work</h2>
+        <h2 className='text-sm font-semibold'>{t('task.myWork')}</h2>
         <Link to='/dashboard/my-work' className='text-primary text-xs font-medium'>
-          See all
+          {t('task.seeAll')}
         </Link>
       </div>
       {tasks.length === 0 ? (
-        <p className='text-muted-foreground py-2 text-sm'>No assigned tasks</p>
+        <p className='text-muted-foreground py-2 text-sm'>{t('task.noAssignedTasks')}</p>
       ) : (
         <div className='space-y-2.5'>
           {tasks.slice(0, 3).map((task) => (
@@ -35,7 +37,7 @@ export default function MyWorkSection() {
                     className='w-full'
                     onClick={() => setSelectedId(task.id)}
                   >
-                    Open
+                    {t('task.open')}
                   </Button>
                 }
               />
