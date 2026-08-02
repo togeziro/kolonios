@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockSessionUser = vi.hoisted(() => ({ role: 'employee' as string }));
 
@@ -78,10 +78,17 @@ describe('hasModulePermission', () => {
 });
 
 describe('requirePermission', () => {
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     mockSessionUser.role = 'employee';
     getUserRoleGroupMock.mockReset();
     getSessionMock.mockClear();
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
   });
 
   it('passes for a role group with is_admin', async () => {
@@ -111,17 +118,18 @@ describe('requirePermission', () => {
     );
   });
 
-  it('rejects when the user has no role group', async () => {
+  it('rejects when the user has no role group and is not admin', async () => {
     getUserRoleGroupMock.mockResolvedValue(null);
     await expect(requirePermission('products', 'view')).rejects.toThrow('Forbidden');
   });
 
-  it('passes for legacy admin role without a role group (fallback)', async () => {
+  it('passes for legacy admin role without a role group (fallback with warning)', async () => {
     mockSessionUser.role = 'admin';
     getUserRoleGroupMock.mockResolvedValue(null);
     await expect(requirePermission('users', 'view')).resolves.toMatchObject({
       user: { role: 'admin' }
     });
+    expect(consoleWarnSpy).toHaveBeenCalledWith('User has admin role but no role group assignment');
   });
 
   it('rejects for legacy non-admin role without a role group', async () => {

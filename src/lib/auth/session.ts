@@ -27,10 +27,23 @@ const loadRoleGroup = createServerOnlyFn(async (userId: string) => {
 
 export async function requirePermission(module: string, action: PermissionAction = 'view') {
   const session = await requireSession();
-  if (session.user.role === 'admin') return session;
   const group = await loadRoleGroup(session.user.id);
-  if (!group) throw new Error(`Forbidden: ${module}.${action} required`);
-  if (hasModulePermission(group.permissions, group.is_admin, module, action)) return session;
+
+  // If no role group assigned, deny access
+  if (!group) {
+    // Check if user.role is admin for backward compatibility during migration
+    if (session.user.role === 'admin') {
+      console.warn('User has admin role but no role group assignment');
+      return session;
+    }
+    throw new Error(`Forbidden: ${module}.${action} required`);
+  }
+
+  // Use role group for authorization
+  if (hasModulePermission(group.permissions, group.is_admin, module, action)) {
+    return session;
+  }
+
   throw new Error(`Forbidden: ${module}.${action} required`);
 }
 
