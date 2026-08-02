@@ -46,6 +46,14 @@ src/
 ├── lib/
 │   ├── auth/                   # Better Auth server + client config + permissions
 │   └── db/                     # Drizzle schema, migrations, data access
+│       ├── utils.ts            # Shared DB utilities (pagination, sorting, conditions)
+│       ├── schema/             # Drizzle schema definitions
+│       ├── customers.ts        # Customer CRUD (uses utils)
+│       ├── employees.ts        # Employee CRUD (uses utils)
+│       ├── masterdata.ts       # Department/designation CRUD (uses utils)
+│       ├── attendance.ts       # Attendance CRUD (uses utils)
+│       ├── audit.ts            # Audit log (uses utils)
+│       └── tasks.ts            # Task management (uses utils)
 ├── components/
 │   ├── ui/                     # shadcn/ui primitives
 │   ├── layout/                 # Sidebar, header, mobile-shell, bottom-nav, mobile-header
@@ -64,10 +72,16 @@ src/
 - **Server functions**: `createServerFn()` with `import()` inside handlers
 - **State management**: React Query for all server state (products, customers, employees, users, notifications, attendance, masterdata)
 - **DB access**: Server-only modules in `src/lib/db/`, never imported by client code
+- **Shared DB utilities**: Common patterns extracted to `src/lib/db/utils.ts`:
+  - `buildPagination()` - consistent pagination with clamping (1-100 limit)
+  - `parseSort()` + `buildOrderBy()` - unified sorting logic
+  - `buildSearchCondition()` - search across multiple fields
+  - `buildStatusCondition()` - status filter helper
+  - `buildConditions()` - WHERE condition builder
 - **Mutation callbacks**: CRUD components compose their `useMutation` options with `mergeMutationCallbacks(baseOptions, extra)` (`src/lib/mutation-options.ts`) so the shared `onSuccess` invalidations always run alongside component-specific callbacks — never spread-overridden.
 - **RPC boundary authz**: Every `createServerFn` endpoint enforces a valid session at the boundary (not just the route `beforeLoad`) via `requireSession()`. Module endpoints additionally call `requirePermission(module, action)`, which resolves the caller's role-group permission map from the DB (`user_role_groups` → `role_groups.permissions`). Authorization is unified: `role_groups.is_admin` is the single admin bypass; legacy helpers (`requireRole`, `requireMinRole`, etc.) have been removed.
 - **Input validation**: Every server-function input is validated at runtime with a Zod schema via `@tanstack/zod-adapter`.
-- **Error mapping**: `lib/db/*.ts` functions are wrapped in `try/catch` using the shared `mapDbError`. Intentional domain errors throw `DomainError` (pass through); unexpected DB errors become a generic message.
+- **Error mapping**: `lib/db/*.ts` functions are wrapped in `try/catch` using the shared `mapDbError`. Intentional domain errors throw `DomainError` (pass through); unexpected DB errors become a generic message. All DB functions include `time` field in response for consistency.
 - **Mobile layout**: Conditional `MobileShell` renders when user is `employee`/`technician` and screen <768px; replaces sidebar/header with bottom nav + FAB.
 - **Pre-commit hooks**: simple-git-hooks + lint-staged (oxlint, oxfmt --check, tsc --noEmit)
 - **E2E testing**: Playwright tests in `e2e/` auto-start the dev server, run headless Chromium with a single worker (shared DB).

@@ -92,6 +92,14 @@ src/
 │   ├── api/                       # API helpers
 │   ├── auth/                      # Better Auth client + server config
 │   ├── db/                        # Drizzle ORM connection, schema, migrations, server-only data access
+│   │   ├── utils.ts               # Shared DB utilities (pagination, sorting, conditions)
+│   │   ├── schema/                # Drizzle schema definitions
+│   │   ├── customers.ts           # Customer CRUD (uses utils)
+│   │   ├── employees.ts           # Employee CRUD (uses utils)
+│   │   ├── masterdata.ts          # Department/designation CRUD (uses utils)
+│   │   ├── attendance.ts          # Attendance CRUD (uses utils)
+│   │   ├── audit.ts               # Audit log (uses utils)
+│   │   └── tasks.ts               # Task management (uses utils)
 │   ├── errors.ts                  # DomainError + mapDbError
 │   ├── logger.ts                  # structured pino logger
 │   ├── parsers.ts                 # sort/filter parsers
@@ -252,6 +260,14 @@ Detailed docs live in [`docs/`](./docs/):
 | [docs/ATTENDANCE.md](./docs/ATTENDANCE.md) | Attendance module deep-dive |
 | [docs/MOBILE.md](./docs/MOBILE.md) | Mobile staff dashboard |
 | [docs/audit/](./docs/audit/) | Repository audit + implementation summary |
+
+## Code Quality & Architecture
+
+- **Shared DB utilities**: Common patterns extracted to `src/lib/db/utils.ts` to reduce code duplication across DB modules (pagination, sorting, search conditions, filtering)
+- **Consistent error handling**: All DB functions use `mapDbError` with consistent response format (`{ success, time, message, data? }`)
+- **Type safety**: Server-only DB layer with Zod-validated inputs and proper error mapping
+- **Testing**: 465+ Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
+- **Code organization**: Feature-based structure with clear separation between routes, features, and shared libraries
 
 ## License
 

@@ -11,6 +11,7 @@ import type {
   TaskActionResponse,
   TaskDetailResponse
 } from '@/features/tasks/api/types';
+import { buildConditions } from './utils';
 
 export const MAX_ACTIVE_TASKS = 3;
 
@@ -115,10 +116,11 @@ export async function getAvailableTasks(
   try {
     const profile = await getEligibilityProfile(userId);
 
-    const conditions = [eq(tasks.status, 'available')];
-    if (filters.locationId != null) conditions.push(eq(tasks.location_id, filters.locationId));
-    if (filters.priority != null) conditions.push(eq(tasks.priority, filters.priority));
-    const where = and(...conditions);
+    const where = buildConditions([
+      eq(tasks.status, 'available'),
+      filters.locationId != null ? eq(tasks.location_id, filters.locationId) : undefined,
+      filters.priority != null ? eq(tasks.priority, filters.priority) : undefined
+    ]);
 
     const rows = await db.select().from(tasks).where(where).orderBy(desc(tasks.created_at));
 

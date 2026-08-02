@@ -1,4 +1,4 @@
-import { asc, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, or, type SQLWrapper } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Pagination
@@ -45,12 +45,17 @@ export function buildOrderBy(sortInput: SortInput, columnMap: SortColumnMap) {
 // Common query conditions
 // ---------------------------------------------------------------------------
 
-export function buildSearchCondition(fields: unknown[], search?: string) {
+export function buildSearchCondition(fields: any[], search?: string) {
   if (!search?.trim()) return undefined;
-  return or(...fields.map((field) => ilike(field as never, `%${search.trim()}%`)));
+  return or(...fields.map((field) => ilike(field, `%${search.trim()}%`)));
 }
 
-export function buildStatusCondition(field: unknown, status?: string) {
+export function buildStatusCondition(field: any, status?: string) {
   if (!status?.trim() || status === 'all') return undefined;
-  return eq(field as never, status);
+  return eq(field, status);
+}
+
+export function buildConditions(conditions: any[]) {
+  const filtered = conditions.filter(Boolean);
+  return filtered.length > 0 ? and(...filtered) : undefined;
 }

@@ -174,13 +174,22 @@ export async function deleteCustomer(id: string) {
   try {
     const existing = await getCustomerOr404(id);
     if (!existing) {
-      return { success: false, message: `Customer with ID ${id} not found` };
+      return {
+        success: false,
+        time: new Date().toISOString(),
+        message: `Customer with ID ${id} not found`
+      };
     }
 
     await db.delete(customers).where(eq(customers.id, id));
 
-    return { success: true, message: 'Customer deleted successfully' };
+    return {
+      success: true,
+      time: new Date().toISOString(),
+      message: 'Customer deleted successfully'
+    };
   } catch (e) {
     mapDbError(e, 'customers.deleteCustomer');
+    throw e;
   }
 }

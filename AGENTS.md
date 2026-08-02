@@ -40,12 +40,13 @@ All `bun run` scripts (lint, format, typecheck, db:*) are defined in `package.js
 
 - `src/lib/auth/auth-client.ts` — Uses `better-auth/react` (React-ready `useSession` hook)
 - `src/lib/auth/session.ts` — `requireSession()` / `requirePermission(module, action)` / `hasModulePermission`
+- `src/lib/db/utils.ts` — Shared DB utilities (pagination, sorting, search conditions, filters)
 - `src/lib/db/role-groups.ts` — Role group CRUD + `getUserRoleGroup`/`setUserRoleGroup` + `mapRoleGroupToLegacyRole`
 - `src/hooks/use-nav.ts` — `useRoleGroupPermissions` (client permission map + nav filtering)
-- `src/lib/db/attendance.ts` — Attendance data access with Haversine
-- `src/lib/db/customers.ts` — Customer CRUD + customer code generation
-- `src/lib/db/employees.ts` — Employee CRUD with joins
-- `src/lib/db/masterdata.ts` — Masterdata CRUD
+- `src/lib/db/attendance.ts` — Attendance data access with Haversine (uses utils)
+- `src/lib/db/customers.ts` — Customer CRUD + customer code generation (uses utils)
+- `src/lib/db/employees.ts` — Employee CRUD with joins (uses utils)
+- `src/lib/db/masterdata.ts` — Masterdata CRUD (uses utils)
 - `src/lib/errors.ts` — `DomainError` + `mapDbError` (standardized error handling)
 - `src/lib/logger.ts` — Structured pino logger
 - `src/lib/rate-limit.ts` — Rate limiter (returns HTTP 429 on exhaustion)

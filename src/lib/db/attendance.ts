@@ -12,6 +12,7 @@ import type {
   LeaveListResponse,
   PerformanceStatsResponse
 } from '@/features/attendance/api/types';
+import { buildPagination, buildConditions } from './utils';
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180;
@@ -75,23 +76,18 @@ export async function getAttendanceHistory(
   filters: AttendanceFilters
 ): Promise<AttendanceHistoryResponse> {
   try {
-    const page = Math.max(1, Math.floor(filters.page ?? 1));
-    const limit = Math.min(100, Math.max(1, Math.floor(filters.limit ?? 10)));
-    const offset = (page - 1) * limit;
+    const { limit, offset } = buildPagination(filters);
 
-    const conditions = [eq(employeeShifts.user_id, userId)];
-    if (filters.month && filters.year) {
-      const monthStr = String(filters.month).padStart(2, '0');
-      const startDate = `${filters.year}-${monthStr}-01`;
-      const endDate = `${filters.year}-${monthStr}-31`;
-      conditions.push(gte(employeeShifts.date, startDate));
-      conditions.push(lte(employeeShifts.date, endDate));
-    }
-    if (filters.status) {
-      conditions.push(eq(employeeShifts.attendance_status, filters.status));
-    }
-
-    const where = and(...conditions);
+    const where = buildConditions([
+      eq(employeeShifts.user_id, userId),
+      filters.month && filters.year
+        ? gte(employeeShifts.date, `${filters.year}-${String(filters.month).padStart(2, '0')}-01`)
+        : undefined,
+      filters.month && filters.year
+        ? lte(employeeShifts.date, `${filters.year}-${String(filters.month).padStart(2, '0')}-31`)
+        : undefined,
+      filters.status ? eq(employeeShifts.attendance_status, filters.status) : undefined
+    ]);
 
     const [rows, [{ count }]] = await Promise.all([
       db
@@ -309,19 +305,13 @@ export async function getMyLeaves(
   filters: LeaveFilters
 ): Promise<LeaveListResponse> {
   try {
-    const page = Math.max(1, Math.floor(filters.page ?? 1));
-    const limit = Math.min(100, Math.max(1, Math.floor(filters.limit ?? 10)));
-    const offset = (page - 1) * limit;
+    const { limit, offset } = buildPagination(filters);
 
-    const conditions = [eq(leaves.user_id, userId)];
-    if (filters.status) {
-      conditions.push(eq(leaves.status, filters.status));
-    }
-    if (filters.leaveType) {
-      conditions.push(eq(leaves.leave_type, filters.leaveType));
-    }
-
-    const where = and(...conditions);
+    const where = buildConditions([
+      eq(leaves.user_id, userId),
+      filters.status ? eq(leaves.status, filters.status) : undefined,
+      filters.leaveType ? eq(leaves.leave_type, filters.leaveType) : undefined
+    ]);
 
     const [rows, [{ count }]] = await Promise.all([
       db

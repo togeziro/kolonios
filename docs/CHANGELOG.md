@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### DB utilities refactoring & code quality improvements
+
+- **Shared DB utilities** — extracted common patterns to `src/lib/db/utils.ts`:
+  - `buildPagination()` - consistent pagination with clamping (1-100 limit)
+  - `parseSort()` + `buildOrderBy()` - unified sorting logic
+  - `buildSearchCondition()` - search across multiple fields
+  - `buildStatusCondition()` - status filter helper
+  - `buildConditions()` - WHERE condition builder
+- **Refactored DB modules** — updated `customers.ts`, `employees.ts`, `masterdata.ts`, `attendance.ts`, `audit.ts`, `tasks.ts` to use shared utilities, reducing code duplication
+- **Consistent error handling** — all DB functions now include `time` field in response envelope for consistency
+- **Utilities test suite** — added `utils.test.ts` with 11 tests for shared DB utilities
+- **TypeScript improvements** — fixed type errors and improved type safety across DB layer
+
 ### Authorization consolidation & integration preparation
 
 - **Unified authorization model** — removed legacy helpers (`requireRole`, `requireMinRole`, `requireAdmin`, `requireHR`, `requireEmployee`, `requireTechnician`) from `src/lib/auth/session.ts`; all authorization now uses `requirePermission(module, action)` with `role_groups.is_admin` as the single admin bypass

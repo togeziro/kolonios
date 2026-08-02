@@ -1,23 +1,26 @@
-import { eq, asc, and } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { departments, designations } from './schema/masterdata';
+import { buildConditions } from './utils';
 
 export async function getDepartments() {
   try {
     const rows = await db.select().from(departments).orderBy(asc(departments.name));
-    return { success: true, departments: rows };
+    return { success: true, time: new Date().toISOString(), departments: rows };
   } catch (e) {
     mapDbError(e, 'masterdata.getDepartments');
+    throw e; // Ensure TypeScript knows this path throws
   }
 }
 
 export async function getDepartmentById(id: number) {
   try {
     const [dept] = await db.select().from(departments).where(eq(departments.id, id));
-    return { success: true, department: dept ?? null };
+    return { success: true, time: new Date().toISOString(), department: dept ?? null };
   } catch (e) {
     mapDbError(e, 'masterdata.getDepartmentById');
+    throw e;
   }
 }
 
@@ -27,7 +30,12 @@ export async function createDepartment(data: { name: string; code: string; descr
       .insert(departments)
       .values({ name: data.name, code: data.code, description: data.description ?? null })
       .returning();
-    return { success: true, message: 'Department created', department: dept };
+    return {
+      success: true,
+      time: new Date().toISOString(),
+      message: 'Department created',
+      department: dept
+    };
   } catch (e) {
     mapDbError(e, 'masterdata.createDepartment');
   }
@@ -43,7 +51,12 @@ export async function updateDepartment(
       .set({ ...data, updated_at: new Date() })
       .where(eq(departments.id, id))
       .returning();
-    return { success: true, message: 'Department updated', department: dept };
+    return {
+      success: true,
+      time: new Date().toISOString(),
+      message: 'Department updated',
+      department: dept
+    };
   } catch (e) {
     mapDbError(e, 'masterdata.updateDepartment');
   }
@@ -57,10 +70,14 @@ export async function deleteDepartment(id: number) {
       .where(eq(designations.department_id, id))
       .limit(1);
     if (linked.length > 0) {
-      return { success: false, message: 'Cannot delete: department has linked designations' };
+      return {
+        success: false,
+        time: new Date().toISOString(),
+        message: 'Cannot delete: department has linked designations'
+      };
     }
     await db.delete(departments).where(eq(departments.id, id));
-    return { success: true, message: 'Department deleted' };
+    return { success: true, time: new Date().toISOString(), message: 'Department deleted' };
   } catch (e) {
     mapDbError(e, 'masterdata.deleteDepartment');
   }
@@ -68,11 +85,9 @@ export async function deleteDepartment(id: number) {
 
 export async function getDesignations(filters?: { department_id?: number }) {
   try {
-    const conditions = [];
-    if (filters?.department_id) {
-      conditions.push(eq(designations.department_id, filters.department_id));
-    }
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const where = buildConditions([
+      filters?.department_id ? eq(designations.department_id, filters.department_id) : undefined
+    ]);
 
     const rows = await db
       .select({
@@ -84,7 +99,7 @@ export async function getDesignations(filters?: { department_id?: number }) {
       .where(where)
       .orderBy(asc(designations.name));
 
-    return { success: true, designations: rows };
+    return { success: true, time: new Date().toISOString(), designations: rows };
   } catch (e) {
     mapDbError(e, 'masterdata.getDesignations');
   }

@@ -2,6 +2,7 @@ import { desc, like, sql } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { auditLog } from './schema/audit-log';
+import { buildPagination } from './utils';
 
 export type AuditEntryRow = {
   actorUserId: string;
@@ -44,8 +45,7 @@ export type AuditLogResponse = {
 
 export async function getAuditLog(filters: AuditFilters = {}): Promise<AuditLogResponse> {
   try {
-    const page = filters.page ?? 1;
-    const limit = Math.min(filters.perPage ?? 50, 100);
+    const { page, limit, offset } = buildPagination({ page: filters.page, limit: filters.perPage });
     const where = filters.action ? like(auditLog.action, `%${filters.action}%`) : undefined;
     const [countRow] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -57,7 +57,7 @@ export async function getAuditLog(filters: AuditFilters = {}): Promise<AuditLogR
       .where(where)
       .orderBy(desc(auditLog.createdAt))
       .limit(limit)
-      .offset((page - 1) * limit);
+      .offset(offset);
     return { total: countRow?.count ?? 0, rows };
   } catch (e) {
     mapDbError(e, 'audit.getAuditLog');

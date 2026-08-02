@@ -321,13 +321,22 @@ export async function deleteEmployee(id: string) {
   try {
     const existing = await getEmployeeOr404(id);
     if (!existing) {
-      return { success: false, message: `Employee with ID ${id} not found` };
+      return {
+        success: false,
+        time: new Date().toISOString(),
+        message: `Employee with ID ${id} not found`
+      };
     }
 
     await db.delete(employees).where(eq(employees.id, id));
 
-    return { success: true, message: 'Employee deleted successfully' };
+    return {
+      success: true,
+      time: new Date().toISOString(),
+      message: 'Employee deleted successfully'
+    };
   } catch (e) {
     mapDbError(e, 'employees.deleteEmployee');
+    throw e;
   }
 }
