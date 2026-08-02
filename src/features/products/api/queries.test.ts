@@ -9,7 +9,7 @@ vi.mock('./service', () => ({
 }));
 
 import { productKeys } from './queries';
-import { productByIdOptions, productsQueryOptions } from './queries';
+import { productByIdQueryOptions, productsQueryOptions } from './queries';
 import { createProductMutation, deleteProductMutation, updateProductMutation } from './mutations';
 import {
   createProductFn,
@@ -37,8 +37,8 @@ describe('product query options', () => {
     expect(getProductsFn).toHaveBeenCalledWith({ data: filters });
   });
 
-  it('productByIdOptions passes the id through', () => {
-    const options = productByIdOptions(7);
+  it('productByIdQueryOptions passes the id through', () => {
+    const options = productByIdQueryOptions(7);
     expect(options.queryKey).toEqual(['products', 'detail', 7]);
     options.queryFn!(undefined as never);
     expect(getProductByIdFn).toHaveBeenCalledWith({ data: 7 });

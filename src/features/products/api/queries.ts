@@ -16,7 +16,7 @@ export const productsQueryOptions = (filters: ProductFilters) =>
     queryFn: () => getProductsFn({ data: filters })
   });
 
-export const productByIdOptions = (id: number) =>
+export const productByIdQueryOptions = (id: number) =>
   queryOptions({
     queryKey: productKeys.detail(id),
     queryFn: () => getProductByIdFn({ data: id })
