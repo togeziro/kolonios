@@ -35,8 +35,9 @@
 - **Notification center** — bell icon badge, popover preview, and full page view (PostgreSQL-backed)
 - **Command palette** — Cmd+K quick navigation
 - **Multi-theme support** — 10+ OKLCH themes with easy switching
-- **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler, Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
-- **Testing** — 481 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
+- **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
+- **Testing** — 465 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
 
 ## Pages
 

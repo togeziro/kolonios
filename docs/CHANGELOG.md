@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Authorization consolidation & integration preparation
+
+- **Unified authorization model** — removed legacy helpers (`requireRole`, `requireMinRole`, `requireAdmin`, `requireHR`, `requireEmployee`, `requireTechnician`) from `src/lib/auth/session.ts`; all authorization now uses `requirePermission(module, action)` with `role_groups.is_admin` as the single admin bypass
+- **Admin bypass fix** — `requirePermission()` now loads role group first and checks `is_admin` flag; temporary backward compatibility for admin users without role group assignment (with console warning)
+- **Integration layer scaffolded** — added `src/integrations/` directory with Tripay payment adapter (client, types, webhook verification) and MikroTik RouterOS adapter (scaffolding)
+- **Tripay webhook handler** — implemented at `src/routes/api/v1/payments/webhook.ts` with HMAC signature verification and payment record storage (`payments` schema)
+- **CRUD standardization** — verified products feature follows standard pattern; created `docs/superpowers/guides/crud-standardization.md` guide for contributors
+- **Test suite updated** — 465 tests passing after authorization refactoring
+
 ### Full UI i18n migration (12-task plan)
 
 - **All functional UI is now translatable EN/ID** — every user-facing string in

@@ -9,19 +9,17 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 
 1. **Data tables** — Sorting, filtering, pagination, URL state sync with TanStack Table
 2. **CRUD operations** — Products, users with server-side validation via Drizzle + React Query
-3. **Kanban board** — Drag-and-drop task management with PostgreSQL persistence
-4. **Notification center** — Badge count, preview popover, full page view
-5. **Forms** — Multi-step, validation, file upload patterns with TanStack Form
-6. **Authentication** — Email/password sign-in and sign-up with Better Auth DB sessions, RBAC, route protection
-7. **Command palette** — Quick navigation (Cmd+K) via kbar
-8. **Multi-theme** — Theme switching with local storage persistence
+3. **Notification center** — Badge count, preview popover, full page view
+4. **Forms** — Multi-step, validation, file upload patterns with TanStack Form
+5. **Authentication** — Email/password sign-in and sign-up with Better Auth DB sessions, RBAC, route protection
+6. **Command palette** — Quick navigation (Cmd+K) via kbar
+7. **Multi-theme** — Theme switching with local storage persistence
 
 ## Implemented Features
 
 - **Dashboard Overview** — Analytics cards with Recharts graphs, Suspense-based loading; mobile staff layout for employees/technicians
 - **Product Management** — CRUD with data table (search, filter, pagination, sort, URL state)
 - **User Management** — Data table with role/status filters
-- **Kanban Board** — Drag-and-drop task management with priority badges, PostgreSQL-backed via Drizzle + React Query
 - **Notification Center** — Bell icon badge, popover preview, full page with tabs, PostgreSQL-backed via Drizzle + React Query
 - **Attendance** — Check-in/out with geo-fencing (Haversine), today's status, attendance history; leave requests with type/date selection, leave history
 - **Masterdata** — Full CRUD for departments and designations with dialog-based forms
@@ -34,6 +32,8 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 - **Testing** — Vitest + Testing Library unit & integration tests plus Playwright E2E
 - **Authentication** — Better Auth email + password with DB sessions, RBAC (admin plugin) + DB-backed role groups, route protection
 - **Mobile Work Dashboard** — Driver-style home for staff: assigned tasks first, eligibility-gated available-jobs pool (department/designation/location/skill), transactional task claiming, attendance status strip, 5-tab bottom nav, profile screen
+- **Unified Authorization** — Single authorization model via `requirePermission(module, action)` and `role_groups.is_admin`; legacy helpers (`requireRole`, `requireMinRole`, etc.) removed for consistency
+- **Integration Layer** — Tripay payment webhook with signature verification, MikroTik adapter scaffolding, dedicated `src/integrations/` directory for external APIs
 
 ## Technical Requirements
 
@@ -52,8 +52,6 @@ The server-function boundary is hardened at every endpoint:
 - **Input validation** — every server-function input is validated at runtime with a Zod schema via `@tanstack/zod-adapter`'s `zodValidator`. Schemas use `z.ZodType<ExistingType>` so they cannot drift from the request types.
 - **Error mapping** — `lib/db/*.ts` wraps DB calls in `mapDbError`; unexpected errors become a generic message (no constraint/column names leak), while intentional `DomainError`s pass through.
 - **Notifications IDOR** — Resolved 2026-07-23. All notification queries are scoped by `user_id`.
-
-**Kanban** is intentionally shared across all authenticated users (team-wide Trello-style board).
 
 ## Roadmap
 

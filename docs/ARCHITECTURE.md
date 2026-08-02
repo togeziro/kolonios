@@ -21,20 +21,23 @@ src/
 │   ├── __root.tsx              # Root layout (providers, theme, HTML shell)
 │   ├── index.tsx               # Home (auth redirect)
 │   ├── dashboard.tsx           # Conditional layout: MobileShell vs sidebar
-│   ├── api/auth/$.tsx          # Better Auth catch-all handler
+│   ├── api/v1/auth/$           # Better Auth catch-all handler (versioned)
 │   └── dashboard/              # Dashboard pages
 │       ├── overview.tsx        # Analytics or StaffMobileDashboard
 │       ├── attendance/         # Check-in/out page
 │       ├── leave/              # Leave management
-│       ├── admin/              # Department & designation CRUD
+│       ├── my-work/            # Assigned task list (mobile)
+│       ├── jobs/               # Available jobs pool (mobile)
+│       ├── profile.tsx         # Profile + month summary
+│       ├── admin/              # Departments, designations, role groups, audit log
 │       ├── users.tsx           # Users table
+│       ├── customers.tsx       # Customer CRUD
+│       ├── employees.tsx       # Employee CRUD
 │       ├── product/            # Product CRUD
-│       ├── react-query.tsx     # React Query demo
-│       ├── kanban.tsx          # Task board
-│       ├── notifications.tsx   # Notifications page
-│       ├── forms/              # Form examples
-│       └── elements/           # UI showcase
-├── features/                   # Feature modules
+│       └── notifications.tsx   # Notifications page
+├── features/                   # attendance, audit, auth, customers, employees,
+│   │                           # masterdata, notifications, overview, products,
+│   │                           # profile, role-groups, tasks, users
 │   ├── <name>/
 │   │   ├── api/                # Types, server functions, queries, mutations
 │   │   ├── components/         # Feature-specific components
@@ -59,16 +62,16 @@ src/
 ## Key Patterns
 
 - **Server functions**: `createServerFn()` with `import()` inside handlers
-- **State management**: React Query for all server state (products, users, kanban, notifications, attendance, masterdata)
+- **State management**: React Query for all server state (products, customers, employees, users, notifications, attendance, masterdata)
 - **DB access**: Server-only modules in `src/lib/db/`, never imported by client code
-- **RPC boundary authz**: Every `createServerFn` endpoint enforces a valid session at the boundary (not just the route `beforeLoad`) via `requireSession()`. Module endpoints additionally call `requirePermission(module, action)`, which resolves the caller's role-group permission map from the DB (`user_role_groups` → `role_groups.permissions`); legacy `requireRole`/`requireMinRole` still exist but are no longer used by features.
+- **Mutation callbacks**: CRUD components compose their `useMutation` options with `mergeMutationCallbacks(baseOptions, extra)` (`src/lib/mutation-options.ts`) so the shared `onSuccess` invalidations always run alongside component-specific callbacks — never spread-overridden.
+- **RPC boundary authz**: Every `createServerFn` endpoint enforces a valid session at the boundary (not just the route `beforeLoad`) via `requireSession()`. Module endpoints additionally call `requirePermission(module, action)`, which resolves the caller's role-group permission map from the DB (`user_role_groups` → `role_groups.permissions`). Authorization is unified: `role_groups.is_admin` is the single admin bypass; legacy helpers (`requireRole`, `requireMinRole`, etc.) have been removed.
 - **Input validation**: Every server-function input is validated at runtime with a Zod schema via `@tanstack/zod-adapter`.
 - **Error mapping**: `lib/db/*.ts` functions are wrapped in `try/catch` using the shared `mapDbError`. Intentional domain errors throw `DomainError` (pass through); unexpected DB errors become a generic message.
 - **Mobile layout**: Conditional `MobileShell` renders when user is `employee`/`technician` and screen <768px; replaces sidebar/header with bottom nav + FAB.
 - **Pre-commit hooks**: simple-git-hooks + lint-staged (oxlint, oxfmt --check, tsc --noEmit)
 - **E2E testing**: Playwright tests in `e2e/` auto-start the dev server, run headless Chromium with a single worker (shared DB).
 
-> **Kanban** is intentionally shared across all authenticated users.
 > **Notifications** are owner-scoped by `user_id` (IDOR resolved 2026-07-23).
 
 ## Authentication Flow
@@ -80,7 +83,7 @@ Auth uses **Better Auth** (DB-session based) via the `admin` plugin for the base
 3. API handler at `/api/v1/auth/$` handles all Better Auth requests (GET/POST)
 4. Dashboard routes use `beforeLoad` guard — calls `auth.api.getSession({ headers })`, redirects to `/auth/sign-in` if unauthenticated
 5. Sign-out via `authClient.signOut()` clears the session
-6. Fine-grained authorization is DB-backed: each user is assigned a **role group** (`user_role_groups` → `role_groups`), whose JSONB permission map is consulted by `requirePermission(module, action)` at every server function and by the sidebar via `useRoleGroupPermissions`. Legacy roles (`user.role`) remain in sync via `mapRoleGroupToLegacyRole`, and the `admin` role always bypasses the matrix.
+6. Fine-grained authorization is DB-backed: each user is assigned a **role group** (`user_role_groups` → `role_groups`), whose JSONB permission map is consulted by `requirePermission(module, action)` at every server function and by the sidebar via `useRoleGroupPermissions`. The `role_groups.is_admin` flag is the single admin bypass. Legacy role helpers have been removed; `user.role` is retained only for Better Auth compatibility.
 
 ## Permission model (role groups)
 
@@ -153,7 +156,7 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 | Technology           | Version  | Purpose                                               |
 | -------------------- | -------- | ----------------------------------------------------- |
-| TanStack React Query | v5.101.2 | Server state (products, users, kanban, notifications) |
+| TanStack React Query | v5.101.2 | Server state (products, customers, employees, users, notifications) |
 
 ### Tables & Charts
 
@@ -185,15 +188,6 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | JetBrains Mono Variable   | @fontsource-variable/jetbrains-mono v5.1.3   |
 | Space Mono                | @fontsource/space-mono v5.0.20               |
 | Architects Daughter       | @fontsource/architects-daughter v5.0.17      |
-
-### Drag & Drop
-
-| Technology         | Version | Purpose               |
-| ------------------ | ------- | --------------------- |
-| @dnd-kit/core      | v6.3.1  | Kanban drag-and-drop  |
-| @dnd-kit/modifiers | v9.0.0  | Movement restrictions |
-| @dnd-kit/sortable  | v10.0.0 | Sortable columns      |
-| @dnd-kit/utilities | v3.2.2  | Drag utilities        |
 
 ### Command Palette
 
@@ -326,6 +320,32 @@ Items from the 2026-07-23 audit, all resolved:
 | IDOR             | Notifications not owner-scoped                                 | ✅      |
 | Font unused      | `playfair-display`, `merriweather` not referenced by any theme | ✅      |
 | Lazy-load        | 11 fonts loaded upfront, only 1-2 active per theme             | ✅      |
+
+## External integrations
+
+Integration adapters live in `src/integrations/` and follow a layered pattern:
+
+```
+src/integrations/
+├── tripay/           # Tripay payment gateway
+│   ├── client.ts     # HTTP client with auth
+│   ├── types.ts      # Request/response types
+│   ├── mapper.ts     # Status mapping
+│   ├── service.ts    # Business logic
+│   └── webhook.ts    # Signature verification + webhook handling
+├── mikrotik/         # MikroTik RouterOS API
+│   ├── client.ts
+│   ├── types.ts
+│   └── service.ts
+└── shared/
+    ├── http-client.ts
+    └── integration-errors.ts
+```
+
+- **Tripay**: Webhook handler at `src/routes/api/v1/payments/webhook.ts` with HMAC signature verification
+- **MikroTik**: PPPoE user management (scaffolding)
+- **Payment schema**: `payments` table tracks external transactions with idempotency
+- **Environment**: API keys stored in `process.env` (never in code or frontend)
 
 ## File uploads (pattern)
 
