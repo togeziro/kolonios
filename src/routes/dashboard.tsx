@@ -6,7 +6,7 @@ import { InfoSidebar } from '@/components/layout/info-sidebar';
 import { InfobarProvider } from '@/components/ui/infobar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { MobileShell } from '@/components/layout/mobile-shell';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/lib/auth/auth-client';
 
 export const Route = createFileRoute('/dashboard')({

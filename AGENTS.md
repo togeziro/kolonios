@@ -14,7 +14,7 @@ Agent-facing quick reference. Full project documentation:
 bun install
 cp env.example.txt .env
 bun run db:push    # apply DB schema
-bun run db:seed    # seed 20 products + 1 demo user + 8 notifications + kanban +
+bun run db:seed    # seed 20 products + 1 demo user + 8 notifications +
                    #       2 locations + 3 shifts + 6 departments + 13 designations +
                    #       4 role groups (Administrator/HR/Employee/Technician) +
                    #       4 demo users + 4 employee records + customers
@@ -49,8 +49,7 @@ All `bun run` scripts (lint, format, typecheck, db:*) are defined in `package.js
 - `src/lib/errors.ts` — `DomainError` + `mapDbError` (standardized error handling)
 - `src/lib/logger.ts` — Structured pino logger
 - `src/lib/rate-limit.ts` — Rate limiter (returns HTTP 429 on exhaustion)
-- `src/lib/api/version.ts` — `API_VERSION`/`API_PREFIX` for `/api/v1`
-- `src/hooks/use-is-mobile.ts` — Responsive media query hook for mobile detection
+- `src/hooks/use-mobile.tsx` — Responsive media query hook for mobile detection (canonical, used by shadcn UI components)
 
 ## Demo Accounts
 

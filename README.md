@@ -89,16 +89,15 @@ src/
 │   └── auth/                      # Auth components
 │
 ├── lib/                           # Core utilities
-│   ├── api/                       # Versioned API helpers (/api/v1)
-│   ├── auth/                      # Better Auth client + server config + permissions
+│   ├── api/                       # API helpers
+│   ├── auth/                      # Better Auth client + server config
 │   ├── db/                        # Drizzle ORM connection, schema, migrations, server-only data access
-│   ├── api-client.ts              # fetch wrapper
 │   ├── errors.ts                  # DomainError + mapDbError
 │   ├── logger.ts                  # structured pino logger
 │   ├── parsers.ts                 # sort/filter parsers
 │   ├── rate-limit.ts              # rate limiter (returns HTTP 429 on exhaustion)
 │   └── query-client.ts            # React Query client config
-├── hooks/                         # Custom hooks (use-data-table, use-is-mobile, etc.)
+├── hooks/                         # Custom hooks (use-data-table, use-mobile, etc.)
 ├── config/                        # Navigation, infobar, data table config
 ├── styles/                        # Global CSS & theme files
 └── types/                         # TypeScript types
