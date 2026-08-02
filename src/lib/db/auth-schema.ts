@@ -1,6 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, text, timestamp, boolean, index } from 'drizzle-orm/pg-core';
-import { employees } from './schema/masterdata';
+import { employees } from './schema/employees';
 import { customers } from './schema/customers';
 
 export const user = pgTable('user', {

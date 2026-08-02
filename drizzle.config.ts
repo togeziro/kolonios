@@ -5,6 +5,7 @@ export default defineConfig({
     './src/lib/db/schema/products.ts',
     './src/lib/db/schema/notifications.ts',
     './src/lib/db/schema/attendance.ts',
+    './src/lib/db/schema/employees.ts',
     './src/lib/db/schema/masterdata.ts',
     './src/lib/db/schema/tasks.ts',
     './src/lib/db/schema/customers.ts',

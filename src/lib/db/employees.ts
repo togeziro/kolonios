@@ -1,48 +1,27 @@
-import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
-import { employees, departments, designations } from './schema/masterdata';
+import { employees } from './schema/employees';
+import { departments, designations } from './schema/masterdata';
 import type {
   EmployeeFilters,
   EmployeesResponse,
   EmployeeByIdResponse,
   EmployeeMutationPayload
 } from '@/features/employees/api/types';
+import { buildPagination, buildOrderBy, buildSearchCondition, buildStatusCondition } from './utils';
 
-function parseSort(sort?: string) {
-  if (!sort) return undefined;
-  try {
-    const items = JSON.parse(sort) as { id: string; desc: boolean }[];
-    return items[0];
-  } catch {
-    return undefined;
-  }
-}
-
-function sortColumn(id: string) {
-  switch (id) {
-    case 'employee_code':
-      return employees.employee_code;
-    case 'full_name':
-      return employees.full_name;
-    case 'email':
-      return employees.email;
-    case 'department_name':
-      return departments.name;
-    case 'designation_name':
-      return designations.name;
-    case 'phone':
-      return employees.phone;
-    case 'status':
-      return employees.status;
-    case 'join_date':
-      return employees.join_date;
-    case 'created_at':
-      return employees.created_at;
-    default:
-      return undefined;
-  }
-}
+const sortColumnMap = {
+  employee_code: employees.employee_code,
+  full_name: employees.full_name,
+  email: employees.email,
+  department_name: departments.name,
+  designation_name: designations.name,
+  phone: employees.phone,
+  status: employees.status,
+  join_date: employees.join_date,
+  created_at: employees.created_at
+} as const;
 
 function serialize(row: {
   id: string;
@@ -161,38 +140,18 @@ const employeeWithJoins = {
 
 export async function listEmployees(filters: EmployeeFilters): Promise<EmployeesResponse> {
   try {
-    const page = Math.max(1, Math.floor(filters.page ?? 1));
-    const limit = Math.min(100, Math.max(1, Math.floor(filters.limit ?? 10)));
-    const offset = (page - 1) * limit;
+    const { limit, offset } = buildPagination(filters);
 
-    const search = filters.search?.trim();
-    const deptId = filters.department_id;
-    const status = filters.status?.trim();
-
-    const conditions = [];
-    if (status) {
-      if (status !== 'all') {
-        conditions.push(eq(employees.status, status));
-      }
-    }
-    if (deptId) {
-      conditions.push(eq(employees.department_id, deptId));
-    }
-    if (search) {
-      conditions.push(
-        or(
-          ilike(employees.full_name, `%${search}%`),
-          ilike(employees.email, `%${search}%`),
-          ilike(employees.phone, `%${search}%`),
-          ilike(employees.employee_code, `%${search}%`)
-        )
-      );
-    }
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const sortItem = parseSort(filters.sort);
-    const col = sortItem ? sortColumn(sortItem.id) : undefined;
-    const orderBy = col ? (sortItem!.desc ? desc(col) : asc(col)) : asc(employees.created_at);
+    const statusCondition = buildStatusCondition(employees.status, filters.status);
+    const deptCondition = filters.department_id
+      ? eq(employees.department_id, filters.department_id)
+      : undefined;
+    const searchCondition = buildSearchCondition(
+      [employees.full_name, employees.email, employees.phone, employees.employee_code],
+      filters.search
+    );
+    const where = and(statusCondition, deptCondition, searchCondition);
+    const orderBy = buildOrderBy(filters, sortColumnMap) ?? asc(employees.created_at);
 
     const [rows, [{ count }]] = await Promise.all([
       db

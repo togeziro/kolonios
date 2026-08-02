@@ -1,6 +1,7 @@
 export * from './products';
 export * from './notifications';
 export * from './attendance';
+export * from './employees';
 export * from './masterdata';
 export * from './tasks';
 export * from './customers';

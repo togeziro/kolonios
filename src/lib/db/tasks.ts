@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { tasks, taskRequirements, employeeSkills } from './schema/tasks';
-import { employees } from './schema/masterdata';
+import { employees } from './schema/employees';
 import { locations } from './schema/attendance';
 import type {
   AvailableTaskFilters,

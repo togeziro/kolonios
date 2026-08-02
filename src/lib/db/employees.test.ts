@@ -8,7 +8,7 @@ import {
 } from './employees';
 import { resetAllTables, seedUser, seedDepartment, seedDesignation } from '@/test-utils/db';
 import { db } from '@/lib/db';
-import { employees } from './schema/masterdata';
+import { employees } from './schema/employees';
 
 const TEST_EMP_USER_ID = 'test-emp-user-001';
 

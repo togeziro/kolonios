@@ -8,7 +8,8 @@ import { db } from '@/lib/db';
 import { products } from '@/lib/db/schema/products';
 import { notifications } from '@/lib/db/schema/notifications';
 import { customers } from '@/lib/db/schema/customers';
-import { departments, designations, employees } from '@/lib/db/schema/masterdata';
+import { departments, designations } from '@/lib/db/schema/masterdata';
+import { employees } from '@/lib/db/schema/employees';
 import {
   employeeShifts,
   leaves,

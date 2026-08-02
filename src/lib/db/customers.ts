@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { customers } from './schema/customers';
@@ -8,33 +8,15 @@ import type {
   CustomerByIdResponse,
   CustomerMutationPayload
 } from '@/features/customers/api/types';
+import { buildPagination, buildOrderBy, buildSearchCondition, buildStatusCondition } from './utils';
 
-function parseSort(sort?: string) {
-  if (!sort) return undefined;
-  try {
-    const items = JSON.parse(sort) as { id: string; desc: boolean }[];
-    return items[0];
-  } catch {
-    return undefined;
-  }
-}
-
-function sortColumn(id: string) {
-  switch (id) {
-    case 'full_name':
-      return customers.full_name;
-    case 'email':
-      return customers.email;
-    case 'customer_code':
-      return customers.customer_code;
-    case 'status':
-      return customers.status;
-    case 'created_at':
-      return customers.created_at;
-    default:
-      return undefined;
-  }
-}
+const sortColumnMap = {
+  full_name: customers.full_name,
+  email: customers.email,
+  customer_code: customers.customer_code,
+  status: customers.status,
+  created_at: customers.created_at
+} as const;
 
 function serialize(row: typeof customers.$inferSelect) {
   return {
@@ -60,34 +42,15 @@ async function generateCustomerCode(): Promise<string> {
 
 export async function listCustomers(filters: CustomerFilters): Promise<CustomersResponse> {
   try {
-    const page = Math.max(1, Math.floor(filters.page ?? 1));
-    const limit = Math.min(100, Math.max(1, Math.floor(filters.limit ?? 10)));
-    const offset = (page - 1) * limit;
+    const { limit, offset } = buildPagination(filters);
 
-    const search = filters.search?.trim();
-    const status = filters.status?.trim();
-
-    const conditions = [];
-    if (status) {
-      if (status !== 'all') {
-        conditions.push(eq(customers.status, status));
-      }
-    }
-    if (search) {
-      conditions.push(
-        or(
-          ilike(customers.full_name, `%${search}%`),
-          ilike(customers.email, `%${search}%`),
-          ilike(customers.phone, `%${search}%`),
-          ilike(customers.customer_code, `%${search}%`)
-        )
-      );
-    }
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const sortItem = parseSort(filters.sort);
-    const col = sortItem ? sortColumn(sortItem.id) : undefined;
-    const orderBy = col ? (sortItem!.desc ? desc(col) : asc(col)) : asc(customers.created_at);
+    const statusCondition = buildStatusCondition(customers.status, filters.status);
+    const searchCondition = buildSearchCondition(
+      [customers.full_name, customers.email, customers.phone, customers.customer_code],
+      filters.search
+    );
+    const where = and(statusCondition, searchCondition);
+    const orderBy = buildOrderBy(filters, sortColumnMap) ?? asc(customers.created_at);
 
     const [rows, [{ count }]] = await Promise.all([
       db.select().from(customers).where(where).orderBy(orderBy).limit(limit).offset(offset),
@@ -160,6 +123,7 @@ export async function createCustomer(data: CustomerMutationPayload & { created_b
 
     return {
       success: true,
+      time: new Date().toISOString(),
       message: 'Customer created successfully',
       customer: serialize(created)
     };
@@ -197,6 +161,7 @@ export async function updateCustomer(id: string, data: CustomerMutationPayload) 
 
     return {
       success: true,
+      time: new Date().toISOString(),
       message: 'Customer updated successfully',
       customer: serialize(updated)
     };
