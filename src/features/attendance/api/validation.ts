@@ -54,3 +54,56 @@ export const leaveFiltersSchema = z.object({
   status: leaveStatusSchema.optional(),
   leaveType: leaveTypeSchema.optional()
 });
+
+// --- Schedule and policy validation schemas ---
+
+export const weekdayScheduleRuleSchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  isWorkingDay: z.boolean(),
+  startTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
+    .nullable(),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
+    .nullable(),
+  lateToleranceMinutes: z.number().int().min(0),
+  absenceCutoffMinutes: z.number().int().min(0)
+});
+
+export const scheduleAssignmentSchema = z.object({
+  userId: z.string().min(1),
+  shiftId: z.number().int().positive(),
+  effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  effectiveTo: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+});
+
+export const dateOverrideSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  shiftId: z.number().int().positive()
+});
+
+export const dayOffSchema = z.object({
+  userId: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+});
+
+export const locationPolicySchema = z.object({
+  gpsValidationEnabled: z.boolean(),
+  selfieRequired: z.boolean(),
+  maxAccuracyMeters: z.number().positive(),
+  maxStaleMs: z.number().positive()
+});
+
+export const schedulePolicyOverrideSchema = z.object({
+  gpsValidationEnabled: z.boolean().nullable(),
+  selfieRequired: z.boolean().nullable(),
+  maxAccuracyMeters: z.number().positive().nullable(),
+  maxStaleMs: z.number().positive().nullable()
+});
+
+export const correctionReasonSchema = z.string().min(1).max(1000);

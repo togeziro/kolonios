@@ -20,6 +20,59 @@ export type LeaveType = 'annual' | 'sick' | 'personal' | 'emergency' | 'maternit
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
+// --- Schedule and policy types ---
+
+export type WeekdayScheduleRule = {
+  dayOfWeek: number;
+  isWorkingDay: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  lateToleranceMinutes: number;
+  absenceCutoffMinutes: number;
+};
+
+export type ScheduleAssignment = {
+  userId: string;
+  shiftId: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+};
+
+export type DateOverride = {
+  date: string;
+  shiftId: number;
+};
+
+export type LocationPolicy = {
+  gpsValidationEnabled: boolean;
+  selfieRequired: boolean;
+  maxAccuracyMeters: number;
+  maxStaleMs: number;
+};
+
+export type SchedulePolicyOverride = {
+  gpsValidationEnabled: boolean | null;
+  selfieRequired: boolean | null;
+  maxAccuracyMeters: number | null;
+  maxStaleMs: number | null;
+};
+
+export type AttendancePolicy = {
+  gpsValidationEnabled: boolean;
+  selfieRequired: boolean;
+  maxAccuracyMeters: number;
+  maxStaleMs: number;
+};
+
+export type EffectiveSchedule = {
+  shiftId: number;
+  startTime: string;
+  endTime: string;
+  lateToleranceMinutes: number;
+  absenceCutoffMinutes: number;
+  isWorkingDay: true;
+};
+
 export type AttendanceCheckInPayload = {
   shiftId?: number;
   locationId?: number;
