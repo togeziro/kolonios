@@ -12,6 +12,8 @@ import {
   schedulesQueryOptions
 } from '../api/queries';
 import { exportAttendanceReportFn } from '../api/service';
+import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
+import { employeesQueryOptions } from '@/features/employees/api/queries';
 import type { AdminAttendanceFilters, ExportFormat } from '../api/types';
 
 const STATUS_OPTIONS = ['present', 'late', 'absent', 'excused', 'pending'] as const;
@@ -23,6 +25,15 @@ export function AdminAttendanceReport() {
   const { data, isFetching } = useQuery(adminAttendanceReportQueryOptions(filters));
   const { data: locationsData } = useQuery(locationsQueryOptions());
   const { data: schedulesData } = useQuery(schedulesQueryOptions());
+  const { data: departmentsData } = useQuery(departmentsQueryOptions());
+  const { data: employeesData } = useQuery(employeesQueryOptions({ limit: 100 }));
+
+  const limit = filters.limit ?? 50;
+  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / limit));
+  const currentPage = filters.page ?? 1;
+
+  const setFilter = (patch: Partial<AdminAttendanceFilters>) =>
+    setFilters((f) => ({ ...f, ...patch, page: 1 }));
 
   const exportMutation = useMutation({
     mutationFn: (format: ExportFormat) => exportAttendanceReportFn({ data: { filters, format } }),
@@ -62,9 +73,7 @@ export function AdminAttendanceReport() {
             <Input
               type='date'
               value={filters.startDate ?? ''}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, startDate: e.target.value || undefined }))
-              }
+              onChange={(e) => setFilter({ startDate: e.target.value || undefined })}
             />
           </div>
           <div className='space-y-1'>
@@ -72,8 +81,42 @@ export function AdminAttendanceReport() {
             <Input
               type='date'
               value={filters.endDate ?? ''}
-              onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value || undefined }))}
+              onChange={(e) => setFilter({ endDate: e.target.value || undefined })}
             />
+          </div>
+          <div className='space-y-1'>
+            <Label>{t('attendanceAdmin.department')}</Label>
+            <select
+              className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
+              value={filters.departmentId ?? ''}
+              onChange={(e) =>
+                setFilter({
+                  departmentId: e.target.value ? Number(e.target.value) : undefined
+                })
+              }
+            >
+              <option value=''>--</option>
+              {(departmentsData?.departments ?? []).map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className='space-y-1'>
+            <Label>{t('attendanceAdmin.employee')}</Label>
+            <select
+              className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
+              value={filters.userId ?? ''}
+              onChange={(e) => setFilter({ userId: e.target.value || undefined })}
+            >
+              <option value=''>--</option>
+              {(employeesData?.employees ?? []).map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.full_name ?? e.email}
+                </option>
+              ))}
+            </select>
           </div>
           <div className='space-y-1'>
             <Label>{t('attendanceAdmin.locationName')}</Label>
@@ -81,10 +124,9 @@ export function AdminAttendanceReport() {
               className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
               value={filters.locationId ?? ''}
               onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
+                setFilter({
                   locationId: e.target.value ? Number(e.target.value) : undefined
-                }))
+                })
               }
             >
               <option value=''>--</option>
@@ -101,10 +143,9 @@ export function AdminAttendanceReport() {
               className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
               value={filters.shiftId ?? ''}
               onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
+                setFilter({
                   shiftId: e.target.value ? Number(e.target.value) : undefined
-                }))
+                })
               }
             >
               <option value=''>--</option>
@@ -121,10 +162,9 @@ export function AdminAttendanceReport() {
               className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
               value={filters.status ?? ''}
               onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
+                setFilter({
                   status: (e.target.value as AdminAttendanceFilters['status']) || undefined
-                }))
+                })
               }
             >
               <option value=''>--</option>
@@ -152,6 +192,28 @@ export function AdminAttendanceReport() {
           <span className='ml-auto text-sm text-muted-foreground'>
             {t('attendanceAdmin.totalRecords', { count: data?.total ?? 0 })}
           </span>
+        </div>
+
+        <div className='flex flex-wrap items-center gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            disabled={currentPage <= 1 || isFetching}
+            onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, currentPage - 1) }))}
+          >
+            {t('common.previous')}
+          </Button>
+          <span className='text-sm text-muted-foreground'>
+            {t('common.pageOf', { page: currentPage, total: totalPages })}
+          </span>
+          <Button
+            variant='outline'
+            size='sm'
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => setFilters((f) => ({ ...f, page: currentPage + 1 }))}
+          >
+            {t('common.next')}
+          </Button>
         </div>
 
         {isFetching ? (

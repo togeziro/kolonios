@@ -431,17 +431,21 @@ export const exportAttendanceReportFn = createServerFn({ method: 'POST' })
       const { PDFDocument, StandardFonts } = await import('pdf-lib');
       const doc = await PDFDocument.create();
       const font = await doc.embedFont(StandardFonts.Helvetica);
-      const page = doc.addPage([595, 842]);
+      let page = doc.addPage([595, 842]);
       let y = 800;
       page.drawText('Attendance Report', { x: 40, y, size: 18, font });
       y -= 30;
-      for (const row of rows.slice(0, 40)) {
+      // Never truncate: paginate across as many pages as the rows require.
+      for (const row of rows) {
+        if (y < 40) {
+          page = doc.addPage([595, 842]);
+          y = 800;
+        }
         page.drawText(
           `${row.date}  ${row.employee}  ${row.shift}  ${row.check_in}  ${row.status}`,
           { x: 40, y, size: 9, font }
         );
         y -= 14;
-        if (y < 40) break;
       }
       const pdf = await doc.save();
       return {

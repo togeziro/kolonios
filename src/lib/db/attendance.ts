@@ -1130,7 +1130,8 @@ export async function getAdminAttendanceReport(filters: AdminReportFilters = {})
       filters.status ? eq(employeeShifts.attendance_status, filters.status) : undefined,
       filters.startDate ? gte(employeeShifts.date, filters.startDate) : undefined,
       filters.endDate ? lte(employeeShifts.date, filters.endDate) : undefined,
-      filters.shiftId ? eq(employeeShifts.shift_id, filters.shiftId) : undefined
+      filters.shiftId ? eq(employeeShifts.shift_id, filters.shiftId) : undefined,
+      filters.locationId ? eq(employeeShifts.lock_location, filters.locationId) : undefined
     );
 
     const records = await db
