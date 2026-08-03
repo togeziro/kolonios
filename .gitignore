@@ -62,6 +62,7 @@ graphify-out/
 # Machine-local tooling artifacts
 .mimocode/
 .tanstack/tmp/
+.worktrees/
 
 # Documentation files are now tracked
 *.md
