@@ -580,6 +580,7 @@ export async function getEffectiveEmployeeSchedule(
           sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${date})`
         )
       )
+      .orderBy(desc(scheduleAssignments.effective_from))
       .limit(1);
 
     if (!assignment) return null;

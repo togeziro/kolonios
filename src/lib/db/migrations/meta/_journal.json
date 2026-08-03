@@ -43,6 +43,13 @@
       "when": 1785790001305,
       "tag": "0005_melodic_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785797301968,
+      "tag": "0006_low_justice",
+      "breakpoints": true
     }
   ]
 }

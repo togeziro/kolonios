@@ -7,8 +7,10 @@ import {
   numeric,
   integer,
   real,
-  boolean
+  boolean,
+  uniqueIndex
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const shiftTypeEnum = pgEnum('shift_type', ['fixed', 'flexible']);
 
@@ -148,53 +150,82 @@ export const performanceReports = pgTable('performance_reports', {
 
 // --- New tables for schedule management ---
 
-export const shiftWeekdayRules = pgTable('shift_weekday_rules', {
-  id: serial('id').primaryKey(),
-  shift_id: integer('shift_id').notNull(),
-  day_of_week: integer('day_of_week').notNull(), // 0=Sun, 1=Mon, ..., 6=Sat
-  is_working_day: boolean('is_working_day').default(true),
-  start_time: text('start_time'), // HH:MM
-  end_time: text('end_time'), // HH:MM
-  late_tolerance_minutes: integer('late_tolerance_minutes').default(0),
-  absence_cutoff_minutes: integer('absence_cutoff_minutes').default(120),
-  created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull()
-});
+export const shiftWeekdayRules = pgTable(
+  'shift_weekday_rules',
+  {
+    id: serial('id').primaryKey(),
+    shift_id: integer('shift_id')
+      .notNull()
+      .references(() => shifts.id),
+    day_of_week: integer('day_of_week').notNull(), // 0=Sun, 1=Mon, ..., 6=Sat
+    is_working_day: boolean('is_working_day').default(true),
+    start_time: text('start_time'), // HH:MM
+    end_time: text('end_time'), // HH:MM
+    late_tolerance_minutes: integer('late_tolerance_minutes').default(0),
+    absence_cutoff_minutes: integer('absence_cutoff_minutes').default(120),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (t) => [uniqueIndex('shift_weekday_rules_shift_day_unique').on(t.shift_id, t.day_of_week)]
+);
 
-export const scheduleAssignments = pgTable('schedule_assignments', {
-  id: serial('id').primaryKey(),
-  user_id: text('user_id').notNull(),
-  shift_id: integer('shift_id').notNull(),
-  effective_from: text('effective_from').notNull(), // YYYY-MM-DD
-  effective_to: text('effective_to'), // YYYY-MM-DD | null
-  created_by: text('created_by'),
-  created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull()
-});
+export const scheduleAssignments = pgTable(
+  'schedule_assignments',
+  {
+    id: serial('id').primaryKey(),
+    user_id: text('user_id').notNull(),
+    shift_id: integer('shift_id')
+      .notNull()
+      .references(() => shifts.id),
+    effective_from: text('effective_from').notNull(), // YYYY-MM-DD
+    effective_to: text('effective_to'), // YYYY-MM-DD | null
+    created_by: text('created_by'),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (t) => [
+    // At most one open-ended assignment per employee
+    uniqueIndex('schedule_assignments_one_active_unique')
+      .on(t.user_id)
+      .where(sql`${t.effective_to} IS NULL`)
+  ]
+);
 
-export const dateOverrides = pgTable('date_overrides', {
-  id: serial('id').primaryKey(),
-  user_id: text('user_id').notNull(),
-  date: text('date').notNull(), // YYYY-MM-DD
-  shift_id: integer('shift_id').notNull(),
-  created_by: text('created_by'),
-  created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull()
-});
+export const dateOverrides = pgTable(
+  'date_overrides',
+  {
+    id: serial('id').primaryKey(),
+    user_id: text('user_id').notNull(),
+    date: text('date').notNull(), // YYYY-MM-DD
+    shift_id: integer('shift_id')
+      .notNull()
+      .references(() => shifts.id),
+    created_by: text('created_by'),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (t) => [uniqueIndex('date_overrides_user_date_unique').on(t.user_id, t.date)]
+);
 
-export const dayOffs = pgTable('day_offs', {
-  id: serial('id').primaryKey(),
-  user_id: text('user_id').notNull(),
-  date: text('date').notNull(), // YYYY-MM-DD
-  reason: text('reason'),
-  created_by: text('created_by'),
-  created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull()
-});
+export const dayOffs = pgTable(
+  'day_offs',
+  {
+    id: serial('id').primaryKey(),
+    user_id: text('user_id').notNull(),
+    date: text('date').notNull(), // YYYY-MM-DD
+    reason: text('reason'),
+    created_by: text('created_by'),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (t) => [uniqueIndex('day_offs_user_date_unique').on(t.user_id, t.date)]
+);
 
 export const attendanceCorrections = pgTable('attendance_corrections', {
   id: serial('id').primaryKey(),
-  attendance_id: integer('attendance_id').notNull(),
+  attendance_id: integer('attendance_id')
+    .notNull()
+    .references(() => employeeShifts.id),
   actor_id: text('actor_id').notNull(),
   reason: text('reason').notNull(),
   previous_values: text('previous_values'), // JSON
