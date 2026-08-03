@@ -630,6 +630,8 @@
     "requestedCheckIn": "Requested Check-in Time",
     "requestedCheckOut": "Requested Check-out Time",
     "correctionNote": "Note",
-    "submitCorrection": "Submit Correction"
+    "submitCorrection": "Submit Correction",
+    "exportFailed": "Export failed",
+    "totalRecords": "{{count}} records"
   }
 }

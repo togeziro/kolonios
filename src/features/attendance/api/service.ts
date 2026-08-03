@@ -22,7 +22,9 @@ import {
   dayOffSchema,
   dayOffDeleteSchema,
   correctionRequestSchema,
-  correctionReviewSchema
+  correctionReviewSchema,
+  reportFiltersSchema,
+  exportReportSchema
 } from './validation';
 
 export const checkInFn = createServerFn({ method: 'POST' })
@@ -347,5 +349,107 @@ export const reviewAttendanceCorrectionFn = createServerFn({ method: 'POST' })
         );
       }
       return result;
+    })
+  );
+
+// --- Admin reports and export ---
+
+export const getAdminAttendanceReportFn = createServerFn({ method: 'GET' })
+  .validator(reportFiltersSchema)
+  .handler(async ({ data: filters }) =>
+    withRequestContext(async () => {
+      await requirePermission('attendance', 'view');
+      const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
+      return getAdminAttendanceReport(filters);
+    })
+  );
+
+function toCsv(records: Array<Record<string, unknown>>): string {
+  const escape = (value: unknown) => {
+    const s = value == null ? '' : String(value);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const headers = [
+    'date',
+    'employee',
+    'department',
+    'shift',
+    'check_in',
+    'check_out',
+    'late_minutes',
+    'status'
+  ];
+  const lines = records.map((r) =>
+    [r.date, r.employee, r.department, r.shift, r.check_in, r.check_out, r.late_minutes, r.status]
+      .map(escape)
+      .join(',')
+  );
+  return [headers.join(','), ...lines].join('\n');
+}
+
+export const exportAttendanceReportFn = createServerFn({ method: 'POST' })
+  .validator(exportReportSchema)
+  .handler(async ({ data }) =>
+    withRequestContext(async () => {
+      await requirePermission('attendance', 'view');
+      const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
+      const { filters, format } = data;
+
+      const result = await getAdminAttendanceReport({ ...filters, page: 1, limit: 10_000 });
+      if (!result.success) return { success: false };
+
+      const rows = result.records.map((r) => ({
+        date: r.attendance.date,
+        employee: r.employee?.full_name ?? r.attendance.user_id,
+        department: r.department?.name ?? '',
+        shift: r.shift?.name ?? '',
+        check_in: r.attendance.check_in_time ?? '',
+        check_out: r.attendance.check_out_time ?? '',
+        late_minutes: r.attendance.late_duration ?? '',
+        status: r.attendance.attendance_status
+      }));
+
+      if (format === 'csv') {
+        return { success: true, format, content: toCsv(rows), mime: 'text/csv', ext: 'csv' };
+      }
+
+      if (format === 'xlsx') {
+        const XLSX = await import('xlsx');
+        const sheet = XLSX.utils.json_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, sheet, 'Attendance');
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        return {
+          success: true,
+          format,
+          content: buffer.toString('base64'),
+          mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ext: 'xlsx'
+        };
+      }
+
+      const { PDFDocument, StandardFonts } = await import('pdf-lib');
+      const doc = await PDFDocument.create();
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const page = doc.addPage([595, 842]);
+      let y = 800;
+      page.drawText('Attendance Report', { x: 40, y, size: 18, font });
+      y -= 30;
+      for (const row of rows.slice(0, 40)) {
+        page.drawText(
+          `${row.date}  ${row.employee}  ${row.shift}  ${row.check_in}  ${row.status}`,
+          { x: 40, y, size: 9, font }
+        );
+        y -= 14;
+        if (y < 40) break;
+      }
+      const pdf = await doc.save();
+      return {
+        success: true,
+        format,
+        content: Buffer.from(pdf).toString('base64'),
+        mime: 'application/pdf',
+        ext: 'pdf'
+      };
     })
   );

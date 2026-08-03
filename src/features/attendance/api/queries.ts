@@ -8,9 +8,15 @@ import {
   getShiftsFn,
   getAttendanceSummaryFn,
   getSchedulesFn,
-  getScheduleAssignmentsFn
+  getScheduleAssignmentsFn,
+  getAdminAttendanceReportFn
 } from './service';
-import type { AttendanceFilters, LeaveFilters, AssignmentFilters } from './types';
+import type {
+  AttendanceFilters,
+  LeaveFilters,
+  AssignmentFilters,
+  AdminAttendanceFilters
+} from './types';
 
 export const attendanceKeys = {
   all: ['attendance'] as const,
@@ -82,4 +88,10 @@ export const scheduleAssignmentsQueryOptions = (filters: AssignmentFilters) =>
   queryOptions({
     queryKey: attendanceKeys.assignments(filters),
     queryFn: () => getScheduleAssignmentsFn({ data: filters })
+  });
+
+export const adminAttendanceReportQueryOptions = (filters: AdminAttendanceFilters) =>
+  queryOptions({
+    queryKey: attendanceKeys.adminReport(filters),
+    queryFn: () => getAdminAttendanceReportFn({ data: filters })
   });

@@ -14,6 +14,8 @@ import {
   attendanceCorrections,
   leaveTypeConfigs
 } from './schema/attendance';
+import { employees } from './schema/employees';
+import { departments } from './schema/masterdata';
 import type {
   AttendanceCheckInPayload,
   AttendanceCheckOutPayload,
@@ -1018,5 +1020,78 @@ export async function reviewAttendanceCorrection(
   } catch (e) {
     mapDbError(e, 'attendance.reviewAttendanceCorrection');
     return { success: false };
+  }
+}
+
+// --- Admin reports ---
+
+export type AdminReportFilters = {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  departmentId?: number;
+  locationId?: number;
+  shiftId?: number;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export async function getAdminAttendanceReport(filters: AdminReportFilters = {}) {
+  try {
+    const { limit, offset } = buildPagination(filters);
+
+    const where = and(
+      filters.userId ? eq(employeeShifts.user_id, filters.userId) : undefined,
+      filters.status ? eq(employeeShifts.attendance_status, filters.status) : undefined,
+      filters.startDate ? gte(employeeShifts.date, filters.startDate) : undefined,
+      filters.endDate ? lte(employeeShifts.date, filters.endDate) : undefined,
+      filters.shiftId ? eq(employeeShifts.shift_id, filters.shiftId) : undefined
+    );
+
+    const records = await db
+      .select({
+        attendance: employeeShifts,
+        shift: shifts,
+        location: locations,
+        employee: employees,
+        department: departments
+      })
+      .from(employeeShifts)
+      .leftJoin(shifts, eq(employeeShifts.shift_id, shifts.id))
+      .leftJoin(locations, eq(employeeShifts.lock_location, locations.id))
+      .leftJoin(employees, eq(employeeShifts.user_id, employees.id))
+      .leftJoin(departments, eq(employees.department_id, departments.id))
+      .where(
+        and(
+          where,
+          filters.departmentId ? eq(employees.department_id, filters.departmentId) : undefined
+        )
+      )
+      .orderBy(desc(employeeShifts.date))
+      .limit(limit)
+      .offset(offset);
+
+    const [countRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(employeeShifts)
+      .leftJoin(employees, eq(employeeShifts.user_id, employees.id))
+      .where(
+        and(
+          where,
+          filters.departmentId ? eq(employees.department_id, filters.departmentId) : undefined
+        )
+      );
+
+    return {
+      success: true,
+      total: countRow?.count ?? 0,
+      offset,
+      limit,
+      records
+    };
+  } catch (e) {
+    mapDbError(e, 'attendance.getAdminAttendanceReport');
+    return { success: false, total: 0, offset: 0, limit: 0, records: [] };
   }
 }

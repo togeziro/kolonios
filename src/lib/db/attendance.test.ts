@@ -18,7 +18,8 @@ import {
   createAttendanceCorrection,
   checkIn,
   requestAttendanceCorrection,
-  reviewAttendanceCorrection
+  reviewAttendanceCorrection,
+  getAdminAttendanceReport
 } from './attendance';
 import {
   resetAllTables,
@@ -28,14 +29,16 @@ import {
   seedScheduleAssignment,
   seedDateOverride,
   seedDayOff,
-  seedAttendanceCorrection
+  seedAttendanceCorrection,
+  seedEmployee
 } from '@/test-utils/db';
 import { db } from '@/lib/db';
 import {
   employeeShifts,
   performanceReports,
   leaveTypeConfigs,
-  attendanceCorrections
+  attendanceCorrections,
+  leaveTypeConfigs as _leaveTypeConfigs
 } from './schema/attendance';
 
 const TEST_USER_ID = 'test-user-att-123';
@@ -713,5 +716,68 @@ describe('leave attachment policy and corrections', () => {
     expect(res.success).toBe(true);
     expect(res.attendance!.request_status).toBe('pending');
     expect(res.attendance!.requested_check_in_time).toBe('09:00');
+  });
+});
+
+describe('admin attendance report', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  it('returns daily detail records with employee/department/shift joins', async () => {
+    const { department } = await seedEmployee('rep-user-1');
+    const shift = await seedShift({ name: 'Morning' });
+    const loc = await seedLocation({ name: 'Office' });
+    await db.insert(employeeShifts).values({
+      user_id: 'rep-user-1',
+      shift_id: shift.id,
+      lock_location: loc.id,
+      date: '2026-08-03',
+      check_in_time: '09:00',
+      attendance_status: 'present'
+    });
+
+    const res = await getAdminAttendanceReport({ page: 1, limit: 10 });
+    expect(res.success).toBe(true);
+    expect(res.total).toBe(1);
+    const row = res.records[0];
+    expect(row.employee!.full_name).toBe('Test Employee');
+    expect(row.department!.id).toBe(department.id);
+    expect(row.shift!.name).toBe('Morning');
+  });
+
+  it('filters by status and date range', async () => {
+    await seedEmployee('rep-user-2');
+    await db.insert(employeeShifts).values([
+      { user_id: 'rep-user-2', date: '2026-08-01', attendance_status: 'present' },
+      { user_id: 'rep-user-2', date: '2026-08-02', attendance_status: 'late' },
+      { user_id: 'rep-user-2', date: '2026-08-10', attendance_status: 'present' }
+    ]);
+
+    const res = await getAdminAttendanceReport({
+      status: 'late',
+      startDate: '2026-08-01',
+      endDate: '2026-08-05'
+    });
+    expect(res.success).toBe(true);
+    expect(res.total).toBe(1);
+    expect(res.records[0].attendance.date).toBe('2026-08-02');
+  });
+
+  it('paginates results', async () => {
+    await seedEmployee('rep-user-3');
+    for (let d = 1; d <= 5; d++) {
+      await db.insert(employeeShifts).values({
+        user_id: 'rep-user-3',
+        date: `2026-08-0${d}`,
+        attendance_status: 'present'
+      });
+    }
+
+    const res = await getAdminAttendanceReport({ page: 2, limit: 2 });
+    expect(res.success).toBe(true);
+    expect(res.total).toBe(5);
+    expect(res.records).toHaveLength(2);
+    expect(res.offset).toBe(2);
   });
 });

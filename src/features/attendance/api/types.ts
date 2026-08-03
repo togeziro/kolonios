@@ -140,6 +140,28 @@ export type AssignmentFilters = {
   shiftId?: number;
 };
 
+export type AdminAttendanceFilters = {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  departmentId?: number;
+  locationId?: number;
+  shiftId?: number;
+  status?: AttendanceStatus;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type ExportFormat = 'csv' | 'xlsx' | 'pdf';
+
+export type ExportResponse = {
+  success: boolean;
+  format?: ExportFormat;
+  content?: string;
+  mime?: string;
+  ext?: string;
+};
+
 export type LeaveListResponse = {
   success: boolean;
   time?: string;
