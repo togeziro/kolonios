@@ -607,6 +607,10 @@
     "correctionRequested": "Correction requested",
     "correctionReviewFailed": "Failed to review correction",
     "correctionApproved": "Correction approved",
-    "correctionRejected": "Correction rejected"
+    "correctionRejected": "Correction rejected",
+    "assignSchedule": "Assign Schedule",
+    "radiusUnit": " m",
+    "gpsBadge": "GPS",
+    "selfieBadge": "Selfie"
   }
 }

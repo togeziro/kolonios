@@ -607,6 +607,10 @@
     "correctionRequested": "Koreksi diajukan",
     "correctionReviewFailed": "Gagal meninjau koreksi",
     "correctionApproved": "Koreksi disetujui",
-    "correctionRejected": "Koreksi ditolak"
+    "correctionRejected": "Koreksi ditolak",
+    "assignSchedule": "Tetapkan Jadwal",
+    "radiusUnit": " m",
+    "gpsBadge": "GPS",
+    "selfieBadge": "Selfie"
   }
 }
