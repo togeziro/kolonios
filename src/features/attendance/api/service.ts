@@ -181,7 +181,21 @@ export const updateLocationFn = createServerFn({ method: 'POST' })
       await checkRateLimit(`write:${session.user.id}`);
       const { updateLocation } = await import('@/lib/db/attendance');
       const { id, ...patch } = data;
-      return updateLocation(id, patch, session.user.id);
+      const result = await updateLocation(id, patch, session.user.id);
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.location.update',
+            entityType: 'location',
+            entityId: String(id),
+            before: null,
+            after: result.location
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 
@@ -192,7 +206,21 @@ export const deleteLocationFn = createServerFn({ method: 'POST' })
       const session = await requirePermission('attendance', 'delete');
       await checkRateLimit(`write:${session.user.id}`);
       const { deleteLocation } = await import('@/lib/db/attendance');
-      return deleteLocation(data.id);
+      const result = await deleteLocation(data.id);
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.location.delete',
+            entityType: 'location',
+            entityId: String(data.id),
+            before: null,
+            after: null
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 
@@ -213,7 +241,21 @@ export const createScheduleFn = createServerFn({ method: 'POST' })
       const session = await requirePermission('attendance', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { createSchedule } = await import('@/lib/db/attendance');
-      return createSchedule(data);
+      const result = await createSchedule(data);
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.schedule.create',
+            entityType: 'schedule',
+            entityId: String(result.shift?.id),
+            before: null,
+            after: result.shift
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 
@@ -225,7 +267,21 @@ export const updateScheduleFn = createServerFn({ method: 'POST' })
       await checkRateLimit(`write:${session.user.id}`);
       const { updateSchedule } = await import('@/lib/db/attendance');
       const { id, ...patch } = data;
-      return updateSchedule(id, patch);
+      const result = await updateSchedule(id, patch);
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.schedule.update',
+            entityType: 'schedule',
+            entityId: String(id),
+            before: null,
+            after: result
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 
@@ -248,13 +304,27 @@ export const assignScheduleFn = createServerFn({ method: 'POST' })
       const session = await requirePermission('attendance', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { createScheduleAssignment } = await import('@/lib/db/attendance');
-      return createScheduleAssignment({
+      const result = await createScheduleAssignment({
         userId: data.userId,
         shiftId: data.shiftId,
         effectiveFrom: data.effectiveFrom,
         effectiveTo: data.effectiveTo ?? null,
         createdBy: session.user.id
       });
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.assignment.create',
+            entityType: 'schedule_assignment',
+            entityId: String(result.assignment?.id),
+            before: null,
+            after: result.assignment
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 
@@ -265,7 +335,21 @@ export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
       const session = await requirePermission('attendance', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { bulkAssignSchedule } = await import('@/lib/db/attendance');
-      return bulkAssignSchedule(data.assignments, session.user.id);
+      const result = await bulkAssignSchedule(data.assignments, session.user.id);
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.assignment.bulk_create',
+            entityType: 'schedule_assignment',
+            entityId: undefined,
+            before: null,
+            after: result
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 
@@ -288,6 +372,17 @@ export const createScheduleOverrideFn = createServerFn({ method: 'POST' })
           created_by: session.user.id
         })
         .returning();
+      await withAudit(
+        session.user.id,
+        {
+          action: 'attendance.override.create',
+          entityType: 'date_override',
+          entityId: String(record.id),
+          before: null,
+          after: record
+        },
+        async () => undefined
+      );
       return { success: true, override: record };
     })
   );
@@ -299,7 +394,25 @@ export const createDayOffFn = createServerFn({ method: 'POST' })
       const session = await requirePermission('attendance', 'edit');
       await checkRateLimit(`write:${session.user.id}`);
       const { createDayOff } = await import('@/lib/db/attendance');
-      return createDayOff({ userId: data.userId, date: data.date, createdBy: session.user.id });
+      const result = await createDayOff({
+        userId: data.userId,
+        date: data.date,
+        createdBy: session.user.id
+      });
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.day_off.create',
+            entityType: 'day_off',
+            entityId: String(result.dayOff?.id),
+            before: null,
+            after: result.dayOff
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 
@@ -310,7 +423,21 @@ export const deleteDayOffFn = createServerFn({ method: 'POST' })
       const session = await requirePermission('attendance', 'delete');
       await checkRateLimit(`write:${session.user.id}`);
       const { deleteDayOff } = await import('@/lib/db/attendance');
-      return deleteDayOff(data.id);
+      const result = await deleteDayOff(data.id);
+      if (result.success) {
+        await withAudit(
+          session.user.id,
+          {
+            action: 'attendance.day_off.delete',
+            entityType: 'day_off',
+            entityId: String(data.id),
+            before: null,
+            after: null
+          },
+          async () => undefined
+        );
+      }
+      return result;
     })
   );
 

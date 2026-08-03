@@ -1078,26 +1078,30 @@ export async function reviewAttendanceCorrection(
         patch.check_out_time = existing.requested_check_out_time;
     }
 
-    const [record] = await db
-      .update(employeeShifts)
-      .set(patch)
-      .where(eq(employeeShifts.id, input.attendanceId))
-      .returning();
+    const record = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(employeeShifts)
+        .set(patch)
+        .where(eq(employeeShifts.id, input.attendanceId))
+        .returning();
 
-    await db.insert(attendanceCorrections).values({
-      attendance_id: input.attendanceId,
-      actor_id: actorId,
-      reason: input.reason,
-      previous_values: JSON.stringify({
-        check_in_time: existing.check_in_time,
-        check_out_time: existing.check_out_time,
-        request_status: existing.request_status
-      }),
-      new_values: JSON.stringify({
-        check_in_time: record.check_in_time,
-        check_out_time: record.check_out_time,
-        request_status: record.request_status
-      })
+      await tx.insert(attendanceCorrections).values({
+        attendance_id: input.attendanceId,
+        actor_id: actorId,
+        reason: input.reason,
+        previous_values: JSON.stringify({
+          check_in_time: existing.check_in_time,
+          check_out_time: existing.check_out_time,
+          request_status: existing.request_status
+        }),
+        new_values: JSON.stringify({
+          check_in_time: updated.check_in_time,
+          check_out_time: updated.check_out_time,
+          request_status: updated.request_status
+        })
+      });
+
+      return updated;
     });
 
     return { success: true, attendance: record };
