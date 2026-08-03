@@ -7,7 +7,9 @@ vi.mock('./service', () => ({
   getPerformanceStatsFn: vi.fn(),
   getLocationsFn: vi.fn(),
   getShiftsFn: vi.fn(),
-  getAttendanceSummaryFn: vi.fn()
+  getAttendanceSummaryFn: vi.fn(),
+  getSchedulesFn: vi.fn(),
+  getScheduleAssignmentsFn: vi.fn()
 }));
 
 import { attendanceKeys } from './queries';
@@ -101,5 +103,19 @@ describe('attendance query options', () => {
     expect(options.queryKey).toEqual(['attendance', 'summary']);
     options.queryFn!(undefined as never);
     expect(getAttendanceSummaryFn).toHaveBeenCalledWith();
+  });
+});
+
+describe('attendanceKeys admin scheduling', () => {
+  it('shapes schedule, assignment, and report keys', () => {
+    expect(attendanceKeys.schedules()).toEqual(['attendance', 'schedules']);
+    expect(attendanceKeys.assignments({})).toEqual(['attendance', 'assignments', {}]);
+    expect(attendanceKeys.effectiveSchedule('2026-08-04')).toEqual([
+      'attendance',
+      'effective-schedule',
+      '2026-08-04'
+    ]);
+    expect(attendanceKeys.dayOffs()).toEqual(['attendance', 'day-offs']);
+    expect(attendanceKeys.corrections()).toEqual(['attendance', 'corrections']);
   });
 });

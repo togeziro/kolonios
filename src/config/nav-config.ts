@@ -78,6 +78,38 @@ export const navGroups: NavGroup[] = [
         isActive: false,
         module: 'employees',
         items: []
+      },
+      {
+        title: 'Attendance Locations',
+        url: '/dashboard/admin/attendance/locations',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance',
+        items: []
+      },
+      {
+        title: 'Attendance Schedules',
+        url: '/dashboard/admin/attendance/schedules',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance',
+        items: []
+      },
+      {
+        title: 'Attendance Assignments',
+        url: '/dashboard/admin/attendance/assignments',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance',
+        items: []
+      },
+      {
+        title: 'Attendance Reports',
+        url: '/dashboard/admin/attendance/reports',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance',
+        items: []
       }
     ]
   },

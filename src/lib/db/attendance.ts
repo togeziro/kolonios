@@ -644,3 +644,343 @@ export async function createAttendanceCorrection(input: {
     return { success: false };
   }
 }
+
+// --- Location CRUD ---
+
+export async function createLocation(input: {
+  name: string;
+  description?: string;
+  status?: string;
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  gpsValidationEnabled?: boolean;
+  selfieRequired?: boolean;
+  maxAccuracyMeters?: number;
+  maxStaleMs?: number;
+  createdBy?: string;
+}) {
+  try {
+    const [record] = await db
+      .insert(locations)
+      .values({
+        name: input.name,
+        description: input.description ?? null,
+        status: input.status ?? 'active',
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        radius: input.radius ?? 100,
+        gps_validation_enabled: input.gpsValidationEnabled ?? true,
+        selfie_required: input.selfieRequired ?? false,
+        max_accuracy_meters: input.maxAccuracyMeters ?? 50,
+        max_stale_ms: input.maxStaleMs ?? 30000,
+        created_by: input.createdBy ?? null
+      })
+      .returning();
+    return { success: true, location: record };
+  } catch (e) {
+    mapDbError(e, 'attendance.createLocation');
+    return { success: false };
+  }
+}
+
+export async function updateLocation(id: number, input: Record<string, unknown>, actorId: string) {
+  try {
+    const [record] = await db
+      .update(locations)
+      .set({ ...input, updated_at: new Date() })
+      .where(eq(locations.id, id))
+      .returning();
+    if (!record) return { success: false, message: 'Location not found' };
+    return { success: true, location: record, actorId };
+  } catch (e) {
+    mapDbError(e, 'attendance.updateLocation');
+    return { success: false };
+  }
+}
+
+export async function deleteLocation(id: number) {
+  try {
+    await db.delete(locations).where(eq(locations.id, id));
+    return { success: true };
+  } catch (e) {
+    mapDbError(e, 'attendance.deleteLocation');
+    return { success: false };
+  }
+}
+
+// --- Schedule CRUD ---
+
+export async function createSchedule(input: {
+  name: string;
+  startTime: string;
+  endTime: string;
+  type?: string;
+  weekdayRules?: Array<{
+    dayOfWeek: number;
+    isWorkingDay?: boolean;
+    startTime?: string | null;
+    endTime?: string | null;
+    lateToleranceMinutes?: number;
+    absenceCutoffMinutes?: number;
+  }>;
+}) {
+  try {
+    const [shift] = await db
+      .insert(shifts)
+      .values({
+        name: input.name,
+        start_time: input.startTime,
+        end_time: input.endTime,
+        type: (input.type ?? 'fixed') as 'fixed' | 'flexible'
+      })
+      .returning();
+
+    if (input.weekdayRules && input.weekdayRules.length > 0) {
+      await db.insert(shiftWeekdayRules).values(
+        input.weekdayRules.map((r) => ({
+          shift_id: shift.id,
+          day_of_week: r.dayOfWeek,
+          is_working_day: r.isWorkingDay ?? true,
+          start_time: r.startTime ?? input.startTime,
+          end_time: r.endTime ?? input.endTime,
+          late_tolerance_minutes: r.lateToleranceMinutes ?? 0,
+          absence_cutoff_minutes: r.absenceCutoffMinutes ?? 120
+        }))
+      );
+    }
+
+    return { success: true, shift };
+  } catch (e) {
+    mapDbError(e, 'attendance.createSchedule');
+    return { success: false };
+  }
+}
+
+export async function updateSchedule(
+  id: number,
+  input: {
+    name?: string;
+    startTime?: string;
+    endTime?: string;
+    type?: string;
+    weekdayRules?: Array<{
+      dayOfWeek: number;
+      isWorkingDay?: boolean;
+      startTime?: string | null;
+      endTime?: string | null;
+      lateToleranceMinutes?: number;
+      absenceCutoffMinutes?: number;
+    }>;
+  }
+) {
+  try {
+    const patch: Record<string, unknown> = {};
+    if (input.name) patch.name = input.name;
+    if (input.startTime) patch.start_time = input.startTime;
+    if (input.endTime) patch.end_time = input.endTime;
+    if (input.type) patch.type = input.type;
+
+    if (Object.keys(patch).length > 0) {
+      await db
+        .update(shifts)
+        .set({ ...patch, updated_at: new Date() })
+        .where(eq(shifts.id, id));
+    }
+
+    if (input.weekdayRules) {
+      await db.delete(shiftWeekdayRules).where(eq(shiftWeekdayRules.shift_id, id));
+      if (input.weekdayRules.length > 0) {
+        await db.insert(shiftWeekdayRules).values(
+          input.weekdayRules.map((r) => ({
+            shift_id: id,
+            day_of_week: r.dayOfWeek,
+            is_working_day: r.isWorkingDay ?? true,
+            start_time: r.startTime ?? input.startTime ?? null,
+            end_time: r.endTime ?? input.endTime ?? null,
+            late_tolerance_minutes: r.lateToleranceMinutes ?? 0,
+            absence_cutoff_minutes: r.absenceCutoffMinutes ?? 120
+          }))
+        );
+      }
+    }
+
+    return { success: true };
+  } catch (e) {
+    mapDbError(e, 'attendance.updateSchedule');
+    return { success: false };
+  }
+}
+
+export async function listScheduleAssignments(filters: {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  shiftId?: number;
+}) {
+  try {
+    const { limit, offset } = buildPagination(filters);
+    const where = buildConditions([
+      filters.userId ? eq(scheduleAssignments.user_id, filters.userId) : undefined,
+      filters.shiftId ? eq(scheduleAssignments.shift_id, filters.shiftId) : undefined
+    ]);
+
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select({
+          assignment: scheduleAssignments,
+          shift: shifts
+        })
+        .from(scheduleAssignments)
+        .leftJoin(shifts, eq(scheduleAssignments.shift_id, shifts.id))
+        .where(where)
+        .orderBy(desc(scheduleAssignments.created_at))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(scheduleAssignments)
+        .where(where)
+    ]);
+
+    return { success: true, total: count, offset, limit, records: rows };
+  } catch (e) {
+    mapDbError(e, 'attendance.listScheduleAssignments');
+    return { success: false, total: 0, offset: 0, limit: 0, records: [] };
+  }
+}
+
+export async function bulkAssignSchedule(
+  entries: Array<{
+    userId: string;
+    shiftId: number;
+    effectiveFrom: string;
+    effectiveTo?: string | null;
+  }>,
+  actorId: string
+) {
+  try {
+    const created = await db.transaction(async (tx) => {
+      const inserted = [];
+      for (const entry of entries) {
+        const [row] = await tx
+          .insert(scheduleAssignments)
+          .values({
+            user_id: entry.userId,
+            shift_id: entry.shiftId,
+            effective_from: entry.effectiveFrom,
+            effective_to: entry.effectiveTo ?? null,
+            created_by: actorId
+          })
+          .returning();
+        inserted.push(row);
+      }
+      return inserted;
+    });
+    return { success: true, count: created.length, assignments: created };
+  } catch (e) {
+    mapDbError(e, 'attendance.bulkAssignSchedule');
+    return { success: false };
+  }
+}
+
+export async function deleteDayOff(id: number) {
+  try {
+    await db.delete(dayOffs).where(eq(dayOffs.id, id));
+    return { success: true };
+  } catch (e) {
+    mapDbError(e, 'attendance.deleteDayOff');
+    return { success: false };
+  }
+}
+
+// --- Corrections ---
+
+export async function requestAttendanceCorrection(
+  userId: string,
+  input: {
+    attendanceId: number;
+    requestedCheckInTime?: string;
+    requestedCheckOutTime?: string;
+    note?: string;
+  }
+) {
+  try {
+    const [existing] = await db
+      .select()
+      .from(employeeShifts)
+      .where(and(eq(employeeShifts.id, input.attendanceId), eq(employeeShifts.user_id, userId)))
+      .limit(1);
+    if (!existing) return { success: false, message: 'Attendance record not found' };
+
+    const [record] = await db
+      .update(employeeShifts)
+      .set({
+        requested_check_in_time: input.requestedCheckInTime ?? existing.requested_check_in_time,
+        requested_check_out_time: input.requestedCheckOutTime ?? existing.requested_check_out_time,
+        request_note: input.note ?? existing.request_note,
+        request_status: 'pending',
+        request_file: existing.request_file
+      })
+      .where(eq(employeeShifts.id, input.attendanceId))
+      .returning();
+    return { success: true, attendance: record };
+  } catch (e) {
+    mapDbError(e, 'attendance.requestAttendanceCorrection');
+    return { success: false };
+  }
+}
+
+export async function reviewAttendanceCorrection(
+  actorId: string,
+  input: { attendanceId: number; decision: 'approve' | 'reject'; reason: string }
+) {
+  try {
+    const [existing] = await db
+      .select()
+      .from(employeeShifts)
+      .where(eq(employeeShifts.id, input.attendanceId))
+      .limit(1);
+    if (!existing) return { success: false, message: 'Attendance record not found' };
+
+    const approved = input.decision === 'approve';
+    const patch: Record<string, unknown> = {
+      request_status: approved ? 'approved' : 'rejected',
+      approved_by: actorId,
+      comment: input.reason,
+      updated_at: new Date()
+    };
+    if (approved) {
+      if (existing.requested_check_in_time) patch.check_in_time = existing.requested_check_in_time;
+      if (existing.requested_check_out_time)
+        patch.check_out_time = existing.requested_check_out_time;
+    }
+
+    const [record] = await db
+      .update(employeeShifts)
+      .set(patch)
+      .where(eq(employeeShifts.id, input.attendanceId))
+      .returning();
+
+    await db.insert(attendanceCorrections).values({
+      attendance_id: input.attendanceId,
+      actor_id: actorId,
+      reason: input.reason,
+      previous_values: JSON.stringify({
+        check_in_time: existing.check_in_time,
+        check_out_time: existing.check_out_time,
+        request_status: existing.request_status
+      }),
+      new_values: JSON.stringify({
+        check_in_time: record.check_in_time,
+        check_out_time: record.check_out_time,
+        request_status: record.request_status
+      })
+    });
+
+    return { success: true, attendance: record };
+  } catch (e) {
+    mapDbError(e, 'attendance.reviewAttendanceCorrection');
+    return { success: false };
+  }
+}

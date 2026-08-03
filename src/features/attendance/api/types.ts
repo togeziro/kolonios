@@ -129,6 +129,13 @@ export type LeaveFilters = {
   leaveType?: LeaveType;
 };
 
+export type AssignmentFilters = {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  shiftId?: number;
+};
+
 export type LeaveListResponse = {
   success: boolean;
   time?: string;
