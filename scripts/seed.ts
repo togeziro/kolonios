@@ -630,6 +630,7 @@ async function seedRoleGroups() {
         description: 'Human resources access',
         permissions: {
           ...coreModules,
+          attendance: { view: true, edit: true },
           employees: { view: true, add: true, edit: true, delete: true },
           departments: { view: true, add: true, edit: true },
           designations: { view: true, add: true, edit: true },
