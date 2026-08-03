@@ -78,6 +78,8 @@ export type AttendanceCheckInPayload = {
   locationId?: number;
   latitude?: number;
   longitude?: number;
+  accuracy?: number;
+  capturedAt?: number;
   lateDuration?: number;
   photo?: string;
   note?: string;
@@ -87,6 +89,8 @@ export type AttendanceCheckOutPayload = {
   attendanceId: number;
   latitude?: number;
   longitude?: number;
+  accuracy?: number;
+  capturedAt?: number;
   earlyOutDuration?: number;
   photo?: string;
   note?: string;

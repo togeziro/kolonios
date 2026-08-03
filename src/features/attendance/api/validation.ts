@@ -5,6 +5,8 @@ export const attendanceCheckInSchema = z.object({
   locationId: z.number().int().positive().optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  accuracy: z.number().positive().optional(),
+  capturedAt: z.number().int().positive().optional(),
   lateDuration: z.number().min(0).optional(),
   photo: z.string().optional(),
   note: z.string().max(500).optional()
@@ -14,6 +16,8 @@ export const attendanceCheckOutSchema = z.object({
   attendanceId: z.number().int().positive(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  accuracy: z.number().positive().optional(),
+  capturedAt: z.number().int().positive().optional(),
   earlyOutDuration: z.number().min(0).optional(),
   photo: z.string().optional(),
   note: z.string().max(500).optional()

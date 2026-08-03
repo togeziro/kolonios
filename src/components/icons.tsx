@@ -43,6 +43,7 @@ import {
   IconFileZip,
   IconFolder,
   IconGlobe,
+  IconMapPin,
   IconGripVertical,
   IconHelpCircle,
   IconInfoCircle,
@@ -155,6 +156,7 @@ export const Icons = {
   dashboard: IconLayoutDashboard,
   panelLeft: IconLayoutSidebar,
   globe: IconGlobe,
+  location: IconMapPin,
 
   // User
   user: IconUser,

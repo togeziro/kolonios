@@ -611,6 +611,16 @@
     "assignSchedule": "Tetapkan Jadwal",
     "radiusUnit": " m",
     "gpsBadge": "GPS",
-    "selfieBadge": "Selfie"
+    "selfieBadge": "Selfie",
+    "currentLocation": "Lokasi Saat Ini",
+    "getLocation": "Ambil Lokasi",
+    "refreshLocation": "Perbarui Lokasi",
+    "meters": " m",
+    "gpsRefreshNeeded": "Lokasi kedaluwarsa atau kurang akurat. Perbarui lokasi Anda.",
+    "gpsUnavailable": "Tidak dapat mengambil lokasi. Periksa izin GPS.",
+    "cameraUnavailable": "Kamera tidak tersedia. Periksa izin kamera.",
+    "captureSelfie": "Ambil Selfie",
+    "captureNow": "Ambil",
+    "retake": "Ulangi"
   }
 }

@@ -175,6 +175,26 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
           message: 'GPS location is required'
         };
       }
+      // Reject stale coordinates (server-side, never trust the client)
+      if (
+        payload.capturedAt != null &&
+        isLocationStale(payload.capturedAt, Date.now(), policy.maxStaleMs)
+      ) {
+        return {
+          success: false,
+          message: 'Location is stale. Refresh your location and try again.'
+        };
+      }
+      // Reject inaccurate coordinates
+      if (
+        payload.accuracy != null &&
+        !isAccuracyAcceptable(payload.accuracy, policy.maxAccuracyMeters)
+      ) {
+        return {
+          success: false,
+          message: 'GPS accuracy is too low. Move to an open area and refresh.'
+        };
+      }
       // Validate geofence
       if (payload.locationId) {
         const [location] = await db
@@ -219,8 +239,8 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
         late_duration: lateMinutes > 0 ? lateMinutes : null,
         check_in_latitude: payload.latitude ?? null,
         check_in_longitude: payload.longitude ?? null,
-        check_in_accuracy: null, // Will be set by the API layer
-        check_in_timestamp: null, // Will be set by the API layer
+        check_in_accuracy: payload.accuracy ?? null,
+        check_in_timestamp: payload.capturedAt != null ? new Date(payload.capturedAt) : null,
         distance_to_office_in: distanceToOffice,
         check_in_photo: payload.photo ?? null,
         check_in_note: payload.note ?? null,
@@ -298,6 +318,8 @@ export async function checkOut(userId: string, payload: AttendanceCheckOutPayloa
         early_out_duration: payload.earlyOutDuration ?? null,
         check_out_latitude: payload.latitude ?? null,
         check_out_longitude: payload.longitude ?? null,
+        check_out_accuracy: payload.accuracy ?? null,
+        check_out_timestamp: payload.capturedAt != null ? new Date(payload.capturedAt) : null,
         distance_to_office_out: distanceToOffice,
         check_out_photo: payload.photo ?? null,
         check_out_note: payload.note ?? null,

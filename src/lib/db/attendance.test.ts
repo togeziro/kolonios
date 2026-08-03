@@ -14,7 +14,8 @@ import {
   getShiftWeekdayRules,
   createScheduleAssignment,
   createDayOff,
-  createAttendanceCorrection
+  createAttendanceCorrection,
+  checkIn
 } from './attendance';
 import {
   resetAllTables,
@@ -472,5 +473,137 @@ describe('attendance data access (integration)', () => {
       expect(res.correction!.actor_id).toBe('test-admin');
       expect(res.correction!.reason).toBe('Wrong check-out time');
     });
+  });
+});
+
+describe('check-in validation with schedules and policies', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  async function seedActiveSchedule() {
+    const shift = await seedShift({ name: 'Morning' });
+    await seedShiftWeekdayRule(shift.id, {
+      day_of_week: 1,
+      is_working_day: true,
+      start_time: '00:00',
+      end_time: '23:59',
+      late_tolerance_minutes: 0,
+      absence_cutoff_minutes: 120
+    });
+    await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
+    return shift;
+  }
+
+  it('rejects check-in when the employee has no active schedule', async () => {
+    const res = await checkIn(TEST_USER_ID, { latitude: -6.2, longitude: 106.85 });
+    expect(res.success).toBe(false);
+  });
+
+  it('accepts check-in without GPS when policy allows and stores context', async () => {
+    await seedActiveSchedule();
+    const loc = await seedLocation({
+      gps_validation_enabled: false,
+      selfie_required: false
+    });
+
+    const res = await checkIn(TEST_USER_ID, { locationId: loc.id });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.gps_validation_enabled).toBe(false);
+    expect(res.attendance!.validation_state).toBe('disabled');
+  });
+
+  it('stores coordinates and accuracy on check-in', async () => {
+    const shift = await seedActiveSchedule();
+    await seedShiftWeekdayRule(shift.id, {
+      day_of_week: 1,
+      is_working_day: true,
+      start_time: '00:00',
+      end_time: '23:59'
+    });
+    const loc = await seedLocation({
+      latitude: -6.2,
+      longitude: 106.85,
+      radius: 500,
+      gps_validation_enabled: true
+    });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: -6.2,
+      longitude: 106.85,
+      accuracy: 10,
+      capturedAt: Date.now()
+    });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.check_in_latitude).toBe(-6.2);
+    expect(res.attendance!.check_in_accuracy).toBe(10);
+    expect(res.attendance!.validation_state).toBe('valid');
+  });
+
+  it('rejects stale coordinates when GPS validation is enabled', async () => {
+    const shift = await seedActiveSchedule();
+    await seedShiftWeekdayRule(shift.id, {
+      day_of_week: 1,
+      is_working_day: true,
+      start_time: '00:00',
+      end_time: '23:59'
+    });
+    const loc = await seedLocation({
+      latitude: -6.2,
+      longitude: 106.85,
+      radius: 500,
+      gps_validation_enabled: true,
+      max_stale_ms: 30000
+    });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: -6.2,
+      longitude: 106.85,
+      accuracy: 10,
+      capturedAt: Date.now() - 120_000
+    });
+    expect(res.success).toBe(false);
+  });
+
+  it('rejects positions outside the geofence radius', async () => {
+    const shift = await seedActiveSchedule();
+    await seedShiftWeekdayRule(shift.id, {
+      day_of_week: 1,
+      is_working_day: true,
+      start_time: '00:00',
+      end_time: '23:59'
+    });
+    const loc = await seedLocation({
+      latitude: -6.2,
+      longitude: 106.85,
+      radius: 50,
+      gps_validation_enabled: true
+    });
+
+    // ~111km away
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: -7.0,
+      longitude: 106.85,
+      accuracy: 10,
+      capturedAt: Date.now()
+    });
+    expect(res.success).toBe(false);
+  });
+
+  it('requires GPS coordinates when GPS validation is enabled', async () => {
+    const shift = await seedActiveSchedule();
+    await seedShiftWeekdayRule(shift.id, {
+      day_of_week: 1,
+      is_working_day: true,
+      start_time: '00:00',
+      end_time: '23:59'
+    });
+    await seedLocation({ gps_validation_enabled: true });
+
+    const res = await checkIn(TEST_USER_ID, {});
+    expect(res.success).toBe(false);
   });
 });

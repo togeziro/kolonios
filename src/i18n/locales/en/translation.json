@@ -611,6 +611,16 @@
     "assignSchedule": "Assign Schedule",
     "radiusUnit": " m",
     "gpsBadge": "GPS",
-    "selfieBadge": "Selfie"
+    "selfieBadge": "Selfie",
+    "currentLocation": "Current Location",
+    "getLocation": "Get Location",
+    "refreshLocation": "Refresh Location",
+    "meters": " m",
+    "gpsRefreshNeeded": "Location is stale or inaccurate. Refresh your location.",
+    "gpsUnavailable": "Could not get your location. Check GPS permissions.",
+    "cameraUnavailable": "Camera is not available. Check camera permissions.",
+    "captureSelfie": "Capture Selfie",
+    "captureNow": "Capture",
+    "retake": "Retake"
   }
 }
