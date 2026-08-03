@@ -66,3 +66,4 @@ graphify-out/
 
 # Documentation files are now tracked
 *.md
+e2e/.auth/

@@ -28,6 +28,11 @@ export default defineConfig({
       Buffer: 'buffer'
     }
   },
+  // maplibre-gl ships a web worker the dep optimizer cannot bundle; exclude it
+  // so Vite serves the library and its worker as-is.
+  optimizeDeps: {
+    exclude: ['maplibre-gl']
+  },
   plugins: [
     tsconfigPaths(),
     tailwindcss(),

@@ -632,6 +632,11 @@
     "correctionNote": "Note",
     "submitCorrection": "Submit Correction",
     "exportFailed": "Export failed",
-    "totalRecords": "{{count}} records"
+    "totalRecords": "{{count}} records",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "exportCSV": "Export CSV",
+    "exportXLSX": "Export Excel",
+    "exportPDF": "Export PDF"
   }
 }

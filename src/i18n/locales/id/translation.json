@@ -632,6 +632,11 @@
     "correctionNote": "Catatan",
     "submitCorrection": "Kirim Koreksi",
     "exportFailed": "Gagal export",
-    "totalRecords": "{{count}} catatan"
+    "totalRecords": "{{count}} catatan",
+    "startDate": "Tanggal Mulai",
+    "endDate": "Tanggal Selesai",
+    "exportCSV": "Export CSV",
+    "exportXLSX": "Export Excel",
+    "exportPDF": "Export PDF"
   }
 }
