@@ -637,6 +637,21 @@
     "endDate": "Tanggal Selesai",
     "exportCSV": "Export CSV",
     "exportXLSX": "Export Excel",
-    "exportPDF": "Export PDF"
+    "exportPDF": "Export PDF",
+    "errGpsRequired": "Lokasi GPS wajib diisi",
+    "errGpsStale": "Lokasi sudah kedaluwarsa. Segarkan lokasi Anda dan coba lagi.",
+    "errGpsInaccurate": "Akurasi GPS terlalu rendah. Pindah ke area terbuka dan segarkan.",
+    "errOutsideRadius": "Anda berada di luar radius geofence. Mendekatlah ke kantor dan segarkan lokasi Anda.",
+    "errNoSchedule": "Tidak ada jadwal aktif untuk hari ini",
+    "errSelfieRequired": "Foto selfie diperlukan untuk check-in",
+    "errNoCheckIn": "Tidak ada catatan check-in untuk hari ini",
+    "errAlreadyCheckedOut": "Sudah check-out hari ini",
+    "daySun": "Min",
+    "dayMon": "Sen",
+    "dayTue": "Sel",
+    "dayWed": "Rab",
+    "dayThu": "Kam",
+    "dayFri": "Jum",
+    "daySat": "Sab"
   }
 }

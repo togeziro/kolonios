@@ -28,7 +28,9 @@ test.describe('employee attendance', () => {
     await page.getByRole('button', { name: /Check In/i }).click();
 
     // The seeded employee has an active schedule, so check-in reaches GPS
-    // validation and is rejected for missing location data.
+    // validation and is rejected for missing location data. The server sends
+    // the GPS_REQUIRED error code, which the card maps to the localized toast
+    // (English in the default Playwright browser locale).
     await expect(page.getByText(/GPS location is required/i)).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -45,6 +45,15 @@ function toRad(deg: number) {
   return (deg * Math.PI) / 180;
 }
 
+// Local calendar date (YYYY-MM-DD) — never UTC, so "today" matches the
+// employee's local day rather than the server's UTC day.
+function localDateString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = toRad(lat2 - lat1);
@@ -152,7 +161,7 @@ export async function getAttendanceHistory(
 
 export async function checkIn(userId: string, payload: AttendanceCheckInPayload) {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateString();
     const now = new Date().toLocaleTimeString('en-US', { hour12: false });
     const nowTime = new Date().toTimeString().slice(0, 5); // HH:MM
 
@@ -161,6 +170,7 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
     if (!effectiveSchedule) {
       return {
         success: false,
+        code: 'NO_SCHEDULE',
         message: 'No active schedule found for today'
       };
     }
@@ -172,56 +182,75 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
 
     // Check GPS validation
     if (policy.gpsValidationEnabled) {
-      if (payload.latitude == null || payload.longitude == null) {
+      // When GPS validation is enabled every coordinate field is required;
+      // omitting any of them must not bypass validation.
+      if (
+        payload.latitude == null ||
+        payload.longitude == null ||
+        payload.accuracy == null ||
+        payload.capturedAt == null ||
+        payload.locationId == null
+      ) {
         return {
           success: false,
+          code: 'GPS_REQUIRED',
           message: 'GPS location is required'
         };
       }
       // Reject stale coordinates (server-side, never trust the client)
-      if (
-        payload.capturedAt != null &&
-        isLocationStale(payload.capturedAt, Date.now(), policy.maxStaleMs)
-      ) {
+      if (isLocationStale(payload.capturedAt, Date.now(), policy.maxStaleMs)) {
         return {
           success: false,
+          code: 'GPS_STALE',
           message: 'Location is stale. Refresh your location and try again.'
         };
       }
       // Reject inaccurate coordinates
-      if (
-        payload.accuracy != null &&
-        !isAccuracyAcceptable(payload.accuracy, policy.maxAccuracyMeters)
-      ) {
+      if (!isAccuracyAcceptable(payload.accuracy, policy.maxAccuracyMeters)) {
         return {
           success: false,
+          code: 'GPS_INACCURATE',
           message: 'GPS accuracy is too low. Move to an open area and refresh.'
         };
       }
-      // Validate geofence
-      if (payload.locationId) {
-        const [location] = await db
-          .select()
-          .from(locations)
-          .where(eq(locations.id, payload.locationId))
-          .limit(1);
+      // Validate geofence against the submitted location
+      const [location] = await db
+        .select()
+        .from(locations)
+        .where(eq(locations.id, payload.locationId))
+        .limit(1);
 
-        if (location && location.latitude != null && location.longitude != null) {
-          distanceToOffice = calculateDistance(
-            payload.latitude,
-            payload.longitude,
-            location.latitude,
-            location.longitude
-          );
-
-          if (location.radius != null && distanceToOffice > location.radius) {
-            return {
-              success: false,
-              message: `You are ${Math.round(distanceToOffice)}m from the office. Must be within ${location.radius}m.`
-            };
-          }
-        }
+      if (!location || location.latitude == null || location.longitude == null) {
+        return {
+          success: false,
+          code: 'GPS_REQUIRED',
+          message: 'Location not found'
+        };
       }
+
+      distanceToOffice = calculateDistance(
+        payload.latitude,
+        payload.longitude,
+        location.latitude,
+        location.longitude
+      );
+
+      if (location.radius != null && distanceToOffice > location.radius) {
+        return {
+          success: false,
+          code: 'OUTSIDE_RADIUS',
+          message: `You are ${Math.round(distanceToOffice)}m from the office. Must be within ${location.radius}m.`
+        };
+      }
+    }
+
+    // Selfie requirement
+    if (policy.selfieRequired && !payload.photo) {
+      return {
+        success: false,
+        code: 'SELFIE_REQUIRED',
+        message: 'A selfie photo is required to check in'
+      };
     }
 
     // Calculate late minutes
@@ -267,7 +296,7 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
 
 export async function checkOut(userId: string, payload: AttendanceCheckOutPayload) {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateString();
     const now = new Date().toLocaleTimeString('en-US', { hour12: false });
 
     const [existing] = await db
@@ -285,6 +314,7 @@ export async function checkOut(userId: string, payload: AttendanceCheckOutPayloa
     if (!existing) {
       return {
         success: false,
+        code: 'NO_CHECK_IN',
         message: 'No check-in record found for today'
       };
     }
@@ -292,26 +322,79 @@ export async function checkOut(userId: string, payload: AttendanceCheckOutPayloa
     if (existing.check_out_time) {
       return {
         success: false,
+        code: 'ALREADY_CHECKED_OUT',
         message: 'Already checked out today'
       };
     }
 
     let distanceToOffice: number | null = null;
-    if (payload.latitude != null && payload.longitude != null && existing.lock_location) {
+    if (existing.gps_validation_enabled) {
+      // Check-out is validated against the policy the check-in was locked to;
+      // omitting any coordinate field must not bypass validation.
+      if (
+        payload.latitude == null ||
+        payload.longitude == null ||
+        payload.accuracy == null ||
+        payload.capturedAt == null ||
+        existing.lock_location == null
+      ) {
+        return {
+          success: false,
+          code: 'GPS_REQUIRED',
+          message: 'GPS location is required'
+        };
+      }
+      const policy = await getAttendancePolicy(existing.lock_location, existing.shift_id);
+      if (isLocationStale(payload.capturedAt, Date.now(), policy.maxStaleMs)) {
+        return {
+          success: false,
+          code: 'GPS_STALE',
+          message: 'Location is stale. Refresh your location and try again.'
+        };
+      }
+      if (!isAccuracyAcceptable(payload.accuracy, policy.maxAccuracyMeters)) {
+        return {
+          success: false,
+          code: 'GPS_INACCURATE',
+          message: 'GPS accuracy is too low. Move to an open area and refresh.'
+        };
+      }
       const [location] = await db
         .select()
         .from(locations)
         .where(eq(locations.id, existing.lock_location))
         .limit(1);
 
-      if (location && location.latitude != null && location.longitude != null) {
-        distanceToOffice = calculateDistance(
-          payload.latitude,
-          payload.longitude,
-          location.latitude,
-          location.longitude
-        );
+      if (!location || location.latitude == null || location.longitude == null) {
+        return {
+          success: false,
+          code: 'GPS_REQUIRED',
+          message: 'Location not found'
+        };
       }
+
+      distanceToOffice = calculateDistance(
+        payload.latitude,
+        payload.longitude,
+        location.latitude,
+        location.longitude
+      );
+
+      if (location.radius != null && distanceToOffice > location.radius) {
+        return {
+          success: false,
+          code: 'OUTSIDE_RADIUS',
+          message: `You are ${Math.round(distanceToOffice)}m from the office. Must be within ${location.radius}m.`
+        };
+      }
+    }
+
+    if (existing.selfie_required && !payload.photo) {
+      return {
+        success: false,
+        code: 'SELFIE_REQUIRED',
+        message: 'A selfie photo is required to check out'
+      };
     }
 
     const [record] = await db

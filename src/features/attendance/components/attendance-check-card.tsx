@@ -16,6 +16,17 @@ import { SelfieCapture } from './selfie-capture';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
+const ERROR_I18N_KEYS: Record<string, string> = {
+  GPS_REQUIRED: 'attendanceAdmin.errGpsRequired',
+  GPS_STALE: 'attendanceAdmin.errGpsStale',
+  GPS_INACCURATE: 'attendanceAdmin.errGpsInaccurate',
+  OUTSIDE_RADIUS: 'attendanceAdmin.errOutsideRadius',
+  NO_SCHEDULE: 'attendanceAdmin.errNoSchedule',
+  SELFIE_REQUIRED: 'attendanceAdmin.errSelfieRequired',
+  NO_CHECK_IN: 'attendanceAdmin.errNoCheckIn',
+  ALREADY_CHECKED_OUT: 'attendanceAdmin.errAlreadyCheckedOut'
+};
+
 export default function AttendanceCheckCard() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -37,6 +48,14 @@ export default function AttendanceCheckCard() {
 
   const selectedLocationObj =
     locationsData?.locations?.find((l) => l.id === selectedLocation) ?? null;
+
+  // Translate a server error code to a localized toast; fall back to the
+  // server-provided message (or the generic GPS message).
+  const errorMessage = (res: { code?: string; message?: string } | undefined | null): string => {
+    if (!res) return t('attendanceAdmin.gpsUnavailable');
+    if (res.code && ERROR_I18N_KEYS[res.code]) return t(ERROR_I18N_KEYS[res.code]);
+    return res.message ?? t('attendanceAdmin.gpsUnavailable');
+  };
 
   const fetchLocation = async () => {
     setLocating(true);
@@ -75,7 +94,7 @@ export default function AttendanceCheckCard() {
       if (res?.success) {
         invalidateAttendance();
       } else {
-        toast.error(res?.message ?? t('attendanceAdmin.gpsUnavailable'));
+        toast.error(errorMessage(res));
       }
     },
     onError: () => toast.error(t('attendanceAdmin.gpsUnavailable'))
@@ -96,7 +115,7 @@ export default function AttendanceCheckCard() {
       if (res?.success) {
         invalidateAttendance();
       } else {
-        toast.error(res?.message ?? t('attendanceAdmin.gpsUnavailable'));
+        toast.error(errorMessage(res));
       }
     },
     onError: () => toast.error(t('attendanceAdmin.gpsUnavailable'))
@@ -104,6 +123,18 @@ export default function AttendanceCheckCard() {
 
   const locations = locationsData?.locations ?? [];
   const shifts = shiftsData?.shifts ?? [];
+
+  // The map centers on the SELECTED location's geofence; the device position
+  // is drawn separately as the blue marker. Falls back to the device position
+  // when no location is selected yet.
+  const mapCoordinates =
+    selectedLocationObj &&
+    selectedLocationObj.latitude != null &&
+    selectedLocationObj.longitude != null
+      ? { lat: selectedLocationObj.latitude, lng: selectedLocationObj.longitude }
+      : deviceLocation
+        ? { lat: deviceLocation.latitude, lng: deviceLocation.longitude }
+        : null;
 
   return (
     <Card>
@@ -199,10 +230,7 @@ export default function AttendanceCheckCard() {
               {deviceLocation && (
                 <>
                   <LocationMap
-                    coordinates={{
-                      lat: deviceLocation.latitude,
-                      lng: deviceLocation.longitude
-                    }}
+                    coordinates={mapCoordinates}
                     radius={selectedLocationObj?.radius ?? 100}
                     readOnly
                     deviceLocation={{

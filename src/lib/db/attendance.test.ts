@@ -17,6 +17,7 @@ import {
   createDayOff,
   createAttendanceCorrection,
   checkIn,
+  checkOut,
   requestAttendanceCorrection,
   reviewAttendanceCorrection,
   getAdminAttendanceReport
@@ -37,8 +38,7 @@ import {
   employeeShifts,
   performanceReports,
   leaveTypeConfigs,
-  attendanceCorrections,
-  leaveTypeConfigs as _leaveTypeConfigs
+  attendanceCorrections
 } from './schema/attendance';
 
 const TEST_USER_ID = 'test-user-att-123';
@@ -472,8 +472,13 @@ describe('attendance data access (integration)', () => {
     });
 
     it('creates an attendance correction with actor and reason', async () => {
+      const [attendance] = await db
+        .insert(employeeShifts)
+        .values({ user_id: TEST_USER_ID, date: '2026-08-03', attendance_status: 'present' })
+        .returning();
+
       const res = await createAttendanceCorrection({
-        attendanceId: 1,
+        attendanceId: attendance.id,
         actorId: 'test-admin',
         reason: 'Wrong check-out time',
         previousValues: JSON.stringify({ check_out_time: '16:00' }),
@@ -495,7 +500,7 @@ describe('check-in validation with schedules and policies', () => {
   async function seedActiveSchedule() {
     const shift = await seedShift({ name: 'Morning' });
     await seedShiftWeekdayRule(shift.id, {
-      day_of_week: 1,
+      day_of_week: new Date().getDay(),
       is_working_day: true,
       start_time: '00:00',
       end_time: '23:59',
@@ -525,13 +530,7 @@ describe('check-in validation with schedules and policies', () => {
   });
 
   it('stores coordinates and accuracy on check-in', async () => {
-    const shift = await seedActiveSchedule();
-    await seedShiftWeekdayRule(shift.id, {
-      day_of_week: 1,
-      is_working_day: true,
-      start_time: '00:00',
-      end_time: '23:59'
-    });
+    await seedActiveSchedule();
     const loc = await seedLocation({
       latitude: -6.2,
       longitude: 106.85,
@@ -553,13 +552,7 @@ describe('check-in validation with schedules and policies', () => {
   });
 
   it('rejects stale coordinates when GPS validation is enabled', async () => {
-    const shift = await seedActiveSchedule();
-    await seedShiftWeekdayRule(shift.id, {
-      day_of_week: 1,
-      is_working_day: true,
-      start_time: '00:00',
-      end_time: '23:59'
-    });
+    await seedActiveSchedule();
     const loc = await seedLocation({
       latitude: -6.2,
       longitude: 106.85,
@@ -579,13 +572,7 @@ describe('check-in validation with schedules and policies', () => {
   });
 
   it('rejects positions outside the geofence radius', async () => {
-    const shift = await seedActiveSchedule();
-    await seedShiftWeekdayRule(shift.id, {
-      day_of_week: 1,
-      is_working_day: true,
-      start_time: '00:00',
-      end_time: '23:59'
-    });
+    await seedActiveSchedule();
     const loc = await seedLocation({
       latitude: -6.2,
       longitude: 106.85,
@@ -605,17 +592,162 @@ describe('check-in validation with schedules and policies', () => {
   });
 
   it('requires GPS coordinates when GPS validation is enabled', async () => {
-    const shift = await seedActiveSchedule();
-    await seedShiftWeekdayRule(shift.id, {
-      day_of_week: 1,
-      is_working_day: true,
-      start_time: '00:00',
-      end_time: '23:59'
-    });
+    await seedActiveSchedule();
     await seedLocation({ gps_validation_enabled: true });
 
     const res = await checkIn(TEST_USER_ID, {});
     expect(res.success).toBe(false);
+    expect(res.code).toBe('GPS_REQUIRED');
+  });
+
+  it('requires a location id when GPS validation is enabled', async () => {
+    await seedActiveSchedule();
+    await seedLocation({ gps_validation_enabled: true });
+
+    const res = await checkIn(TEST_USER_ID, {
+      latitude: -6.2,
+      longitude: 106.85,
+      accuracy: 10,
+      capturedAt: Date.now()
+    });
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('GPS_REQUIRED');
+  });
+
+  it('requires accuracy and capturedAt when GPS validation is enabled', async () => {
+    await seedActiveSchedule();
+    const loc = await seedLocation({ gps_validation_enabled: true });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: -6.2,
+      longitude: 106.85
+    });
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('GPS_REQUIRED');
+  });
+
+  it('rejects check-in without a selfie when the policy requires one', async () => {
+    await seedActiveSchedule();
+    const loc = await seedLocation({ gps_validation_enabled: true, selfie_required: true });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: 40.7128,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now()
+    });
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('SELFIE_REQUIRED');
+  });
+
+  it('accepts check-in with a selfie when the policy requires one', async () => {
+    await seedActiveSchedule();
+    const loc = await seedLocation({ gps_validation_enabled: true, selfie_required: true });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: 40.7128,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now(),
+      photo: 'data:image/jpeg;base64,selfie'
+    });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.check_in_photo).toBe('data:image/jpeg;base64,selfie');
+  });
+});
+
+describe('check-out validation with stored policies', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  async function seedCheckedInRecord(overrides: Partial<typeof employeeShifts.$inferInsert> = {}) {
+    const loc = await seedLocation({ gps_validation_enabled: true, selfie_required: false });
+    const [record] = await db
+      .insert(employeeShifts)
+      .values({
+        user_id: TEST_USER_ID,
+        date: '2026-08-04',
+        shift_id: 1,
+        check_in_time: '08:00',
+        attendance_status: 'present',
+        gps_validation_enabled: true,
+        selfie_required: false,
+        lock_location: loc.id,
+        ...overrides
+      })
+      .returning();
+    return { record, loc };
+  }
+
+  it('rejects check-out without GPS when the record policy requires it', async () => {
+    const { record } = await seedCheckedInRecord();
+    const res = await checkOut(TEST_USER_ID, { attendanceId: record.id });
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('GPS_REQUIRED');
+  });
+
+  it('rejects check-out without a selfie when the record requires one', async () => {
+    const { record } = await seedCheckedInRecord({ selfie_required: true });
+    const res = await checkOut(TEST_USER_ID, {
+      attendanceId: record.id,
+      latitude: 40.7128,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now()
+    });
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('SELFIE_REQUIRED');
+  });
+
+  it('accepts check-out with valid GPS and stores coordinates', async () => {
+    const { record } = await seedCheckedInRecord();
+    const res = await checkOut(TEST_USER_ID, {
+      attendanceId: record.id,
+      latitude: 40.7128,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now()
+    });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.check_out_latitude).toBe(40.7128);
+    expect(res.attendance!.check_out_accuracy).toBe(10);
+  });
+
+  it('rejects check-out outside the geofence of the locked location', async () => {
+    const { record } = await seedCheckedInRecord();
+    // ~111km away from the locked location (40.7128, -74.006)
+    const res = await checkOut(TEST_USER_ID, {
+      attendanceId: record.id,
+      latitude: 41.7,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now()
+    });
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('OUTSIDE_RADIUS');
+  });
+
+  it('does not require GPS on check-out when the record policy is disabled', async () => {
+    const loc = await seedLocation({ gps_validation_enabled: false });
+    const [record] = await db
+      .insert(employeeShifts)
+      .values({
+        user_id: TEST_USER_ID,
+        date: '2026-08-04',
+        check_in_time: '08:00',
+        attendance_status: 'present',
+        gps_validation_enabled: false,
+        selfie_required: false,
+        lock_location: loc.id
+      })
+      .returning();
+
+    const res = await checkOut(TEST_USER_ID, { attendanceId: record.id });
+    expect(res.success).toBe(true);
   });
 });
 
@@ -759,6 +891,31 @@ describe('admin attendance report', () => {
       startDate: '2026-08-01',
       endDate: '2026-08-05'
     });
+    expect(res.success).toBe(true);
+    expect(res.total).toBe(1);
+    expect(res.records[0].attendance.date).toBe('2026-08-02');
+  });
+
+  it('filters by locked location', async () => {
+    await seedEmployee('rep-user-2');
+    const locA = await seedLocation({ name: 'Office A' });
+    const locB = await seedLocation({ name: 'Office B' });
+    await db.insert(employeeShifts).values([
+      {
+        user_id: 'rep-user-2',
+        date: '2026-08-01',
+        attendance_status: 'present',
+        lock_location: locA.id
+      },
+      {
+        user_id: 'rep-user-2',
+        date: '2026-08-02',
+        attendance_status: 'present',
+        lock_location: locB.id
+      }
+    ]);
+
+    const res = await getAdminAttendanceReport({ locationId: locB.id });
     expect(res.success).toBe(true);
     expect(res.total).toBe(1);
     expect(res.records[0].attendance.date).toBe('2026-08-02');

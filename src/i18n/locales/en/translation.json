@@ -637,6 +637,21 @@
     "endDate": "End Date",
     "exportCSV": "Export CSV",
     "exportXLSX": "Export Excel",
-    "exportPDF": "Export PDF"
+    "exportPDF": "Export PDF",
+    "errGpsRequired": "GPS location is required",
+    "errGpsStale": "Location is stale. Refresh your location and try again.",
+    "errGpsInaccurate": "GPS accuracy is too low. Move to an open area and refresh.",
+    "errOutsideRadius": "You are outside the geofence radius. Move closer to the office and refresh your location.",
+    "errNoSchedule": "No active schedule found for today",
+    "errSelfieRequired": "A selfie photo is required to check in",
+    "errNoCheckIn": "No check-in record found for today",
+    "errAlreadyCheckedOut": "Already checked out today",
+    "daySun": "Sun",
+    "dayMon": "Mon",
+    "dayTue": "Tue",
+    "dayWed": "Wed",
+    "dayThu": "Thu",
+    "dayFri": "Fri",
+    "daySat": "Sat"
   }
 }
