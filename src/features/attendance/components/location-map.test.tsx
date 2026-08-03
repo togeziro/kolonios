@@ -96,13 +96,14 @@ describe('LocationMap', () => {
     expect(result).toEqual({ lat: -6.2, lng: 106.85 });
   });
 
-  it('adds geofence circle layers on load', async () => {
+  it('adds geofence polygon layers on load', async () => {
     render(<LocationMap coordinates={{ lat: -6.2, lng: 106.85 }} radius={250} />);
     await act(async () => {});
     await act(async () => {
       clickHandlers['load']?.({});
     });
-    expect(layerIds).toContain('geofence-circle');
+    expect(layerIds).toContain('geofence-fill');
+    expect(layerIds).toContain('geofence-line');
     expect(layerIds).toContain('geofence-center');
   });
 

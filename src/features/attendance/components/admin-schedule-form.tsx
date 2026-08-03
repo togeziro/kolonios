@@ -38,7 +38,15 @@ const emptyForm: ScheduleFormState = {
   }))
 };
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_I18N_KEYS = [
+  'attendanceAdmin.daySun',
+  'attendanceAdmin.dayMon',
+  'attendanceAdmin.dayTue',
+  'attendanceAdmin.dayWed',
+  'attendanceAdmin.dayThu',
+  'attendanceAdmin.dayFri',
+  'attendanceAdmin.daySat'
+];
 
 export function ScheduleForm() {
   const { t } = useTranslation();
@@ -130,7 +138,7 @@ export function ScheduleForm() {
                   checked={rule.isWorkingDay}
                   onChange={(e) => setRule(i, { isWorkingDay: e.target.checked })}
                 />
-                {DAY_LABELS[rule.dayOfWeek]}
+                {t(DAY_I18N_KEYS[rule.dayOfWeek])}
               </label>
               <input
                 type='time'

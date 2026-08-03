@@ -14,7 +14,8 @@ export function ScheduleAssignmentForm() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const { data: employees } = useQuery(employeesQueryOptions({}));
+  // Bulk assignment covers up to the configured employee list limit (100).
+  const { data: employees } = useQuery(employeesQueryOptions({ limit: 100 }));
   const { data: schedules } = useQuery(schedulesQueryOptions());
 
   const employeeRows = employees?.employees ?? [];

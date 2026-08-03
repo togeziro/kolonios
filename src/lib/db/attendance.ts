@@ -661,7 +661,8 @@ export async function getAttendancePolicy(
       }
     }
 
-    // Schedule policy override not implemented yet (would need schedule-level policy)
+    // Schedule-level policy overrides are deferred (see docs/CHANGELOG.md);
+    // only location-level policies apply in this release.
     const schedulePolicyOverride = null;
 
     return resolveAttendancePolicyUtil({

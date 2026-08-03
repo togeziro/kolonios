@@ -11,6 +11,7 @@
 - **Corrections** — employees request check-in/out corrections; admins approve/reject with reason; before/after values recorded in `attendance_corrections` and the audit log (entity filter added).
 - **Admin UI** — locations (MapLibre map + radius/policy), schedules (weekday rules), assignments (individual/bulk + day offs), and reports (filters + CSV/Excel/PDF export).
 - **Dependencies** — added `maplibre-gl`, `@types/geojson`, `xlsx`, `pdf-lib`.
+- **Deferred** — schedule-level GPS/selfie policy overrides are deferred; location-level policies apply.
 
 ### DB utilities refactoring & code quality improvements
 
