@@ -20,7 +20,8 @@ import {
   scheduleAssignments,
   dateOverrides,
   dayOffs,
-  attendanceCorrections
+  attendanceCorrections,
+  leaveTypeConfigs
 } from '@/lib/db/schema/attendance';
 import { tasks, taskRequirements, employeeSkills } from '@/lib/db/schema/tasks';
 import { user, session, account, verification } from '@/lib/db/auth-schema';
@@ -37,6 +38,7 @@ export async function resetDatabase() {
 
 export async function resetAllTables() {
   await db.delete(attendanceCorrections);
+  await db.delete(leaveTypeConfigs);
   await db.delete(dayOffs);
   await db.delete(dateOverrides);
   await db.delete(scheduleAssignments);

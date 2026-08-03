@@ -11,7 +11,8 @@ import {
   scheduleAssignments,
   dateOverrides,
   dayOffs,
-  attendanceCorrections
+  attendanceCorrections,
+  leaveTypeConfigs
 } from './schema/attendance';
 import type {
   AttendanceCheckInPayload,
@@ -340,6 +341,19 @@ export async function checkOut(userId: string, payload: AttendanceCheckOutPayloa
 
 export async function createLeaveRequest(userId: string, payload: LeaveRequestPayload) {
   try {
+    // Enforce leave-type attachment policy on the server, not just the form.
+    const [config] = await db
+      .select()
+      .from(leaveTypeConfigs)
+      .where(eq(leaveTypeConfigs.leave_type, payload.leaveType))
+      .limit(1);
+    if (config?.attachment_required && !payload.file) {
+      return {
+        success: false,
+        message: 'An attachment is required for this leave type'
+      };
+    }
+
     const start = new Date(payload.startDate);
     const end = new Date(payload.endDate);
     const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;

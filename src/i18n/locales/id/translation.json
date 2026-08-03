@@ -330,7 +330,9 @@
     "todayAttendance": "Absensi Hari Ini",
     "type": "Tipe",
     "yearPlaceholder": "Tahun",
-    "yourPerformance": "Performa Anda"
+    "yourPerformance": "Performa Anda",
+    "attachment": "Lampiran",
+    "attachmentRequiredHint": "Lampiran wajib untuk jenis cuti ini"
   },
   "language": {
     "english": "Inggris",
@@ -362,7 +364,8 @@
     "action": "Aksi",
     "entity": "Entitas",
     "id": "ID",
-    "noEntries": "Belum ada entri audit."
+    "noEntries": "Belum ada entri audit.",
+    "allEntities": "Semua Entitas"
   },
   "profile": {
     "thisMonth": "Bulan ini",
@@ -621,6 +624,12 @@
     "cameraUnavailable": "Kamera tidak tersedia. Periksa izin kamera.",
     "captureSelfie": "Ambil Selfie",
     "captureNow": "Ambil",
-    "retake": "Ulangi"
+    "retake": "Ulangi",
+    "correctionTitle": "Ajukan Koreksi Absensi",
+    "correctionDescription": "Ajukan koreksi jam masuk atau jam pulang Anda",
+    "requestedCheckIn": "Jam Masuk yang Diminta",
+    "requestedCheckOut": "Jam Keluar yang Diminta",
+    "correctionNote": "Catatan",
+    "submitCorrection": "Kirim Koreksi"
   }
 }

@@ -1,4 +1,4 @@
-import { desc, like, sql } from 'drizzle-orm';
+import { and, desc, eq, like, sql } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { auditLog } from './schema/audit-log';
@@ -36,6 +36,7 @@ export type AuditFilters = {
   page?: number;
   perPage?: number;
   action?: string;
+  entityType?: string;
 };
 
 export type AuditLogResponse = {
@@ -46,7 +47,10 @@ export type AuditLogResponse = {
 export async function getAuditLog(filters: AuditFilters = {}): Promise<AuditLogResponse> {
   try {
     const { page, limit, offset } = buildPagination({ page: filters.page, limit: filters.perPage });
-    const where = filters.action ? like(auditLog.action, `%${filters.action}%`) : undefined;
+    const where = and(
+      filters.action ? like(auditLog.action, `%${filters.action}%`) : undefined,
+      filters.entityType ? eq(auditLog.entityType, filters.entityType) : undefined
+    );
     const [countRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(auditLog)

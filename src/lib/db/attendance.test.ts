@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
 import {
   calculateDistance,
   getLocations,
@@ -15,7 +16,9 @@ import {
   createScheduleAssignment,
   createDayOff,
   createAttendanceCorrection,
-  checkIn
+  checkIn,
+  requestAttendanceCorrection,
+  reviewAttendanceCorrection
 } from './attendance';
 import {
   resetAllTables,
@@ -28,7 +31,12 @@ import {
   seedAttendanceCorrection
 } from '@/test-utils/db';
 import { db } from '@/lib/db';
-import { employeeShifts, performanceReports } from './schema/attendance';
+import {
+  employeeShifts,
+  performanceReports,
+  leaveTypeConfigs,
+  attendanceCorrections
+} from './schema/attendance';
 
 const TEST_USER_ID = 'test-user-att-123';
 
@@ -605,5 +613,105 @@ describe('check-in validation with schedules and policies', () => {
 
     const res = await checkIn(TEST_USER_ID, {});
     expect(res.success).toBe(false);
+  });
+});
+
+describe('leave attachment policy and corrections', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  it('rejects leave requests missing a required attachment', async () => {
+    await db.insert(leaveTypeConfigs).values({ leave_type: 'sick', attachment_required: true });
+
+    const res = await createLeaveRequest(TEST_USER_ID, {
+      leaveType: 'sick',
+      startDate: '2026-08-01',
+      endDate: '2026-08-01'
+    });
+    expect(res.success).toBe(false);
+  });
+
+  it('accepts leave requests with a required attachment', async () => {
+    await db.insert(leaveTypeConfigs).values({ leave_type: 'sick', attachment_required: true });
+
+    const res = await createLeaveRequest(TEST_USER_ID, {
+      leaveType: 'sick',
+      startDate: '2026-08-01',
+      endDate: '2026-08-01',
+      file: 'doctor-note.pdf'
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it('accepts leave requests when no attachment is required', async () => {
+    const res = await createLeaveRequest(TEST_USER_ID, {
+      leaveType: 'annual',
+      startDate: '2026-08-01',
+      endDate: '2026-08-03'
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it('records before/after values when a correction is reviewed', async () => {
+    const [attendance] = await db
+      .insert(employeeShifts)
+      .values({
+        user_id: TEST_USER_ID,
+        date: '2026-08-03',
+        check_in_time: '08:00',
+        attendance_status: 'present',
+        requested_check_in_time: '09:00',
+        request_status: 'pending'
+      })
+      .returning();
+
+    const res = await reviewAttendanceCorrection(TEST_USER_ID, {
+      attendanceId: attendance.id,
+      decision: 'approve',
+      reason: 'Late check-in due to traffic'
+    });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.check_in_time).toBe('09:00');
+    expect(res.attendance!.request_status).toBe('approved');
+
+    const [correction] = await db
+      .select()
+      .from(attendanceCorrections)
+      .where(eq(attendanceCorrections.attendance_id, attendance.id))
+      .limit(1);
+    expect(correction).toBeDefined();
+    expect(correction.reason).toBe('Late check-in due to traffic');
+    expect(JSON.parse(correction.previous_values!).check_in_time).toBe('08:00');
+    expect(JSON.parse(correction.new_values!).check_in_time).toBe('09:00');
+  });
+
+  it('rejects a correction request for an attendance record that is not yours', async () => {
+    const [attendance] = await db
+      .insert(employeeShifts)
+      .values({ user_id: 'other-user-456', date: '2026-08-03', attendance_status: 'present' })
+      .returning();
+
+    const res = await requestAttendanceCorrection(TEST_USER_ID, {
+      attendanceId: attendance.id,
+      note: 'Fix my time'
+    });
+    expect(res.success).toBe(false);
+  });
+
+  it('requests a correction and marks it pending', async () => {
+    const [attendance] = await db
+      .insert(employeeShifts)
+      .values({ user_id: TEST_USER_ID, date: '2026-08-03', attendance_status: 'present' })
+      .returning();
+
+    const res = await requestAttendanceCorrection(TEST_USER_ID, {
+      attendanceId: attendance.id,
+      requestedCheckInTime: '09:00',
+      note: 'Forgot to check in on time'
+    });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.request_status).toBe('pending');
+    expect(res.attendance!.requested_check_in_time).toBe('09:00');
   });
 });

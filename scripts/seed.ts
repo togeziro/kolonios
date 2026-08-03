@@ -19,7 +19,8 @@ import {
   scheduleAssignments,
   dateOverrides,
   dayOffs,
-  attendanceCorrections
+  attendanceCorrections,
+  leaveTypeConfigs
 } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
 import {
@@ -680,6 +681,10 @@ async function seedRoleGroups() {
 }
 
 async function seedAttendanceSchedules() {
+  await db.delete(leaveTypeConfigs);
+  await db.insert(leaveTypeConfigs).values([{ leave_type: 'sick', attachment_required: true }]);
+  console.log('Seeded leave type config (sick requires attachment)');
+
   await db.delete(attendanceCorrections);
   await db.delete(dayOffs);
   await db.delete(dateOverrides);

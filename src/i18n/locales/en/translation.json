@@ -330,7 +330,9 @@
     "todayAttendance": "Today's Attendance",
     "type": "Type",
     "yearPlaceholder": "Year",
-    "yourPerformance": "Your performance"
+    "yourPerformance": "Your performance",
+    "attachment": "Attachment",
+    "attachmentRequiredHint": "Attachment required for this leave type"
   },
   "language": {
     "english": "English",
@@ -362,7 +364,8 @@
     "action": "Action",
     "entity": "Entity",
     "id": "ID",
-    "noEntries": "No audit entries yet."
+    "noEntries": "No audit entries yet.",
+    "allEntities": "All Entities"
   },
   "profile": {
     "thisMonth": "This month",
@@ -621,6 +624,12 @@
     "cameraUnavailable": "Camera is not available. Check camera permissions.",
     "captureSelfie": "Capture Selfie",
     "captureNow": "Capture",
-    "retake": "Retake"
+    "retake": "Retake",
+    "correctionTitle": "Request Attendance Correction",
+    "correctionDescription": "Ask to correct your check-in or check-out time",
+    "requestedCheckIn": "Requested Check-in Time",
+    "requestedCheckOut": "Requested Check-out Time",
+    "correctionNote": "Note",
+    "submitCorrection": "Submit Correction"
   }
 }

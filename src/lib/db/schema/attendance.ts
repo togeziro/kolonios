@@ -124,6 +124,14 @@ export const leaves = pgTable('leaves', {
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });
 
+export const leaveTypeConfigs = pgTable('leave_type_configs', {
+  id: serial('id').primaryKey(),
+  leave_type: leaveTypeEnum('leave_type').notNull().unique(),
+  attachment_required: boolean('attachment_required').default(false),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
+});
+
 export const performanceReports = pgTable('performance_reports', {
   id: serial('id').primaryKey(),
   user_id: text('user_id').notNull(),
@@ -317,3 +325,6 @@ export type NewDayOff = typeof dayOffs.$inferInsert;
 
 export type AttendanceCorrection = typeof attendanceCorrections.$inferSelect;
 export type NewAttendanceCorrection = typeof attendanceCorrections.$inferInsert;
+
+export type LeaveTypeConfig = typeof leaveTypeConfigs.$inferSelect;
+export type NewLeaveTypeConfig = typeof leaveTypeConfigs.$inferInsert;
