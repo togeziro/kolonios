@@ -8,9 +8,24 @@ import {
   getPerformanceStats,
   getAttendanceSummary,
   getEmployeeAttendance,
-  getAttendanceHistory
+  getAttendanceHistory,
+  getEffectiveEmployeeSchedule,
+  getAttendancePolicy,
+  getShiftWeekdayRules,
+  createScheduleAssignment,
+  createDayOff,
+  createAttendanceCorrection
 } from './attendance';
-import { resetAllTables, seedLocation, seedShift } from '@/test-utils/db';
+import {
+  resetAllTables,
+  seedLocation,
+  seedShift,
+  seedShiftWeekdayRule,
+  seedScheduleAssignment,
+  seedDateOverride,
+  seedDayOff,
+  seedAttendanceCorrection
+} from '@/test-utils/db';
 import { db } from '@/lib/db';
 import { employeeShifts, performanceReports } from './schema/attendance';
 
@@ -282,6 +297,180 @@ describe('attendance data access (integration)', () => {
 
       const res = await getAttendanceHistory(TEST_USER_ID, { status: 'late' });
       expect(res.total).toBe(1);
+    });
+  });
+
+  describe('schedule resolution', () => {
+    it('returns null when the employee has no active assignment', async () => {
+      const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
+      expect(res).toBeNull();
+    });
+
+    it('returns the weekday rule for a working day', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, {
+        day_of_week: 1, // Monday
+        start_time: '08:00',
+        end_time: '17:00',
+        late_tolerance_minutes: 10,
+        absence_cutoff_minutes: 120
+      });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
+
+      const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
+      expect(res).not.toBeNull();
+      expect(res!.shiftId).toBe(shift.id);
+      expect(res!.startTime).toBe('08:00');
+      expect(res!.endTime).toBe('17:00');
+      expect(res!.lateToleranceMinutes).toBe(10);
+      expect(res!.absenceCutoffMinutes).toBe(120);
+    });
+
+    it('returns null for a non-working weekday (Saturday)', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, {
+        day_of_week: 6, // Saturday
+        is_working_day: false
+      });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
+
+      const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-08');
+      expect(res).toBeNull();
+    });
+
+    it('returns null when the date is a day off', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, {
+        day_of_week: 1,
+        start_time: '08:00',
+        end_time: '17:00'
+      });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-08-03' });
+
+      const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
+      expect(res).toBeNull();
+    });
+
+    it('applies a date override for the shift on that date', async () => {
+      const morning = await seedShift({ name: 'Morning' });
+      const night = await seedShift({ name: 'Night', start_time: '20:00', end_time: '04:00' });
+      await seedShiftWeekdayRule(morning.id, {
+        day_of_week: 1,
+        start_time: '08:00',
+        end_time: '17:00'
+      });
+      await seedShiftWeekdayRule(night.id, {
+        day_of_week: 1,
+        start_time: '20:00',
+        end_time: '04:00'
+      });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: morning.id });
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-08-03', shift_id: night.id });
+
+      const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
+      expect(res).not.toBeNull();
+      expect(res!.shiftId).toBe(night.id);
+      expect(res!.startTime).toBe('20:00');
+    });
+
+    it('day off takes precedence over a date override', async () => {
+      const morning = await seedShift({ name: 'Morning' });
+      const night = await seedShift({ name: 'Night', start_time: '20:00', end_time: '04:00' });
+      await seedShiftWeekdayRule(morning.id, {
+        day_of_week: 1,
+        start_time: '08:00',
+        end_time: '17:00'
+      });
+      await seedShiftWeekdayRule(night.id, {
+        day_of_week: 1,
+        start_time: '20:00',
+        end_time: '04:00'
+      });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: morning.id });
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-08-03', shift_id: night.id });
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-08-03' });
+
+      const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
+      expect(res).toBeNull();
+    });
+  });
+
+  describe('attendance policy', () => {
+    it('returns location policy defaults when no location exists', async () => {
+      const policy = await getAttendancePolicy(null, null);
+      expect(policy.gpsValidationEnabled).toBe(true);
+      expect(policy.selfieRequired).toBe(false);
+      expect(policy.maxAccuracyMeters).toBe(50);
+      expect(policy.maxStaleMs).toBe(30000);
+    });
+
+    it('reads policy configuration from the location', async () => {
+      const loc = await seedLocation({
+        gps_validation_enabled: false,
+        selfie_required: true,
+        max_accuracy_meters: 25,
+        max_stale_ms: 15000
+      });
+
+      const policy = await getAttendancePolicy(loc.id, null);
+      expect(policy.gpsValidationEnabled).toBe(false);
+      expect(policy.selfieRequired).toBe(true);
+      expect(policy.maxAccuracyMeters).toBe(25);
+      expect(policy.maxStaleMs).toBe(15000);
+    });
+  });
+
+  describe('schedule management CRUD', () => {
+    it('lists weekday rules for a shift', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, { day_of_week: 1 });
+      await seedShiftWeekdayRule(shift.id, { day_of_week: 2 });
+
+      const res = await getShiftWeekdayRules(shift.id);
+      expect(res.success).toBe(true);
+      expect(res.rules).toHaveLength(2);
+    });
+
+    it('creates a schedule assignment', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      const res = await createScheduleAssignment({
+        userId: TEST_USER_ID,
+        shiftId: shift.id,
+        effectiveFrom: '2026-08-01',
+        createdBy: 'test-admin'
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.assignment!.user_id).toBe(TEST_USER_ID);
+      expect(res.assignment!.shift_id).toBe(shift.id);
+    });
+
+    it('creates a day off', async () => {
+      const res = await createDayOff({
+        userId: TEST_USER_ID,
+        date: '2026-08-05',
+        reason: 'Family event',
+        createdBy: 'test-admin'
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.dayOff!.date).toBe('2026-08-05');
+      expect(res.dayOff!.reason).toBe('Family event');
+    });
+
+    it('creates an attendance correction with actor and reason', async () => {
+      const res = await createAttendanceCorrection({
+        attendanceId: 1,
+        actorId: 'test-admin',
+        reason: 'Wrong check-out time',
+        previousValues: JSON.stringify({ check_out_time: '16:00' }),
+        newValues: JSON.stringify({ check_out_time: '17:00' })
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.correction!.actor_id).toBe('test-admin');
+      expect(res.correction!.reason).toBe('Wrong check-out time');
     });
   });
 });

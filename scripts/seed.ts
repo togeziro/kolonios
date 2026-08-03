@@ -14,7 +14,12 @@ import {
   taskRequirements,
   employeeSkills,
   roleGroups,
-  userRoleGroups
+  userRoleGroups,
+  shiftWeekdayRules,
+  scheduleAssignments,
+  dateOverrides,
+  dayOffs,
+  attendanceCorrections
 } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
 import {
@@ -674,6 +679,63 @@ async function seedRoleGroups() {
   console.log('Seeded role groups');
 }
 
+async function seedAttendanceSchedules() {
+  await db.delete(attendanceCorrections);
+  await db.delete(dayOffs);
+  await db.delete(dateOverrides);
+  await db.delete(scheduleAssignments);
+  await db.delete(shiftWeekdayRules);
+
+  const shiftsRows = await db.select({ id: shifts.id, name: shifts.name }).from(shifts);
+  const morning = shiftsRows.find((s) => s.name === 'Morning Shift');
+  if (!morning) throw new Error('Morning Shift not found for schedule seed');
+
+  const weekdayRules = [1, 2, 3, 4, 5].map((day) => ({
+    shift_id: morning.id,
+    day_of_week: day,
+    is_working_day: true,
+    start_time: '08:00',
+    end_time: '17:00',
+    late_tolerance_minutes: 10,
+    absence_cutoff_minutes: 120
+  }));
+  await db.insert(shiftWeekdayRules).values(weekdayRules);
+  console.log(`Seeded ${weekdayRules.length} weekday rules for Morning Shift`);
+
+  const users = await db.select({ id: user.id, email: user.email }).from(user);
+  const byEmail = new Map(users.map((u) => [u.email, u.id]));
+  const empId = byEmail.get('employee@example.com');
+  if (empId) {
+    await db.insert(scheduleAssignments).values({
+      user_id: empId,
+      shift_id: morning.id,
+      effective_from: '2026-01-01',
+      effective_to: null,
+      created_by: 'seed'
+    });
+    console.log(`Assigned Morning Shift to employee@example.com`);
+
+    await db.insert(dayOffs).values({
+      user_id: empId,
+      date: '2026-08-17',
+      reason: 'Company day off example',
+      created_by: 'seed'
+    });
+    console.log(`Seeded day off example for employee@example.com`);
+  }
+
+  await db
+    .update(locations)
+    .set({
+      gps_validation_enabled: true,
+      selfie_required: true,
+      max_accuracy_meters: 50,
+      max_stale_ms: 30000
+    })
+    .where(eq(locations.name, 'Head Office'));
+  console.log('Seeded policy override for Head Office');
+}
+
 export async function seedDatabase() {
   faker.seed(42);
   await seedProducts();
@@ -683,6 +745,7 @@ export async function seedDatabase() {
   await seedCustomers();
   await seedTasks();
   await seedRoleGroups();
+  await seedAttendanceSchedules();
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');

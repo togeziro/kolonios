@@ -15,7 +15,12 @@ import {
   leaves,
   performanceReports,
   locations,
-  shifts
+  shifts,
+  shiftWeekdayRules,
+  scheduleAssignments,
+  dateOverrides,
+  dayOffs,
+  attendanceCorrections
 } from '@/lib/db/schema/attendance';
 import { tasks, taskRequirements, employeeSkills } from '@/lib/db/schema/tasks';
 import { user, session, account, verification } from '@/lib/db/auth-schema';
@@ -31,6 +36,11 @@ export async function resetDatabase() {
 }
 
 export async function resetAllTables() {
+  await db.delete(attendanceCorrections);
+  await db.delete(dayOffs);
+  await db.delete(dateOverrides);
+  await db.delete(scheduleAssignments);
+  await db.delete(shiftWeekdayRules);
   await db.delete(auditLog);
   await db.delete(employeeShifts);
   await db.delete(leaves);
@@ -200,4 +210,80 @@ export async function seedTaskRequirement(
 
 export async function seedEmployeeSkill(userId: string, skill: string) {
   await db.insert(employeeSkills).values({ user_id: userId, skill });
+}
+
+export async function seedShiftWeekdayRule(
+  shiftId: number,
+  overrides: Partial<typeof shiftWeekdayRules.$inferInsert> = {}
+) {
+  const [rule] = await db
+    .insert(shiftWeekdayRules)
+    .values({
+      shift_id: shiftId,
+      day_of_week: 1, // Monday
+      is_working_day: true,
+      start_time: '09:00',
+      end_time: '17:00',
+      late_tolerance_minutes: 0,
+      absence_cutoff_minutes: 120,
+      ...overrides
+    })
+    .returning();
+  return rule;
+}
+
+export async function seedScheduleAssignment(
+  overrides: Partial<typeof scheduleAssignments.$inferInsert> = {}
+) {
+  const [assignment] = await db
+    .insert(scheduleAssignments)
+    .values({
+      user_id: 'test-user-att-123',
+      shift_id: 1,
+      effective_from: '2026-01-01',
+      effective_to: null,
+      ...overrides
+    })
+    .returning();
+  return assignment;
+}
+
+export async function seedDateOverride(overrides: Partial<typeof dateOverrides.$inferInsert> = {}) {
+  const [override] = await db
+    .insert(dateOverrides)
+    .values({
+      user_id: 'test-user-att-123',
+      date: '2026-08-04',
+      shift_id: 1,
+      ...overrides
+    })
+    .returning();
+  return override;
+}
+
+export async function seedDayOff(overrides: Partial<typeof dayOffs.$inferInsert> = {}) {
+  const [dayOff] = await db
+    .insert(dayOffs)
+    .values({
+      user_id: 'test-user-att-123',
+      date: '2026-08-04',
+      ...overrides
+    })
+    .returning();
+  return dayOff;
+}
+
+export async function seedAttendanceCorrection(
+  overrides: Partial<typeof attendanceCorrections.$inferInsert> = {}
+) {
+  const [correction] = await db
+    .insert(attendanceCorrections)
+    .values({
+      attendance_id: 1,
+      actor_id: 'test-admin',
+      reason: 'Manual correction',
+      ...overrides
+    })
+    .returning();
+  return correction;
 }
