@@ -235,7 +235,7 @@ export const getScheduleAssignmentsFn = createServerFn({ method: 'GET' })
   .validator(assignmentFiltersSchema)
   .handler(async ({ data: filters }) =>
     withRequestContext(async () => {
-      await requirePermission('attendance', 'view');
+      await requirePermission('attendance', 'edit');
       const { listScheduleAssignments } = await import('@/lib/db/attendance');
       return listScheduleAssignments(filters);
     })
@@ -358,7 +358,7 @@ export const getAdminAttendanceReportFn = createServerFn({ method: 'GET' })
   .validator(reportFiltersSchema)
   .handler(async ({ data: filters }) =>
     withRequestContext(async () => {
-      await requirePermission('attendance', 'view');
+      await requirePermission('attendance', 'edit');
       const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
       return getAdminAttendanceReport(filters);
     })
@@ -391,7 +391,7 @@ export const exportAttendanceReportFn = createServerFn({ method: 'POST' })
   .validator(exportReportSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
-      await requirePermission('attendance', 'view');
+      await requirePermission('attendance', 'edit');
       const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
       const { filters, format } = data;
 

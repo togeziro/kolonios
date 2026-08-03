@@ -4,6 +4,10 @@ import { ScheduleAssignmentForm } from '@/features/attendance/components/schedul
 import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/dashboard/admin/attendance/assignments')({
+  beforeLoad: async () => {
+    const { requirePermissionRpc } = await import('@/lib/auth/session');
+    await requirePermissionRpc({ data: 'attendance.edit' });
+  },
   head: () => ({ meta: [{ title: 'Dashboard: Attendance Assignments' }] }),
   component: AssignmentsPage
 });

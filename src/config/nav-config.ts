@@ -84,7 +84,7 @@ export const navGroups: NavGroup[] = [
         url: '/dashboard/admin/attendance/locations',
         icon: 'clock',
         isActive: false,
-        module: 'attendance',
+        module: 'attendance_admin',
         items: []
       },
       {
@@ -92,7 +92,7 @@ export const navGroups: NavGroup[] = [
         url: '/dashboard/admin/attendance/schedules',
         icon: 'clock',
         isActive: false,
-        module: 'attendance',
+        module: 'attendance_admin',
         items: []
       },
       {
@@ -100,7 +100,7 @@ export const navGroups: NavGroup[] = [
         url: '/dashboard/admin/attendance/assignments',
         icon: 'clock',
         isActive: false,
-        module: 'attendance',
+        module: 'attendance_admin',
         items: []
       },
       {
@@ -108,7 +108,7 @@ export const navGroups: NavGroup[] = [
         url: '/dashboard/admin/attendance/reports',
         icon: 'clock',
         isActive: false,
-        module: 'attendance',
+        module: 'attendance_admin',
         items: []
       }
     ]

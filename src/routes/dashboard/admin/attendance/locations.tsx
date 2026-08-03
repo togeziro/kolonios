@@ -4,6 +4,10 @@ import { LocationManagePage } from '@/features/attendance/components/location-ma
 import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/dashboard/admin/attendance/locations')({
+  beforeLoad: async () => {
+    const { requirePermissionRpc } = await import('@/lib/auth/session');
+    await requirePermissionRpc({ data: 'attendance.edit' });
+  },
   head: () => ({ meta: [{ title: 'Dashboard: Attendance Locations' }] }),
   component: LocationsPage
 });

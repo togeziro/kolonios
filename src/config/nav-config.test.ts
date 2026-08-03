@@ -115,13 +115,14 @@ describe('filterNavGroupsByRole', () => {
   it('non-admin with limited permissions sees only matching modules', () => {
     const filtered = filterNavGroupsByRole(navGroups, technicianPerms, false);
     const labels = filtered.map((g) => g.label);
-    // Technician has attendance view permission, so the attendance admin
-    // items in Management make that group visible alongside Overview.
-    expect(labels).toEqual(['Overview', 'Management']);
+    // Technician has attendance view permission, but the attendance admin
+    // items in Management now require the attendance_admin module, so only
+    // the Overview group remains visible.
+    expect(labels).toEqual(['Overview']);
     const titles = allTitles(filtered);
     expect(titles).toContain('Dashboard');
     expect(titles).toContain('My Work');
-    expect(titles).toContain('Attendance Locations');
+    expect(titles).not.toContain('Attendance Locations');
     expect(titles).not.toContain('Product');
     expect(titles).not.toContain('Users');
   });
