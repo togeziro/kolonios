@@ -35,6 +35,7 @@ export default function AttendanceCheckCard() {
   const [deviceLocation, setDeviceLocation] = useState<DeviceLocation | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationResult['status'] | null>(null);
   const [selfie, setSelfie] = useState<string | null>(null);
+  const [checkOutSelfie, setCheckOutSelfie] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
   const { data: todayData } = useQuery(myAttendanceQueryOptions());
@@ -108,7 +109,8 @@ export default function AttendanceCheckCard() {
           latitude: deviceLocation?.latitude,
           longitude: deviceLocation?.longitude,
           accuracy: deviceLocation?.accuracy,
-          capturedAt: deviceLocation?.capturedAt
+          capturedAt: deviceLocation?.capturedAt,
+          photo: checkOutSelfie ?? undefined
         }
       }),
     onSuccess: (res) => {
@@ -277,19 +279,28 @@ export default function AttendanceCheckCard() {
         )}
 
         {isCheckedIn && !isCheckedOut && (
-          <Button
-            className='w-full'
-            variant='secondary'
-            onClick={() => checkOutMutation.mutate()}
-            disabled={checkOutMutation.isPending}
-          >
-            {checkOutMutation.isPending ? (
-              <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
-            ) : (
-              <Icons.logout className='mr-2 h-4 w-4' />
-            )}
-            {t('attendance.checkOut')}
-          </Button>
+          <div className='space-y-3'>
+            <SelfieCapture
+              required={false}
+              disabled={checkOutMutation.isPending}
+              onCapture={setCheckOutSelfie}
+              onClear={() => setCheckOutSelfie(null)}
+            />
+
+            <Button
+              className='w-full'
+              variant='secondary'
+              onClick={() => checkOutMutation.mutate()}
+              disabled={checkOutMutation.isPending}
+            >
+              {checkOutMutation.isPending ? (
+                <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+              ) : (
+                <Icons.logout className='mr-2 h-4 w-4' />
+              )}
+              {t('attendance.checkOut')}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
