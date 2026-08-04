@@ -560,6 +560,25 @@
     "completed": "Tugas selesai",
     "completeFailed": "Gagal menyelesaikan tugas"
   },
+  "payroll": {
+    "title": "Penggajian",
+    "components": "Komponen Gaji",
+    "periods": "Periode Penggajian",
+    "records": "Catatan Penggajian",
+    "payslips": "Slip Gaji",
+    "reports": "Laporan Penggajian",
+    "generate": "Buat Penggajian",
+    "approve": "Setujui Penggajian",
+    "pay": "Tandai Sudah Dibayar",
+    "lock": "Kunci Penggajian",
+    "created": "Periode penggajian dibuat",
+    "updated": "Penggajian diperbarui",
+    "failed": "Operasi penggajian gagal",
+    "invalidPeriod": "Periode penggajian tidak valid",
+    "missingData": "Data penggajian yang diperlukan tidak tersedia",
+    "duplicate": "Catatan penggajian untuk karyawan dan periode ini sudah ada",
+    "locked": "Periode penggajian yang terkunci tidak dapat diubah"
+  },
   "attendanceAdmin": {
     "locationsTitle": "Lokasi Absensi",
     "locationsDescription": "Kelola lokasi kerja dan kebijakan geofence",

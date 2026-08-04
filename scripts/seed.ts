@@ -598,7 +598,16 @@ async function seedRoleGroups() {
           designations: { view: true, add: true, edit: true },
           users: { view: true },
           audit_log: { view: true },
-          attendance_admin: { view: true }
+          attendance_admin: { view: true },
+          payroll: {
+            view: true,
+            add: true,
+            edit: true,
+            delete: true,
+            approve: true,
+            pay: true,
+            reports: true
+          }
         },
         is_admin: false
       },
@@ -609,7 +618,8 @@ async function seedRoleGroups() {
         permissions: {
           ...coreModules,
           jobs: { view: true },
-          notifications: { view: true }
+          notifications: { view: true },
+          payroll: { view: true }
         },
         is_admin: false
       },
@@ -620,7 +630,8 @@ async function seedRoleGroups() {
         permissions: {
           ...coreModules,
           jobs: { view: true },
-          notifications: { view: true }
+          notifications: { view: true },
+          payroll: { view: true }
         },
         is_admin: false
       }

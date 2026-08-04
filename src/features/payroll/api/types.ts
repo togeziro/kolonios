@@ -5,6 +5,16 @@ export type ComponentType = 'allowance' | 'deduction';
 export type ComponentMode = 'fixed' | 'percentage' | 'per-attendance';
 export type TaxMethod = 'none' | 'progressive' | 'ter';
 
+export interface PayrollRecordFilters {
+  payrollPeriodId?: number;
+  employeeId?: string;
+  departmentId?: number;
+  status?: 'draft' | 'processing' | 'ready_to_pay' | 'paid' | 'locked';
+  scope?: 'admin' | 'employee';
+  page?: number;
+  limit?: number;
+}
+
 export interface SalaryProfile {
   type: SalaryType;
   amount: Money;

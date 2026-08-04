@@ -12,7 +12,8 @@ const MODULES = [
   { key: 'role_groups', label: 'Role Groups', hasCrud: true },
   { key: 'notifications', label: 'Notifications', hasCrud: false },
   { key: 'profile', label: 'Profile', hasCrud: false },
-  { key: 'jobs', label: 'Jobs', hasCrud: false }
+  { key: 'jobs', label: 'Jobs', hasCrud: false },
+  { key: 'payroll', label: 'Payroll', hasCrud: true }
 ] as const;
 
 type ModuleKey = (typeof MODULES)[number]['key'];

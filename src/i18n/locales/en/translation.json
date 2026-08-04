@@ -560,6 +560,25 @@
     "completed": "Task completed",
     "completeFailed": "Failed to complete task"
   },
+  "payroll": {
+    "title": "Payroll",
+    "components": "Salary Components",
+    "periods": "Payroll Periods",
+    "records": "Payroll Records",
+    "payslips": "Payslips",
+    "reports": "Payroll Reports",
+    "generate": "Generate Payroll",
+    "approve": "Approve Payroll",
+    "pay": "Mark as Paid",
+    "lock": "Lock Payroll",
+    "created": "Payroll period created",
+    "updated": "Payroll updated",
+    "failed": "Payroll operation failed",
+    "invalidPeriod": "The payroll period is invalid",
+    "missingData": "Required payroll data is missing",
+    "duplicate": "A payroll record already exists for this employee and period",
+    "locked": "Locked payroll periods cannot be changed"
+  },
   "attendanceAdmin": {
     "locationsTitle": "Attendance Locations",
     "locationsDescription": "Manage work locations and geofence policies",
