@@ -50,3 +50,18 @@
 - Targeted `oxlint`: completed with pre-existing `no-explicit-any` and `consistent-function-scoping` warnings only.
 - `bun run build`: passed; generated the payslip route and production bundles.
 - `bun run i18n:hardcoded`: remains red only for pre-existing violations in payroll admin, role-group, and masterdata files; no new payslip violation was reported.
+
+## Remaining Task 6 Review Fix (2026-08-05)
+
+### Changes
+
+- Added `src/features/payroll/api/service.integration.test.ts` covering an authenticated employee A request that attempts an employee B ID/query and asserting only employee A's paid payslip is returned, with processing-period and employee B rows excluded.
+- Reused the existing `requirePermission` authentication mocks and test database helpers; production scope logic was not changed.
+- The test invokes the service handler path used by `getMyPayslipsFn`. TanStack Start transforms direct server-function calls into an SSR RPC stub under Vitest, so the test exercises the authenticated handler implementation rather than bypassing authorization or changing production behavior.
+
+### Verification
+
+- `bun run test:run src/features/payroll/api/service.integration.test.ts`: passed, 1 test.
+- `bun run test:run src/features/payroll/api/service.integration.test.ts src/features/payroll/api/service.test.ts src/features/payroll/components/payslip-template.test.tsx src/features/payroll/components/payslip-download.test.ts src/lib/db/payroll.test.ts`: passed, 5 files / 38 tests. Existing payroll rollback test logs an expected foreign-key error while testing rollback handling.
+- `bun run typecheck`: passed.
+- `bun run build`: passed; generated the payslip route and production bundles.
