@@ -71,9 +71,9 @@ admin reporting for both web and mobile layouts.
 - Map rendering uses MapLibre GL (`src/components/ui/map.tsx`) with an
   environment-configurable tile URL (`VITE_MAP_STYLE_URL`).
 - All UI copy is localized through i18n (`attendance.*`, `attendanceAdmin.*`).
-- The business date is resolved in the WIB timezone (`Asia/Jakarta` default,
-  configurable via app config) by `businessDateInTimeZone` in
-  `src/lib/dates.ts` — both check-in records and the admin filter default use it.
+- The business date is resolved in the WIB timezone (`Asia/Jakarta` default
+  parameter) by `businessDateInTimeZone` in `src/lib/dates.ts`; the attendance
+  server functions use it as the default date when no date is supplied.
 - The check-out branch captures an optional selfie; the captured frame resets
   after a successful check-out so the next check-out starts with a clean state.
 - XLSX export goes through `src/features/attendance/api/export-adapter.ts`

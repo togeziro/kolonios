@@ -129,7 +129,7 @@ permission grants employees their self-service card but never admin pages.
 | `deleteDayOffFn`      | POST   | `attendance.delete` | `{ id }`                        | `{ success }` (+ audit) |
 | `reviewAttendanceCorrectionFn` | POST | `attendance.edit` | `ReviewCorrectionPayload`      | `AttendanceCorrection` (+ audit) |
 | `getAdminAttendanceReportFn` | GET | `attendance.edit`   | `AttendanceReportFilters`       | `AttendanceReportResponse` |
-| `exportAttendanceReportFn` | POST | `attendance.edit`   | `AttendanceReportExportPayload` | `{ fileName, data }` |
+| `exportAttendanceReportFn` | POST | `attendance.edit`   | `AttendanceReportExportPayload` | `ExportResponse` (`{ success, format?, content?, mime?, ext? }`) |
 
 ### Tasks
 

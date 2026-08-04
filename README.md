@@ -37,7 +37,7 @@
 - **Multi-theme support** — 10+ OKLCH themes with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
 - **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
-- **Testing** — 565 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Testing** — 575 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
@@ -273,7 +273,7 @@ Detailed docs live in [`docs/`](./docs/):
 - **Shared DB utilities**: Common patterns extracted to `src/lib/db/utils.ts` to reduce code duplication across DB modules (pagination, sorting, search conditions, filtering)
 - **Consistent error handling**: All DB functions use `mapDbError` with consistent response format (`{ success, time, message, data? }`)
 - **Type safety**: Server-only DB layer with Zod-validated inputs and proper error mapping
-- **Testing**: 565+ Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
+- **Testing**: 575+ Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
 - **Code organization**: Feature-based structure with clear separation between routes, features, and shared libraries
 
 ## License

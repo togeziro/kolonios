@@ -187,7 +187,7 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | ----------- | -------- | ----------------------------------------- |
 | maplibre-gl | ^6.1.0   | Admin location editor geofence map        |
 | @types/geojson | —    | GeoJSON types for MapLibre                |
-| xlsx        | ^0.18.5  | Excel export for attendance reports       |
+| xlsx        | 0.20.3 (SheetJS tarball) | Excel export for attendance reports   |
 | pdf-lib     | ^1.17.1  | PDF export for attendance reports         |
 
 ### Styling & Themes
