@@ -53,15 +53,6 @@ export const navGroups: NavGroup[] = [
     label: 'Management',
     items: [
       {
-        title: 'Product',
-        url: '/dashboard/product',
-        icon: 'product',
-        shortcut: ['p', 'p'],
-        isActive: false,
-        module: 'products',
-        items: []
-      },
-      {
         title: 'Customers',
         url: '/dashboard/customers',
         icon: 'customer',

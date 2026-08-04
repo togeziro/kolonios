@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker';
 import { db, client as dbClient } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
 import {
-  products,
   notifications,
   employees,
   departments,
@@ -34,32 +33,7 @@ import {
 } from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-const PRODUCT_CATEGORIES = [
-  'Electronics',
-  'Furniture',
-  'Clothing',
-  'Toys',
-  'Groceries',
-  'Books',
-  'Jewelry',
-  'Beauty Products'
-] as const;
-
 const ROLES = ['admin', 'hr', 'employee', 'technician', 'customer'] as const;
-
-async function seedProducts(count = 20) {
-  const rows = Array.from({ length: count }, (_, i) => ({
-    photo_url: `https://api.slingacademy.com/public/sample-products/${i + 1}.png`,
-    name: faker.commerce.productName(),
-    description: faker.commerce.productDescription(),
-    price: faker.commerce.price({ min: 5, max: 500, dec: 2 }),
-    category: faker.helpers.arrayElement(PRODUCT_CATEGORIES)
-  }));
-
-  await db.delete(products);
-  await db.insert(products).values(rows);
-  console.log(`Seeded ${rows.length} products`);
-}
 
 async function seedUsers() {
   const demo = {
@@ -755,7 +729,6 @@ async function seedAttendanceSchedules() {
 
 export async function seedDatabase() {
   faker.seed(42);
-  await seedProducts();
   await seedMasterdata();
   await seedDemoUsers();
   await seedEmployees();

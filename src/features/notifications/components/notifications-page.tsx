@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 
 const actionRoutes: Record<string, string> = {
   view: '/dashboard/overview',
-  'view-product': '/dashboard/product',
   billing: '/dashboard/overview',
   open: '/dashboard/overview'
 };

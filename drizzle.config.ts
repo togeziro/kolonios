@@ -2,7 +2,6 @@ import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
   schema: [
-    './src/lib/db/schema/products.ts',
     './src/lib/db/schema/notifications.ts',
     './src/lib/db/schema/attendance.ts',
     './src/lib/db/schema/employees.ts',

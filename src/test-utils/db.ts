@@ -5,7 +5,6 @@
 // test start from a clean, known state by truncating every table and seeding
 // only what the test needs.
 import { db } from '@/lib/db';
-import { products } from '@/lib/db/schema/products';
 import { notifications } from '@/lib/db/schema/notifications';
 import { customers } from '@/lib/db/schema/customers';
 import { departments, designations } from '@/lib/db/schema/masterdata';
@@ -28,11 +27,9 @@ import { user, session, account, verification } from '@/lib/db/auth-schema';
 import { auditLog } from '@/lib/db/schema/audit-log';
 import { roleGroups } from '@/lib/db/schema/role-groups';
 import { userRoleGroups } from '@/lib/db/schema/user-role-groups';
-import type { NewProduct } from '@/lib/db/schema/products';
 
 export async function resetDatabase() {
   await db.delete(notifications);
-  await db.delete(products);
   await db.delete(roleGroups);
 }
 
@@ -57,7 +54,6 @@ export async function resetAllTables() {
   await db.delete(locations);
   await db.delete(shifts);
   await db.delete(notifications);
-  await db.delete(products);
   await db.delete(userRoleGroups);
   await db.delete(roleGroups);
   await db.delete(session);
@@ -129,24 +125,6 @@ export async function seedShift(overrides: Partial<typeof shifts.$inferInsert> =
     .values({ name: 'Morning', start_time: '09:00', end_time: '17:00', ...overrides })
     .returning();
   return s;
-}
-
-export function makeProduct(overrides: Partial<NewProduct> = {}): NewProduct {
-  return {
-    name: 'Test Product',
-    description: 'A product used in tests.',
-    price: '19.99',
-    category: 'Electronics',
-    photo_url: 'https://example.com/p.png',
-    ...overrides
-  };
-}
-
-export async function seedProducts(rows: Partial<NewProduct>[]) {
-  return db
-    .insert(products)
-    .values(rows.map((r) => makeProduct(r)))
-    .returning();
 }
 
 let taskCreatorSeq = 0;

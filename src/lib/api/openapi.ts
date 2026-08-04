@@ -1,10 +1,5 @@
 import type { ZodTypeAny } from 'zod';
 import {
-  productFiltersSchema,
-  productIdSchema,
-  productMutationSchema
-} from '@/features/products/api/validation';
-import {
   customerFiltersSchema,
   customerIdSchema,
   customerMutationSchema
@@ -61,54 +56,6 @@ const asQuery = (schema: ZodTypeAny): Record<string, ZodTypeAny> =>
   (schema as unknown as { shape: Record<string, ZodTypeAny> }).shape;
 
 export const operations: Operation[] = [
-  // Products
-  {
-    operationId: 'getProducts',
-    method: 'get',
-    path: '/products',
-    summary: 'List products (search, filter, paginate)',
-    permission: 'products.view',
-    queryParams: asQuery(productFiltersSchema),
-    responseDescription: 'Paginated product list'
-  },
-  {
-    operationId: 'getProductById',
-    method: 'get',
-    path: '/products/{id}',
-    summary: 'Get a single product',
-    permission: 'products.view',
-    pathParams: asId(productIdSchema),
-    responseDescription: 'Product details'
-  },
-  {
-    operationId: 'createProduct',
-    method: 'post',
-    path: '/products',
-    summary: 'Create a product',
-    permission: 'products.add',
-    body: productMutationSchema,
-    responseDescription: 'Created product'
-  },
-  {
-    operationId: 'updateProduct',
-    method: 'post',
-    path: '/products/{id}',
-    summary: 'Update a product',
-    permission: 'products.edit',
-    pathParams: asId(productIdSchema),
-    body: productMutationSchema,
-    responseDescription: 'Updated product'
-  },
-  {
-    operationId: 'deleteProduct',
-    method: 'post',
-    path: '/products/{id}/delete',
-    summary: 'Delete a product',
-    permission: 'products.delete',
-    pathParams: asId(productIdSchema),
-    responseDescription: 'Success acknowledgement'
-  },
-
   // Customers
   {
     operationId: 'listCustomers',
