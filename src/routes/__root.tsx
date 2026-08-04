@@ -1,7 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { TanStackDevtools } from '@tanstack/react-devtools';
+import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools';
+import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { Toaster } from '@/components/ui/sonner';
 import { ActiveThemeProvider } from '@/components/themes/active-theme';
@@ -121,8 +122,12 @@ function RootDocument() {
             </I18nProvider>
           </ActiveThemeProvider>
         </ThemeProvider>
-        <TanStackRouterDevtools position='bottom-left' />
-        <ReactQueryDevtools initialIsOpen={false} buttonPosition='bottom-right' />
+        <TanStackDevtools
+          plugins={[
+            { name: 'TanStack Query', render: <ReactQueryDevtoolsPanel /> },
+            { name: 'TanStack Router', render: <TanStackRouterDevtoolsPanel /> }
+          ]}
+        />
         <Scripts />
       </body>
     </html>
