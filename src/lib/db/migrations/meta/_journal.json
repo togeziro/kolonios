@@ -64,6 +64,13 @@
       "when": 1785878163152,
       "tag": "0008_wide_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785878748652,
+      "tag": "0009_naive_eternity",
+      "breakpoints": true
     }
   ]
 }

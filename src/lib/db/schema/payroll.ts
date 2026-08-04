@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import {
   date,
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -142,23 +143,32 @@ export const payrollRecords = pgTable(
       table.payroll_period_id,
       table.employee_id
     ),
+    uniqueIndex('payroll_records_id_employee_unique').on(table.id, table.employee_id),
     index('payroll_records_employee_idx').on(table.employee_id)
   ]
 );
 
-export const payslips = pgTable('payslips', {
-  id: serial('id').primaryKey(),
-  payroll_record_id: integer('payroll_record_id')
-    .notNull()
-    .references(() => payrollRecords.id, { onDelete: 'cascade' }),
-  employee_id: text('employee_id')
-    .notNull()
-    .references(() => employees.id, { onDelete: 'cascade' }),
-  payslip_number: text('payslip_number').notNull().unique(),
-  issued_at: timestamp('issued_at').defaultNow().notNull(),
-  file_url: text('file_url'),
-  created_at: timestamp('created_at').defaultNow().notNull()
-});
+export const payslips = pgTable(
+  'payslips',
+  {
+    id: serial('id').primaryKey(),
+    payroll_record_id: integer('payroll_record_id').notNull(),
+    employee_id: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    payslip_number: text('payslip_number').notNull().unique(),
+    issued_at: timestamp('issued_at').defaultNow().notNull(),
+    file_url: text('file_url'),
+    created_at: timestamp('created_at').defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.payroll_record_id, table.employee_id],
+      foreignColumns: [payrollRecords.id, payrollRecords.employee_id],
+      name: 'payslips_payroll_record_employee_fk'
+    }).onDelete('cascade')
+  ]
+);
 
 export const taxSettings = pgTable(
   'tax_settings',
@@ -178,20 +188,28 @@ export const taxSettings = pgTable(
   ]
 );
 
-export const employeeTaxProfiles = pgTable('employee_tax_profiles', {
-  id: serial('id').primaryKey(),
-  employee_id: text('employee_id')
-    .notNull()
-    .unique()
-    .references(() => employees.id, { onDelete: 'cascade' }),
-  tax_setting_id: integer('tax_setting_id').references(() => taxSettings.id),
-  tax_identifier: text('tax_identifier'),
-  filing_status: text('filing_status'),
-  effective_from: date('effective_from').notNull(),
-  effective_to: date('effective_to'),
-  created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull()
-});
+export const employeeTaxProfiles = pgTable(
+  'employee_tax_profiles',
+  {
+    id: serial('id').primaryKey(),
+    employee_id: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    tax_setting_id: integer('tax_setting_id').references(() => taxSettings.id),
+    tax_identifier: text('tax_identifier'),
+    filing_status: text('filing_status'),
+    effective_from: date('effective_from').notNull(),
+    effective_to: date('effective_to'),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [
+    uniqueIndex('employee_tax_profiles_employee_effective_unique').on(
+      table.employee_id,
+      table.effective_from
+    )
+  ]
+);
 
 export const employeeTaxRecords = pgTable(
   'employee_tax_records',
@@ -200,9 +218,7 @@ export const employeeTaxRecords = pgTable(
     employee_id: text('employee_id')
       .notNull()
       .references(() => employees.id, { onDelete: 'cascade' }),
-    payroll_record_id: integer('payroll_record_id').references(() => payrollRecords.id, {
-      onDelete: 'cascade'
-    }),
+    payroll_record_id: integer('payroll_record_id'),
     tax_period: date('tax_period').notNull(),
     taxable_income: numeric('taxable_income', { precision: 14, scale: 2 }).notNull(),
     tax_amount: numeric('tax_amount', { precision: 14, scale: 2 }).notNull(),
@@ -210,6 +226,11 @@ export const employeeTaxRecords = pgTable(
     created_at: timestamp('created_at').defaultNow().notNull()
   },
   (table) => [
+    foreignKey({
+      columns: [table.payroll_record_id, table.employee_id],
+      foreignColumns: [payrollRecords.id, payrollRecords.employee_id],
+      name: 'employee_tax_records_payroll_record_employee_fk'
+    }).onDelete('cascade'),
     index('employee_tax_records_employee_period_idx').on(table.employee_id, table.tax_period)
   ]
 );
