@@ -2,7 +2,6 @@ import React from 'react';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Separator } from '../ui/separator';
 import { Breadcrumbs } from '../breadcrumbs';
-import SearchInput from '../search-input';
 import { ThemeSelector } from '../themes/theme-selector';
 import { ThemeModeToggle } from '../themes/theme-mode-toggle';
 import { NotificationCenter } from '@/features/notifications/components/notification-center';
@@ -18,9 +17,6 @@ export default function Header() {
       </div>
 
       <div className='flex items-center gap-2'>
-        <div className='hidden md:flex'>
-          <SearchInput />
-        </div>
         <ThemeModeToggle />
         <LanguageSwitcher />
         <div className='hidden sm:block'>

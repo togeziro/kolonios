@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
-import KBar from '@/components/kbar';
 import AppSidebar from '@/components/layout/app-sidebar';
 import Header from '@/components/layout/header';
 import { InfoSidebar } from '@/components/layout/info-sidebar';
@@ -38,25 +37,19 @@ function DashboardLayout() {
   const isStaff = role === 'employee' || role === 'technician';
 
   if (isMobile && isStaff) {
-    return (
-      <KBar>
-        <MobileShell />
-      </KBar>
-    );
+    return <MobileShell />;
   }
 
   return (
-    <KBar>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <Header />
-          <InfobarProvider defaultOpen={false}>
-            <Outlet />
-            <InfoSidebar side='right' />
-          </InfobarProvider>
-        </SidebarInset>
-      </SidebarProvider>
-    </KBar>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <Header />
+        <InfobarProvider defaultOpen={false}>
+          <Outlet />
+          <InfoSidebar side='right' />
+        </InfobarProvider>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
