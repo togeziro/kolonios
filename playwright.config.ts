@@ -15,7 +15,12 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure'
+    screenshot: 'only-on-failure',
+    // Headless Chromium has no camera/geolocation hardware: fake devices +
+    // auto-granted prompts let the selfie capture and GPS flows run in e2e.
+    launchOptions: {
+      args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream']
+    }
   },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
