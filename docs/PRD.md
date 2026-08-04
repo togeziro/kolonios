@@ -8,7 +8,7 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 ## Core Requirements
 
 1. **Data tables** — Sorting, filtering, pagination, URL state sync with TanStack Table
-2. **CRUD operations** — Products, users with server-side validation via Drizzle + React Query
+2. **CRUD operations** — Users, customers, employees with server-side validation via Drizzle + React Query
 3. **Notification center** — Badge count, preview popover, full page view
 4. **Forms** — Multi-step, validation, file upload patterns with TanStack Form
 5. **Authentication** — Email/password sign-in and sign-up with Better Auth DB sessions, RBAC, route protection
@@ -18,7 +18,6 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 ## Implemented Features
 
 - **Dashboard Overview** — Analytics cards with Recharts graphs, Suspense-based loading; mobile staff layout for employees/technicians
-- **Product Management** — CRUD with data table (search, filter, pagination, sort, URL state)
 - **User Management** — Data table with role/status filters
 - **Notification Center** — Bell icon badge, popover preview, full page with tabs, PostgreSQL-backed via Drizzle + React Query
 - **Attendance** — Check-in/out with geo-fencing (Haversine) and server-enforced GPS/selfie policies; master work schedules (weekday rules, date overrides, day offs); leave requests with attachment policy; correction requests with admin approval; admin reports (CSV/Excel/PDF)
@@ -48,7 +47,7 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 
 The server-function boundary is hardened at every endpoint:
 
-- **Authentication at the boundary** — every endpoint calls `requireSession()` (or `requirePermission(module, action)` for module access, e.g. `products.add` for product writes) inside the handler, so endpoints cannot be reached unauthenticated or unpermitted over HTTP — independent of route guards (`beforeLoad`).
+- **Authentication at the boundary** — every endpoint calls `requireSession()` (or `requirePermission(module, action)` for module access, e.g. `customers.edit` for customer writes) inside the handler, so endpoints cannot be reached unauthenticated or unpermitted over HTTP — independent of route guards (`beforeLoad`).
 - **Input validation** — every server-function input is validated at runtime with a Zod schema via `@tanstack/zod-adapter`'s `zodValidator`. Schemas use `z.ZodType<ExistingType>` so they cannot drift from the request types.
 - **Error mapping** — `lib/db/*.ts` wraps DB calls in `mapDbError`; unexpected errors become a generic message (no constraint/column names leak), while intentional `DomainError`s pass through.
 - **Notifications IDOR** — Resolved 2026-07-23. All notification queries are scoped by `user_id`.

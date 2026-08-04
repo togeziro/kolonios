@@ -33,16 +33,6 @@ The "Required permission" column uses `<module>.<action>` keys from the
 role-group permission matrix (`src/config/nav-config.ts` module keys). The
 `admin` role bypasses the matrix. Actions: `view`, `add`, `edit`, `delete`.
 
-### Products
-
-| Function           | Method | Required permission | Payload                  | Returns                |
-| ------------------ | ------ | ------------------- | ------------------------ | ---------------------- |
-| `getProductsFn`    | GET    | `products.view`     | `ProductFilters`         | `ProductsResponse`     |
-| `getProductByIdFn` | GET    | `products.view`     | `number` (id)            | `ProductByIdResponse`  |
-| `createProductFn`  | POST   | `products.add`      | `ProductMutationPayload` | `Product`              |
-| `updateProductFn`  | POST   | `products.edit`     | `{ id, values }`         | `Product`              |
-| `deleteProductFn`  | POST   | `products.delete`   | `number` (id)            | `{ success, message }` |
-
 ### Users
 
 | Function       | Method | Required permission | Payload               | Returns                |

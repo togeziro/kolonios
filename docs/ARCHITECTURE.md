@@ -34,10 +34,9 @@ src/
 │       ├── users.tsx           # Users table
 │       ├── customers.tsx       # Customer CRUD
 │       ├── employees.tsx       # Employee CRUD
-│       ├── product/            # Product CRUD
 │       └── notifications.tsx   # Notifications page
 ├── features/                   # attendance, audit, auth, customers, employees,
-│   │                           # masterdata, notifications, overview, products,
+│   │                           # masterdata, notifications, overview,
 │   │                           # profile, role-groups, tasks, users
 │   ├── <name>/
 │   │   ├── api/                # Types, server functions, queries, mutations
@@ -71,7 +70,7 @@ src/
 ## Key Patterns
 
 - **Server functions**: `createServerFn()` with `import()` inside handlers
-- **State management**: React Query for all server state (products, customers, employees, users, notifications, attendance, masterdata)
+- **State management**: React Query for all server state (customers, employees, users, notifications, attendance, masterdata)
 - **DB access**: Server-only modules in `src/lib/db/`, never imported by client code
 - **Shared DB utilities**: Common patterns extracted to `src/lib/db/utils.ts`:
   - `buildPagination()` - consistent pagination with clamping (1-100 limit)
@@ -112,7 +111,7 @@ Auth uses **Better Auth** (DB-session based) via the `admin` plugin for the base
 | Client hook `useRoleGroupPermissions` + nav filtering | `src/hooks/use-nav.ts` |
 | Nav config with `module` keys per item | `src/config/nav-config.ts` |
 
-Permission keys are `<module>.<action>` pairs — e.g. `products.add`, `employees.view`, `audit_log.view` — with actions `view` / `add` / `edit` / `delete`. A role group with `is_admin = true` bypasses all checks. Module keys: `overview`, `my_work`, `jobs`, `attendance`, `attendance_admin`, `leave`, `profile`, `products`, `customers`, `employees`, `users`, `departments`, `designations`, `audit_log`, `role_groups`, `notifications`. (`attendance_admin` is a nav-gating-only module used by the admin attendance routes; the admin attendance server functions enforce `attendance.edit`/`attendance.delete`. HR retains `attendance.edit` by intentional product decision — attendance expansion, 2026-08-04.)
+Permission keys are `<module>.<action>` pairs — e.g. `customers.edit`, `employees.view`, `audit_log.view` — with actions `view` / `add` / `edit` / `delete`. A role group with `is_admin = true` bypasses all checks. Module keys: `overview`, `my_work`, `jobs`, `attendance`, `attendance_admin`, `leave`, `profile`, `customers`, `employees`, `users`, `departments`, `designations`, `audit_log`, `role_groups`, `notifications`. (`attendance_admin` is a nav-gating-only module used by the admin attendance routes; the admin attendance server functions enforce `attendance.edit`/`attendance.delete`. HR retains `attendance.edit` by intentional product decision — attendance expansion, 2026-08-04.)
 
 Because the client sidebar and server guards read the same map, UI visibility and server enforcement can never drift.
 
@@ -171,7 +170,7 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 | Technology           | Version  | Purpose                                               |
 | -------------------- | -------- | ----------------------------------------------------- |
-| TanStack React Query | v5.101.2 | Server state (products, customers, employees, users, notifications) |
+| TanStack React Query | v5.101.2 | Server state (customers, employees, users, notifications) |
 
 ### Tables & Charts
 

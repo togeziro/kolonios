@@ -11,7 +11,7 @@
 
 # Kolonios
 
-**Kolonios** is a production-ready **ISP / property management admin dashboard** built with **TanStack Start** (React 19 + Vite 7 + Nitro), **shadcn/ui**, **Tailwind CSS v4**, **Better Auth**, and **PostgreSQL (Drizzle ORM)**. It provides attendance tracking with geo-fencing, customer and employee management, masterdata CRUD, inventory (products), and a notification center behind a type-safe, feature-based codebase.
+**Kolonios** is a production-ready **ISP / property management admin dashboard** built with **TanStack Start** (React 19 + Vite 7 + Nitro), **shadcn/ui**, **Tailwind CSS v4**, **Better Auth**, and **PostgreSQL (Drizzle ORM)**. It provides attendance tracking with geo-fencing, customer and employee management, masterdata CRUD, and a notification center behind a type-safe, feature-based codebase.
 
 ## Tech Stack
 
@@ -37,7 +37,7 @@
 - **Multi-theme support** — 10+ OKLCH themes with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
 - **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
-- **Testing** — 575 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Testing** — 532 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
@@ -55,8 +55,6 @@
 | [Departments](/dashboard/admin/departments) | CRUD management for company departments. |
 | [Job Titles](/dashboard/admin/designations) | CRUD for designations with department assignment and base salary. |
 | [Role Groups](/dashboard/admin/role-groups) | RBAC group management: per-module permission toggles for each role group. |
-| [Product List (Table)](/dashboard/product) | TanStack Table + React Query with URL search params for search, filter, pagination. |
-| [Create Product Form](/dashboard/product/new) | TanStack Form + Zod with `useMutation` and cache invalidation. |
 | [Users (Table)](/dashboard/users) | Users table with React Query + URL state pattern. |
 | [Notifications](/dashboard/notifications) | Notification center with bell badge, popover preview, and full page with tabs. |
 | [Not Found](/notfound) | Custom 404 page via TanStack Router's `defaultNotFoundComponent`. |
@@ -71,7 +69,7 @@ src/
 │   ├── auth/                      # Auth pages (sign-in, sign-up)
 │   ├── dashboard.tsx              # Dashboard layout (sidebar/header or MobileShell)
 │   ├── dashboard/                 # Dashboard pages (overview, attendance, customers,
-│   │                              #   employees, product, users, admin, my-work, jobs,
+│   │                              #   employees, users, admin, my-work, jobs,
 │   │                              #   leave, notifications, profile)
 │   └── api/v1/                    # Versioned API routes (/api/v1/auth/$ for Better Auth)
 │
@@ -86,7 +84,6 @@ src/
 │   ├── customers/                 # Customer CRUD, code generation
 │   ├── employees/                 # Employee CRUD with department joins
 │   ├── masterdata/                # Departments & designations CRUD
-│   ├── products/                  # Product listing, form, tables (React Query)
 │   ├── role-groups/               # RBAC role groups (permission matrix UI + queries)
 │   ├── users/                     # User management table (React Query)
 │   ├── notifications/             # Notification center (React Query + PostgreSQL)
@@ -140,8 +137,8 @@ Apply the schema and seed the database:
 
 ```bash
 bun run db:push    # apply the Drizzle schema to the database
-bun run db:seed    # seed 20 products, masterdata (2 locations, 3 shifts, 6 departments,
-                   #   13 designations), 4 role groups (Administrator/HR/Employee/Technician),
+bun run db:seed    # seed masterdata (2 locations, 3 shifts, 6 departments, 13 designations),
+                   #   4 role groups (Administrator/HR/Employee/Technician),
                    #   4 demo users, 4 employee records, customers,
                    #   + 1 demo user with 8 notifications
 ```
@@ -273,7 +270,7 @@ Detailed docs live in [`docs/`](./docs/):
 - **Shared DB utilities**: Common patterns extracted to `src/lib/db/utils.ts` to reduce code duplication across DB modules (pagination, sorting, search conditions, filtering)
 - **Consistent error handling**: All DB functions use `mapDbError` with consistent response format (`{ success, time, message, data? }`)
 - **Type safety**: Server-only DB layer with Zod-validated inputs and proper error mapping
-- **Testing**: 575+ Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
+- **Testing**: 532+ Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
 - **Code organization**: Feature-based structure with clear separation between routes, features, and shared libraries
 
 ## License
