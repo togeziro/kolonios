@@ -1,0 +1,125 @@
+import { useState } from 'react';
+import { createFileRoute } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import PageContainer from '@/components/layout/page-container';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
+import { payrollPeriodsQueryOptions } from '@/features/payroll/api/queries';
+import { useCreatePayrollPeriod } from '@/features/payroll/api/mutations';
+
+export const Route = createFileRoute('/dashboard/admin/payroll/periods')({
+  beforeLoad: async () => {
+    const { requirePermissionRpc } = await import('@/lib/auth/session');
+    await requirePermissionRpc({ data: 'payroll.view' });
+  },
+  component: PeriodsPage
+});
+
+function PeriodsPage() {
+  const { t } = useTranslation();
+  const { data: response, isLoading } = useQuery(payrollPeriodsQueryOptions({ limit: 100 }));
+  const data = Array.isArray(response) ? response : (response?.rows ?? []);
+  const create = useCreatePayrollPeriod();
+  const [form, setForm] = useState({ name: '', periodStart: '', periodEnd: '' });
+  const save = async () => {
+    if (!form.name || !form.periodStart || !form.periodEnd || form.periodEnd < form.periodStart)
+      return toast.error(t('payroll.invalidPeriod'));
+    try {
+      await create.mutateAsync(form);
+      toast.success(t('payroll.created'));
+      setForm({ name: '', periodStart: '', periodEnd: '' });
+    } catch {
+      toast.error(t('payroll.failed'));
+    }
+  };
+  return (
+    <PageContainer
+      pageTitle={t('payroll.periods')}
+      pageDescription={t('payroll.periodsDescription')}
+    >
+      <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]'>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('payroll.periods')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <p>{t('common.loading')}</p>
+            ) : (
+              <div className='overflow-x-auto'>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('payroll.name')}</TableHead>
+                      <TableHead>{t('payroll.start')}</TableHead>
+                      <TableHead>{t('payroll.end')}</TableHead>
+                      <TableHead>{t('payroll.status')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(data ?? []).map((period: any) => (
+                      <TableRow key={period.id}>
+                        <TableCell>{period.name}</TableCell>
+                        <TableCell>{period.period_start}</TableCell>
+                        <TableCell>{period.period_end}</TableCell>
+                        <TableCell>
+                          <Badge variant='outline'>{t(`payroll.statuses.${period.status}`)}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('payroll.newPeriod')}</CardTitle>
+          </CardHeader>
+          <CardContent className='space-y-3'>
+            <div>
+              <Label>{t('payroll.name')}</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>{t('payroll.start')}</Label>
+              <Input
+                type='date'
+                value={form.periodStart}
+                onChange={(e) => setForm({ ...form, periodStart: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>{t('payroll.end')}</Label>
+              <Input
+                type='date'
+                value={form.periodEnd}
+                onChange={(e) => setForm({ ...form, periodEnd: e.target.value })}
+              />
+            </div>
+            <Button onClick={save} disabled={create.isPending}>
+              {t('common.save')}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </PageContainer>
+  );
+}
