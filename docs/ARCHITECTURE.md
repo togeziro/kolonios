@@ -29,7 +29,8 @@ src/
 │       ├── my-work/            # Assigned task list (mobile)
 │       ├── jobs/               # Available jobs pool (mobile)
 │       ├── profile.tsx         # Profile + month summary
-│       ├── admin/              # Departments, designations, role groups, audit log
+│       ├── admin/              # Departments, designations, role groups, audit log,
+│       │                       #   attendance admin (locations, schedules, assignments, reports)
 │       ├── users.tsx           # Users table
 │       ├── customers.tsx       # Customer CRUD
 │       ├── employees.tsx       # Employee CRUD
@@ -111,7 +112,7 @@ Auth uses **Better Auth** (DB-session based) via the `admin` plugin for the base
 | Client hook `useRoleGroupPermissions` + nav filtering | `src/hooks/use-nav.ts` |
 | Nav config with `module` keys per item | `src/config/nav-config.ts` |
 
-Permission keys are `<module>.<action>` pairs — e.g. `products.add`, `employees.view`, `audit_log.view` — with actions `view` / `add` / `edit` / `delete`. A role group with `is_admin = true` bypasses all checks. Module keys: `overview`, `my_work`, `jobs`, `attendance`, `leave`, `profile`, `products`, `customers`, `employees`, `users`, `departments`, `designations`, `audit_log`, `role_groups`, `notifications`.
+Permission keys are `<module>.<action>` pairs — e.g. `products.add`, `employees.view`, `audit_log.view` — with actions `view` / `add` / `edit` / `delete`. A role group with `is_admin = true` bypasses all checks. Module keys: `overview`, `my_work`, `jobs`, `attendance`, `attendance_admin`, `leave`, `profile`, `products`, `customers`, `employees`, `users`, `departments`, `designations`, `audit_log`, `role_groups`, `notifications`. (`attendance_admin` is a nav-gating-only module used by the admin attendance routes; the admin attendance server functions enforce `attendance.edit`/`attendance.delete`. HR retains `attendance.edit` by intentional product decision — attendance expansion, 2026-08-04.)
 
 Because the client sidebar and server guards read the same map, UI visibility and server enforcement can never drift.
 
@@ -179,6 +180,15 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | TanStack Table | v8.21.3 | Data tables (sorting, filtering, pagination) |
 | Recharts       | v3.10.0 | Charts (area, bar, pie)                      |
 | date-fns       | v4.1.0  | Date formatting                              |
+
+### Maps & Export (attendance)
+
+| Technology  | Version  | Purpose                                   |
+| ----------- | -------- | ----------------------------------------- |
+| maplibre-gl | ^6.1.0   | Admin location editor geofence map        |
+| @types/geojson | —    | GeoJSON types for MapLibre                |
+| xlsx        | ^0.18.5  | Excel export for attendance reports       |
+| pdf-lib     | ^1.17.1  | PDF export for attendance reports         |
 
 ### Styling & Themes
 

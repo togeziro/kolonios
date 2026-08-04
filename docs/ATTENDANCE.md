@@ -31,8 +31,9 @@ admin reporting for both web and mobile layouts.
   `effective_to` (open-ended when null).
 - `date_overrides` substitutes a shift for an employee on a specific date.
 - `day_offs` marks an individual non-working day (highest precedence).
-- The effective schedule for a date is resolved as: assignment → weekday rule
-  → date override; a day off wins over everything.
+- The effective schedule for a date is resolved as: a day off wins first (no work
+  that day); otherwise a date override substitutes the employee's shift for that
+  single date; then the assigned (or overridden) shift's weekday rule applies.
 
 ## Policies and validation
 
@@ -70,3 +71,11 @@ admin reporting for both web and mobile layouts.
 - Map rendering uses MapLibre GL (`src/components/ui/map.tsx`) with an
   environment-configurable tile URL (`VITE_MAP_STYLE_URL`).
 - All UI copy is localized through i18n (`attendance.*`, `attendanceAdmin.*`).
+- The business date is resolved in the WIB timezone (`Asia/Jakarta` default,
+  configurable via app config) by `businessDateInTimeZone` in
+  `src/lib/dates.ts` — both check-in records and the admin filter default use it.
+- The check-out branch captures an optional selfie; the captured frame resets
+  after a successful check-out so the next check-out starts with a clean state.
+- XLSX export goes through `src/features/attendance/api/export-adapter.ts`
+  (`writeXlsxBuffer`), backed by the official SheetJS distribution (xlsx-0.20.3)
+  installed as a tarball, not the `xlsx` npm package.

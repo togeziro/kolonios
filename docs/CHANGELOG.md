@@ -13,6 +13,17 @@
 - **Dependencies** — added `maplibre-gl`, `@types/geojson`, `xlsx`, `pdf-lib`.
 - **Deferred** — schedule-level GPS/selfie policy overrides are deferred; location-level policies apply.
 
+### Attendance expansion — hardening (final review)
+
+- **Server-enforced GPS & selfie** — check-in requires GPS coordinates when the location policy is enabled (omission rejected, not just bad values); check-out validation follows the policy stored on the record; selfie required server-side per policy.
+- **Authorization** — admin attendance endpoints (reports, exports, assignments, corrections review) now require `attendance.edit`/`attendance.delete`, not `attendance.view`; admin route guards use a server RPC permission check in `beforeLoad`; nav gating moved to the `attendance_admin` module so employees with `attendance.view` can never reach admin pages.
+- **Data integrity** — migration `0006_low_justice` adds unique constraints (shift weekday rule, one employee-shift per day) and FKs (day offs, date overrides, corrections).
+- **Reports & exports** — report location filter fixed and wired to the UI; PDF export no longer truncates at 40 rows.
+- **Audit coverage** — admin mutations (schedule override, day off, bulk assign, correction review) recorded to the audit log.
+- **Seed/permissions** — HR role group granted `attendance: { view, edit }` (it operates the admin pages); Employee/Technician keep `attendance: { view }` only.
+- **Check-out selfie UI** — the check-out branch now captures an optional selfie so users can satisfy selfie-required policies.
+- **Residual hardening** — checkout selfie state reset after success, business timezone date defaults (WIB), official SheetJS distribution for XLSX export, HR `attendance.edit` documented as intentional.
+
 ### DB utilities refactoring & code quality improvements
 
 - **Shared DB utilities** — extracted common patterns to `src/lib/db/utils.ts`:

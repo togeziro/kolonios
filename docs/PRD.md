@@ -21,7 +21,7 @@ and PostgreSQL. Targets SaaS apps, internal tools, and admin panels.
 - **Product Management** — CRUD with data table (search, filter, pagination, sort, URL state)
 - **User Management** — Data table with role/status filters
 - **Notification Center** — Bell icon badge, popover preview, full page with tabs, PostgreSQL-backed via Drizzle + React Query
-- **Attendance** — Check-in/out with geo-fencing (Haversine), today's status, attendance history; leave requests with type/date selection, leave history
+- **Attendance** — Check-in/out with geo-fencing (Haversine) and server-enforced GPS/selfie policies; master work schedules (weekday rules, date overrides, day offs); leave requests with attachment policy; correction requests with admin approval; admin reports (CSV/Excel/PDF)
 - **Masterdata** — Full CRUD for departments and designations with dialog-based forms
 - **Mobile Dashboard** — Responsive mobile layout for staff: 5-tab bottom nav, attendance shortcut FAB, task lists
 - **RBAC (role groups)** — Customizable role groups (Administrator, HR, Employee, Technician, + custom) with per-module permission toggles from the UI; the same permission map drives the sidebar and every server function via `requirePermission(module, action)`
@@ -74,6 +74,15 @@ Directional buckets, not a strict timeline.
 - [x] Add leave management (cuti) with request form and history
 - [x] Implement performance tracking (Laporan Kinerja) API
 - [x] Mobile staff dashboard with task lists, 5-tab bottom nav, attendance shortcut FAB
+
+**Attendance Expansion (complete)**
+- [x] Master work schedules (shifts + weekday rules + assignments + date overrides + day offs) with day-off precedence
+- [x] GPS & selfie policies per location, enforced server-side (stale/inaccurate/out-of-geofence rejected)
+- [x] Self-service corrections with admin approval and audit trail
+- [x] Admin UI: locations (MapLibre), schedules, assignments (bulk + day offs), reports (CSV/Excel/PDF)
+- [x] Admin exports and reports gated to `attendance.edit`, never `attendance.view`; `attendance_admin` module for nav
+- [x] Migration `0006` unique constraints + FKs; HR granted `attendance.edit`
+- [x] E2E coverage for admin + employee attendance flows
 
 **Masterdata Module (complete)**
 - [x] Extend RBAC roles: `admin`, `hr`, `employee`, `technician`

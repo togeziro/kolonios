@@ -89,7 +89,7 @@ role-group permission matrix (`src/config/nav-config.ts` module keys). The
 
 Polling: the query refetches every 30 s (see `docs/NOTIFICATIONS.md`).
 
-### Attendance
+### Attendance — employee self-service
 
 | Function              | Method | Required permission | Payload                         | Returns              |
 | --------------------- | ------ | ------------------- | ------------------------------- | -------------------- |
@@ -97,11 +97,39 @@ Polling: the query refetches every 30 s (see `docs/NOTIFICATIONS.md`).
 | `checkOutFn`          | POST   | `attendance.view`   | `AttendanceCheckOutPayload`     | `EmployeeShift` (+ audit) |
 | `getMyAttendanceFn`   | GET    | `attendance.view`   | `dateParamSchema`               | `AttendanceResponse` |
 | `getAttendanceHistoryFn` | GET | `attendance.view`   | `AttendanceFilters`           | `AttendanceHistoryResponse` |
+| `getAttendanceSummaryFn` | GET | `attendance.view`   | —                               | `AttendanceSummaryResponse` |
 | `getMyLeavesFn`       | GET    | `leave.view`        | `LeaveFilters`                  | `LeaveListResponse`  |
 | `createLeaveRequestFn`| POST   | `leave.view`        | `LeaveRequestPayload`           | `Leave`              |
 | `getPerformanceStatsFn` | GET  | `attendance.view`   | —                               | `PerformanceStatsResponse` |
 | `getLocationsFn`      | GET    | `attendance.view`   | —                               | `Location[]`         |
 | `getShiftsFn`         | GET    | `attendance.view`   | —                               | `Shift[]`            |
+| `requestAttendanceCorrectionFn` | POST | `attendance.view` | `AttendanceCorrectionRequestPayload` | `AttendanceCorrection` (+ audit) |
+
+### Attendance — admin management
+
+Admin endpoints require `attendance.edit` (or `attendance.delete` where noted);
+route guards use the `attendance_admin` module for nav visibility. The `attendance.view`
+permission grants employees their self-service card but never admin pages.
+
+> HR retains `attendance.edit` by intentional product decision (attendance expansion, 2026-08-04).
+
+| Function              | Method | Required permission | Payload                         | Returns              |
+| --------------------- | ------ | ------------------- | ------------------------------- | -------------------- |
+| `createLocationFn`    | POST   | `attendance.edit`   | `LocationMutationPayload`       | `Location` (+ audit) |
+| `updateLocationFn`    | POST   | `attendance.edit`   | `{ id, values }`                | `Location` (+ audit) |
+| `deleteLocationFn`    | POST   | `attendance.delete` | `{ id }`                        | `{ success }` (+ audit) |
+| `getSchedulesFn`      | GET    | `attendance.view`   | —                               | `Shift[]`            |
+| `createScheduleFn`    | POST   | `attendance.edit`   | `ScheduleMutationPayload`       | `Shift` (+ audit)    |
+| `updateScheduleFn`    | POST   | `attendance.edit`   | `{ id, values }`                | `Shift` (+ audit)    |
+| `getScheduleAssignmentsFn` | GET | `attendance.edit`   | `{ date? }`                     | `ScheduleAssignmentsResponse` |
+| `assignScheduleFn`    | POST   | `attendance.edit`   | `AssignSchedulePayload`         | `{ success }` (+ audit) |
+| `bulkAssignScheduleFn`| POST   | `attendance.edit`   | `BulkAssignSchedulePayload`     | `{ assigned }` (+ audit) |
+| `createScheduleOverrideFn` | POST | `attendance.edit` | `ScheduleOverridePayload`      | `{ success }` (+ audit) |
+| `createDayOffFn`      | POST   | `attendance.edit`   | `DayOffPayload`                 | `{ success }` (+ audit) |
+| `deleteDayOffFn`      | POST   | `attendance.delete` | `{ id }`                        | `{ success }` (+ audit) |
+| `reviewAttendanceCorrectionFn` | POST | `attendance.edit` | `ReviewCorrectionPayload`      | `AttendanceCorrection` (+ audit) |
+| `getAdminAttendanceReportFn` | GET | `attendance.edit`   | `AttendanceReportFilters`       | `AttendanceReportResponse` |
+| `exportAttendanceReportFn` | POST | `attendance.edit`   | `AttendanceReportExportPayload` | `{ fileName, data }` |
 
 ### Tasks
 
@@ -303,7 +331,7 @@ export function hasModulePermission(
 | Role group | is_admin | Grants |
 | ---------- | -------- | ------ |
 | Administrator | ✅ | Full system access (bypasses matrix) |
-| HR | — | employees add/edit/delete, departments add/edit, designations add/edit, users view, audit_log view, core modules (overview/my_work/attendance/leave/profile view) |
+| HR | — | employees add/edit/delete, departments add/edit, designations add/edit, users view, audit_log view, attendance edit (+ admin nav via `attendance_admin.view`), core modules (overview/my_work/attendance/leave/profile) view |
 | Employee | — | core modules (overview/my_work/attendance/leave/profile view) + jobs view + notifications view |
 | Technician | — | core modules (overview/my_work/attendance/leave/profile view) + jobs view + notifications view |
 
