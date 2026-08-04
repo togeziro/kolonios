@@ -26,8 +26,10 @@ function PayslipsPage() {
   const [periodId, setPeriodId] = useState<number | undefined>();
   const query = useQuery(myPayslipsQueryOptions({ payrollPeriodId: periodId, page: 1, limit: 50 }));
   const rows = (query.data?.rows ?? []) as PayslipRecord[];
+  const company = query.data?.company;
   const payslips = rows.flatMap((row) => {
-    const payslip = payslipFromRecord(row);
+    if (!company) return [];
+    const payslip = payslipFromRecord(row, company);
     return payslip ? [{ row, payslip }] : [];
   });
   const periods = [...new Map(rows.map((row) => [row.payroll_period_id, row])).values()];

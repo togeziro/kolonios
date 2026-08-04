@@ -29,3 +29,24 @@
 
 - The repository-wide hardcoded-string check remains red because of pre-existing violations in payroll admin, role-group, and masterdata files. The new payslip template was cleaned up and adds no new violation.
 - The current schema does not create payslip rows during payroll payment; the employee view supports the existing optional payslip metadata and remains usable from locked/paid payroll records.
+
+## Review Fixes (2026-08-05)
+
+- Reworked PDF generation to wrap every line by measured font width, paginate at fixed page bounds, repeat no unsafe overflow, and replace glyphs unsupported by the existing PDF standard font with a safe placeholder instead of throwing. The PDF now includes the same company address, employee code/name/department/designation, period, line items, totals, tax, net pay, and masked bank details as the HTML view.
+- Added typed `CompanyProfile` delivery from `getMyPayslipsFn`. It reads optional `COMPANY_NAME` and `COMPANY_ADDRESS` server configuration and explicitly falls back to `Kolonios` when unset; the client no longer chooses company identity. Added the variables to `env.example.txt`.
+- Passed translated labels into PDF generation from the existing i18n keys.
+- Added mobile bottom-navigation filtering for `payroll.view`, matching the desktop permission behavior while retaining the route's server-side authorization.
+- Added `listMyPayslips` as the scoped database query path and an integration test proving employee A receives no employee B record. The test database was recreated with `bun run db:test:create` before verification because it was stale.
+- Sanitized employee-code and period filename components using normalized ASCII-safe segments with bounded length and fallbacks.
+- Delayed PDF object URL revocation by 1000ms and updated the browser download integration test to assert delayed cleanup.
+- Added tests for long Unicode line items, multi-page output, configured company identity, filename sanitization, mobile permissions, and delayed URL revocation.
+
+## Review Verification
+
+- `bun run db:test:create`: passed; recreated `kolonios_test` and applied the current schema.
+- `bun run test:run src/features/payroll/components/payslip-template.test.tsx src/features/payroll/components/payslip-download.test.ts src/components/layout/bottom-nav.test.ts src/features/payroll/api/service.test.ts src/lib/db/payroll.test.ts`: passed, 5 files / 38 tests.
+- `bun run typecheck`: passed.
+- `bun run i18n:check`: passed with 742 keys in both locales.
+- Targeted `oxlint`: completed with pre-existing `no-explicit-any` and `consistent-function-scoping` warnings only.
+- `bun run build`: passed; generated the payslip route and production bundles.
+- `bun run i18n:hardcoded`: remains red only for pre-existing violations in payroll admin, role-group, and masterdata files; no new payslip violation was reported.

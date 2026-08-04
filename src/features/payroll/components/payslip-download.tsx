@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { createPayslipPdf, type PayslipData } from './payslip-template';
+import { createPayslipPdf, type PayslipData, type PayslipPdfLabels } from './payslip-template';
 
-export function downloadPayslip(payslip: PayslipData) {
-  return createPayslipPdf(payslip).then(({ bytes, filename }) => {
+export function downloadPayslip(payslip: PayslipData, labels: PayslipPdfLabels) {
+  return createPayslipPdf(payslip, labels).then(({ bytes, filename }) => {
     const url = URL.createObjectURL(
       new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
     );
@@ -12,7 +12,7 @@ export function downloadPayslip(payslip: PayslipData) {
     anchor.href = url;
     anchor.download = filename;
     anchor.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     return filename;
   });
 }
@@ -24,8 +24,24 @@ export function PayslipDownload({ payslip }: { payslip: PayslipData }) {
   const handleDownload = async () => {
     setIsDownloading(true);
     setError(false);
+    const labels = {
+      payslip: t('payroll.payslips'),
+      period: t('payroll.periods'),
+      employee: t('payroll.employee'),
+      employeeCode: t('payroll.employeeCode'),
+      department: t('payroll.department'),
+      designation: t('employee.designation'),
+      description: t('payroll.description'),
+      amount: t('payroll.amount'),
+      gross: t('payroll.gross'),
+      allowances: t('payroll.allowances'),
+      deductions: t('payroll.deductions'),
+      tax: t('payroll.tax'),
+      net: t('payroll.net'),
+      bank: t('payroll.bank')
+    };
     try {
-      await downloadPayslip(payslip);
+      await downloadPayslip(payslip, labels);
     } catch {
       setError(true);
     } finally {

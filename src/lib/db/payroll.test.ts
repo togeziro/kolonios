@@ -43,6 +43,7 @@ import {
   generatePayrollRecords,
   getEffectiveTaxProfile,
   getPrimaryBankAccount,
+  listMyPayslips,
   listPayrollRecords,
   transitionPayrollPeriod
 } from './payroll';
@@ -479,6 +480,11 @@ describe('payroll data access (integration)', () => {
     });
     expect(adminRows.rows).toHaveLength(1);
     await expect(listPayrollRecords({ scope: 'employee' })).rejects.toThrow(/employee/i);
+    await transitionPayrollPeriod(period.id, 'paid');
+    const employeeRows = await listMyPayslips('payroll-scope-a');
+    expect(employeeRows.rows).toHaveLength(1);
+    expect(employeeRows.rows[0]?.employee_id).toBe('payroll-scope-a');
+    expect(employeeRows.rows.some((row) => row.employee_id === 'payroll-scope-b')).toBe(false);
     const profile = await createEmployeeTaxProfile({
       employee_id: 'payroll-scope-a',
       effective_from: '2026-07-01'

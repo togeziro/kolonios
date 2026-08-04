@@ -30,6 +30,7 @@ import {
   getEmploymentContext,
   getPrimaryBankAccount,
   listEmployeePayrollProfileHistory,
+  listMyPayslips,
   listPayrollPeriods,
   listPayrollRecords,
   listPayrollReportRows,
@@ -68,6 +69,20 @@ const emptyPolicy: AttendancePolicy = {
   unpaidLeave: { enabled: true },
   monthlyAttendanceMode: 'prorate'
 };
+
+export interface CompanyProfile {
+  name: string;
+  address?: string;
+}
+
+export function getCompanyProfile(): CompanyProfile {
+  const name = process.env.COMPANY_NAME?.trim();
+  const address = process.env.COMPANY_ADDRESS?.trim();
+  return {
+    name: name || 'Kolonios',
+    ...(address ? { address } : {})
+  };
+}
 
 export function assertEmployeeScope(
   actor: { user: { id: string; role?: string | null } },
@@ -1020,11 +1035,8 @@ export const getMyPayslipsFn = createServerFn({ method: 'GET' })
   .validator(myPayslipFiltersSchema)
   .handler(async ({ data }) => {
     const session = await requirePermission('payroll', 'view');
-    const result = await listPayrollRecords({
+    const result = await listMyPayslips(session.user.id, {
       payroll_period_id: data.payrollPeriodId,
-      employee_id: session.user.id,
-      scope: 'employee',
-      statuses: ['paid', 'locked'],
       page: data.page,
       limit: data.limit
     });
@@ -1039,7 +1051,7 @@ export const getMyPayslipsFn = createServerFn({ method: 'GET' })
         };
       })
     );
-    return JSON.parse(JSON.stringify({ ...result, rows }));
+    return JSON.parse(JSON.stringify({ ...result, company: getCompanyProfile(), rows }));
   });
 export const getPayrollReportFn = createServerFn({ method: 'GET' })
   .validator(reportFiltersSchema)

@@ -14,6 +14,28 @@ export interface PayslipData {
   lineItems: Array<{ name: string; type: 'earning' | 'deduction'; amount: string }>;
 }
 
+export interface CompanyProfile {
+  name: string;
+  address?: string;
+}
+
+export interface PayslipPdfLabels {
+  payslip: string;
+  period: string;
+  employee: string;
+  employeeCode: string;
+  department: string;
+  designation: string;
+  description: string;
+  amount: string;
+  gross: string;
+  allowances: string;
+  deductions: string;
+  tax: string;
+  net: string;
+  bank: string;
+}
+
 export type PayslipRecord = {
   id: number;
   payroll_period_id: number;
@@ -61,14 +83,14 @@ function snapshotLineItems(details: Record<string, unknown>) {
     : [];
 }
 
-export function payslipFromRecord(row: PayslipRecord): PayslipData | null {
+export function payslipFromRecord(row: PayslipRecord, company: CompanyProfile): PayslipData | null {
   if (row.period_status !== 'paid' && row.period_status !== 'locked') return null;
   const details =
     row.details && typeof row.details === 'object' ? (row.details as Record<string, unknown>) : {};
   const tax =
     details.tax && typeof details.tax === 'object' ? (details.tax as Record<string, unknown>) : {};
   return {
-    company: { name: 'Kolonios' },
+    company,
     employee: {
       code: row.employee_code ?? row.employee_name ?? 'Employee',
       name: row.employee_name ?? 'Employee',
@@ -186,40 +208,104 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export async function createPayslipPdf(payslip: PayslipData) {
+function sanitizeFilenamePart(value: string, fallback: string) {
+  const sanitized = value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return sanitized || fallback;
+}
+
+function safePdfText(value: string, font: Awaited<ReturnType<PDFDocument['embedFont']>>) {
+  return Array.from(value, (character) => {
+    try {
+      font.encodeText(character);
+      return character;
+    } catch {
+      return '?';
+    }
+  }).join('');
+}
+
+function wrapPdfText(
+  value: string,
+  font: Awaited<ReturnType<PDFDocument['embedFont']>>,
+  size: number,
+  maxWidth: number
+) {
+  const text = safePdfText(value, font);
+  const lines: string[] = [];
+  let line = '';
+  for (const character of text) {
+    if (character === '\n') {
+      lines.push(line);
+      line = '';
+      continue;
+    }
+    const candidate = line + character;
+    if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line.trimEnd());
+      line = character.trimStart();
+    } else {
+      line = candidate;
+    }
+  }
+  if (line || lines.length === 0) lines.push(line);
+  return lines;
+}
+
+export async function createPayslipPdf(payslip: PayslipData, labels: PayslipPdfLabels) {
   const document = await PDFDocument.create();
   const font = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
-  const page = document.addPage([595, 842]);
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const margin = 40;
+  const maxWidth = pageWidth - margin * 2;
+  const bottom = 40;
+  let page = document.addPage([pageWidth, pageHeight]);
   let y = 800;
   const draw = (text: string, size = 10, isBold = false) => {
-    page.drawText(text, {
-      x: 40,
-      y,
-      size,
-      font: isBold ? bold : font,
-      color: rgb(0.12, 0.14, 0.18)
-    });
-    y -= size + 8;
+    const selectedFont = isBold ? bold : font;
+    for (const line of wrapPdfText(text, selectedFont, size, maxWidth)) {
+      if (y < bottom + size) {
+        page = document.addPage([pageWidth, pageHeight]);
+        y = pageHeight - margin;
+      }
+      page.drawText(line, {
+        x: margin,
+        y,
+        size,
+        font: selectedFont,
+        color: rgb(0.12, 0.14, 0.18)
+      });
+      y -= size + 4;
+    }
   };
   draw(payslip.company.name, 18, true);
-  draw(`Payslip: ${payslip.period.name}`, 12, true);
-  draw(`${payslip.period.start} - ${payslip.period.end}`);
+  if (payslip.company.address) draw(payslip.company.address);
+  draw(`${labels.payslip}: ${payslip.period.name}`, 12, true);
+  draw(`${labels.period}: ${payslip.period.start} - ${payslip.period.end}`);
   y -= 8;
-  draw(`${payslip.employee.name} (${payslip.employee.code})`);
-  draw(
-    `Gross ${payslip.gross}   Allowances ${payslip.allowances}   Deductions ${payslip.deductions}`
-  );
-  draw(`Tax ${payslip.tax}   Net pay ${payslip.net}`, 12, true);
-  y -= 8;
+  draw(`${labels.employee}: ${payslip.employee.name}`);
+  draw(`${labels.employeeCode}: ${payslip.employee.code}`);
+  draw(`${labels.department}: ${payslip.employee.department ?? '-'}`);
+  draw(`${labels.designation}: ${payslip.employee.designation ?? '-'}`);
+  draw(`${labels.description} / ${labels.amount}`, 10, true);
   for (const item of payslip.lineItems)
     draw(`${item.name}: ${item.type === 'deduction' ? '-' : ''}${item.amount}`);
+  draw(
+    `${labels.gross} ${payslip.gross}   ${labels.allowances} ${payslip.allowances}   ${labels.deductions} ${payslip.deductions}`
+  );
+  draw(`${labels.tax} ${payslip.tax}   ${labels.net} ${payslip.net}`, 12, true);
   if (payslip.bankAccount)
     draw(
-      `Bank: ${payslip.bankAccount.bankName ?? '-'} ${maskPayslipBankAccount(payslip.bankAccount.accountNumber ?? '')}`
+      `${labels.bank}: ${payslip.bankAccount.bankName ?? '-'} ${maskPayslipBankAccount(payslip.bankAccount.accountNumber ?? '')}`
     );
   return {
     bytes: await document.save(),
-    filename: `payslip-${payslip.employee.code}-${payslip.period.start.slice(0, 7)}.pdf`
+    filename: `payslip-${sanitizeFilenamePart(payslip.employee.code, 'employee')}-${sanitizeFilenamePart(payslip.period.start.slice(0, 7), 'period')}.pdf`
   };
 }

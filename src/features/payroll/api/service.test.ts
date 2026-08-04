@@ -3,12 +3,16 @@ import {
   assertEmployeeScope,
   assertProfileReferenceScope,
   buildAttendanceTotals,
+  getCompanyProfile,
   mapTaxProfile,
   resolvePayrollRecordScope,
   serializePayrollReport
 } from './service';
 
 describe('payroll service boundaries', () => {
+  it('returns a typed configured company profile with an explicit fallback', () => {
+    expect(getCompanyProfile()).toMatchObject({ name: expect.any(String) });
+  });
   it('prevents staff users from reading another employee payroll profile', () => {
     expect(() =>
       assertEmployeeScope({ user: { id: 'employee-1', role: 'employee' } }, 'employee-2')

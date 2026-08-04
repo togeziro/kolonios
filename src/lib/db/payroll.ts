@@ -1272,6 +1272,18 @@ export async function listPayrollRecords(
   }
 }
 
+export async function listMyPayslips(
+  employeeId: string,
+  filters: { payroll_period_id?: number; page?: number; limit?: number } = {}
+) {
+  return listPayrollRecords({
+    ...filters,
+    employee_id: employeeId,
+    scope: 'employee',
+    statuses: ['paid', 'locked']
+  });
+}
+
 export async function listPayrollReportRows(
   filters: {
     payroll_period_id?: number;
