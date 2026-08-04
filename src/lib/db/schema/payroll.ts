@@ -12,6 +12,7 @@ import {
   serial,
   text,
   timestamp,
+  unique,
   uniqueIndex
 } from 'drizzle-orm/pg-core';
 import { user } from '../auth-schema';
@@ -143,7 +144,7 @@ export const payrollRecords = pgTable(
       table.payroll_period_id,
       table.employee_id
     ),
-    uniqueIndex('payroll_records_id_employee_unique').on(table.id, table.employee_id),
+    unique('payroll_records_id_employee_unique').on(table.id, table.employee_id),
     index('payroll_records_employee_idx').on(table.employee_id)
   ]
 );
@@ -271,12 +272,14 @@ export const employeeBankAccounts = pgTable(
     account_name: text('account_name').notNull(),
     account_number: text('account_number').notNull(),
     is_primary: boolean('is_primary').notNull().default(false),
+    effective_from: date('effective_from').notNull(),
+    effective_to: date('effective_to'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull()
   },
   (table) => [
-    uniqueIndex('employee_bank_accounts_primary_unique')
-      .on(table.employee_id)
+    uniqueIndex('employee_bank_accounts_primary_effective_unique')
+      .on(table.employee_id, table.effective_from)
       .where(sql`${table.is_primary} = true`),
     index('employee_bank_accounts_employee_idx').on(table.employee_id)
   ]
