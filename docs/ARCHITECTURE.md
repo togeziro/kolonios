@@ -121,10 +121,9 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | Technology            | Version          | Purpose                    |
 | --------------------- | ---------------- | -------------------------- |
 | TanStack Start        | v1.168.35        | Full-stack meta-framework  |
-| React                 | v19.0.0          | UI library                 |
+| React                 | v19.2.8          | UI library                 |
 | Vite                  | v7.0.2           | Build tool / dev server    |
-| Nitro                 | v3.0.260415-beta | Server engine / deployment |
-| TypeScript            | v5.7.2           | Language                   |
+| TypeScript            | v5.9.3           | Language                   |
 | bun (package manager) | —                | Package manager            |
 
 ### Routing & Data Fetching
@@ -160,7 +159,7 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | Technology       | Version  | Purpose               |
 | ---------------- | -------- | --------------------- |
 | TanStack Form    | v1.33.3  | Form state management |
-| Zod              | v4.3.6   | Schema validation     |
+| Zod              | v4.4.3   | Schema validation     |
 | react-day-picker | v9.14.0  | Date picker           |
 
 ### State Management
@@ -174,7 +173,7 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | Technology     | Version | Purpose                                      |
 | -------------- | ------- | -------------------------------------------- |
 | TanStack Table | v8.21.3 | Data tables (sorting, filtering, pagination) |
-| Recharts       | v3.10.0 | Charts (area, bar, pie)                      |
+| Recharts       | v3.10.1 | Charts (area, bar, pie)                      |
 | date-fns       | v4.1.0  | Date formatting                              |
 
 ### Maps & Export (attendance)
@@ -190,8 +189,8 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 | Technology        | Version | Purpose                            |
 | ----------------- | ------- | ---------------------------------- |
-| Tailwind CSS      | v4.3.1  | Utility-first CSS                  |
-| @tailwindcss/vite | v4.3.1  | Tailwind Vite plugin               |
+| Tailwind CSS      | v4.3.3  | Utility-first CSS                  |
+| @tailwindcss/vite | v4.3.3  | Tailwind Vite plugin               |
 | tw-animate-css    | v1.4.0  | CSS animation utilities            |
 | next-themes       | v0.4.6  | Theme provider (dark/light/system) |
 
@@ -246,8 +245,8 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 | Technology | Version | Purpose              |
 | ---------- | ------- | -------------------- |
-| oxlint     | v1.59.0 | Rust-based linter    |
-| oxfmt      | v0.44.0 | Rust-based formatter |
+| oxlint     | v1.77.0 | Rust-based linter    |
+| oxfmt      | v0.62.0 | Rust-based formatter |
 
 ### Quality & Tooling
 
@@ -262,8 +261,8 @@ Pre-commit hook runs: `oxlint` → `oxfmt --check` → `tsc --noEmit` on every c
 
 | Technology                   | Version | Purpose                              |
 | ---------------------------- | ------- | ------------------------------------ |
-| better-auth                  | ^1.6.23 | Full auth system (DB sessions, RBAC) |
-| @better-auth/drizzle-adapter | ^1.6.23 | Drizzle ORM adapter for Better Auth  |
+| better-auth                  | ^1.6.25 | Full auth system (DB sessions, RBAC) |
+| @better-auth/drizzle-adapter | ^1.6.25 | Drizzle ORM adapter for Better Auth  |
 
 ### Deployment
 
