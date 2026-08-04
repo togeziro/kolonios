@@ -1,5 +1,6 @@
 import { createMiddleware, createServerFn, createServerOnlyFn } from '@tanstack/react-start';
 import type { Permissions } from '@/features/role-groups/api/types';
+import { logger } from '@/lib/logger';
 
 export type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'customer' | 'user';
 
@@ -33,7 +34,7 @@ export async function requirePermission(module: string, action: PermissionAction
   if (!group) {
     // Check if user.role is admin for backward compatibility during migration
     if (session.user.role === 'admin') {
-      console.warn('User has admin role but no role group assignment');
+      logger.warn({ userId: session.user.id }, 'User has admin role but no role group assignment');
       return session;
     }
     throw new Error(`Forbidden: ${module}.${action} required`);

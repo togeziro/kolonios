@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { tanstackStartCookies } from 'better-auth/tanstack-start';
 import { db } from '@/lib/db';
+import { AUTH_RATE_LIMIT_DEFAULTS } from '@/lib/constants';
 
 export const auth = betterAuth({
   basePath: '/api/v1/auth',
@@ -22,12 +23,12 @@ export const auth = betterAuth({
   plugins: [admin(), tanstackStartCookies()],
   rateLimit: {
     enabled: true,
-    window: Number(process.env.AUTH_RATE_LIMIT_WINDOW || 60),
-    max: Number(process.env.AUTH_RATE_LIMIT_MAX || 100),
+    window: Number(process.env.AUTH_RATE_LIMIT_WINDOW || AUTH_RATE_LIMIT_DEFAULTS.window),
+    max: Number(process.env.AUTH_RATE_LIMIT_MAX || AUTH_RATE_LIMIT_DEFAULTS.max),
     customRules: {
       '/sign-in/email': {
-        window: Number(process.env.AUTH_RATE_LIMIT_WINDOW || 60),
-        max: Number(process.env.AUTH_RATE_LIMIT_MAX_SIGNIN || 5)
+        window: Number(process.env.AUTH_RATE_LIMIT_WINDOW || AUTH_RATE_LIMIT_DEFAULTS.window),
+        max: Number(process.env.AUTH_RATE_LIMIT_MAX_SIGNIN || AUTH_RATE_LIMIT_DEFAULTS.maxSignin)
       }
     }
   }

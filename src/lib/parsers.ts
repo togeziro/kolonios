@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { dataTableConfig } from '@/config/data-table';
 
 import type { ExtendedColumnFilter, ExtendedColumnSort } from '@/types/data-table';
+import type { SearchParams } from '@/types';
 
 const ARRAY_SEPARATOR = ',';
 
 export function parseFilterValuesFromSearch(
-  search: Record<string, unknown>,
+  search: SearchParams,
   columns: { id?: string; meta?: { options?: unknown } }[]
 ): Record<string, string | string[] | null> {
   const values: Record<string, string | string[] | null> = {};
@@ -29,9 +30,9 @@ export function parseFilterValuesFromSearch(
 
 export function buildFilterSearchParams(
   values: Record<string, string | string[] | null>
-): (prev: Record<string, unknown>) => Record<string, unknown> {
+): (prev: SearchParams) => SearchParams {
   return (prev) => {
-    const next: Record<string, unknown> = { ...prev, page: 1 };
+    const next: SearchParams = { ...prev, page: 1 };
     for (const [key, value] of Object.entries(values)) {
       if (value === null || value === undefined) {
         delete next[key];

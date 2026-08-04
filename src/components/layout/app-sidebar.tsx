@@ -85,7 +85,10 @@ export default function AppSidebar() {
             )}
             <SidebarMenu>
               {group.items.map((item) => {
-                const Icon = item.icon ? Icons[item.icon] : Icons.logo;
+                const Icon =
+                  item.icon && item.icon in Icons
+                    ? Icons[item.icon as keyof typeof Icons]
+                    : Icons.logo;
                 return item?.items && item?.items?.length > 0 ? (
                   <Collapsible
                     key={item.title}

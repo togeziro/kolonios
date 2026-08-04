@@ -6,11 +6,12 @@ import { useSearch } from '@tanstack/react-router';
 import { parseSortingState } from '@/lib/parsers';
 import { customersQueryOptions } from '../../api/queries';
 import { columns } from './columns';
+import type { SearchParams } from '@/types';
 
 const columnIds = columns.map((c) => c.id).filter(Boolean) as string[];
 
 export function CustomerTable() {
-  const search = useSearch({ strict: false }) as Record<string, unknown>;
+  const search = useSearch({ strict: false }) as SearchParams;
 
   const page = (search.page as number) ?? 1;
   const perPage = (search.perPage as number) ?? 10;

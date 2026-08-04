@@ -55,14 +55,6 @@ describe('nav-config', () => {
     expect(titles).toContain('Role Groups');
   });
 
-  it('has no per-item access fields — permissions are group-based', () => {
-    for (const group of navGroups) {
-      for (const item of group.items) {
-        expect(item.access).toBeUndefined();
-      }
-    }
-  });
-
   it('every nav item has a module key', () => {
     for (const group of navGroups) {
       for (const item of group.items) {

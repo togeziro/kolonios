@@ -1,5 +1,6 @@
 import { mutationOptions } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/query-client';
+import { logger } from '@/lib/logger';
 import { markAsReadFn, markAllAsReadFn, addNotificationFn, removeNotificationFn } from './service';
 import { notificationKeys } from './queries';
 import type { AddNotificationPayload } from './types';
@@ -10,7 +11,7 @@ export const markAsReadMutation = mutationOptions({
     getQueryClient().invalidateQueries({ queryKey: notificationKeys.all });
   },
   onError: (err) => {
-    console.error('Failed to mark notification as read:', err);
+    logger.error({ err }, 'Failed to mark notification as read');
   }
 });
 
@@ -20,7 +21,7 @@ export const markAllAsReadMutation = mutationOptions({
     getQueryClient().invalidateQueries({ queryKey: notificationKeys.all });
   },
   onError: (err) => {
-    console.error('Failed to mark all notifications as read:', err);
+    logger.error({ err }, 'Failed to mark all notifications as read');
   }
 });
 
@@ -30,7 +31,7 @@ export const addNotificationMutation = mutationOptions({
     getQueryClient().invalidateQueries({ queryKey: notificationKeys.all });
   },
   onError: (err) => {
-    console.error('Failed to add notification:', err);
+    logger.error({ err }, 'Failed to add notification');
   }
 });
 
@@ -40,6 +41,6 @@ export const removeNotificationMutation = mutationOptions({
     getQueryClient().invalidateQueries({ queryKey: notificationKeys.all });
   },
   onError: (err) => {
-    console.error('Failed to remove notification:', err);
+    logger.error({ err }, 'Failed to remove notification');
   }
 });

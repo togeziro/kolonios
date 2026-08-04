@@ -4,9 +4,10 @@ import { zodValidator } from '@tanstack/zod-adapter';
 import PageContainer from '@/components/layout/page-container';
 import EmployeeListingPage from '@/features/employees/components/employee-listing';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
-import { parseSortingState } from '@/lib/parsers';
 import { EmployeeFormSheetTrigger } from '@/features/employees/components/employee-form-sheet';
 import { useTranslation } from 'react-i18next';
+import { parseFilters } from '@/lib/filters';
+import type { SearchParams } from '@/types';
 
 const employeesSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -17,34 +18,22 @@ const employeesSearchSchema = z.object({
   sort: z.string().optional()
 });
 
-function getEmployeeFilters(search: Record<string, unknown>) {
-  const page = (search.page as number) ?? 1;
-  const perPage = (search.perPage as number) ?? 10;
-  const name = search.name as string | undefined;
-  const departmentId = search.department_id as number | undefined;
-  const status = search.status as string | undefined;
-  const sortStr = search.sort as string | undefined;
-  const sort = parseSortingState(sortStr, [
-    'employee_code',
-    'full_name',
-    'email',
-    'department_name',
-    'designation_name',
-    'phone',
-    'status',
-    'join_date',
-    'created_at',
-    'actions'
-  ]);
-
-  return {
-    page,
-    limit: perPage,
-    ...(name && { search: name }),
-    ...(departmentId && { department_id: departmentId }),
-    ...(status && { status }),
-    ...(sort.length > 0 && { sort: JSON.stringify(sort) })
-  };
+function getEmployeeFilters(search: SearchParams) {
+  return parseFilters(search, {
+    sortColumns: [
+      'employee_code',
+      'full_name',
+      'email',
+      'department_name',
+      'designation_name',
+      'phone',
+      'status',
+      'join_date',
+      'created_at',
+      'actions'
+    ],
+    fieldMappings: { department_id: 'department_id' }
+  });
 }
 
 export const Route = createFileRoute('/dashboard/employees')({

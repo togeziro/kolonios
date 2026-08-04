@@ -22,6 +22,3 @@ export const fonts = {
   notoSansMono: { family: 'Noto Sans Mono Variable', variable: '--font-noto-mono' },
   spaceMono: { family: 'Space Mono', variable: '--font-space-mono' }
 } as const;
-
-// Legacy export - no longer needed since fonts are CSS-level
-export const fontVariables = '';

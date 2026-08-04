@@ -1,50 +1,39 @@
-import { Icons } from '@/components/icons';
+/**
+ * Common type definitions used across the application.
+ */
 
-export interface PermissionCheck {
-  permission?: string;
-  plan?: string;
-  feature?: string;
-  role?: string;
-  requireOrg?: boolean;
-}
+/**
+ * Type for search/filter parameters that are typically passed as query strings.
+ * Use this instead of `Record<string, unknown>` for better type safety and consistency.
+ */
+export type SearchParams = Record<string, unknown>;
 
+/**
+ * Type for navigation with search parameters.
+ * Use this when working with TanStack Router's navigate function with search params.
+ */
+export type NavigateWithSearch = (opts: {
+  search?: SearchParams | ((prev: SearchParams) => SearchParams);
+  replace?: boolean;
+}) => void;
+
+/**
+ * Navigation item type for sidebar/menu navigation.
+ */
 export interface NavItem {
   title: string;
   url: string;
-  disabled?: boolean;
-  external?: boolean;
-  shortcut?: [string, string];
-  icon?: keyof typeof Icons;
-  label?: string;
-  description?: string;
-  isActive?: boolean;
+  icon: string;
+  isActive: boolean;
+  shortcut?: string[];
+  module: string;
   items?: NavItem[];
-  module?: string;
-  access?: PermissionCheck;
 }
 
+/**
+ * Navigation group type for organizing navigation items.
+ */
 export interface NavGroup {
   label: string;
   items: NavItem[];
 }
-
-export interface NavItemWithChildren extends NavItem {
-  items: NavItemWithChildren[];
-}
-
-export interface NavItemWithOptionalChildren extends NavItem {
-  items?: NavItemWithChildren[];
-}
-
-export interface FooterItem {
-  title: string;
-  items: {
-    title: string;
-    href: string;
-    external?: boolean;
-  }[];
-}
-
-export type MainNavItem = NavItemWithOptionalChildren;
-
-export type SidebarNavItem = NavItemWithChildren;

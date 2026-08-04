@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const MAX_TEXT_LENGTH = 1000;
+
 export const attendanceCheckInSchema = z.object({
   shiftId: z.number().int().positive().optional(),
   locationId: z.number().int().positive().optional(),
@@ -48,7 +50,7 @@ export const leaveRequestSchema = z.object({
   leaveType: leaveTypeSchema,
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  reason: z.string().max(1000).optional(),
+  reason: z.string().max(MAX_TEXT_LENGTH).optional(),
   file: z.string().optional()
 });
 
@@ -113,13 +115,13 @@ export const schedulePolicyOverrideSchema = z.object({
   maxStaleMs: z.number().positive().nullable()
 });
 
-export const correctionReasonSchema = z.string().min(1).max(1000);
+export const correctionReasonSchema = z.string().min(1).max(MAX_TEXT_LENGTH);
 
 // --- Location management ---
 
 export const locationCreateSchema = z.object({
   name: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
+  description: z.string().max(MAX_TEXT_LENGTH).optional(),
   status: z.enum(['active', 'inactive']).optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
@@ -133,7 +135,7 @@ export const locationCreateSchema = z.object({
 export const locationUpdateSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().min(1).max(200).optional(),
-  description: z.string().max(1000).optional(),
+  description: z.string().max(MAX_TEXT_LENGTH).optional(),
   status: z.enum(['active', 'inactive']).optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
@@ -205,7 +207,7 @@ export const correctionRequestSchema = z
       .string()
       .regex(/^\d{2}:\d{2}(:\d{2})?$/)
       .optional(),
-    note: z.string().max(1000).optional()
+    note: z.string().max(MAX_TEXT_LENGTH).optional()
   })
   .refine((v) => v.requestedCheckInTime || v.requestedCheckOutTime || v.note, {
     message: 'Provide a requested time or a note'

@@ -1,6 +1,7 @@
 import pino from 'pino';
+import { isDev } from './env';
 
 export const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
-  transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty' } : undefined
+  transport: isDev ? { target: 'pino-pretty' } : undefined
 });

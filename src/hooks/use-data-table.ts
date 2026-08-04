@@ -28,6 +28,7 @@ import {
   serializeSortingState
 } from '@/lib/parsers';
 import type { ExtendedColumnSort } from '@/types/data-table';
+import type { SearchParams, NavigateWithSearch } from '@/types';
 
 const DEBOUNCE_MS = 300;
 
@@ -68,14 +69,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     ...tableProps
   } = props;
 
-  const search = useSearch({ strict: false }) as Record<string, unknown>;
-  // Called from a generic hook with no route context, so TanStack Router
-  // infers the search param as `never`. Loosen the signature to keep the
-  // search updater (prev: Record<string, unknown>) => Record<string, unknown>.
-  type NavigateWithSearch = (opts: {
-    search?: ((prev: Record<string, unknown>) => Record<string, unknown>) | true;
-    replace?: boolean;
-  }) => void;
+  const search = useSearch({ strict: false }) as SearchParams;
   const navigate = useNavigate() as unknown as NavigateWithSearch;
 
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(

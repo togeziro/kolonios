@@ -1,9 +1,11 @@
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { setResponseStatus } from '@tanstack/react-start/server';
+import { RATE_LIMIT_DEFAULTS } from '@/lib/constants';
 
 export const rateLimiter = new RateLimiterMemory({
-  points: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
-  duration: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10) / 1000
+  points: parseInt(process.env.RATE_LIMIT_MAX || String(RATE_LIMIT_DEFAULTS.max), 10),
+  duration:
+    parseInt(process.env.RATE_LIMIT_WINDOW_MS || String(RATE_LIMIT_DEFAULTS.windowMs), 10) / 1000
 });
 
 export async function checkRateLimit(key: string) {

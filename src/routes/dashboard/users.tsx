@@ -4,10 +4,11 @@ import { zodValidator } from '@tanstack/zod-adapter';
 import PageContainer from '@/components/layout/page-container';
 import UserListingPage from '@/features/users/components/user-listing';
 import { usersQueryOptions } from '@/features/users/api/queries';
-import { parseSortingState } from '@/lib/parsers';
 import { UserFormSheetTrigger } from '@/features/users/components/user-form-sheet';
 import { usersInfoContent } from '@/features/users/info-content';
 import { useTranslation } from 'react-i18next';
+import { parseFilters } from '@/lib/filters';
+import type { SearchParams } from '@/types';
 
 const usersSearchSchema = z.object({
   page: z.number().optional().default(1),
@@ -17,21 +18,11 @@ const usersSearchSchema = z.object({
   sort: z.string().optional()
 });
 
-function getUsersFilters(search: Record<string, unknown>) {
-  const page = (search.page as number) ?? 1;
-  const perPage = (search.perPage as number) ?? 10;
-  const name = search.name as string | undefined;
-  const role = search.role as string | undefined;
-  const sortStr = search.sort as string | undefined;
-  const sort = parseSortingState(sortStr, ['name', 'role', 'created_at', 'actions']);
-
-  return {
-    page,
-    limit: perPage,
-    ...(name && { search: name }),
-    ...(role && { role }),
-    ...(sort.length > 0 && { sort: JSON.stringify(sort) })
-  };
+function getUsersFilters(search: SearchParams) {
+  return parseFilters(search, {
+    sortColumns: ['name', 'role', 'created_at', 'actions'],
+    fieldMappings: { role: 'role' }
+  });
 }
 
 export const Route = createFileRoute('/dashboard/users')({
