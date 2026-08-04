@@ -7,7 +7,15 @@ import {
   leaveRequestSchema,
   leaveFiltersSchema,
   leaveTypeSchema,
-  leaveStatusSchema
+  leaveStatusSchema,
+  locationCreateSchema,
+  locationUpdateSchema,
+  scheduleCreateSchema,
+  bulkAssignmentSchema,
+  correctionRequestSchema,
+  correctionReviewSchema,
+  reportFiltersSchema,
+  exportFormatSchema
 } from './validation';
 
 describe('attendanceCheckInSchema', () => {
@@ -183,5 +191,153 @@ describe('leaveFiltersSchema', () => {
     expect(leaveFiltersSchema.safeParse({ status: 'pending' }).success).toBe(true);
     expect(leaveFiltersSchema.safeParse({ leaveType: 'annual' }).success).toBe(true);
     expect(leaveFiltersSchema.safeParse({ status: 'invalid' }).success).toBe(false);
+  });
+});
+
+describe('locationCreateSchema', () => {
+  it('requires name and accepts valid coordinates/policy', () => {
+    expect(locationCreateSchema.safeParse({ name: 'Office' }).success).toBe(true);
+    expect(locationCreateSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('validates coordinate ranges', () => {
+    const base = { name: 'Office' };
+    expect(locationCreateSchema.safeParse({ ...base, latitude: -90, longitude: 180 }).success).toBe(
+      true
+    );
+    expect(locationCreateSchema.safeParse({ ...base, latitude: 91 }).success).toBe(false);
+    expect(locationCreateSchema.safeParse({ ...base, longitude: -181 }).success).toBe(false);
+  });
+
+  it('validates positive radius and policy limits', () => {
+    const base = { name: 'Office' };
+    expect(locationCreateSchema.safeParse({ ...base, radius: 100 }).success).toBe(true);
+    expect(locationCreateSchema.safeParse({ ...base, radius: 0 }).success).toBe(false);
+    expect(locationCreateSchema.safeParse({ ...base, maxAccuracyMeters: 50 }).success).toBe(true);
+    expect(locationCreateSchema.safeParse({ ...base, maxAccuracyMeters: 0 }).success).toBe(false);
+    expect(locationCreateSchema.safeParse({ ...base, maxStaleMs: 0 }).success).toBe(false);
+  });
+});
+
+describe('locationUpdateSchema', () => {
+  it('requires an id', () => {
+    expect(locationUpdateSchema.safeParse({}).success).toBe(false);
+    expect(locationUpdateSchema.safeParse({ id: 1, name: 'New' }).success).toBe(true);
+  });
+
+  it('validates optional policy toggles', () => {
+    expect(
+      locationUpdateSchema.safeParse({ id: 1, gpsValidationEnabled: false, selfieRequired: true })
+        .success
+    ).toBe(true);
+  });
+});
+
+describe('scheduleCreateSchema', () => {
+  it('requires name and time format', () => {
+    expect(
+      scheduleCreateSchema.safeParse({ name: 'Shift A', startTime: '08:00', endTime: '17:00' })
+        .success
+    ).toBe(true);
+    expect(scheduleCreateSchema.safeParse({ name: 'Shift A' }).success).toBe(false);
+    expect(
+      scheduleCreateSchema.safeParse({ name: 'Shift A', startTime: '8am', endTime: '17:00' })
+        .success
+    ).toBe(false);
+  });
+
+  it('validates weekday rules array', () => {
+    const base = { name: 'Shift A', startTime: '08:00', endTime: '17:00' };
+    expect(
+      scheduleCreateSchema.safeParse({
+        ...base,
+        weekdayRules: [{ dayOfWeek: 1, isWorkingDay: true, startTime: '08:00', endTime: '17:00' }]
+      }).success
+    ).toBe(true);
+    expect(
+      scheduleCreateSchema.safeParse({ ...base, weekdayRules: [{ dayOfWeek: 8 }] }).success
+    ).toBe(false);
+  });
+});
+
+describe('bulkAssignmentSchema', () => {
+  it('requires at least one assignment', () => {
+    expect(bulkAssignmentSchema.safeParse({ assignments: [] }).success).toBe(false);
+    expect(
+      bulkAssignmentSchema.safeParse({
+        assignments: [{ userId: 'u1', shiftId: 1, effectiveFrom: '2026-08-01' }]
+      }).success
+    ).toBe(true);
+  });
+
+  it('validates each assignment', () => {
+    expect(
+      bulkAssignmentSchema.safeParse({
+        assignments: [{ userId: '', shiftId: 1, effectiveFrom: '2026-08-01' }]
+      }).success
+    ).toBe(false);
+  });
+});
+
+describe('correctionRequestSchema', () => {
+  it('requires attendanceId and at least one requested time or note', () => {
+    expect(correctionRequestSchema.safeParse({ attendanceId: 1 }).success).toBe(false);
+    expect(
+      correctionRequestSchema.safeParse({ attendanceId: 1, requestedCheckInTime: '09:00' }).success
+    ).toBe(true);
+    expect(
+      correctionRequestSchema.safeParse({ attendanceId: 1, note: 'Forgot to check in' }).success
+    ).toBe(true);
+  });
+
+  it('validates time format and note length', () => {
+    expect(
+      correctionRequestSchema.safeParse({ attendanceId: 1, requestedCheckInTime: '9:00' }).success
+    ).toBe(false);
+    expect(
+      correctionRequestSchema.safeParse({ attendanceId: 1, note: 'x'.repeat(1001) }).success
+    ).toBe(false);
+  });
+});
+
+describe('correctionReviewSchema', () => {
+  it('requires attendanceId, decision, and reason', () => {
+    expect(correctionReviewSchema.safeParse({}).success).toBe(false);
+    expect(
+      correctionReviewSchema.safeParse({ attendanceId: 1, decision: 'approve', reason: 'OK' })
+        .success
+    ).toBe(true);
+    expect(correctionReviewSchema.safeParse({ attendanceId: 1, decision: 'approve' }).success).toBe(
+      false
+    );
+  });
+
+  it('validates decision enum', () => {
+    expect(
+      correctionReviewSchema.safeParse({ attendanceId: 1, decision: 'maybe', reason: 'x' }).success
+    ).toBe(false);
+  });
+});
+
+describe('reportFiltersSchema', () => {
+  it('accepts empty object', () => {
+    expect(reportFiltersSchema.safeParse({}).success).toBe(true);
+  });
+
+  it('validates date range and pagination', () => {
+    expect(
+      reportFiltersSchema.safeParse({ startDate: '2026-08-01', endDate: '2026-08-31' }).success
+    ).toBe(true);
+    expect(reportFiltersSchema.safeParse({ startDate: '2026/08/01' }).success).toBe(false);
+    expect(reportFiltersSchema.safeParse({ limit: 101 }).success).toBe(false);
+  });
+});
+
+describe('exportFormatSchema', () => {
+  it('accepts csv, xlsx, pdf only', () => {
+    expect(exportFormatSchema.safeParse('csv').success).toBe(true);
+    expect(exportFormatSchema.safeParse('xlsx').success).toBe(true);
+    expect(exportFormatSchema.safeParse('pdf').success).toBe(true);
+    expect(exportFormatSchema.safeParse('html').success).toBe(false);
   });
 });

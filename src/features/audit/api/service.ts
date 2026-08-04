@@ -7,7 +7,8 @@ import { withRequestContext } from '@/lib/request-id';
 const auditFiltersSchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   perPage: z.coerce.number().int().positive().max(100).optional().default(50),
-  action: z.string().optional()
+  action: z.string().optional(),
+  entityType: z.string().optional()
 });
 
 export type AuditLogListItem = {

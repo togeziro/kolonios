@@ -8,27 +8,44 @@ import { auditLogQueryOptions } from '../api/queries';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 
+const ENTITY_TYPES = ['attendance', 'location', 'task', 'customer', 'employee', 'product', 'user'];
+
 export function AuditLogPage() {
   const { t } = useTranslation();
   const [action, setAction] = useState('');
+  const [entityType, setEntityType] = useState('');
   const [search, setSearch] = useState('');
 
-  const { data, isFetching } = useQuery(auditLogQueryOptions({ perPage: 100, action: search }));
+  const { data, isFetching } = useQuery(
+    auditLogQueryOptions({ perPage: 100, action: search, entityType: entityType || undefined })
+  );
 
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
 
   return (
     <div className='space-y-4'>
-      <div className='flex items-center gap-2'>
+      <div className='flex flex-wrap items-center gap-2'>
         <Input
           value={action}
           onChange={(e) => setAction(e.target.value)}
           placeholder={t('audit.filterByAction')}
           className='max-w-sm'
         />
+        <select
+          value={entityType}
+          onChange={(e) => setEntityType(e.target.value)}
+          className='rounded-md border border-input bg-background px-3 py-2 text-sm'
+        >
+          <option value=''>{t('audit.allEntities')}</option>
+          {ENTITY_TYPES.map((entity) => (
+            <option key={entity} value={entity}>
+              {entity}
+            </option>
+          ))}
+        </select>
         <Button variant='outline' onClick={() => setSearch(action)} disabled={isFetching}>
-          {isFetching ? 'Loading...' : 'Apply'}
+          {isFetching ? t('common.loading') : t('common.save')}
         </Button>
       </div>
       <p className='text-muted-foreground text-sm'>

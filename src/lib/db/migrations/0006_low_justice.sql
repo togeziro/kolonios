@@ -1,0 +1,8 @@
+ALTER TABLE "attendance_corrections" ADD CONSTRAINT "attendance_corrections_attendance_id_employee_shifts_id_fk" FOREIGN KEY ("attendance_id") REFERENCES "public"."employee_shifts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "date_overrides" ADD CONSTRAINT "date_overrides_shift_id_shifts_id_fk" FOREIGN KEY ("shift_id") REFERENCES "public"."shifts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "schedule_assignments" ADD CONSTRAINT "schedule_assignments_shift_id_shifts_id_fk" FOREIGN KEY ("shift_id") REFERENCES "public"."shifts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "shift_weekday_rules" ADD CONSTRAINT "shift_weekday_rules_shift_id_shifts_id_fk" FOREIGN KEY ("shift_id") REFERENCES "public"."shifts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "date_overrides_user_date_unique" ON "date_overrides" USING btree ("user_id","date");--> statement-breakpoint
+CREATE UNIQUE INDEX "day_offs_user_date_unique" ON "day_offs" USING btree ("user_id","date");--> statement-breakpoint
+CREATE UNIQUE INDEX "schedule_assignments_one_active_unique" ON "schedule_assignments" USING btree ("user_id") WHERE "schedule_assignments"."effective_to" IS NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "shift_weekday_rules_shift_day_unique" ON "shift_weekday_rules" USING btree ("shift_id","day_of_week");

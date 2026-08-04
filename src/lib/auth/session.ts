@@ -62,6 +62,16 @@ export const ensureSession = createServerFn({ method: 'GET' }).handler(async () 
   return requireSession();
 });
 
+// RPC-bridged permission check for route guards (`requirePermission` itself
+// touches server-only modules and cannot be imported into client routes).
+// Call with `{ data: 'module.action' }`, e.g. 'attendance.edit'.
+export const requirePermissionRpc = createServerFn({ method: 'GET' })
+  .validator((input: string) => input)
+  .handler(async ({ data }) => {
+    const [module, action] = data.split('.');
+    await requirePermission(module, action as PermissionAction);
+  });
+
 export const authMiddleware = createMiddleware().server(async ({ next }) => {
   const session = await requireSession();
   return next({

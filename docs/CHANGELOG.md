@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Attendance expansion
+
+- **Work schedules** — `shifts` is now the master schedule; new `shift_weekday_rules`, `schedule_assignments`, `date_overrides`, `day_offs`, and `attendance_corrections` tables; effective-schedule resolution with day-off precedence.
+- **GPS & selfie policies** — locations carry GPS validation/selfie/accuracy/staleness config; server rejects stale, inaccurate, or out-of-geofence check-ins; coordinates and validation state stored on attendance records.
+- **Check-in/out** — employee card now supports browser location refresh, map preview, selfie capture, and translated GPS guidance.
+- **Leave attachment policy** — `leave_type_configs` table; attachments enforced server-side (e.g. sick leave).
+- **Corrections** — employees request check-in/out corrections; admins approve/reject with reason; before/after values recorded in `attendance_corrections` and the audit log (entity filter added).
+- **Admin UI** — locations (MapLibre map + radius/policy), schedules (weekday rules), assignments (individual/bulk + day offs), and reports (filters + CSV/Excel/PDF export).
+- **Dependencies** — added `maplibre-gl`, `@types/geojson`, `xlsx`, `pdf-lib`.
+- **Deferred** — schedule-level GPS/selfie policy overrides are deferred; location-level policies apply.
+
 ### DB utilities refactoring & code quality improvements
 
 - **Shared DB utilities** — extracted common patterns to `src/lib/db/utils.ts`:

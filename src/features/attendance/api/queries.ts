@@ -6,9 +6,17 @@ import {
   getPerformanceStatsFn,
   getLocationsFn,
   getShiftsFn,
-  getAttendanceSummaryFn
+  getAttendanceSummaryFn,
+  getSchedulesFn,
+  getScheduleAssignmentsFn,
+  getAdminAttendanceReportFn
 } from './service';
-import type { AttendanceFilters, LeaveFilters } from './types';
+import type {
+  AttendanceFilters,
+  LeaveFilters,
+  AssignmentFilters,
+  AdminAttendanceFilters
+} from './types';
 
 export const attendanceKeys = {
   all: ['attendance'] as const,
@@ -17,7 +25,15 @@ export const attendanceKeys = {
   leaves: (filters: LeaveFilters) => [...attendanceKeys.all, 'leaves', filters] as const,
   performance: () => [...attendanceKeys.all, 'performance'] as const,
   locations: () => [...attendanceKeys.all, 'locations'] as const,
-  shifts: () => [...attendanceKeys.all, 'shifts'] as const
+  shifts: () => [...attendanceKeys.all, 'shifts'] as const,
+  schedules: () => [...attendanceKeys.all, 'schedules'] as const,
+  assignments: (filters: AssignmentFilters) =>
+    [...attendanceKeys.all, 'assignments', filters] as const,
+  effectiveSchedule: (date?: string) =>
+    [...attendanceKeys.all, 'effective-schedule', date] as const,
+  dayOffs: () => [...attendanceKeys.all, 'day-offs'] as const,
+  corrections: () => [...attendanceKeys.all, 'corrections'] as const,
+  adminReport: (filters: unknown) => [...attendanceKeys.all, 'admin-report', filters] as const
 };
 
 export const myAttendanceQueryOptions = (date?: string) =>
@@ -60,4 +76,22 @@ export const attendanceSummaryQueryOptions = () =>
   queryOptions({
     queryKey: [...attendanceKeys.all, 'summary'] as const,
     queryFn: () => getAttendanceSummaryFn()
+  });
+
+export const schedulesQueryOptions = () =>
+  queryOptions({
+    queryKey: attendanceKeys.schedules(),
+    queryFn: () => getSchedulesFn()
+  });
+
+export const scheduleAssignmentsQueryOptions = (filters: AssignmentFilters) =>
+  queryOptions({
+    queryKey: attendanceKeys.assignments(filters),
+    queryFn: () => getScheduleAssignmentsFn({ data: filters })
+  });
+
+export const adminAttendanceReportQueryOptions = (filters: AdminAttendanceFilters) =>
+  queryOptions({
+    queryKey: attendanceKeys.adminReport(filters),
+    queryFn: () => getAdminAttendanceReportFn({ data: filters })
   });

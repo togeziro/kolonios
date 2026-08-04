@@ -26,6 +26,8 @@ const leaveTypes: { value: LeaveType; label: string }[] = [
   { value: 'paternity', label: 'attendance.leaveTypePaternity' }
 ] as const;
 
+const ATTACHMENT_REQUIRED_TYPES: LeaveType[] = ['sick'];
+
 export default function LeaveRequestFields() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -33,6 +35,10 @@ export default function LeaveRequestFields() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
+  const [file, setFile] = useState('');
+
+  const attachmentRequired =
+    ATTACHMENT_REQUIRED_TYPES.includes(leaveType as LeaveType) && leaveType !== '';
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -41,7 +47,8 @@ export default function LeaveRequestFields() {
           leaveType: leaveType as LeaveType,
           startDate,
           endDate,
-          reason: reason || undefined
+          reason: reason || undefined,
+          file: file || undefined
         }
       }),
     onSuccess: (res) => {
@@ -51,6 +58,7 @@ export default function LeaveRequestFields() {
         setStartDate('');
         setEndDate('');
         setReason('');
+        setFile('');
         queryClient.invalidateQueries({ queryKey: ['attendance', 'leaves'] });
       } else {
         toast.error(res?.message ?? t('attendance.leaveSubmitFailed'));
@@ -62,7 +70,12 @@ export default function LeaveRequestFields() {
   });
 
   const canSubmit =
-    leaveType && startDate && endDate && startDate <= endDate && !mutation.isPending;
+    leaveType &&
+    startDate &&
+    endDate &&
+    startDate <= endDate &&
+    (!attachmentRequired || file.length > 0) &&
+    !mutation.isPending;
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -112,6 +125,17 @@ export default function LeaveRequestFields() {
           onChange={(e) => setReason(e.target.value)}
           rows={3}
         />
+      </div>
+
+      <div className='space-y-2'>
+        <Label>
+          {t('attendance.attachment')}
+          {attachmentRequired && <span className='text-destructive'>{'\u002a'}</span>}
+        </Label>
+        <Input type='file' onChange={(e) => setFile(e.target.files?.[0]?.name ?? '')} />
+        {attachmentRequired && (
+          <p className='text-xs text-muted-foreground'>{t('attendance.attachmentRequiredHint')}</p>
+        )}
       </div>
 
       <Button className='w-full' onClick={() => mutation.mutate()} disabled={!canSubmit}>
