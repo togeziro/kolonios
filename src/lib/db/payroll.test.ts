@@ -21,6 +21,14 @@ import {
   salaryTypeEnum,
   taxSettings
 } from './schema/payroll';
+import {
+  resolveEffectiveRecord,
+  requireEffectiveRecord,
+  validatePayrollDateRange,
+  assertEmployeeScope,
+  assertPayrollTransition,
+  assertPayrollRecordUnique
+} from './payroll';
 
 const migration = readFileSync(
   new URL('./migrations/0009_naive_eternity.sql', import.meta.url),
@@ -162,5 +170,41 @@ describe('payroll schema contract', () => {
         (index) => index.config.name === 'employee_bank_accounts_primary_unique'
       )
     ).toBe(true);
+  });
+});
+
+describe('payroll effective-date access', () => {
+  it('resolves the latest record covering the as-of date and rejects overlap', () => {
+    const records = [
+      { id: 1, effective_from: '2026-01-01', effective_to: '2026-06-30' },
+      { id: 2, effective_from: '2026-07-01', effective_to: null }
+    ];
+    expect(resolveEffectiveRecord('emp-1', '2026-08-01', records)).toEqual(records[1]);
+    expect(resolveEffectiveRecord('emp-1', '2025-12-01', records)).toBeNull();
+    expect(() =>
+      resolveEffectiveRecord('emp-1', '2026-05-01', [
+        records[0],
+        { id: 3, effective_from: '2026-04-01', effective_to: '2026-08-01' }
+      ])
+    ).toThrow(/overlap/i);
+  });
+
+  it('rejects invalid ranges and missing employee scope', () => {
+    expect(() => validatePayrollDateRange('2026-08-01', '2026-07-31')).toThrow(/start/i);
+    expect(() => assertEmployeeScope(undefined)).toThrow(/employee/i);
+    expect(() => requireEffectiveRecord('emp-1', '2026-08-01', [])).toThrow(
+      /required payroll data/i
+    );
+  });
+
+  it('rejects duplicate payroll records before insertion', () => {
+    expect(() => assertPayrollRecordUnique(true)).toThrow(/duplicate/i);
+    expect(() => assertPayrollRecordUnique(false)).not.toThrow();
+  });
+
+  it('rejects locked edits and invalid workflow transitions', () => {
+    expect(() => assertPayrollTransition('locked', 'paid')).toThrow(/locked/i);
+    expect(() => assertPayrollTransition('draft', 'paid')).toThrow(/transition/i);
+    expect(() => assertPayrollTransition('paid', 'locked')).not.toThrow();
   });
 });
