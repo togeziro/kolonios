@@ -28,6 +28,7 @@ import {
   getEffectiveSalaryComponents,
   getEffectiveTaxProfile,
   getEmploymentContext,
+  getPrimaryBankAccount,
   listEmployeePayrollProfileHistory,
   listPayrollPeriods,
   listPayrollRecords,
@@ -1019,17 +1020,26 @@ export const getMyPayslipsFn = createServerFn({ method: 'GET' })
   .validator(myPayslipFiltersSchema)
   .handler(async ({ data }) => {
     const session = await requirePermission('payroll', 'view');
-    return JSON.parse(
-      JSON.stringify(
-        await listPayrollRecords({
-          payroll_period_id: data.payrollPeriodId,
-          employee_id: session.user.id,
-          scope: 'employee',
-          page: data.page,
-          limit: data.limit
-        })
-      )
+    const result = await listPayrollRecords({
+      payroll_period_id: data.payrollPeriodId,
+      employee_id: session.user.id,
+      scope: 'employee',
+      statuses: ['paid', 'locked'],
+      page: data.page,
+      limit: data.limit
+    });
+    const rows = await Promise.all(
+      result.rows.map(async (row) => {
+        const bank = await getPrimaryBankAccount(session.user.id, row.period_end);
+        const accountNumber = bank?.account_number ?? '';
+        return {
+          ...row,
+          bank_name: bank?.bank_name ?? null,
+          bank_account_number: accountNumber ? `******${accountNumber.slice(-4)}` : null
+        };
+      })
     );
+    return JSON.parse(JSON.stringify({ ...result, rows }));
   });
 export const getPayrollReportFn = createServerFn({ method: 'GET' })
   .validator(reportFiltersSchema)

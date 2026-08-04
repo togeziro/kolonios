@@ -7,6 +7,7 @@ const navItems = [
   { icon: Icons.dashboard, labelKey: 'navigation.home', to: '/dashboard/overview' },
   { icon: Icons.workspace, labelKey: 'navigation.myWork', to: '/dashboard/my-work' },
   { icon: Icons.calendar, labelKey: 'navigation.leave', to: '/dashboard/leave' },
+  { icon: Icons.billing, labelKey: 'navigation.payslips', to: '/dashboard/payroll/payslips' },
   { icon: Icons.user, labelKey: 'navigation.profile', to: '/dashboard/profile' }
 ] as const;
 

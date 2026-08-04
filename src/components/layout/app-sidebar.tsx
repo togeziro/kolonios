@@ -42,6 +42,7 @@ const navTitleKeys: Record<string, string> = {
   Customers: 'navigation.customers',
   Employees: 'navigation.employees',
   Payroll: 'navigation.payroll',
+  Payslips: 'navigation.payslips',
   'Payroll Profiles': 'navigation.payrollProfiles',
   Settings: 'navigation.settings',
   Users: 'navigation.users',

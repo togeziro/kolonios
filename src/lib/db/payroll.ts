@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, getTableColumns, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, getTableColumns, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from './index';
 import { DomainError, mapDbError } from '../errors';
 import {
@@ -8,6 +8,7 @@ import {
   employeeSalaryAssignments,
   employeeSalaryComponents,
   employeeTaxProfiles,
+  payslips,
   payrollPeriods,
   payrollRecords,
   salaryComponents
@@ -1197,6 +1198,7 @@ export async function listPayrollRecords(
     employee_id?: string;
     department_id?: number;
     status?: string;
+    statuses?: string[];
     scope?: 'admin' | 'employee';
     page?: number;
     limit?: number;
@@ -1217,14 +1219,42 @@ export async function listPayrollRecords(
             payrollPeriods.status,
             filters.status as 'draft' | 'processing' | 'ready_to_pay' | 'paid' | 'locked'
           )
+        : undefined,
+      filters.statuses?.length
+        ? inArray(
+            payrollPeriods.status,
+            filters.statuses as Array<'draft' | 'processing' | 'ready_to_pay' | 'paid' | 'locked'>
+          )
         : undefined
     ]);
     const [rows, [{ count }]] = await Promise.all([
       db
-        .select({ ...getTableColumns(payrollRecords), period_status: payrollPeriods.status })
+        .select({
+          ...getTableColumns(payrollRecords),
+          period_status: payrollPeriods.status,
+          period_name: payrollPeriods.name,
+          period_start: payrollPeriods.period_start,
+          period_end: payrollPeriods.period_end,
+          payment_date: payrollPeriods.payment_date,
+          employee_code: employees.employee_code,
+          employee_name: employees.full_name,
+          department_name: departments.name,
+          designation_name: designations.name,
+          payslip_number: payslips.payslip_number,
+          payslip_issued_at: payslips.issued_at
+        })
         .from(payrollRecords)
         .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))
         .innerJoin(employees, eq(payrollRecords.employee_id, employees.id))
+        .leftJoin(departments, eq(employees.department_id, departments.id))
+        .leftJoin(designations, eq(employees.designation_id, designations.id))
+        .leftJoin(
+          payslips,
+          and(
+            eq(payslips.payroll_record_id, payrollRecords.id),
+            eq(payslips.employee_id, payrollRecords.employee_id)
+          )
+        )
         .where(where)
         .orderBy(desc(payrollRecords.id))
         .limit(limit)

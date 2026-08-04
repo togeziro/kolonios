@@ -46,6 +46,14 @@ export const navGroups: NavGroup[] = [
         isActive: false,
         module: 'profile',
         items: []
+      },
+      {
+        title: 'Payslips',
+        url: '/dashboard/payroll/payslips',
+        icon: 'wallet',
+        isActive: false,
+        module: 'payroll',
+        items: []
       }
     ]
   },

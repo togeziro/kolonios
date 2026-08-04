@@ -11,6 +11,7 @@
     "attendance": "Absensi",
     "leave": "Cuti",
     "profile": "Profil",
+    "payslips": "Slip Gaji",
     "management": "Manajemen",
     "customers": "Pelanggan",
     "employees": "Karyawan",
@@ -637,44 +638,58 @@
     "allowances": "Tunjangan",
     "deductions": "Potongan",
     "net": "Neto",
-    "statuses": { "draft": "Draf", "processing": "Diproses", "ready_to_pay": "Siap dibayar", "paid": "Dibayar", "locked": "Terkunci" }
-    ,"payrollProfiles": "Profil Penggajian"
-    ,"paymentDate": "Tanggal pembayaran"
-    ,"department": "Departemen"
-    ,"employeeCount": "Karyawan aktif"
-    ,"employeeLoadFailed": "Gagal memuat karyawan"
-    ,"loadingPeriods": "Memuat periode penggajian…"
-    ,"loadFailed": "Gagal memuat data penggajian"
-    ,"noPeriods": "Tidak ada periode penggajian"
-    ,"noRecords": "Tidak ada catatan penggajian"
-    ,"noReportData": "Tidak ada data laporan"
-    ,"noProfile": "Profil penggajian tidak ditemukan"
-    ,"noComponents": "Tidak ada komponen gaji"
-    ,"noTaxProfile": "Profil PPh 21 tidak ditemukan"
-    ,"noBenefits": "Tidak ada pendaftaran tunjangan BPJS"
-    ,"noBankAccounts": "Tidak ada riwayat rekening bank"
-    ,"pph21": "PPh 21"
-    ,"bpjs": "Tunjangan BPJS"
-    ,"bankHistory": "Riwayat Rekening Bank"
-    ,"reenterAccount": "Masukkan ulang nomor rekening untuk memperbarui"
-    ,"bankAccountRequired": "Nomor rekening wajib diisi saat menyimpan"
-    ,"profileEditHint": "Semua catatan profil menggunakan tanggal efektif. Nomor bank disamarkan kecuali empat digit terakhir."
-    ,"detailBreakdown": "Rincian Penggajian"
-    ,"adjust": "Sesuaikan"
-    ,"adjustmentName": "Nama penyesuaian"
-    ,"adjustmentType": "Jenis penyesuaian"
-    ,"bonus": "Bonus"
-    ,"addAdjustment": "Tambah penyesuaian"
-    ,"saveAdjustments": "Simpan penyesuaian"
-    ,"adjustmentRequired": "Nama dan jumlah penyesuaian wajib diisi"
-    ,"departmentTotals": "Total departemen"
-    ,"componentTotals": "Total tunjangan dan potongan"
-    ,"taxTotal": "Total pajak"
-    ,"exportXlsx": "Ekspor XLSX"
-    ,"addProfile": "Tambah profil"
-    ,"accountName": "Nama rekening"
-    ,"accountNumber": "Nomor rekening"
-    ,"selectComponent": "Pilih komponen"
+    "statuses": {
+      "draft": "Draf",
+      "processing": "Diproses",
+      "ready_to_pay": "Siap dibayar",
+      "paid": "Dibayar",
+      "locked": "Terkunci"
+    },
+    "payrollProfiles": "Profil Penggajian",
+    "paymentDate": "Tanggal pembayaran",
+    "department": "Departemen",
+    "employeeCount": "Karyawan aktif",
+    "employeeLoadFailed": "Gagal memuat karyawan",
+    "loadingPeriods": "Memuat periode penggajian…",
+    "loadFailed": "Gagal memuat data penggajian",
+    "noPeriods": "Tidak ada periode penggajian",
+    "noRecords": "Tidak ada catatan penggajian",
+    "noReportData": "Tidak ada data laporan",
+    "noProfile": "Profil penggajian tidak ditemukan",
+    "noComponents": "Tidak ada komponen gaji",
+    "noTaxProfile": "Profil PPh 21 tidak ditemukan",
+    "noBenefits": "Tidak ada pendaftaran tunjangan BPJS",
+    "noBankAccounts": "Tidak ada riwayat rekening bank",
+    "pph21": "PPh 21",
+    "bpjs": "Tunjangan BPJS",
+    "bankHistory": "Riwayat Rekening Bank",
+    "reenterAccount": "Masukkan ulang nomor rekening untuk memperbarui",
+    "bankAccountRequired": "Nomor rekening wajib diisi saat menyimpan",
+    "profileEditHint": "Semua catatan profil menggunakan tanggal efektif. Nomor bank disamarkan kecuali empat digit terakhir.",
+    "detailBreakdown": "Rincian Penggajian",
+    "adjust": "Sesuaikan",
+    "adjustmentName": "Nama penyesuaian",
+    "adjustmentType": "Jenis penyesuaian",
+    "bonus": "Bonus",
+    "addAdjustment": "Tambah penyesuaian",
+    "saveAdjustments": "Simpan penyesuaian",
+    "adjustmentRequired": "Nama dan jumlah penyesuaian wajib diisi",
+    "departmentTotals": "Total departemen",
+    "componentTotals": "Total tunjangan dan potongan",
+    "taxTotal": "Total pajak",
+    "exportXlsx": "Ekspor XLSX",
+    "addProfile": "Tambah profil",
+    "accountName": "Nama rekening",
+    "accountNumber": "Nomor rekening",
+    "selectComponent": "Pilih komponen",
+    "employeeCode": "Kode karyawan",
+    "tax": "Pajak",
+    "payslipsDescription": "Lihat snapshot penggajian yang telah dibayar dan dikunci.",
+    "payslipsLoadFailed": "Gagal memuat slip gaji Anda",
+    "noPayslips": "Belum ada slip gaji yang dibayar",
+    "download": "Unduh PDF",
+    "downloading": "Menyiapkan PDF...",
+    "downloadFailed": "Gagal mengunduh slip gaji"
   },
   "attendanceAdmin": {
     "locationsTitle": "Lokasi Absensi",
