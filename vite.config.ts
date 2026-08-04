@@ -73,4 +73,4 @@ export default defineConfig({
       }
     }
   }
-});
+} as Parameters<typeof defineConfig>[0]);
