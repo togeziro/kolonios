@@ -4,7 +4,7 @@ This guide explains the standardized CRUD pattern used in the Kolonios project. 
 
 ## Reference Implementation
 
-The **products feature** (`src/features/products/`) serves as the canonical reference implementation. When in doubt, check the products feature first.
+The **customers feature** (`src/features/customers/`) serves as the canonical reference implementation. When in doubt, check the customers feature first.
 
 ## Standard File Structure
 
@@ -34,52 +34,71 @@ src/features/your-feature/
 Define all types in `types.ts`. Use descriptive names that reflect the domain.
 
 ```typescript
-// src/features/products/api/types.ts
+// src/features/customers/api/types.ts
 
-// Main entity type - matches database schema
-export type Product = {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
+// Main entity type - matches database schema (dates serialized to ISO strings)
+export type Customer = {
+  id: string;
+  customer_code: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  id_card_number: string;
+  id_card_photo: string;
+  service_data: string;
+  billing_address: string;
+  notes: string;
+  status: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
 };
 
 // Filter/pagination types for list endpoints
-export type ProductFilters = {
+export type CustomerFilters = {
   page?: number;
   limit?: number;
-  categories?: string | string[];
   search?: string;
+  status?: string;
   sort?: string;
 };
 
 // Response types - match server function return types
-export type ProductsResponse = {
+export type CustomersResponse = {
   success: boolean;
   time: string;
   message: string;
-  total_products: number;
+  total_customers: number;
   offset: number;
   limit: number;
-  products: Product[];
+  customers: Customer[];
 };
 
-export type ProductByIdResponse = {
+export type CustomerByIdResponse = {
   success: boolean;
   time: string;
   message: string;
-  product: Product;
+  customer: Customer;
 };
 
 // Mutation payload - what the client sends
-export type ProductMutationPayload = {
-  name: string;
-  category: string;
-  price: number;
-  description: string;
+export type CustomerMutationPayload = {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  id_card_number?: string;
+  id_card_photo?: string;
+  service_data?: string;
+  billing_address?: string;
+  notes?: string;
+  status?: string;
 };
 ```
 
@@ -94,28 +113,37 @@ export type ProductMutationPayload = {
 Use Zod schemas in `validation.ts` for runtime type safety. These schemas validate data at the RPC boundary.
 
 ```typescript
-// src/features/products/api/validation.ts
+// src/features/customers/api/validation.ts
 import { z } from 'zod';
-import type { ProductFilters, ProductMutationPayload } from './types';
+import type { CustomerFilters, CustomerMutationPayload } from './types';
 
 // Coerce types when data comes from URL/search params
-export const productFiltersSchema: z.ZodType<ProductFilters> = z.object({
+export const customerFiltersSchema: z.ZodType<CustomerFilters> = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
-  categories: z.string().optional(),
   search: z.string().optional(),
+  status: z.string().optional(),
   sort: z.string().optional()
 });
 
 // ID validation - reuse this in multiple places
-export const productIdSchema = z.coerce.number().int().positive();
+export const customerIdSchema = z.string();
 
 // Mutation payload validation
-export const productMutationSchema: z.ZodType<ProductMutationPayload> = z.object({
-  name: z.string().min(1, 'Name is required'),
-  category: z.string().min(1, 'Category is required'),
-  price: z.coerce.number().positive('Price must be positive'),
-  description: z.string().min(1, 'Description is required')
+export const customerMutationSchema: z.ZodType<CustomerMutationPayload> = z.object({
+  id: z.string(),
+  full_name: z.string().min(1, 'Full name is required'),
+  email: z.string().email('Invalid email'),
+  phone: z.string().min(1, 'Phone is required'),
+  address: z.string().optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
+  id_card_number: z.string().optional(),
+  id_card_photo: z.string().optional(),
+  service_data: z.string().optional(),
+  billing_address: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.string().optional()
 });
 ```
 
@@ -136,39 +164,39 @@ export const productMutationSchema: z.ZodType<ProductMutationPayload> = z.object
 Use a structured query key factory in `queries.ts`. This ensures consistency and enables selective invalidation.
 
 ```typescript
-// src/features/products/api/queries.ts
+// src/features/customers/api/queries.ts
 import { queryOptions } from '@tanstack/react-query';
-import { getProductsFn, getProductByIdFn } from './service';
-import type { Product, ProductFilters } from './types';
+import { listCustomersFn, getCustomerByIdFn } from './service';
+import type { Customer, CustomerFilters } from './types';
 
 // Re-export types for convenience
-export type { Product };
+export type { Customer };
 
 // Query key factory - centralizes key structure
-export const productKeys = {
-  all: ['products'] as const,
-  list: (filters: ProductFilters) => [...productKeys.all, 'list', filters] as const,
-  detail: (id: number) => [...productKeys.all, 'detail', id] as const
+export const customerKeys = {
+  all: ['customers'] as const,
+  list: (filters: CustomerFilters) => [...customerKeys.all, 'list', filters] as const,
+  detail: (id: string) => [...customerKeys.all, 'detail', id] as const
 };
 
 // Query options - pre-configured query configurations
-export const productsQueryOptions = (filters: ProductFilters) =>
+export const customersQueryOptions = (filters: CustomerFilters) =>
   queryOptions({
-    queryKey: productKeys.list(filters),
-    queryFn: () => getProductsFn({ data: filters })
+    queryKey: customerKeys.list(filters),
+    queryFn: () => listCustomersFn({ data: filters })
   });
 
-export const productByIdQueryOptions = (id: number) =>
+export const customerByIdQueryOptions = (id: string) =>
   queryOptions({
-    queryKey: productKeys.detail(id),
-    queryFn: () => getProductByIdFn({ data: id })
+    queryKey: customerKeys.detail(id),
+    queryFn: () => getCustomerByIdFn({ data: id })
   });
 ```
 
 **Why query key factories?**
 - Type-safe query keys
 - Consistent key structure
-- Easy invalidation (`invalidateQueries({ queryKey: productKeys.all })`)
+- Easy invalidation (`invalidateQueries({ queryKey: customerKeys.all })`)
 - Enables debugging (keys are readable)
 
 **Key structure rules:**
@@ -181,45 +209,46 @@ export const productByIdQueryOptions = (id: number) =>
 Use `requirePermission()` in server functions to enforce RBAC. Always check permissions at the RPC boundary.
 
 ```typescript
-// src/features/products/api/service.ts
+// src/features/customers/api/service.ts
 import { createServerFn } from '@tanstack/react-start';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withAudit } from '@/lib/audit';
 import { withRequestContext } from '@/lib/request-id';
+import { customerFiltersSchema, customerMutationSchema } from './validation';
 
-export const getProductsFn = createServerFn({ method: 'GET' })
-  .validator(productFiltersSchema)
+export const listCustomersFn = createServerFn({ method: 'GET' })
+  .validator(customerFiltersSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       // Always require permission for data access
-      await requirePermission('products', 'view');
+      await requirePermission('customers', 'view');
 
-      const { getProducts } = await import('@/lib/db/products');
-      return getProducts(data);
+      const { listCustomers } = await import('@/lib/db/customers');
+      return listCustomers(data);
     })
   );
 
-export const createProductFn = createServerFn({ method: 'POST' })
-  .validator(productMutationSchema)
+export const createCustomerFn = createServerFn({ method: 'POST' })
+  .validator(customerMutationSchema)
   .handler(async ({ data }) =>
     withRequestContext(async () => {
       // Require permission for the specific action
-      const session = await requirePermission('products', 'add');
+      const session = await requirePermission('customers', 'add');
 
       // Rate limiting for write operations
       await checkRateLimit(`write:${session.user.id}`);
 
-      const { createProduct } = await import('@/lib/db/products');
-      const created = await createProduct(data);
+      const { createCustomer } = await import('@/lib/db/customers');
+      const created = await createCustomer({ ...data, created_by: session.user.id });
 
       // Audit logging for compliance
       await withAudit(
         session.user.id,
         {
-          action: 'product.create',
-          entityType: 'product',
-          entityId: created.product.id,
+          action: 'customer.create',
+          entityType: 'customer',
+          entityId: created.customer.id,
           before: null,
           after: created
         },
@@ -248,33 +277,33 @@ export const createProductFn = createServerFn({ method: 'POST' })
 Define mutation options in `mutations.ts` with proper cache invalidation.
 
 ```typescript
-// src/features/products/api/mutations.ts
+// src/features/customers/api/mutations.ts
 import { mutationOptions } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/query-client';
-import { createProductFn, updateProductFn, deleteProductFn } from './service';
-import { productKeys } from './queries';
-import type { ProductMutationPayload } from './types';
+import { createCustomerFn, updateCustomerFn, deleteCustomerFn } from './service';
+import { customerKeys } from './queries';
+import type { CustomerMutationPayload } from './types';
 
-export const createProductMutation = mutationOptions({
-  mutationFn: (data: ProductMutationPayload) => createProductFn({ data }),
+export const createCustomerMutation = mutationOptions({
+  mutationFn: (data: CustomerMutationPayload) => createCustomerFn({ data }),
   onSuccess: () => {
-    // Invalidate all product queries to refetch lists and details
-    getQueryClient().invalidateQueries({ queryKey: productKeys.all });
+    // Invalidate all customer queries to refetch lists and details
+    getQueryClient().invalidateQueries({ queryKey: customerKeys.all });
   }
 });
 
-export const updateProductMutation = mutationOptions({
-  mutationFn: ({ id, values }: { id: number; values: ProductMutationPayload }) =>
-    updateProductFn({ data: { id, values } }),
+export const updateCustomerMutation = mutationOptions({
+  mutationFn: ({ id, values }: { id: string; values: CustomerMutationPayload }) =>
+    updateCustomerFn({ data: { id, values } }),
   onSuccess: () => {
-    getQueryClient().invalidateQueries({ queryKey: productKeys.all });
+    getQueryClient().invalidateQueries({ queryKey: customerKeys.all });
   }
 });
 
-export const deleteProductMutation = mutationOptions({
-  mutationFn: (id: number) => deleteProductFn({ data: id }),
+export const deleteCustomerMutation = mutationOptions({
+  mutationFn: (id: string) => deleteCustomerFn({ data: id }),
   onSuccess: () => {
-    getQueryClient().invalidateQueries({ queryKey: productKeys.all });
+    getQueryClient().invalidateQueries({ queryKey: customerKeys.all });
   }
 });
 ```
@@ -301,38 +330,38 @@ Server functions in `service.ts` are the RPC endpoints. They:
 
 ```typescript
 // Pattern for write operations
-export const updateProductFn = createServerFn({ method: 'POST' })
+export const updateCustomerFn = createServerFn({ method: 'POST' })
   .validator(
     zodValidator(
       z.object({
-        id: productIdSchema,
-        values: productMutationSchema
+        id: customerIdSchema,
+        values: customerMutationSchema
       })
     )
   )
   .handler(async ({ data: { id, values } }) =>
     withRequestContext(async () => {
       // 1. Authorization
-      const session = await requirePermission('products', 'edit');
+      const session = await requirePermission('customers', 'edit');
 
       // 2. Rate limiting
       await checkRateLimit(`write:${session.user.id}`);
 
       // 3. Database import (lazy-loaded)
-      const { updateProduct, getProductById } = await import('@/lib/db/products');
+      const { updateCustomer, getCustomerById } = await import('@/lib/db/customers');
 
       // 4. Fetch before state for audit
-      const before = await getProductById(id);
+      const before = await getCustomerById(id);
 
       // 5. Perform mutation
-      const updated = await updateProduct(id, values);
+      const updated = await updateCustomer(id, values);
 
       // 6. Audit log
       await withAudit(
         session.user.id,
         {
-          action: 'product.update',
-          entityType: 'product',
+          action: 'customer.update',
+          entityType: 'customer',
           entityId: id,
           before,
           after: updated
@@ -388,7 +417,7 @@ Features with WebSocket/SSE may need different patterns.
 
 ### Do's ✅
 
-1. **Do** use the products feature as a reference
+1. **Do** use the customers feature as a reference
 2. **Do** export types from `queries.ts` for convenience
 3. **Do** use `z.coerce` for URL/search param validation
 4. **Do** invalidate queries in `onSuccess` of mutations
@@ -438,10 +467,10 @@ This pattern exists because it:
 ## Getting Help
 
 If you're unsure about the pattern:
-1. Check the products feature first
+1. Check the customers feature first
 2. Ask in the team chat
 3. Update this documentation if you discover a better way
 
 ---
 
-**Remember:** Consistency is more important than perfection. When in doubt, follow the products feature pattern.
+**Remember:** Consistency is more important than perfection. When in doubt, follow the customers feature pattern.
