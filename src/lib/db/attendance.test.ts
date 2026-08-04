@@ -34,6 +34,7 @@ import {
   seedEmployee
 } from '@/test-utils/db';
 import { db } from '@/lib/db';
+import { businessDateInTimeZone } from '@/lib/dates';
 import {
   employeeShifts,
   performanceReports,
@@ -279,6 +280,21 @@ describe('attendance data access (integration)', () => {
       expect(res.success).toBe(true);
       expect(res.attendance).not.toBeNull();
       expect(res.attendance!.attendance.check_in_time).toBe('09:00');
+    });
+
+    it('uses the business timezone default for "today"', async () => {
+      // The record exists only in the WIB business day that the current instant
+      // resolves to; the UTC date could be the previous day near midnight.
+      const today = businessDateInTimeZone(new Date());
+      await db.insert(employeeShifts).values({
+        user_id: TEST_USER_ID,
+        date: today,
+        check_in_time: '09:00',
+        attendance_status: 'present'
+      });
+      const res = await getEmployeeAttendance(TEST_USER_ID);
+      expect(res.success).toBe(true);
+      expect(res.attendance?.attendance.date).toBe(today);
     });
   });
 

@@ -1,6 +1,7 @@
 import { and, eq, gte, lte, sql, desc, asc, inArray } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
+import { businessDateInTimeZone } from '@/lib/dates';
 import {
   employeeShifts,
   locations,
@@ -85,7 +86,7 @@ export async function getShifts() {
 
 export async function getEmployeeAttendance(userId: string, date?: string) {
   try {
-    const today = date ?? new Date().toISOString().split('T')[0];
+    const today = date ?? businessDateInTimeZone(new Date());
     const [record] = await db
       .select({
         attendance: employeeShifts,
