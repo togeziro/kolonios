@@ -11,6 +11,8 @@ vi.mock('./service', () => ({
 
 import { payrollKeys, payrollRecordsQueryOptions } from './queries';
 import { listPayrollRecordsFn } from './service';
+import { payrollMutationKeys } from './mutations';
+import { useUpdateEmployeePayrollProfile } from './mutations';
 
 describe('payroll query options', () => {
   it('keeps employee scope in the record key and request', () => {
@@ -20,5 +22,18 @@ describe('payroll query options', () => {
     options.queryFn!(undefined as never);
     expect(listPayrollRecordsFn).toHaveBeenCalledWith({ data: filters });
     expect(payrollKeys.all).toEqual(['payroll']);
+  });
+
+  it('narrows mutation invalidation to affected query families', () => {
+    expect(payrollMutationKeys.components()).toEqual([['payroll', 'components']]);
+    expect(payrollMutationKeys.generation()).toEqual([
+      ['payroll', 'periods', {}],
+      ['payroll', 'records', {}],
+      ['payroll', 'report', {}]
+    ]);
+  });
+
+  it('exports the employee payroll profile mutation hook', () => {
+    expect(useUpdateEmployeePayrollProfile).toBeTypeOf('function');
   });
 });

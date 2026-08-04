@@ -46,6 +46,7 @@ import {
   listPayrollRecords,
   transitionPayrollPeriod
 } from './payroll';
+import { withPayrollAuditTransaction } from './payroll';
 
 const migration = readFileSync(
   new URL('./migrations/0009_naive_eternity.sql', import.meta.url),
@@ -480,5 +481,21 @@ describe('payroll data access (integration)', () => {
       effective_from: '2026-07-01'
     });
     expect((await getEffectiveTaxProfile('payroll-scope-a', '2026-07-01')).id).toBe(profile.id);
+  });
+
+  it('rolls back payroll data when the audit insert fails', async () => {
+    await expect(
+      withPayrollAuditTransaction(
+        'missing-audit-actor',
+        { action: 'payroll.test.rollback', entityType: 'salary_component' },
+        async (tx) => {
+          await tx
+            .insert(salaryComponents)
+            .values({ code: 'ROLLBACK-AUDIT', name: 'Rollback', type: 'allowance' });
+          return true;
+        }
+      )
+    ).rejects.toThrow();
+    expect(await db.select().from(salaryComponents)).toHaveLength(0);
   });
 });

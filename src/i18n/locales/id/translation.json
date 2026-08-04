@@ -29,6 +29,9 @@
     "save": "Simpan",
     "edit": "Edit",
     "delete": "Hapus",
+    "approve": "Setujui",
+    "pay": "Bayar",
+    "reports": "Laporan",
     "create": "Buat",
     "date": "Tanggal",
     "update": "Perbarui",
@@ -529,6 +532,9 @@
     "updateFailed": "Gagal memperbarui grup peran",
     "permissionsPageTitle": "Izin Peran",
     "permissionsPageDescription": "Atur modul dan aksi apa saja yang dapat diakses peran ini",
+    "approve": "Setujui",
+    "pay": "Bayar",
+    "reports": "Laporan",
     "pageDescription": "Kelola grup peran dan atur izin akses tingkat modul"
   },
   "task": {

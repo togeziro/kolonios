@@ -9,6 +9,14 @@ export const moneySchema = z
   .transform((value) => (typeof value === 'number' ? value.toFixed(2) : Number(value).toFixed(2)));
 const idSchema = z.number().int().positive();
 const employeeIdSchema = z.string().trim().min(1);
+const effectiveDatesSchema = z
+  .object({
+    effectiveFrom: dateSchema,
+    effectiveTo: dateSchema.nullish()
+  })
+  .refine((value) => !value.effectiveTo || value.effectiveFrom <= value.effectiveTo, {
+    message: 'Effective start must precede end'
+  });
 
 export const salaryComponentSchema = z.object({
   code: z.string().trim().min(1).max(50),
@@ -23,10 +31,46 @@ export const salaryComponentUpdateSchema = salaryComponentIdSchema.extend({
 });
 
 const profileBase = z.object({ employeeId: employeeIdSchema });
-export const employeePayrollProfileSchema = profileBase.extend({
-  kind: z.enum(['assignment', 'component', 'tax', 'benefit', 'bank']),
-  values: z.record(z.string(), z.unknown())
+const assignmentValuesSchema = effectiveDatesSchema.extend({
+  id: idSchema.optional(),
+  salaryType: z.enum(['monthly', 'daily', 'hourly']),
+  amount: moneySchema,
+  departmentId: idSchema.nullish(),
+  designationId: idSchema.nullish()
 });
+const componentValuesSchema = effectiveDatesSchema.extend({
+  id: idSchema.optional(),
+  assignmentId: idSchema,
+  salaryComponentId: idSchema,
+  amount: moneySchema
+});
+const taxValuesSchema = effectiveDatesSchema.extend({
+  id: idSchema.optional(),
+  taxSettingId: idSchema.nullish(),
+  taxIdentifier: z.string().max(100).nullish(),
+  filingStatus: z.string().max(50).nullish()
+});
+const benefitValuesSchema = effectiveDatesSchema.extend({
+  id: idSchema.optional(),
+  benefitCode: z.string().trim().min(1).max(50),
+  benefitName: z.string().trim().min(1).max(200),
+  amount: moneySchema.nullish(),
+  status: z.enum(['active', 'inactive']).default('active')
+});
+const bankValuesSchema = effectiveDatesSchema.extend({
+  id: idSchema.optional(),
+  bankName: z.string().trim().min(1).max(100),
+  accountName: z.string().trim().min(1).max(200),
+  accountNumber: z.string().trim().min(1).max(100),
+  isPrimary: z.boolean().default(false)
+});
+export const employeePayrollProfileSchema = z.discriminatedUnion('kind', [
+  profileBase.extend({ kind: z.literal('assignment'), values: assignmentValuesSchema }),
+  profileBase.extend({ kind: z.literal('component'), values: componentValuesSchema }),
+  profileBase.extend({ kind: z.literal('tax'), values: taxValuesSchema }),
+  profileBase.extend({ kind: z.literal('benefit'), values: benefitValuesSchema }),
+  profileBase.extend({ kind: z.literal('bank'), values: bankValuesSchema })
+]);
 export const employeePayrollProfileReadSchema = profileBase;
 
 export const payrollPeriodSchema = z
@@ -67,35 +111,5 @@ export const myPayslipFiltersSchema = z.object({
 export const payrollRecordIdSchema = z.object({ id: idSchema });
 export const generatePayrollSchema = z.object({ payrollPeriodId: idSchema });
 export const reportFiltersSchema = payrollRecordFiltersSchema.extend({
-  format: z.enum(['json', 'csv']).optional()
-});
-
-export const profileValuesSchema = z.object({
-  employeeId: employeeIdSchema,
-  assignment: z
-    .object({
-      salaryType: z.enum(['monthly', 'daily', 'hourly']),
-      amount: moneySchema,
-      effectiveFrom: dateSchema,
-      effectiveTo: dateSchema.nullish()
-    })
-    .optional(),
-  component: z
-    .object({
-      assignmentId: idSchema,
-      salaryComponentId: idSchema,
-      amount: moneySchema,
-      effectiveFrom: dateSchema,
-      effectiveTo: dateSchema.nullish()
-    })
-    .optional(),
-  tax: z
-    .object({
-      effectiveFrom: dateSchema,
-      effectiveTo: dateSchema.nullish(),
-      taxSettingId: idSchema.nullish(),
-      taxIdentifier: z.string().max(100).nullish(),
-      filingStatus: z.string().max(50).nullish()
-    })
-    .optional()
+  format: z.enum(['json', 'csv']).default('json')
 });

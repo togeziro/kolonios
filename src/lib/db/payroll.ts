@@ -15,6 +15,8 @@ import {
 import { employees } from './schema/employees';
 import { departments, designations } from './schema/masterdata';
 import { buildConditions, buildPagination, buildStatusCondition } from './utils';
+import { auditLog } from './schema/audit-log';
+import { getRequestId } from '../request-id';
 import type {
   NewEmployeeSalaryAssignment,
   NewEmployeeSalaryComponent,
@@ -25,6 +27,31 @@ import type {
 } from './schema/payroll';
 
 type EffectiveRow = { id: number; effective_from: string; effective_to: string | null };
+export type PayrollTransaction = any;
+
+export async function withPayrollAuditTransaction<T>(
+  actorUserId: string,
+  entry: { action: string; entityType: string; entityId?: string | number; after?: unknown },
+  operation: (tx: PayrollTransaction) => Promise<T>
+) {
+  try {
+    return await db.transaction(async (tx) => {
+      const result = await operation(tx);
+      await tx.insert(auditLog).values({
+        actorUserId,
+        action: entry.action,
+        entityType: entry.entityType,
+        entityId: entry.entityId == null ? null : String(entry.entityId),
+        before: null,
+        after: entry.after,
+        requestId: getRequestId() ?? null
+      });
+      return result;
+    });
+  } catch (e) {
+    mapDbError(e, `payroll.${entry.action}`);
+  }
+}
 
 export function assertEffectiveDate(value: string) {
   const match = /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -131,8 +158,13 @@ function effectiveWhere(
   );
 }
 
-async function effectiveAssignmentRows(employeeId: string, periodStart: string, periodEnd: string) {
-  return db
+async function effectiveAssignmentRows(
+  employeeId: string,
+  periodStart: string,
+  periodEnd: string,
+  tx?: PayrollTransaction
+) {
+  return (tx ?? db)
     .select()
     .from(employeeSalaryAssignments)
     .where(
@@ -151,15 +183,16 @@ async function effectiveAssignmentRows(employeeId: string, periodStart: string, 
 export async function getEffectiveSalaryAssignment(
   employeeId: string,
   periodStart: string,
-  periodEnd: string
-) {
+  periodEnd: string,
+  tx?: PayrollTransaction
+): Promise<any> {
   try {
     assertEmployeeId(employeeId);
     assertDateRange(periodStart, periodEnd);
     const row = requireEffectiveRecord(
       employeeId,
       periodStart,
-      await effectiveAssignmentRows(employeeId, periodStart, periodEnd)
+      await effectiveAssignmentRows(employeeId, periodStart, periodEnd, tx)
     );
     return row;
   } catch (e) {
@@ -170,8 +203,9 @@ export async function getEffectiveSalaryAssignment(
 export async function getEffectiveSalaryComponents(
   employeeId: string,
   periodStart: string,
-  periodEnd: string
-) {
+  periodEnd: string,
+  tx?: PayrollTransaction
+): Promise<any> {
   try {
     assertEmployeeId(employeeId);
     assertDateRange(periodStart, periodEnd);
@@ -179,7 +213,7 @@ export async function getEffectiveSalaryComponents(
       employeeId,
       periodStart,
       periodEnd,
-      await effectiveAssignmentRows(employeeId, periodStart, periodEnd)
+      await effectiveAssignmentRows(employeeId, periodStart, periodEnd, tx)
     );
     if (!assignments.length) {
       throw new DomainError(
@@ -189,7 +223,7 @@ export async function getEffectiveSalaryComponents(
     }
     const resolved = [];
     for (const assignment of assignments) {
-      const rows = await db
+      const rows = await (tx ?? db)
         .select({ component: employeeSalaryComponents, definition: salaryComponents })
         .from(employeeSalaryComponents)
         .innerJoin(
@@ -214,7 +248,7 @@ export async function getEffectiveSalaryComponents(
         list.push(row.component);
         byComponent.set(row.component.salary_component_id, list);
       }
-      const definitions = new Map(rows.map((row) => [row.component.id, row.definition]));
+      const definitions = new Map(rows.map((row: any) => [row.component.id, row.definition]));
       for (const componentRows of byComponent.values()) {
         for (const component of resolveEffectiveRecords(
           employeeId,
@@ -232,11 +266,15 @@ export async function getEffectiveSalaryComponents(
   }
 }
 
-export async function getEffectiveTaxProfile(employeeId: string, asOfDate: string) {
+export async function getEffectiveTaxProfile(
+  employeeId: string,
+  asOfDate: string,
+  tx?: PayrollTransaction
+): Promise<any> {
   try {
     assertEmployeeId(employeeId);
     assertEffectiveDate(asOfDate);
-    const rows = await db
+    const rows = await (tx ?? db)
       .select()
       .from(employeeTaxProfiles)
       .where(
@@ -975,7 +1013,7 @@ async function getPayrollRecordForTransaction(tx: any, id: number) {
   return row ?? null;
 }
 
-async function lockPayrollPeriod(tx: any, id: number) {
+export async function lockPayrollPeriod(tx: PayrollTransaction, id: number) {
   await tx.execute(
     sql`select ${payrollPeriods.id} from ${payrollPeriods} where ${payrollPeriods.id} = ${id} for update`
   );
@@ -1123,9 +1161,7 @@ export async function listPayrollRecords(
     if (scope === 'employee') assertEmployeeId(filters.employee_id);
     const { limit, offset } = buildPagination(filters);
     const where = buildConditions([
-      scope === 'employee' && filters.employee_id
-        ? eq(payrollRecords.employee_id, filters.employee_id)
-        : undefined,
+      filters.employee_id ? eq(payrollRecords.employee_id, filters.employee_id) : undefined,
       filters.payroll_period_id
         ? eq(payrollRecords.payroll_period_id, filters.payroll_period_id)
         : undefined,

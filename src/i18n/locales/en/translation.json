@@ -29,6 +29,9 @@
     "save": "Save",
     "edit": "Edit",
     "delete": "Delete",
+    "approve": "Approve",
+    "pay": "Pay",
+    "reports": "Reports",
     "create": "Create",
     "date": "Date",
     "update": "Update",
@@ -529,6 +532,9 @@
     "updateFailed": "Failed to update role group",
     "permissionsPageTitle": "Role Permissions",
     "permissionsPageDescription": "Configure which modules and actions this role can access",
+    "approve": "Approve",
+    "pay": "Pay",
+    "reports": "Reports",
     "pageDescription": "Manage role groups and configure module-level access permissions"
   },
   "task": {

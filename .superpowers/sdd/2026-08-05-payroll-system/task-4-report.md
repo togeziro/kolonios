@@ -21,5 +21,31 @@
 ## Concerns
 
 - Task 2 schema does not persist component calculation modes or a dedicated attendance-hours aggregate, so generation treats effective salary components as fixed amounts and derives worked hours from completed attendance rows at eight hours per row.
-- Payroll profile updates currently support assignment, component, and tax sections; benefit and bank writes require corresponding Task 2 mutation data-access functions before they can be safely exposed.
-- Payroll report currently returns filtered payroll records rather than a separate aggregate/export format.
+- Payroll profile updates and reports are implemented in the Task 4 service layer; the Task 2 schema remains the persistence contract.
+- Payroll reports remain record-based, with CSV output available when requested.
+
+## Review Fixes
+
+- `listPayrollRecordsFn` now derives scope from the authenticated role and forces staff to their own employee ID; client scope and employee filters cannot widen access.
+- Added `withPayrollAuditTransaction`; payroll component, period, profile, generation, and workflow mutations now insert audit rows in the same transaction so audit failure rolls back data.
+- Generation now locks the period before reading active employees, effective payroll data, schedule/calendar, attendance, and leave, then calculates and writes inside the same transaction.
+- Tax JSON mapping now validates method, PTKP, progressive bounds/rates, TER categories/bounds/rates, and converts persisted money decimals to calculator minor units.
+- Replaced arbitrary profile records with discriminated assignment, component, tax, benefit, and bank schemas; all five update/insert paths are implemented.
+- Attendance totals now use effective schedule/calendar days, exclude pending attendance, clip approved leave to the period, and preserve zero scheduled days.
+- React Query mutations invalidate only affected payroll query families; added `useUpdateEmployeePayrollProfile`.
+- Payroll role permissions now expose configurable `approve`, `pay`, and `reports` actions in the module registry and UI.
+- CSV reports now produce escaped CSV output; unsupported formats are rejected by validation. Removed duplicate profile validation.
+- Added regression coverage for scope bypass, audit rollback, tax mapping, validation, period clipping, pending attendance, invalidation, profile permissions/hooks, role actions, and CSV output.
+
+## Review-Fix Verification
+
+- `bun run test:run src/features/payroll src/lib/db/payroll.test.ts src/features/role-groups/modules.test.ts`: passed, 6 files / 53 tests.
+- `bun run typecheck`: passed.
+- `bun run i18n:check`: passed, 638 keys in both locales.
+- `bun x oxlint src/features/payroll src/features/role-groups/modules.ts src/features/role-groups/modules.test.ts src/features/role-groups/components/role-permissions-page.tsx src/lib/db/payroll.ts src/lib/db/payroll.test.ts`: passed with warnings only.
+- Full `bun run lint`: remains blocked by the pre-existing `src/components/layout/mobile-header.tsx:53` `control-has-associated-label` error.
+
+## Updated Concerns
+
+- Task 2 stores no component calculation mode, so payroll generation still treats persisted employee salary components as fixed amounts.
+- Worked hours remain derived from attendance check-in/check-out timestamps; no persisted shift-duration aggregate exists.
