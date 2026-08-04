@@ -158,8 +158,9 @@ async function seedNotifications(userId: string) {
 
 async function seedMasterdata() {
   // Clear attendance schedule tables first: they hold FKs to shifts/locations.
-  await db.delete(employeeShifts);
+  // Corrections reference attendance rows, so delete them before employee_shifts.
   await db.delete(attendanceCorrections);
+  await db.delete(employeeShifts);
   await db.delete(dayOffs);
   await db.delete(dateOverrides);
   await db.delete(scheduleAssignments);
