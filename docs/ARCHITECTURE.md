@@ -153,7 +153,6 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | vaul                     | v1.1.2   | Drawer component                |
 | sonner                   | v2.0.7  | Toast notifications             |
 | input-otp                | v1.4.2  | OTP input                       |
-| react-resizable-panels   | v4.12.2 | Resizable panels                |
 | motion                   | v11.18.2 | Animations (Framer Motion v11+) |
 
 ### Forms & Validation
@@ -162,14 +161,13 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | ---------------- | -------- | --------------------- |
 | TanStack Form    | v1.33.3  | Form state management |
 | Zod              | v4.3.6   | Schema validation     |
-| react-dropzone   | v14.4.1  | File upload           |
 | react-day-picker | v9.14.0  | Date picker           |
 
 ### State Management
 
 | Technology           | Version  | Purpose                                               |
 | -------------------- | -------- | ----------------------------------------------------- |
-| TanStack React Query | v5.101.2 | Server state (customers, employees, users, notifications) |
+| TanStack React Query | v5.101.4 | Server state (customers, employees, users, notifications) |
 
 ### Tables & Charts
 
@@ -220,10 +218,9 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 ### Mock Data
 
-| Technology      | Version | Purpose              |
+| Technology       | Version | Purpose              |
 | --------------- | ------- | -------------------- |
-| @faker-js/faker | v10.5.0 | Seed data generation |
-| uuid            | v11.1.0 | ID generation        |
+| @faker-js/faker | ^10.5.0 | Seed data generation |
 
 ### Database & ORM
 
@@ -266,7 +263,7 @@ Pre-commit hook runs: `oxlint` → `oxfmt --check` → `tsc --noEmit` on every c
 | Technology                   | Version | Purpose                              |
 | ---------------------------- | ------- | ------------------------------------ |
 | better-auth                  | ^1.6.23 | Full auth system (DB sessions, RBAC) |
-| @better-auth/drizzle-adapter | ^1.2.6  | Drizzle ORM adapter for Better Auth  |
+| @better-auth/drizzle-adapter | ^1.6.23 | Drizzle ORM adapter for Better Auth  |
 
 ### Deployment
 
@@ -280,9 +277,8 @@ Pre-commit hook runs: `oxlint` → `oxfmt --check` → `tsc --noEmit` on every c
 
 | Technology               | Version | Purpose                          |
 | ------------------------ | ------- | -------------------------------- |
-| i18next                  | v26.x   | Core i18n framework              |
-| react-i18next            | v17.x   | React bindings for i18next       |
-| i18next-browser-languagedetector | v8.x | Client-side language detection   |
+| i18next                  | ^26.3.6 | Core i18n framework              |
+| react-i18next            | ^17.0.11 | React bindings for i18next       |
 
 **Structure:**
 - `src/i18n/config.ts` — i18n instance factory with SSR support
