@@ -122,12 +122,14 @@ function RootDocument() {
             </I18nProvider>
           </ActiveThemeProvider>
         </ThemeProvider>
-        <TanStackDevtools
-          plugins={[
-            { name: 'TanStack Query', render: <ReactQueryDevtoolsPanel /> },
-            { name: 'TanStack Router', render: <TanStackRouterDevtoolsPanel /> }
-          ]}
-        />
+        {import.meta.env.DEV ? (
+          <TanStackDevtools
+            plugins={[
+              { name: 'TanStack Query', render: <ReactQueryDevtoolsPanel /> },
+              { name: 'TanStack Router', render: <TanStackRouterDevtoolsPanel /> }
+            ]}
+          />
+        ) : null}
         <Scripts />
       </body>
     </html>
