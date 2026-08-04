@@ -10,7 +10,6 @@ type BreadcrumbItem = {
 const segmentKeys: Record<string, string> = {
   dashboard: 'navigation.dashboard',
   overview: 'navigation.overview',
-  product: 'navigation.product',
   customers: 'navigation.customers',
   employees: 'navigation.employees',
   users: 'navigation.users',
@@ -31,7 +30,6 @@ const routeMapping: Record<string, BreadcrumbItem[]> = {
     { title: 'navigation.dashboard', link: '/dashboard' },
     { title: 'employee.title', link: '/dashboard/employee' }
   ]
-
   // Add more custom mappings as needed
 };
 

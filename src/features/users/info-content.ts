@@ -32,7 +32,7 @@ export const usersInfoContent: InfobarContent = {
       ]
     },
     {
-      title: 'Products vs Users Pattern',
+      title: 'Customers vs Users Pattern',
       description:
         'Both pages use the same architecture: route loader prefetch → client useSuspenseQuery → useDataTable for table state. The pattern enables background refetching, cache sharing across components, and optimistic mutations.',
       links: []

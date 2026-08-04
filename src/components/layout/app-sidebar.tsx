@@ -39,7 +39,6 @@ const navTitleKeys: Record<string, string> = {
   Leave: 'navigation.leave',
   Profile: 'navigation.profile',
   Management: 'navigation.management',
-  Product: 'navigation.product',
   Customers: 'navigation.customers',
   Employees: 'navigation.employees',
   Settings: 'navigation.settings',
