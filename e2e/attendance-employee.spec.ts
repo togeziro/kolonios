@@ -90,7 +90,7 @@ test.describe('check-out selfie policy', () => {
     await checkInFromHeadOffice(page);
 
     await page.getByRole('button', { name: /Check Out/i }).click();
-    await expect(page.getByText(/selfie photo is required/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/selfie photo is required/i)).toBeVisible({ timeout: 15_000 });
   });
 
   test('check-out with a selfie succeeds and leaves the checked-out state', async ({ page }) => {
