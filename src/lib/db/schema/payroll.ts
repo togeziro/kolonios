@@ -104,6 +104,7 @@ export const payrollPeriods = pgTable(
     name: text('name').notNull(),
     period_start: date('period_start').notNull(),
     period_end: date('period_end').notNull(),
+    payment_date: date('payment_date').notNull(),
     status: payrollPeriodStatusEnum('status').notNull().default('draft'),
     processed_at: timestamp('processed_at'),
     paid_at: timestamp('paid_at'),

@@ -28,6 +28,9 @@ import {
   useDeleteSalaryComponent,
   useUpdateSalaryComponent
 } from '@/features/payroll/api/mutations';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { canPayrollAction } from '@/features/payroll/components/permissions';
+import type { SalaryComponentDefinition } from '@/features/payroll/api/types';
 
 export function maskBankAccount(value: string) {
   if (value.length <= 4) return '*'.repeat(value.length);
@@ -44,12 +47,16 @@ export function formatPayrollMoney(value: string | number | null | undefined) {
 
 export function SalaryComponentsPanel() {
   const { t } = useTranslation();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canAdd = canPayrollAction(permissions, isAdmin, 'add');
+  const canEdit = canPayrollAction(permissions, isAdmin, 'edit');
+  const canDelete = canPayrollAction(permissions, isAdmin, 'delete');
   const { data, isLoading, isError } = useQuery(salaryComponentsQueryOptions());
   const create = useCreateSalaryComponent();
   const update = useUpdateSalaryComponent();
   const remove = useDeleteSalaryComponent();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<SalaryComponentDefinition | null>(null);
   const [form, setForm] = useState<{
     code: string;
     name: string;
@@ -58,7 +65,7 @@ export function SalaryComponentsPanel() {
     isActive: boolean;
   }>({ code: '', name: '', type: 'allowance', description: '', isActive: true });
 
-  const startEdit = (item?: any) => {
+  const startEdit = (item?: SalaryComponentDefinition) => {
     setEditing(item ?? null);
     setForm({
       code: item?.code ?? '',
@@ -96,7 +103,7 @@ export function SalaryComponentsPanel() {
         <CardTitle>{t('payroll.components')}</CardTitle>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size='sm' onClick={() => startEdit()}>
+            <Button size='sm' disabled={!canAdd} onClick={() => startEdit()}>
               {t('payroll.addComponent')}
             </Button>
           </DialogTrigger>
@@ -142,7 +149,15 @@ export function SalaryComponentsPanel() {
                 />
               </div>
             </div>
-            <Button onClick={save} disabled={create.isPending || update.isPending}>
+            <Button
+              onClick={save}
+              disabled={
+                (!editing && !canAdd) ||
+                (editing && !canEdit) ||
+                create.isPending ||
+                update.isPending
+              }
+            >
               {t('common.save')}
             </Button>
           </DialogContent>
@@ -151,7 +166,10 @@ export function SalaryComponentsPanel() {
       <CardContent>
         {isLoading && <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>}
         {isError && <p className='text-sm text-destructive'>{t('payroll.failed')}</p>}
-        {!isLoading && !isError && (
+        {!isLoading && !isError && !(data ?? []).length && (
+          <p className='text-sm text-muted-foreground'>{t('payroll.noComponents')}</p>
+        )}
+        {!isLoading && !isError && (data ?? []).length > 0 && (
           <div className='overflow-x-auto'>
             <Table>
               <TableHeader>
@@ -164,7 +182,7 @@ export function SalaryComponentsPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(data ?? []).map((item: any) => (
+                {((data as SalaryComponentDefinition[] | undefined) ?? []).map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>{item.code}</TableCell>
                     <TableCell>{item.name}</TableCell>
@@ -177,10 +195,20 @@ export function SalaryComponentsPanel() {
                       </Badge>
                     </TableCell>
                     <TableCell className='text-right'>
-                      <Button variant='ghost' size='sm' onClick={() => startEdit(item)}>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        disabled={!canEdit}
+                        onClick={() => startEdit(item)}
+                      >
                         {t('common.edit')}
                       </Button>
-                      <Button variant='ghost' size='sm' onClick={() => onDelete(item.id)}>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        disabled={!canDelete}
+                        onClick={() => onDelete(item.id)}
+                      >
                         {t('common.delete')}
                       </Button>
                     </TableCell>

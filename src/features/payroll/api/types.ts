@@ -5,6 +5,15 @@ export type ComponentType = 'allowance' | 'deduction';
 export type ComponentMode = 'fixed' | 'percentage' | 'per-attendance';
 export type TaxMethod = 'none' | 'progressive' | 'ter';
 
+export interface SalaryComponentDefinition {
+  id: number;
+  code: string;
+  name: string;
+  type: ComponentType;
+  description: string | null;
+  is_active: boolean;
+}
+
 export interface PayrollRecordFilters {
   payrollPeriodId?: number;
   employeeId?: string;
@@ -13,6 +22,30 @@ export interface PayrollRecordFilters {
   scope?: 'admin' | 'employee';
   page?: number;
   limit?: number;
+}
+
+export interface PayrollReportRow {
+  id: number;
+  payroll_period_id: number;
+  employee_id: string;
+  gross_salary: string;
+  total_allowances: string;
+  total_deductions: string;
+  net_salary: string;
+  details: unknown;
+  period_status: PayrollRecordFilters['status'];
+  department_name?: string | null;
+}
+
+export interface PayrollReportResult {
+  rows: PayrollReportRow[];
+  gross: number;
+  allowances: number;
+  deductions: number;
+  net: number;
+  taxTotal: number;
+  departmentTotals: Array<{ department: string; gross: number; net: number }>;
+  componentTotals: Array<{ name: string; type: string; amount: number }>;
 }
 
 export interface SalaryProfile {

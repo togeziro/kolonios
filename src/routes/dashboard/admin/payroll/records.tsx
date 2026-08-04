@@ -1,22 +1,31 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import PageContainer from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { DataTable } from '@/components/ui/table/data-table';
+import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import {
   payrollPeriodsQueryOptions,
   payrollRecordsQueryOptions
 } from '@/features/payroll/api/queries';
 import {
+  useAdjustPayrollRecord,
   useApprovePayroll,
   useLockPayroll,
   useMarkPayrollPaid
 } from '@/features/payroll/api/mutations';
-import { formatPayrollMoney } from './components';
+import type { PayrollRecordFilters, PayrollReportRow } from '@/features/payroll/api/types';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { canPayrollAction } from '@/features/payroll/components/permissions';
+import { createPayrollRecordColumns } from './records-columns';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/records')({
   beforeLoad: async () => {
@@ -25,27 +34,96 @@ export const Route = createFileRoute('/dashboard/admin/payroll/records')({
   },
   component: RecordsPage
 });
+
+type Adjustment = { name: string; type: 'bonus' | 'deduction'; amount: string; taxable: boolean };
+
 function RecordsPage() {
   const { t } = useTranslation();
-  const [periodId, setPeriodId] = useState('');
-  const [status, setStatus] = useState('');
-  const { data: periodsResponse } = useQuery(payrollPeriodsQueryOptions({ limit: 100 }));
-  const periods = Array.isArray(periodsResponse) ? periodsResponse : (periodsResponse?.rows ?? []);
-  const { data, isLoading } = useQuery(
-    payrollRecordsQueryOptions({
-      payrollPeriodId: periodId ? Number(periodId) : undefined,
-      status: (status || undefined) as any,
-      page: 1,
-      limit: 100
-    })
-  );
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canApprove = canPayrollAction(permissions, isAdmin, 'approve');
+  const canPay = canPayrollAction(permissions, isAdmin, 'pay');
+  const canLock = canPayrollAction(permissions, isAdmin, 'edit');
+  const canAdjust = canPayrollAction(permissions, isAdmin, 'edit');
+  const [filters, setFilters] = useState<PayrollRecordFilters>({ page: 1, limit: 25 });
+  const [selected, setSelected] = useState<PayrollReportRow | null>(null);
+  const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
+  const [draftAdjustment, setDraftAdjustment] = useState<Adjustment>({
+    name: '',
+    type: 'bonus',
+    amount: '',
+    taxable: false
+  });
+  const periodsQuery = useQuery(payrollPeriodsQueryOptions({ limit: 100 }));
+  const departmentsQuery = useQuery(departmentsQueryOptions());
+  const recordsQuery = useQuery(payrollRecordsQueryOptions(filters));
   const approve = useApprovePayroll();
   const paid = useMarkPayrollPaid();
   const lock = useLockPayroll();
-  const run = async (action: any, id: number) => {
+  const adjust = useAdjustPayrollRecord();
+  const periods = periodsQuery.data?.rows ?? [];
+  const records = (recordsQuery.data?.rows ?? []) as PayrollReportRow[];
+  const pageCount = Math.max(1, Math.ceil((recordsQuery.data?.total ?? 0) / (filters.limit ?? 25)));
+  const updateFilter = (patch: Partial<PayrollRecordFilters>) =>
+    setFilters((current) => ({ ...current, ...patch, page: 1 }));
+  const run = async (
+    action: { mutateAsync: (data: { id: number }) => Promise<unknown> },
+    id: number
+  ) => {
     try {
       await action.mutateAsync({ id });
       toast.success(t('payroll.updated'));
+    } catch {
+      toast.error(t('payroll.failed'));
+    }
+  };
+  const columns = createPayrollRecordColumns({
+    t,
+    canApprove,
+    canPay,
+    canLock,
+    canAdjust,
+    onApprove: (id) => void run(approve, id),
+    onPay: (id) => void run(paid, id),
+    onLock: (id) => void run(lock, id),
+    onAdjust: (row) => {
+      setSelected(row);
+      setAdjustments([]);
+    },
+    onDetail: (row) => {
+      setSelected(row);
+      setAdjustments([]);
+    }
+  });
+  const table = useReactTable({
+    data: records,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    pageCount,
+    state: {
+      pagination: { pageIndex: (filters.page ?? 1) - 1, pageSize: filters.limit ?? 25 },
+      columnPinning: { right: ['actions'] }
+    },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === 'function'
+          ? updater({ pageIndex: (filters.page ?? 1) - 1, pageSize: filters.limit ?? 25 })
+          : updater;
+      setFilters((current) => ({ ...current, page: next.pageIndex + 1, limit: next.pageSize }));
+    }
+  });
+  const addAdjustment = () => {
+    if (!draftAdjustment.name.trim() || !draftAdjustment.amount)
+      return toast.error(t('payroll.adjustmentRequired'));
+    setAdjustments((current) => [...current, draftAdjustment]);
+    setDraftAdjustment({ name: '', type: 'bonus', amount: '', taxable: false });
+  };
+  const saveAdjustments = async () => {
+    if (!selected) return;
+    try {
+      await adjust.mutateAsync({ id: selected.id, adjustments });
+      toast.success(t('payroll.updated'));
+      setSelected(null);
     } catch {
       toast.error(t('payroll.failed'));
     }
@@ -60,105 +138,159 @@ function RecordsPage() {
           <CardTitle>{t('payroll.records')}</CardTitle>
         </CardHeader>
         <CardContent className='space-y-4'>
-          <div className='grid gap-3 sm:grid-cols-2'>
+          <div className='grid gap-3 sm:grid-cols-3'>
             <div>
-              <label className='text-sm font-medium'>{t('payroll.periods')}</label>
+              <Label htmlFor='record-period'>{t('payroll.periods')}</Label>
               <select
+                id='record-period'
                 className='w-full rounded-md border bg-background px-3 py-2 text-sm'
-                value={periodId}
-                onChange={(e) => setPeriodId(e.target.value)}
+                value={filters.payrollPeriodId ?? ''}
+                onChange={(e) =>
+                  updateFilter({
+                    payrollPeriodId: e.target.value ? Number(e.target.value) : undefined
+                  })
+                }
               >
                 <option value=''>{t('common.all')}</option>
-                {(periods ?? []).map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
+                {periods.map((period) => (
+                  <option key={period.id} value={period.id}>
+                    {period.name}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className='text-sm font-medium'>{t('payroll.status')}</label>
+              <Label htmlFor='record-department'>{t('payroll.department')}</Label>
               <select
+                id='record-department'
                 className='w-full rounded-md border bg-background px-3 py-2 text-sm'
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                value={filters.departmentId ?? ''}
+                onChange={(e) =>
+                  updateFilter({
+                    departmentId: e.target.value ? Number(e.target.value) : undefined
+                  })
+                }
               >
                 <option value=''>{t('common.all')}</option>
-                {['draft', 'processing', 'ready_to_pay', 'paid', 'locked'].map((s) => (
-                  <option key={s} value={s}>
-                    {t(`payroll.statuses.${s}`)}
+                {(departmentsQuery.data?.departments ?? []).map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor='record-status'>{t('payroll.status')}</Label>
+              <select
+                id='record-status'
+                className='w-full rounded-md border bg-background px-3 py-2 text-sm'
+                value={filters.status ?? ''}
+                onChange={(e) =>
+                  updateFilter({
+                    status: (e.target.value || undefined) as PayrollRecordFilters['status']
+                  })
+                }
+              >
+                <option value=''>{t('common.all')}</option>
+                {['draft', 'processing', 'ready_to_pay', 'paid', 'locked'].map((status) => (
+                  <option key={status} value={status}>
+                    {t(`payroll.statuses.${status}`)}
                   </option>
                 ))}
               </select>
             </div>
           </div>
-          {isLoading ? (
-            <p>{t('common.loading')}</p>
+          {recordsQuery.isLoading ? (
+            <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>
+          ) : recordsQuery.isError ? (
+            <p className='text-sm text-destructive'>{t('payroll.loadFailed')}</p>
+          ) : records.length === 0 ? (
+            <p className='text-sm text-muted-foreground'>{t('payroll.noRecords')}</p>
           ) : (
-            <div className='overflow-x-auto'>
-              <table className='w-full text-sm'>
-                <thead>
-                  <tr className='border-b text-left'>
-                    <th className='p-2'>{t('payroll.employee')}</th>
-                    <th className='p-2'>{t('payroll.gross')}</th>
-                    <th className='p-2'>{t('payroll.deductions')}</th>
-                    <th className='p-2'>{t('payroll.net')}</th>
-                    <th className='p-2'>{t('payroll.status')}</th>
-                    <th className='p-2 text-right'>{t('payroll.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data?.rows ?? []).map((row: any) => (
-                    <tr className='border-b' key={row.id}>
-                      <td className='p-2'>{row.employee_id}</td>
-                      <td className='p-2'>{formatPayrollMoney(row.gross_salary)}</td>
-                      <td className='p-2'>{formatPayrollMoney(row.total_deductions)}</td>
-                      <td className='p-2 font-medium'>{formatPayrollMoney(row.net_salary)}</td>
-                      <td className='p-2'>
-                        <Badge variant='outline'>
-                          {t(`payroll.statuses.${row.period_status}`)}
-                        </Badge>
-                      </td>
-                      <td className='p-2 text-right'>
-                        <div className='flex flex-wrap justify-end gap-1'>
-                          {row.period_status === 'processing' && (
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() => run(approve, row.payroll_period_id)}
-                            >
-                              {t('payroll.approve')}
-                            </Button>
-                          )}
-                          {row.period_status === 'ready_to_pay' && (
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() => run(paid, row.payroll_period_id)}
-                            >
-                              {t('payroll.pay')}
-                            </Button>
-                          )}
-                          {row.period_status === 'paid' && (
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() => run(lock, row.payroll_period_id)}
-                            >
-                              {t('payroll.lock')}
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable table={table} />
           )}
-          <p className='text-xs text-muted-foreground'>{t('payroll.adjustmentsHint')}</p>
         </CardContent>
       </Card>
+      <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>{t('payroll.detailBreakdown')}</DialogTitle>
+          </DialogHeader>
+          {selected && (
+            <div className='space-y-4'>
+              <div className='grid gap-3 sm:grid-cols-4'>
+                {[
+                  ['gross', selected.gross_salary],
+                  ['allowances', selected.total_allowances],
+                  ['deductions', selected.total_deductions],
+                  ['net', selected.net_salary]
+                ].map(([label, value]) => (
+                  <div className='rounded border p-3' key={label as string}>
+                    <p className='text-xs text-muted-foreground'>{t(`payroll.${label}`)}</p>
+                    <p className='font-semibold'>{String(value)}</p>
+                  </div>
+                ))}
+              </div>
+              <p className='text-sm text-muted-foreground'>{t('payroll.adjustmentsHint')}</p>
+              {canAdjust && selected.period_status === 'processing' && (
+                <>
+                  <div className='grid gap-2 sm:grid-cols-4'>
+                    <Input
+                      aria-label={t('payroll.adjustmentName')}
+                      placeholder={t('payroll.adjustmentName')}
+                      value={draftAdjustment.name}
+                      onChange={(e) =>
+                        setDraftAdjustment({ ...draftAdjustment, name: e.target.value })
+                      }
+                    />
+                    <select
+                      aria-label={t('payroll.adjustmentType')}
+                      className='rounded-md border bg-background px-2 text-sm'
+                      value={draftAdjustment.type}
+                      onChange={(e) =>
+                        setDraftAdjustment({
+                          ...draftAdjustment,
+                          type: e.target.value as Adjustment['type']
+                        })
+                      }
+                    >
+                      <option value='bonus'>{t('payroll.bonus')}</option>
+                      <option value='deduction'>{t('payroll.deduction')}</option>
+                    </select>
+                    <Input
+                      aria-label={t('payroll.amount')}
+                      inputMode='decimal'
+                      value={draftAdjustment.amount}
+                      onChange={(e) =>
+                        setDraftAdjustment({ ...draftAdjustment, amount: e.target.value })
+                      }
+                    />
+                    <Button type='button' variant='outline' onClick={addAdjustment}>
+                      {t('payroll.addAdjustment')}
+                    </Button>
+                  </div>
+                  <ul className='space-y-1 text-sm'>
+                    {adjustments.map((adjustment, index) => (
+                      <li
+                        key={`${adjustment.name}-${index}`}
+                        className='flex justify-between border-b py-1'
+                      >
+                        <span>
+                          {adjustment.name} ({adjustment.type})
+                        </span>
+                        <span>{adjustment.amount}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button onClick={saveAdjustments} disabled={adjust.isPending}>
+                    {t('payroll.saveAdjustments')}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

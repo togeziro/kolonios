@@ -6,6 +6,7 @@ import {
   payrollRecordFiltersSchema,
   reportFiltersSchema
 } from './validation';
+import { payrollRecordAdjustmentSchema } from './validation';
 
 describe('payroll validation', () => {
   it('accepts decimal money and normalizes it to a database decimal', () => {
@@ -20,6 +21,24 @@ describe('payroll validation', () => {
         periodEnd: '2026-07-01'
       })
     ).toThrow();
+  });
+
+  it('requires a payment date on payroll periods', () => {
+    expect(() =>
+      payrollPeriodSchema.parse({
+        name: 'July',
+        periodStart: '2026-07-01',
+        periodEnd: '2026-07-31'
+      })
+    ).toThrow();
+    expect(
+      payrollPeriodSchema.parse({
+        name: 'July',
+        periodStart: '2026-07-01',
+        periodEnd: '2026-07-31',
+        paymentDate: '2026-08-05'
+      }).paymentDate
+    ).toBe('2026-08-05');
   });
 
   it('requires an employee id for employee-scoped record reads', () => {
@@ -44,6 +63,21 @@ describe('payroll validation', () => {
 
   it('accepts only explicitly implemented report formats', () => {
     expect(reportFiltersSchema.parse({ format: 'csv' }).format).toBe('csv');
-    expect(() => reportFiltersSchema.parse({ format: 'xlsx' })).toThrow();
+    expect(reportFiltersSchema.parse({ format: 'xlsx' }).format).toBe('xlsx');
+  });
+
+  it('validates manual adjustments as bounded money entries', () => {
+    expect(() =>
+      payrollRecordAdjustmentSchema.parse({
+        id: 1,
+        adjustments: [{ name: '', type: 'bonus', amount: '1.00' }]
+      })
+    ).toThrow();
+    expect(
+      payrollRecordAdjustmentSchema.parse({
+        id: 1,
+        adjustments: [{ name: 'Bonus', type: 'bonus', amount: '1.00' }]
+      }).adjustments[0]?.amount
+    ).toBe('1.00');
   });
 });

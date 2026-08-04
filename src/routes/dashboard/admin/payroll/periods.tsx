@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/table';
 import { payrollPeriodsQueryOptions } from '@/features/payroll/api/queries';
 import { useCreatePayrollPeriod } from '@/features/payroll/api/mutations';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { canPayrollAction } from '@/features/payroll/components/permissions';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/periods')({
   beforeLoad: async () => {
@@ -30,17 +32,30 @@ export const Route = createFileRoute('/dashboard/admin/payroll/periods')({
 
 function PeriodsPage() {
   const { t } = useTranslation();
-  const { data: response, isLoading } = useQuery(payrollPeriodsQueryOptions({ limit: 100 }));
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canAdd = canPayrollAction(permissions, isAdmin, 'add');
+  const {
+    data: response,
+    isLoading,
+    isError
+  } = useQuery(payrollPeriodsQueryOptions({ limit: 100 }));
   const data = Array.isArray(response) ? response : (response?.rows ?? []);
   const create = useCreatePayrollPeriod();
-  const [form, setForm] = useState({ name: '', periodStart: '', periodEnd: '' });
+  const [form, setForm] = useState({ name: '', periodStart: '', periodEnd: '', paymentDate: '' });
   const save = async () => {
-    if (!form.name || !form.periodStart || !form.periodEnd || form.periodEnd < form.periodStart)
+    if (
+      !canAdd ||
+      !form.name ||
+      !form.periodStart ||
+      !form.periodEnd ||
+      !form.paymentDate ||
+      form.periodEnd < form.periodStart
+    )
       return toast.error(t('payroll.invalidPeriod'));
     try {
       await create.mutateAsync(form);
       toast.success(t('payroll.created'));
-      setForm({ name: '', periodStart: '', periodEnd: '' });
+      setForm({ name: '', periodStart: '', periodEnd: '', paymentDate: '' });
     } catch {
       toast.error(t('payroll.failed'));
     }
@@ -58,6 +73,10 @@ function PeriodsPage() {
           <CardContent>
             {isLoading ? (
               <p>{t('common.loading')}</p>
+            ) : isError ? (
+              <p className='text-sm text-destructive'>{t('payroll.loadFailed')}</p>
+            ) : !data.length ? (
+              <p className='text-sm text-muted-foreground'>{t('payroll.noPeriods')}</p>
             ) : (
               <div className='overflow-x-auto'>
                 <Table>
@@ -66,15 +85,17 @@ function PeriodsPage() {
                       <TableHead>{t('payroll.name')}</TableHead>
                       <TableHead>{t('payroll.start')}</TableHead>
                       <TableHead>{t('payroll.end')}</TableHead>
+                      <TableHead>{t('payroll.paymentDate')}</TableHead>
                       <TableHead>{t('payroll.status')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(data ?? []).map((period: any) => (
+                    {(data ?? []).map((period) => (
                       <TableRow key={period.id}>
                         <TableCell>{period.name}</TableCell>
                         <TableCell>{period.period_start}</TableCell>
                         <TableCell>{period.period_end}</TableCell>
+                        <TableCell>{period.payment_date}</TableCell>
                         <TableCell>
                           <Badge variant='outline'>{t(`payroll.statuses.${period.status}`)}</Badge>
                         </TableCell>
@@ -114,7 +135,15 @@ function PeriodsPage() {
                 onChange={(e) => setForm({ ...form, periodEnd: e.target.value })}
               />
             </div>
-            <Button onClick={save} disabled={create.isPending}>
+            <div>
+              <Label>{t('payroll.paymentDate')}</Label>
+              <Input
+                type='date'
+                value={form.paymentDate}
+                onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
+              />
+            </div>
+            <Button onClick={save} disabled={!canAdd || create.isPending}>
               {t('common.save')}
             </Button>
           </CardContent>

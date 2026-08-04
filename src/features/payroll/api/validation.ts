@@ -78,6 +78,7 @@ export const payrollPeriodSchema = z
     name: z.string().trim().min(1).max(200),
     periodStart: dateSchema,
     periodEnd: dateSchema,
+    paymentDate: dateSchema,
     status: z.literal('draft').optional()
   })
   .refine((value) => value.periodStart <= value.periodEnd, {
@@ -110,6 +111,16 @@ export const myPayslipFiltersSchema = z.object({
 });
 export const payrollRecordIdSchema = z.object({ id: idSchema });
 export const generatePayrollSchema = z.object({ payrollPeriodId: idSchema });
+const manualAdjustmentSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  type: z.enum(['bonus', 'deduction']),
+  amount: moneySchema,
+  taxable: z.boolean().optional()
+});
+export const payrollRecordAdjustmentSchema = z.object({
+  id: idSchema,
+  adjustments: z.array(manualAdjustmentSchema).max(50)
+});
 export const reportFiltersSchema = payrollRecordFiltersSchema.extend({
-  format: z.enum(['json', 'csv']).default('json')
+  format: z.enum(['json', 'csv', 'xlsx']).default('json')
 });

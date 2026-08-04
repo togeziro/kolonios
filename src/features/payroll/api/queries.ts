@@ -14,6 +14,7 @@ export type PayrollQueryFilters = PayrollRecordFilters & {
   employeeId?: string;
   scope?: 'admin' | 'employee';
 };
+export type PayrollReportFilters = PayrollQueryFilters & { format?: 'json' | 'csv' | 'xlsx' };
 export const payrollKeys = {
   all: ['payroll'] as const,
   components: () => [...payrollKeys.all, 'components'] as const,
@@ -40,7 +41,7 @@ export const payrollRecordsQueryOptions = (filters: PayrollQueryFilters = {}) =>
     queryKey: payrollKeys.records(filters),
     queryFn: () => listPayrollRecordsFn({ data: filters })
   });
-export const payrollReportQueryOptions = (filters: PayrollQueryFilters = {}) =>
+export const payrollReportQueryOptions = (filters: PayrollReportFilters = {}) =>
   queryOptions({
     queryKey: payrollKeys.report(filters),
     queryFn: () => getPayrollReportFn({ data: filters })

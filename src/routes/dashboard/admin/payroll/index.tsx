@@ -14,6 +14,14 @@ export const Route = createFileRoute('/dashboard/admin/payroll/')({
   component: PayrollOverviewPage
 });
 
+const payrollLinks = [
+  ['/dashboard/admin/payroll/periods', 'periods'],
+  ['/dashboard/admin/payroll/profile', 'profile'],
+  ['/dashboard/admin/payroll/generate', 'generate'],
+  ['/dashboard/admin/payroll/records', 'records'],
+  ['/dashboard/admin/payroll/reports', 'reports']
+] as const;
+
 function PayrollOverviewPage() {
   const { t } = useTranslation();
   return (
@@ -22,19 +30,14 @@ function PayrollOverviewPage() {
       pageDescription={t('payroll.overviewDescription')}
     >
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-        {[
-          ['/dashboard/admin/payroll/periods', t('payroll.periods')],
-          ['/dashboard/admin/payroll/generate', t('payroll.generate')],
-          ['/dashboard/admin/payroll/records', t('payroll.records')],
-          ['/dashboard/admin/payroll/reports', t('payroll.reports')]
-        ].map(([to, label]) => (
+        {payrollLinks.map(([to, key]) => (
           <Card key={to}>
             <CardHeader>
-              <CardTitle className='text-base'>{label}</CardTitle>
+              <CardTitle className='text-base'>{t(`payroll.${key}`)}</CardTitle>
             </CardHeader>
             <CardContent>
               <Button asChild variant='outline' size='sm'>
-                <Link to={to as any}>{t('common.open')}</Link>
+                <Link to={to}>{t('common.open')}</Link>
               </Button>
             </CardContent>
           </Card>

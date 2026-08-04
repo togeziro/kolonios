@@ -27,11 +27,12 @@ import {
   getEffectiveSalaryAssignment,
   getEffectiveSalaryComponents,
   getEffectiveTaxProfile,
-  getEffectiveBenefits,
-  getPrimaryBankAccount,
   getEmploymentContext,
+  listEmployeePayrollProfileHistory,
   listPayrollPeriods,
   listPayrollRecords,
+  listPayrollReportRows,
+  resolveEffectiveRecord,
   withPayrollAuditTransaction,
   lockPayrollPeriod,
   assertPayrollTransition,
@@ -53,6 +54,7 @@ import {
   payrollPeriodSchema,
   payrollRecordFiltersSchema,
   reportFiltersSchema,
+  payrollRecordAdjustmentSchema,
   salaryComponentIdSchema,
   salaryComponentSchema,
   salaryComponentUpdateSchema,
@@ -278,6 +280,74 @@ export function serializePayrollReport(
   };
 }
 
+export function assertPayrollAdjustmentAllowed(status: string) {
+  if (status !== 'processing') {
+    throw new Error('Manual adjustments are only allowed before payroll approval.');
+  }
+}
+
+type PayrollReportRow = {
+  employee_id: string;
+  department_name?: string | null;
+  gross_salary: string | number;
+  total_allowances: string | number;
+  total_deductions: string | number;
+  net_salary: string | number;
+  details?: unknown;
+};
+
+export function aggregatePayrollRows(rows: PayrollReportRow[]) {
+  const departmentsByName = new Map<string, { department: string; gross: number; net: number }>();
+  const componentsByKey = new Map<string, { name: string; type: string; amount: number }>();
+  let gross = 0;
+  let allowances = 0;
+  let deductions = 0;
+  let net = 0;
+  let taxTotal = 0;
+  for (const row of rows) {
+    const rowGross = Number(row.gross_salary ?? 0);
+    const rowNet = Number(row.net_salary ?? 0);
+    gross += rowGross;
+    allowances += Number(row.total_allowances ?? 0);
+    deductions += Number(row.total_deductions ?? 0);
+    net += rowNet;
+    const department = row.department_name ?? 'Unassigned';
+    const departmentTotal = departmentsByName.get(department) ?? { department, gross: 0, net: 0 };
+    departmentTotal.gross += rowGross;
+    departmentTotal.net += rowNet;
+    departmentsByName.set(department, departmentTotal);
+    const details =
+      row.details && typeof row.details === 'object'
+        ? (row.details as Record<string, unknown>)
+        : {};
+    const tax =
+      details.tax && typeof details.tax === 'object'
+        ? (details.tax as Record<string, unknown>)
+        : {};
+    taxTotal += Number(tax.amount ?? 0);
+    const lineItems = Array.isArray(details.lineItems) ? details.lineItems : [];
+    for (const item of lineItems) {
+      if (!item || typeof item !== 'object') continue;
+      const line = item as Record<string, unknown>;
+      if (typeof line.name !== 'string' || typeof line.type !== 'string') continue;
+      const key = `${line.type}:${line.name}`;
+      const component = componentsByKey.get(key) ?? { name: line.name, type: line.type, amount: 0 };
+      component.amount += Number(line.amount ?? 0);
+      componentsByKey.set(key, component);
+    }
+  }
+  return {
+    rows,
+    gross,
+    allowances,
+    deductions,
+    net,
+    taxTotal,
+    departmentTotals: [...departmentsByName.values()],
+    componentTotals: [...componentsByKey.values()]
+  };
+}
+
 export const listSalaryComponentsFn = createServerFn({ method: 'GET' }).handler(async () => {
   await requirePermission('payroll', 'view');
   return listSalaryComponents();
@@ -362,17 +432,35 @@ export const getEmployeePayrollProfileFn = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const session = await requirePermission('payroll', 'view');
     assertEmployeeScope(session, data.employeeId);
+    const asOfDate = new Date().toISOString().slice(0, 10);
+    const [employment, history] = await Promise.all([
+      getEmploymentContext(data.employeeId, asOfDate),
+      listEmployeePayrollProfileHistory(data.employeeId)
+    ]);
+    const assignment = history?.assignments
+      ? resolveEffectiveRecord(data.employeeId, asOfDate, history.assignments)
+      : null;
+    const tax = history?.taxProfiles
+      ? resolveEffectiveRecord(data.employeeId, asOfDate, history.taxProfiles)
+      : null;
+    const bank = history?.bankAccounts
+      ? resolveEffectiveRecord(
+          data.employeeId,
+          asOfDate,
+          history.bankAccounts.filter((account) => account.is_primary)
+        )
+      : null;
     return JSON.parse(
       JSON.stringify({
-        employment: await getEmploymentContext(
-          data.employeeId,
-          new Date().toISOString().slice(0, 10)
-        ),
-        assignment: await getEffectiveSalaryAssignment(data.employeeId, '1900-01-01', '9999-12-31'),
-        components: await getEffectiveSalaryComponents(data.employeeId, '1900-01-01', '9999-12-31'),
-        tax: await getEffectiveTaxProfile(data.employeeId, new Date().toISOString().slice(0, 10)),
-        benefits: await getEffectiveBenefits(data.employeeId, '1900-01-01', '9999-12-31'),
-        bank: await getPrimaryBankAccount(data.employeeId, new Date().toISOString().slice(0, 10))
+        employment,
+        assignment,
+        components: history?.components ?? [],
+        assignments: history?.assignments ?? [],
+        tax,
+        taxProfiles: history?.taxProfiles ?? [],
+        benefits: history?.benefits ?? [],
+        bank,
+        bankAccounts: history?.bankAccounts ?? []
       })
     );
   });
@@ -578,6 +666,7 @@ export const createPayrollPeriodFn = createServerFn({ method: 'POST' })
             name: data.name,
             period_start: data.periodStart,
             period_end: data.periodEnd,
+            payment_date: data.paymentDate,
             status: 'draft',
             created_by: session.user.id
           })
@@ -817,6 +906,55 @@ export const listPayrollRecordsFn = createServerFn({ method: 'GET' })
     );
   });
 
+export const adjustPayrollRecordFn = createServerFn({ method: 'POST' })
+  .validator(payrollRecordAdjustmentSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    return withPayrollAuditTransaction(
+      session.user.id,
+      { action: 'payroll.record.adjust', entityType: 'payroll_record', entityId: data.id },
+      async (tx) => {
+        const [record] = await tx
+          .select()
+          .from(payrollRecords)
+          .where(eq(payrollRecords.id, data.id))
+          .limit(1);
+        if (!record) throw new Error('Payroll record was not found.');
+        const period = await lockPayrollPeriod(tx, record.payroll_period_id);
+        if (!period) throw new Error('Payroll period was not found.');
+        assertPayrollAdjustmentAllowed(period.status);
+        const details =
+          record.details && typeof record.details === 'object'
+            ? (record.details as Record<string, unknown>)
+            : null;
+        const input = details?.input;
+        if (!input || typeof input !== 'object')
+          throw new Error('Payroll calculation input is unavailable.');
+        const result = calculatePayroll({
+          ...(input as PayrollCalculationInput),
+          manualAdjustments: data.adjustments.map((adjustment) => ({
+            ...adjustment,
+            amount: parseDbDecimalToMoney(adjustment.amount)
+          }))
+        });
+        const [updated] = await tx
+          .update(payrollRecords)
+          .set({
+            gross_salary: (result.grossSalary / 100).toFixed(2),
+            total_allowances: (result.allowanceTotal / 100).toFixed(2),
+            total_deductions: (result.deductionTotal / 100).toFixed(2),
+            net_salary: (result.netSalary / 100).toFixed(2),
+            details: result.snapshot,
+            updated_at: new Date()
+          })
+          .where(eq(payrollRecords.id, data.id))
+          .returning();
+        if (!updated) throw new Error('Payroll record changed during adjustment.');
+        return JSON.parse(JSON.stringify(updated));
+      }
+    );
+  });
+
 async function transitionPayrollWithAudit(
   actorUserId: string,
   id: number,
@@ -885,14 +1023,27 @@ export const getPayrollReportFn = createServerFn({ method: 'GET' })
   .validator(reportFiltersSchema)
   .handler(async ({ data }) => {
     await requirePermission('payroll', 'reports');
-    const result = await listPayrollRecords({
+    const rows = await listPayrollReportRows({
       payroll_period_id: data.payrollPeriodId,
       employee_id: data.employeeId,
       department_id: data.departmentId,
-      status: data.status,
-      scope: 'admin',
-      page: data.page,
-      limit: data.limit
+      status: data.status
     });
-    return serializePayrollReport(JSON.parse(JSON.stringify(result)), data.format) as any;
+    const aggregate = aggregatePayrollRows(JSON.parse(JSON.stringify(rows ?? [])));
+    if (data.format === 'csv')
+      return serializePayrollReport({ rows: aggregate.rows }, 'csv') as any;
+    if (data.format === 'xlsx') {
+      const { writeXlsxBuffer } = await import('@/features/attendance/api/export-adapter');
+      const buffer = writeXlsxBuffer(
+        aggregate.rows as unknown as Array<Record<string, unknown>>,
+        'Payroll'
+      );
+      return {
+        format: 'xlsx' as const,
+        content: buffer.toString('base64'),
+        mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ext: 'xlsx'
+      };
+    }
+    return aggregate;
   });

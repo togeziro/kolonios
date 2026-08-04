@@ -100,4 +100,37 @@ describe('payroll service boundaries', () => {
       content: expect.stringContaining('employee_id,net_salary')
     });
   });
+
+  it('aggregates complete payroll rows by department, tax, and component', async () => {
+    const { aggregatePayrollRows } = await import('./service');
+    const result = aggregatePayrollRows([
+      {
+        employee_id: 'e1',
+        department_name: 'Engineering',
+        gross_salary: '100.00',
+        total_allowances: '20.00',
+        total_deductions: '5.00',
+        net_salary: '95.00',
+        details: {
+          tax: { amount: 300 },
+          lineItems: [
+            { name: 'Transport', type: 'allowance', amount: 2000 },
+            { name: 'Loan', type: 'deduction', amount: 500 }
+          ]
+        }
+      }
+    ]);
+    expect(result.departmentTotals).toEqual([{ department: 'Engineering', gross: 100, net: 95 }]);
+    expect(result.taxTotal).toBe(300);
+    expect(result.componentTotals).toEqual([
+      { name: 'Transport', type: 'allowance', amount: 2000 },
+      { name: 'Loan', type: 'deduction', amount: 500 }
+    ]);
+  });
+
+  it('allows adjustments only while a payroll period is processing', async () => {
+    const { assertPayrollAdjustmentAllowed } = await import('./service');
+    expect(() => assertPayrollAdjustmentAllowed('processing')).not.toThrow();
+    expect(() => assertPayrollAdjustmentAllowed('ready_to_pay')).toThrow(/approval/i);
+  });
 });

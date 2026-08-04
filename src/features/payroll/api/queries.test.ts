@@ -6,6 +6,7 @@ vi.mock('./service', () => ({
   listPayrollPeriodsFn: vi.fn(),
   listPayrollRecordsFn: vi.fn(),
   getPayrollReportFn: vi.fn(),
+  adjustPayrollRecordFn: vi.fn(),
   getMyPayslipsFn: vi.fn()
 }));
 
@@ -13,6 +14,7 @@ import { payrollKeys, payrollRecordsQueryOptions } from './queries';
 import { listPayrollRecordsFn } from './service';
 import { payrollMutationKeys } from './mutations';
 import { useUpdateEmployeePayrollProfile } from './mutations';
+import { useAdjustPayrollRecord } from './mutations';
 
 describe('payroll query options', () => {
   it('keeps employee scope in the record key and request', () => {
@@ -35,5 +37,9 @@ describe('payroll query options', () => {
 
   it('exports the employee payroll profile mutation hook', () => {
     expect(useUpdateEmployeePayrollProfile).toBeTypeOf('function');
+  });
+
+  it('exports the pre-approval adjustment mutation hook', () => {
+    expect(useAdjustPayrollRecord).toBeTypeOf('function');
   });
 });

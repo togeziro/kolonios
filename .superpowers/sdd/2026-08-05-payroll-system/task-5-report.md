@@ -14,8 +14,8 @@
 ## API Constraints
 
 - The existing salary-component API supports code, name, allowance/deduction type, description, and active status. The UI does not invent unsupported mode, taxable, or amount fields.
-- The existing payroll report API supports JSON and CSV only. XLSX export was not added because no payroll XLSX endpoint exists.
-- The existing mutation set has no manual-adjustment mutation, so the records screen explains that limitation rather than sending unsupported requests.
+- The payroll report API now supports JSON, CSV, and XLSX through the repository's existing `xlsx` export adapter.
+- A smallest-scope, server-authorized manual-adjustment mutation was added and is restricted to `processing` periods.
 
 ## Verification
 
@@ -27,5 +27,34 @@
 
 ## Concerns
 
-- The route components use a few `any` casts because the current server-function return types are inferred as unions and the existing API does not expose dedicated payroll view models.
-- The brief requests XLSX export and manual adjustments, but those capabilities are absent from the Task 4 server API and were intentionally not fabricated in the UI.
+- Existing database/service code still emits unrelated `any` warnings; touched payroll route and component files are clean under targeted lint.
+
+## Review Fixes
+
+- Replaced the records table with the shared TanStack `DataTable`, server-backed period/department/status filters, pinned actions, detail breakdown dialog, explicit loading/error/empty states, guarded workflow actions, and a validated pre-approval adjustment mutation.
+- Added `payment_date` to the payroll-period schema, validation, create payload, migration `0012_nebulous_morlocks.sql`, table display, and generation preview.
+- Added profile-history reads for salary assignments/components, PPh 21 profiles, BPJS benefits, and bank accounts; the profile screen edits each effective-dated section and masks bank numbers except the final four digits.
+- Added client permission checks for component CRUD, period creation, profile edits, generation, adjustments, approval, payment, locking, and exports while retaining server permission guards.
+- Added complete server-side report aggregation by department, tax, and allowance/deduction component, plus CSV and existing-tool XLSX export.
+- Added generation employee count, period/employee loading and error states, missing-data feedback, profile navigation, permission tests, workflow-column tests, validation tests, adjustment tests, and table helper tests.
+
+## Review Verification
+
+- `bun run db:generate`: passed; generated `0012_nebulous_morlocks.sql`, then hardened it to backfill existing rows from `period_end` before `NOT NULL`.
+- `bun test src/features/payroll/api/validation.test.ts src/features/payroll/api/service.test.ts src/features/payroll/api/queries.test.ts src/features/payroll/components/permissions.test.ts src/routes/dashboard/admin/payroll/components.test.tsx src/routes/dashboard/admin/payroll/records-columns.test.tsx`: passed, 24 tests, 42 assertions.
+- `bun run typecheck`: passed.
+- `bun run i18n:check`: passed, 733 keys in both locales.
+- Targeted `bunx oxlint src/routes/dashboard/admin/payroll src/features/payroll/components src/features/payroll/api src/lib/db/schema/payroll.ts src/lib/db/payroll.ts src/config/nav-config.ts src/components/layout/app-sidebar.tsx`: warnings only from pre-existing database/service `any` and CSV helper patterns; touched route files have no targeted lint errors.
+- Full `bun run lint`: retains the known unrelated `jsx-a11y/control-has-associated-label` error in `src/components/layout/mobile-header.tsx`.
+
+## Final Command Evidence
+
+- `bun run typecheck`: `$ tsc --noEmit` completed successfully.
+- Focused payroll test command: `24 pass`, `0 fail`, `42 expect() calls`.
+- `bun run i18n:check`: `i18n key parity OK (733 keys in both locales)`.
+- Targeted `bunx oxlint src/routes/dashboard/admin/payroll src/features/payroll/components`: completed with no output and no findings.
+- Full `bun run lint`: completed lint output with existing warnings, then exited `1` on `src/components/layout/mobile-header.tsx:53:9` (`jsx-a11y/control-has-associated-label`).
+
+## Updated Concerns
+
+- Payroll detail line-item component amounts remain in calculator minor units in the aggregate payload, matching the existing calculator snapshot contract.

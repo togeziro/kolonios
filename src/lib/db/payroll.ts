@@ -357,6 +357,52 @@ export async function getPrimaryBankAccount(employeeId: string, asOfDate: string
   }
 }
 
+export async function listEmployeePayrollProfileHistory(employeeId: string) {
+  try {
+    assertEmployeeId(employeeId);
+    const [assignments, components, taxProfiles, benefits, bankAccounts] = await Promise.all([
+      db
+        .select()
+        .from(employeeSalaryAssignments)
+        .where(eq(employeeSalaryAssignments.employee_id, employeeId))
+        .orderBy(
+          desc(employeeSalaryAssignments.effective_from),
+          desc(employeeSalaryAssignments.id)
+        ),
+      db
+        .select({ component: employeeSalaryComponents, definition: salaryComponents })
+        .from(employeeSalaryComponents)
+        .innerJoin(
+          salaryComponents,
+          eq(employeeSalaryComponents.salary_component_id, salaryComponents.id)
+        )
+        .innerJoin(
+          employeeSalaryAssignments,
+          eq(employeeSalaryComponents.assignment_id, employeeSalaryAssignments.id)
+        )
+        .where(eq(employeeSalaryAssignments.employee_id, employeeId))
+        .orderBy(desc(employeeSalaryComponents.effective_from), desc(employeeSalaryComponents.id)),
+      listEmployeeTaxProfiles(employeeId),
+      db
+        .select()
+        .from(employeeBenefitEnrollments)
+        .where(eq(employeeBenefitEnrollments.employee_id, employeeId))
+        .orderBy(
+          desc(employeeBenefitEnrollments.effective_from),
+          desc(employeeBenefitEnrollments.id)
+        ),
+      db
+        .select()
+        .from(employeeBankAccounts)
+        .where(eq(employeeBankAccounts.employee_id, employeeId))
+        .orderBy(desc(employeeBankAccounts.effective_from), desc(employeeBankAccounts.id))
+    ]);
+    return { assignments, components, taxProfiles, benefits, bankAccounts };
+  } catch (e) {
+    mapDbError(e, 'payroll.listEmployeePayrollProfileHistory');
+  }
+}
+
 export async function getEmploymentContext(employeeId: string, asOfDate: string) {
   try {
     assertEmployeeId(employeeId);
@@ -1193,6 +1239,45 @@ export async function listPayrollRecords(
     return { rows, total: count, limit, offset };
   } catch (e) {
     mapDbError(e, 'payroll.listPayrollRecords');
+  }
+}
+
+export async function listPayrollReportRows(
+  filters: {
+    payroll_period_id?: number;
+    employee_id?: string;
+    department_id?: number;
+    status?: string;
+  } = {}
+) {
+  try {
+    const where = buildConditions([
+      filters.employee_id ? eq(payrollRecords.employee_id, filters.employee_id) : undefined,
+      filters.payroll_period_id
+        ? eq(payrollRecords.payroll_period_id, filters.payroll_period_id)
+        : undefined,
+      filters.department_id ? eq(employees.department_id, filters.department_id) : undefined,
+      filters.status
+        ? eq(
+            payrollPeriods.status,
+            filters.status as 'draft' | 'processing' | 'ready_to_pay' | 'paid' | 'locked'
+          )
+        : undefined
+    ]);
+    return await db
+      .select({
+        ...getTableColumns(payrollRecords),
+        period_status: payrollPeriods.status,
+        department_name: departments.name
+      })
+      .from(payrollRecords)
+      .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))
+      .innerJoin(employees, eq(payrollRecords.employee_id, employees.id))
+      .leftJoin(departments, eq(employees.department_id, departments.id))
+      .where(where)
+      .orderBy(desc(payrollRecords.id));
+  } catch (e) {
+    mapDbError(e, 'payroll.listPayrollReportRows');
   }
 }
 

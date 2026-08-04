@@ -330,7 +330,8 @@ describe('payroll data access (integration)', () => {
     const period = await createPayrollPeriod({
       name: 'Rollback Period',
       period_start: '2026-07-01',
-      period_end: '2026-07-31'
+      period_end: '2026-07-31',
+      payment_date: '2026-08-05'
     });
     await seedUser('payroll-generation-employee');
     const department = await seedDepartment({ code: 'PAY-GEN-DEPT' });
@@ -382,7 +383,8 @@ describe('payroll data access (integration)', () => {
     const period = await createPayrollPeriod({
       name: 'Locked Period',
       period_start: '2026-08-01',
-      period_end: '2026-08-31'
+      period_end: '2026-08-31',
+      payment_date: '2026-09-05'
     });
     await transitionPayrollPeriod(period.id, 'processing');
     await transitionPayrollPeriod(period.id, 'ready_to_pay');
@@ -424,7 +426,8 @@ describe('payroll data access (integration)', () => {
     const period = await createPayrollPeriod({
       name: 'Scoped Period',
       period_start: '2026-07-01',
-      period_end: '2026-07-31'
+      period_end: '2026-07-31',
+      payment_date: '2026-08-05'
     });
     await transitionPayrollPeriod(period.id, 'processing');
     await transitionPayrollPeriod(period.id, 'ready_to_pay');

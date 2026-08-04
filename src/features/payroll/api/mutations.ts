@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import {
   approvePayrollFn,
+  adjustPayrollRecordFn,
   createPayrollPeriodFn,
   createSalaryComponentFn,
   deleteSalaryComponentFn,
@@ -64,6 +65,11 @@ export const useGeneratePayroll = () =>
   usePayrollMutation(
     (data: Parameters<typeof generatePayrollFn>[0]['data']) => generatePayrollFn({ data }),
     () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()]
+  );
+export const useAdjustPayrollRecord = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof adjustPayrollRecordFn>[0]['data']) => adjustPayrollRecordFn({ data }),
+    () => [payrollKeys.records(), payrollKeys.report()]
   );
 export const useApprovePayroll = () =>
   usePayrollMutation(
