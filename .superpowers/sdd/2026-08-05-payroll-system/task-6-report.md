@@ -65,3 +65,20 @@
 - `bun run test:run src/features/payroll/api/service.integration.test.ts src/features/payroll/api/service.test.ts src/features/payroll/components/payslip-template.test.tsx src/features/payroll/components/payslip-download.test.ts src/lib/db/payroll.test.ts`: passed, 5 files / 38 tests. Existing payroll rollback test logs an expected foreign-key error while testing rollback handling.
 - `bun run typecheck`: passed.
 - `bun run build`: passed; generated the payslip route and production bundles.
+
+## Task 6 Test Boundary Correction (2026-08-05)
+
+### Exact Changes
+
+- Replaced the local `getMyPayslipsFn` wrapper in `src/features/payroll/api/service.integration.test.ts` with an import of the production `getMyPayslipsFn` from `./service`.
+- Added a provider RPC test adapter that bridges that exported caller to the production `getMyPayslipsFn_createServerFn_handler` from the TanStack Start `tss-serverfn-split` provider module, so the extracted validator and authenticated handler execute under Vitest; no production code, dependency, or authentication bypass changed.
+- Kept the employee A session while submitting employee B's `employeeId` filter and added employee A `locked`, employee A `processing`, and employee B `paid` fixtures.
+- Asserted exactly employee A's `paid` and `locked` rows are returned, with employee B and `processing` rows excluded, and retained session/header/permission assertions.
+
+### Exact Verification Outputs
+
+- `bun run test:run src/features/payroll/api/service.integration.test.ts`: passed; `Test Files 1 passed (1)`, `Tests 1 passed (1)`.
+- `bun run test:run src/features/payroll/api/service.integration.test.ts src/features/payroll/api/service.test.ts`: passed; `Test Files 2 passed (2)`, `Tests 11 passed (11)`.
+- `bun run typecheck`: passed; `tsc --noEmit` exited 0.
+- `bun run build`: passed; Vite and Nitro completed, `Generated .output/nitro.json`, and exited 0.
+- Focused test and build output included the existing route-file warnings for non-Route payroll component/test files; the build also emitted existing dependency `use client` directive warnings.

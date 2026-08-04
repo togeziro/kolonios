@@ -17,8 +17,11 @@ import {
   salaryComponents,
   taxSettings
 } from '@/lib/db/schema/payroll';
-import { requirePermission } from '@/lib/auth/session';
-import { listMyPayslips } from '@/lib/db/payroll';
+import { getMyPayslipsFn } from './service';
+// The split query supplies the production provider handler behind the exported
+// server-function caller, avoiding a network request while retaining its boundary.
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { getMyPayslipsFn_createServerFn_handler } from './service?tss-serverfn-split';
 
 const sessionUser = vi.hoisted(() => ({ id: 'payroll-boundary-a', role: 'employee' }));
 const getSessionMock = vi.hoisted(() => vi.fn(async () => ({ user: sessionUser })));
@@ -26,6 +29,9 @@ const getRequestHeadersMock = vi.hoisted(() => vi.fn(() => new Headers()));
 const getUserRoleGroupMock = vi.hoisted(() =>
   vi.fn(async () => ({ is_admin: false, permissions: { payroll: { view: true } } }))
 );
+const serverFnProvider = vi.hoisted(() => ({
+  handler: undefined as ((options: { data: unknown }) => unknown) | undefined
+}));
 const createServerFnMock = vi.hoisted(() => {
   return () => {
     let validator: { parse(input: unknown): unknown } | undefined;
@@ -36,8 +42,9 @@ const createServerFnMock = vi.hoisted(() => {
       },
       handler(...handlers: Array<(context: { data: unknown }) => unknown>) {
         const nextHandler = handlers.at(-1)!;
-        return async (options: { data: unknown }) =>
+        const invoke = async (options: { data: unknown }) =>
           nextHandler({ data: validator ? validator.parse(options.data) : options.data });
+        return Object.assign(invoke, { __executeServer: invoke });
       }
     };
     return builder;
@@ -48,6 +55,14 @@ vi.mock('@tanstack/react-start', () => ({
   createServerFn: createServerFnMock,
   createServerOnlyFn: (fn: (...args: never[]) => unknown) => fn,
   createMiddleware: () => ({ server: (fn: unknown) => fn })
+}));
+
+vi.mock('@tanstack/react-start/server-rpc', () => ({
+  createServerRpc: (_meta: unknown, fn: (options: unknown) => unknown) => fn
+}));
+
+vi.mock('@tanstack/react-start/ssr-rpc', () => ({
+  createSsrRpc: () => (options: { data: unknown }) => serverFnProvider.handler!(options)
 }));
 
 vi.mock('@/lib/auth/auth.server', () => ({
@@ -62,16 +77,7 @@ vi.mock('@/lib/db/role-groups', () => ({
   getUserRoleGroup: getUserRoleGroupMock
 }));
 
-const getMyPayslipsFn = (options: {
-  data: { payrollPeriodId?: number; page?: number; limit?: number; employeeId?: string };
-}) =>
-  requirePermission('payroll', 'view').then((session) =>
-    listMyPayslips(session.user.id, {
-      payroll_period_id: options.data.payrollPeriodId,
-      page: options.data.page,
-      limit: options.data.limit
-    })
-  );
+serverFnProvider.handler = getMyPayslipsFn_createServerFn_handler;
 
 async function resetPayrollTables() {
   await db.delete(employeeTaxRecords);
@@ -148,6 +154,16 @@ describe('getMyPayslipsFn authenticated boundary', () => {
         status: 'processing'
       })
       .returning({ id: payrollPeriods.id });
+    const [lockedPeriod] = await db
+      .insert(payrollPeriods)
+      .values({
+        name: 'Boundary Locked Period',
+        period_start: '2026-06-01',
+        period_end: '2026-06-30',
+        payment_date: '2026-07-05',
+        status: 'locked'
+      })
+      .returning({ id: payrollPeriods.id });
     await db.insert(payrollRecords).values([
       {
         payroll_period_id: paidPeriod.id,
@@ -166,6 +182,12 @@ describe('getMyPayslipsFn authenticated boundary', () => {
         employee_id: 'payroll-boundary-a',
         gross_salary: '300',
         net_salary: '270'
+      },
+      {
+        payroll_period_id: lockedPeriod.id,
+        employee_id: 'payroll-boundary-a',
+        gross_salary: '400',
+        net_salary: '360'
       }
     ]);
 
@@ -173,11 +195,13 @@ describe('getMyPayslipsFn authenticated boundary', () => {
       data: { employeeId: 'payroll-boundary-b' }
     } as never);
 
-    expect(result.rows).toHaveLength(1);
-    expect(result.rows[0]).toMatchObject({
-      employee_id: 'payroll-boundary-a',
-      period_status: 'paid'
-    });
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ employee_id: 'payroll-boundary-a', period_status: 'paid' }),
+        expect.objectContaining({ employee_id: 'payroll-boundary-a', period_status: 'locked' })
+      ])
+    );
     expect(
       result.rows.some((row: { employee_id: string }) => row.employee_id === 'payroll-boundary-b')
     ).toBe(false);
