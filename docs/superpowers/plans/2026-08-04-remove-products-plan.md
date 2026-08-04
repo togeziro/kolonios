@@ -75,9 +75,10 @@ git commit -m "refactor: remove products runtime feature"
 - Modify: `src/config/nav-config.ts` to remove the product navigation item
 - Modify: `src/features/role-groups/modules.ts` to remove the `products` module definition
 - Modify: role-group seed data wherever `products.view/add/edit/delete` is emitted
-- Modify: `src/config/infoconfig.ts` to remove product-only infobar content and imports
+- Modify: `src/config/infoconfig.ts` to remove `productInfoContent` (it has no consumers) and its imports; if the file contains nothing else, delete it
 - Modify: `scripts/seed.ts` to remove product inserts and product schema imports
 - Modify: `scripts/i18n-hardcoded-baseline.txt` to remove product component entries
+- Modify: `src/test-utils/db.ts` to remove the product fixture and its schema import
 - Modify: affected navigation or role-group tests to assert the remaining configuration
 
 **Interfaces:**
@@ -96,7 +97,7 @@ Classify each match before editing. Remove product-specific configuration, but p
 
 - [ ] **Step 2: Remove the product navigation item and module metadata**
 
-Delete the product item from `src/config/nav-config.ts`, remove the `products` entry from `src/features/role-groups/modules.ts`, and remove product-only permission fixtures from role-group tests. Do not change the generic permission filtering implementation.
+Delete the product item from `src/config/nav-config.ts`, remove the `products` entry from `src/features/role-groups/modules.ts`, and remove product-only permission fixtures from role-group tests. Remove `productInfoContent` from `src/config/infoconfig.ts`; if the file has no other exports, delete the file. Do not change the generic permission filtering implementation.
 
 - [ ] **Step 3: Remove product seed inserts**
 
@@ -104,9 +105,9 @@ Delete the product import, product category/type usage, product factory, and pro
 
 Also remove the product-only notification fixture from `scripts/seed.ts`; it currently uses the product catalog wording and `view-product` action. Keep all non-product notification fixtures intact.
 
-- [ ] **Step 4: Update configuration tests**
+- [ ] **Step 4: Update configuration tests and test fixtures**
 
-Adjust `src/config/nav-config.test.ts` or role-group tests only where they explicitly expect the removed product item/module. Add an assertion that no navigation item URL is `/dashboard/product` if the existing test style supports this without creating a new abstraction.
+Adjust `src/config/nav-config.test.ts` or role-group tests only where they explicitly expect the removed product item/module. Remove the product fixture and `products` schema import from `src/test-utils/db.ts`, keeping all other fixtures intact. Add an assertion that no navigation item URL is `/dashboard/product` if the existing test style supports this without creating a new abstraction.
 
 - [ ] **Step 5: Verify configuration and seed references are gone**
 
@@ -121,9 +122,11 @@ Expected: no product-specific navigation, permission, seed, or test-fixture refe
 - [ ] **Step 6: Commit configuration cleanup**
 
 ```bash
-git add src/config/nav-config.ts src/config/nav-config.test.ts src/config/infoconfig.ts src/features/role-groups/modules.ts scripts/seed.ts scripts/i18n-hardcoded-baseline.txt
+git add src/config/nav-config.ts src/config/nav-config.test.ts src/config/infoconfig.ts src/features/role-groups/modules.ts scripts/seed.ts scripts/i18n-hardcoded-baseline.txt src/test-utils/db.ts
 git commit -m "refactor: remove product navigation and seed data"
 ```
+
+Before committing, run `git status --short` and confirm only the files listed above (plus any pre-existing unrelated changes left unstaged) appear in the index. Do not stage unrelated pre-existing changes.
 
 ### Task 3: Remove Product Tests And Generate The Database Migration
 
@@ -248,8 +251,8 @@ Review that only product removal files are included in the implementation commit
 - [ ] **Step 6: Commit documentation and final cleanup**
 
 ```bash
-git add -p README.md docs/PRD.md docs/API.md docs/ARCHITECTURE.md docs/ATTENDANCE.md docs/TODO.md
+git add README.md docs/PRD.md docs/API.md docs/ARCHITECTURE.md docs/ATTENDANCE.md docs/TODO.md
 git commit -m "docs: remove products feature references"
 ```
 
-If a listed documentation file has no product-related change, do not stage it.
+Before committing, run `git status --short` and confirm only documentation files with actual product-related edits are staged. If a listed documentation file has no product-related change, do not stage it.
