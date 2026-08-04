@@ -273,6 +273,7 @@ export function serializePayrollReport(
     ...result,
     format,
     mime: 'text/csv',
+    encoding: 'identity' as const,
     content: [
       headers.join(','),
       ...result.rows.map((row) => headers.map((header) => escape(row[header])).join(','))
@@ -324,15 +325,21 @@ export function aggregatePayrollRows(rows: PayrollReportRow[]) {
       details.tax && typeof details.tax === 'object'
         ? (details.tax as Record<string, unknown>)
         : {};
-    taxTotal += Number(tax.amount ?? 0);
+    taxTotal += Number(tax.amount ?? 0) / 100;
     const lineItems = Array.isArray(details.lineItems) ? details.lineItems : [];
     for (const item of lineItems) {
       if (!item || typeof item !== 'object') continue;
       const line = item as Record<string, unknown>;
-      if (typeof line.name !== 'string' || typeof line.type !== 'string') continue;
-      const key = `${line.type}:${line.name}`;
-      const component = componentsByKey.get(key) ?? { name: line.name, type: line.type, amount: 0 };
-      component.amount += Number(line.amount ?? 0);
+      const lineType = typeof line.type === 'string' ? line.type : null;
+      if (
+        !lineType ||
+        !['allowance', 'deduction'].includes(lineType) ||
+        typeof line.name !== 'string'
+      )
+        continue;
+      const key = `${lineType}:${line.name}`;
+      const component = componentsByKey.get(key) ?? { name: line.name, type: lineType, amount: 0 };
+      component.amount += Number(line.amount ?? 0) / 100;
       componentsByKey.set(key, component);
     }
   }
@@ -1041,6 +1048,7 @@ export const getPayrollReportFn = createServerFn({ method: 'GET' })
       return {
         format: 'xlsx' as const,
         content: buffer.toString('base64'),
+        encoding: 'base64' as const,
         mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ext: 'xlsx'
       };

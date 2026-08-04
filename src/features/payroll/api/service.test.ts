@@ -97,11 +97,12 @@ describe('payroll service boundaries', () => {
       serializePayrollReport({ rows: [{ employee_id: 'e1', net_salary: '10.00' }] }, 'csv')
     ).toMatchObject({
       mime: 'text/csv',
+      encoding: 'identity',
       content: expect.stringContaining('employee_id,net_salary')
     });
   });
 
-  it('aggregates complete payroll rows by department, tax, and component', async () => {
+  it('aggregates complete payroll rows by department, tax, and display-unit components', async () => {
     const { aggregatePayrollRows } = await import('./service');
     const result = aggregatePayrollRows([
       {
@@ -114,17 +115,19 @@ describe('payroll service boundaries', () => {
         details: {
           tax: { amount: 300 },
           lineItems: [
+            { name: 'Base salary', type: 'base', amount: 10000 },
             { name: 'Transport', type: 'allowance', amount: 2000 },
-            { name: 'Loan', type: 'deduction', amount: 500 }
+            { name: 'Loan', type: 'deduction', amount: 500 },
+            { name: 'PPh 21', type: 'tax', amount: 300 }
           ]
         }
       }
     ]);
     expect(result.departmentTotals).toEqual([{ department: 'Engineering', gross: 100, net: 95 }]);
-    expect(result.taxTotal).toBe(300);
+    expect(result.taxTotal).toBe(3);
     expect(result.componentTotals).toEqual([
-      { name: 'Transport', type: 'allowance', amount: 2000 },
-      { name: 'Loan', type: 'deduction', amount: 500 }
+      { name: 'Transport', type: 'allowance', amount: 20 },
+      { name: 'Loan', type: 'deduction', amount: 5 }
     ]);
   });
 

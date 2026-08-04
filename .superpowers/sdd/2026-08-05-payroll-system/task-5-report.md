@@ -58,3 +58,17 @@
 ## Updated Concerns
 
 - Payroll detail line-item component amounts remain in calculator minor units in the aggregate payload, matching the existing calculator snapshot contract.
+
+## Final Review Fixes
+
+- Added explicit `encoding` metadata: CSV responses are `identity` text, while XLSX responses remain `base64`; the client now decodes only binary formats and preserves CSV text bytes.
+- Normalized report aggregation to persisted display units by dividing calculator minor-unit tax and allowance/deduction line items exactly once, while excluding `base` and `tax` line items from component totals.
+- Added add-record paths for components, PPh 21, BPJS benefits, and bank accounts even when existing history is non-empty; new records omit identity IDs and continue through the existing effective-date and server overlap validation.
+- Added regressions for CSV/binary decoding, report filtering and unit normalization, and new profile-record identity behavior.
+
+## Final Review Command Evidence
+
+- `bun test src/features/payroll/api/validation.test.ts src/features/payroll/api/service.test.ts src/features/payroll/api/queries.test.ts src/features/payroll/components/permissions.test.ts src/routes/dashboard/admin/payroll/components.test.tsx src/routes/dashboard/admin/payroll/records-columns.test.tsx src/routes/dashboard/admin/payroll/reports-download.test.ts src/routes/dashboard/admin/payroll/profile.test.ts`: `27 pass`, `0 fail`, `51 expect() calls`.
+- `bun run typecheck`: `$ tsc --noEmit` completed successfully.
+- `bun run i18n:check`: `i18n key parity OK (733 keys in both locales)`.
+- `bunx oxlint src/routes/dashboard/admin/payroll src/features/payroll/components`: completed with no output and no findings.

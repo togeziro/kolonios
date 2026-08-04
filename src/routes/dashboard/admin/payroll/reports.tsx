@@ -22,6 +22,7 @@ import { getPayrollReportFn } from '@/features/payroll/api/service';
 import type { PayrollReportResult } from '@/features/payroll/api/types';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
+import { decodePayrollExport } from './reports-download';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/reports')({
   beforeLoad: async () => {
@@ -57,8 +58,7 @@ function ReportsPage() {
       }),
     onSuccess: (result) => {
       if (!result || !('content' in result)) return;
-      const encoded = result.content;
-      const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+      const bytes = decodePayrollExport(result.content, result.encoding);
       const blob = new Blob([bytes], { type: result.mime });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');

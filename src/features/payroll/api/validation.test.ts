@@ -80,4 +80,21 @@ describe('payroll validation', () => {
       }).adjustments[0]?.amount
     ).toBe('1.00');
   });
+
+  it('accepts new effective-dated profile records alongside existing history', () => {
+    for (const [kind, values] of [
+      ['component', { assignmentId: 1, salaryComponentId: 2, amount: '10.00' }],
+      ['tax', { taxIdentifier: 'NPWP-2', filingStatus: 'TK/0' }],
+      ['benefit', { benefitCode: 'BPJS-K', benefitName: 'Health' }],
+      ['bank', { bankName: 'Bank', accountName: 'Employee', accountNumber: '1234' }]
+    ] as const) {
+      expect(() =>
+        employeePayrollProfileSchema.parse({
+          employeeId: 'e1',
+          kind,
+          values: { ...values, effectiveFrom: '2027-01-01' }
+        })
+      ).not.toThrow();
+    }
+  });
 });

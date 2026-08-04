@@ -123,6 +123,10 @@ function validDates(from: string, to: string) {
   return Boolean(from) && (!to || from <= to);
 }
 
+export function profileRecordId(id: number | undefined) {
+  return id && id > 0 ? id : undefined;
+}
+
 function ProfilePage() {
   const { t } = useTranslation();
   const { isAdmin, permissions } = useRoleGroupPermissions();
@@ -219,6 +223,10 @@ function ProfilePage() {
   const save = async (payload: ProfileMutation) => {
     try {
       await update.mutateAsync(payload);
+      if (payload.kind === 'component') setNewComponentDraft(null);
+      if (payload.kind === 'tax') setNewTaxDraft(null);
+      if (payload.kind === 'benefit') setNewBenefitDraft(null);
+      if (payload.kind === 'bank') setNewBankDraft(null);
       toast.success(t('payroll.saved'));
     } catch {
       toast.error(t('payroll.failed'));
@@ -231,7 +239,7 @@ function ProfilePage() {
       employeeId,
       kind: 'assignment',
       values: {
-        id: assignment.id > 0 ? assignment.id : undefined,
+        id: profileRecordId(assignment.id),
         salaryType: assignment.salary_type,
         amount: assignment.amount,
         effectiveFrom: assignment.effective_from,
@@ -248,7 +256,7 @@ function ProfilePage() {
       employeeId,
       kind: 'component',
       values: {
-        id: draft.id && draft.id > 0 ? draft.id : undefined,
+        id: profileRecordId(draft.id),
         assignmentId: draft.assignmentId,
         salaryComponentId: draft.salaryComponentId,
         amount: draft.amount,
@@ -264,7 +272,7 @@ function ProfilePage() {
       employeeId,
       kind: 'tax',
       values: {
-        id: draft.id && draft.id > 0 ? draft.id : undefined,
+        id: profileRecordId(draft.id),
         taxSettingId: draft.taxSettingId,
         taxIdentifier: draft.taxIdentifier || undefined,
         filingStatus: draft.filingStatus || undefined,
@@ -280,7 +288,7 @@ function ProfilePage() {
       employeeId,
       kind: 'benefit',
       values: {
-        id: draft.id && draft.id > 0 ? draft.id : undefined,
+        id: profileRecordId(draft.id),
         benefitCode: draft.benefitCode,
         benefitName: draft.benefitName,
         amount: draft.amount || undefined,
@@ -297,7 +305,7 @@ function ProfilePage() {
       employeeId,
       kind: 'bank',
       values: {
-        id: draft.id && draft.id > 0 ? draft.id : undefined,
+        id: profileRecordId(draft.id),
         bankName: draft.bankName,
         accountName: draft.accountName,
         accountNumber: draft.accountNumber,
@@ -438,7 +446,7 @@ function ProfilePage() {
                 <CardTitle>{t('payroll.components')}</CardTitle>
               </CardHeader>
               <CardContent className='space-y-3'>
-                {data.components.length === 0 ? (
+                {data.components.length === 0 || newComponentDraft ? (
                   newComponentDraft ? (
                     <div className='grid gap-2 sm:grid-cols-5'>
                       <select
@@ -513,60 +521,76 @@ function ProfilePage() {
                     </Button>
                   )
                 ) : (
-                  data.components.map(({ component, definition }) => {
-                    const draft = componentDrafts[component.id];
-                    if (!draft) return null;
-                    return (
-                      <div className='space-y-2 rounded-lg border p-3' key={component.id}>
-                        <div className='flex items-center justify-between'>
-                          <span className='font-medium'>{definition.name}</span>
-                          <Badge variant='outline'>{t(`payroll.${definition.type}`)}</Badge>
+                  <>
+                    <Button
+                      disabled={!canEdit || !selectedAssignmentId}
+                      onClick={() =>
+                        setNewComponentDraft({
+                          assignmentId: selectedAssignmentId ?? 0,
+                          salaryComponentId: 0,
+                          amount: '',
+                          effectiveFrom: '',
+                          effectiveTo: ''
+                        })
+                      }
+                    >
+                      {t('payroll.addProfile')}
+                    </Button>
+                    {data.components.map(({ component, definition }) => {
+                      const draft = componentDrafts[component.id];
+                      if (!draft) return null;
+                      return (
+                        <div className='space-y-2 rounded-lg border p-3' key={component.id}>
+                          <div className='flex items-center justify-between'>
+                            <span className='font-medium'>{definition.name}</span>
+                            <Badge variant='outline'>{t(`payroll.${definition.type}`)}</Badge>
+                          </div>
+                          <div className='grid gap-2 sm:grid-cols-3'>
+                            <Input
+                              disabled={!canEdit}
+                              aria-label={t('payroll.amount')}
+                              value={draft.amount}
+                              onChange={(e) =>
+                                setComponentDrafts({
+                                  ...componentDrafts,
+                                  [component.id]: { ...draft, amount: e.target.value }
+                                })
+                              }
+                            />
+                            <Input
+                              disabled={!canEdit}
+                              type='date'
+                              value={draft.effectiveFrom}
+                              onChange={(e) =>
+                                setComponentDrafts({
+                                  ...componentDrafts,
+                                  [component.id]: { ...draft, effectiveFrom: e.target.value }
+                                })
+                              }
+                            />
+                            <Input
+                              disabled={!canEdit}
+                              type='date'
+                              value={draft.effectiveTo}
+                              onChange={(e) =>
+                                setComponentDrafts({
+                                  ...componentDrafts,
+                                  [component.id]: { ...draft, effectiveTo: e.target.value }
+                                })
+                              }
+                            />
+                          </div>
+                          <Button
+                            disabled={!canEdit || update.isPending}
+                            size='sm'
+                            onClick={() => saveComponent(draft)}
+                          >
+                            {t('common.save')}
+                          </Button>
                         </div>
-                        <div className='grid gap-2 sm:grid-cols-3'>
-                          <Input
-                            disabled={!canEdit}
-                            aria-label={t('payroll.amount')}
-                            value={draft.amount}
-                            onChange={(e) =>
-                              setComponentDrafts({
-                                ...componentDrafts,
-                                [component.id]: { ...draft, amount: e.target.value }
-                              })
-                            }
-                          />
-                          <Input
-                            disabled={!canEdit}
-                            type='date'
-                            value={draft.effectiveFrom}
-                            onChange={(e) =>
-                              setComponentDrafts({
-                                ...componentDrafts,
-                                [component.id]: { ...draft, effectiveFrom: e.target.value }
-                              })
-                            }
-                          />
-                          <Input
-                            disabled={!canEdit}
-                            type='date'
-                            value={draft.effectiveTo}
-                            onChange={(e) =>
-                              setComponentDrafts({
-                                ...componentDrafts,
-                                [component.id]: { ...draft, effectiveTo: e.target.value }
-                              })
-                            }
-                          />
-                        </div>
-                        <Button
-                          disabled={!canEdit || update.isPending}
-                          size='sm'
-                          onClick={() => saveComponent(draft)}
-                        >
-                          {t('common.save')}
-                        </Button>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -575,7 +599,7 @@ function ProfilePage() {
                 <CardTitle>{t('payroll.pph21')}</CardTitle>
               </CardHeader>
               <CardContent className='space-y-3'>
-                {data.taxProfiles.length === 0 ? (
+                {data.taxProfiles.length === 0 || newTaxDraft ? (
                   newTaxDraft ? (
                     <div className='grid gap-2 sm:grid-cols-5'>
                       <Input
@@ -633,64 +657,82 @@ function ProfilePage() {
                     </Button>
                   )
                 ) : (
-                  data.taxProfiles.map((tax) => {
-                    const draft = taxDrafts[tax.id];
-                    if (!draft) return null;
-                    return (
-                      <div className='grid gap-2 rounded-lg border p-3 sm:grid-cols-5' key={tax.id}>
-                        <Input
-                          disabled={!canEdit}
-                          placeholder={t('payroll.taxIdentifier')}
-                          value={draft.taxIdentifier}
-                          onChange={(e) =>
-                            setTaxDrafts({
-                              ...taxDrafts,
-                              [tax.id]: { ...draft, taxIdentifier: e.target.value }
-                            })
-                          }
-                        />
-                        <Input
-                          disabled={!canEdit}
-                          placeholder={t('payroll.filingStatus')}
-                          value={draft.filingStatus}
-                          onChange={(e) =>
-                            setTaxDrafts({
-                              ...taxDrafts,
-                              [tax.id]: { ...draft, filingStatus: e.target.value }
-                            })
-                          }
-                        />
-                        <Input
-                          disabled={!canEdit}
-                          type='date'
-                          value={draft.effectiveFrom}
-                          onChange={(e) =>
-                            setTaxDrafts({
-                              ...taxDrafts,
-                              [tax.id]: { ...draft, effectiveFrom: e.target.value }
-                            })
-                          }
-                        />
-                        <Input
-                          disabled={!canEdit}
-                          type='date'
-                          value={draft.effectiveTo}
-                          onChange={(e) =>
-                            setTaxDrafts({
-                              ...taxDrafts,
-                              [tax.id]: { ...draft, effectiveTo: e.target.value }
-                            })
-                          }
-                        />
-                        <Button
-                          disabled={!canEdit || update.isPending}
-                          onClick={() => saveTax(draft)}
+                  <>
+                    <Button
+                      disabled={!canEdit}
+                      onClick={() =>
+                        setNewTaxDraft({
+                          taxIdentifier: '',
+                          filingStatus: '',
+                          effectiveFrom: '',
+                          effectiveTo: ''
+                        })
+                      }
+                    >
+                      {t('payroll.addProfile')}
+                    </Button>
+                    {data.taxProfiles.map((tax) => {
+                      const draft = taxDrafts[tax.id];
+                      if (!draft) return null;
+                      return (
+                        <div
+                          className='grid gap-2 rounded-lg border p-3 sm:grid-cols-5'
+                          key={tax.id}
                         >
-                          {t('common.save')}
-                        </Button>
-                      </div>
-                    );
-                  })
+                          <Input
+                            disabled={!canEdit}
+                            placeholder={t('payroll.taxIdentifier')}
+                            value={draft.taxIdentifier}
+                            onChange={(e) =>
+                              setTaxDrafts({
+                                ...taxDrafts,
+                                [tax.id]: { ...draft, taxIdentifier: e.target.value }
+                              })
+                            }
+                          />
+                          <Input
+                            disabled={!canEdit}
+                            placeholder={t('payroll.filingStatus')}
+                            value={draft.filingStatus}
+                            onChange={(e) =>
+                              setTaxDrafts({
+                                ...taxDrafts,
+                                [tax.id]: { ...draft, filingStatus: e.target.value }
+                              })
+                            }
+                          />
+                          <Input
+                            disabled={!canEdit}
+                            type='date'
+                            value={draft.effectiveFrom}
+                            onChange={(e) =>
+                              setTaxDrafts({
+                                ...taxDrafts,
+                                [tax.id]: { ...draft, effectiveFrom: e.target.value }
+                              })
+                            }
+                          />
+                          <Input
+                            disabled={!canEdit}
+                            type='date'
+                            value={draft.effectiveTo}
+                            onChange={(e) =>
+                              setTaxDrafts({
+                                ...taxDrafts,
+                                [tax.id]: { ...draft, effectiveTo: e.target.value }
+                              })
+                            }
+                          />
+                          <Button
+                            disabled={!canEdit || update.isPending}
+                            onClick={() => saveTax(draft)}
+                          >
+                            {t('common.save')}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -699,7 +741,7 @@ function ProfilePage() {
                 <CardTitle>{t('payroll.bpjs')}</CardTitle>
               </CardHeader>
               <CardContent className='space-y-3'>
-                {data.benefits.length === 0 ? (
+                {data.benefits.length === 0 || newBenefitDraft ? (
                   newBenefitDraft ? (
                     <div className='grid gap-2 sm:grid-cols-6'>
                       <Input
@@ -759,75 +801,92 @@ function ProfilePage() {
                     </Button>
                   )
                 ) : (
-                  data.benefits.map((benefit) => {
-                    const draft = benefitDrafts[benefit.id];
-                    if (!draft) return null;
-                    return (
-                      <div
-                        className='grid gap-2 rounded-lg border p-3 sm:grid-cols-6'
-                        key={benefit.id}
-                      >
-                        <Input
-                          disabled={!canEdit}
-                          value={draft.benefitCode}
-                          onChange={(e) =>
-                            setBenefitDrafts({
-                              ...benefitDrafts,
-                              [benefit.id]: { ...draft, benefitCode: e.target.value }
-                            })
-                          }
-                        />
-                        <Input
-                          disabled={!canEdit}
-                          value={draft.benefitName}
-                          onChange={(e) =>
-                            setBenefitDrafts({
-                              ...benefitDrafts,
-                              [benefit.id]: { ...draft, benefitName: e.target.value }
-                            })
-                          }
-                        />
-                        <Input
-                          disabled={!canEdit}
-                          value={draft.amount}
-                          onChange={(e) =>
-                            setBenefitDrafts({
-                              ...benefitDrafts,
-                              [benefit.id]: { ...draft, amount: e.target.value }
-                            })
-                          }
-                        />
-                        <Input
-                          disabled={!canEdit}
-                          type='date'
-                          value={draft.effectiveFrom}
-                          onChange={(e) =>
-                            setBenefitDrafts({
-                              ...benefitDrafts,
-                              [benefit.id]: { ...draft, effectiveFrom: e.target.value }
-                            })
-                          }
-                        />
-                        <Input
-                          disabled={!canEdit}
-                          type='date'
-                          value={draft.effectiveTo}
-                          onChange={(e) =>
-                            setBenefitDrafts({
-                              ...benefitDrafts,
-                              [benefit.id]: { ...draft, effectiveTo: e.target.value }
-                            })
-                          }
-                        />
-                        <Button
-                          disabled={!canEdit || update.isPending}
-                          onClick={() => saveBenefit(draft)}
+                  <>
+                    <Button
+                      disabled={!canEdit}
+                      onClick={() =>
+                        setNewBenefitDraft({
+                          benefitCode: '',
+                          benefitName: '',
+                          amount: '',
+                          status: 'active',
+                          effectiveFrom: '',
+                          effectiveTo: ''
+                        })
+                      }
+                    >
+                      {t('payroll.addProfile')}
+                    </Button>
+                    {data.benefits.map((benefit) => {
+                      const draft = benefitDrafts[benefit.id];
+                      if (!draft) return null;
+                      return (
+                        <div
+                          className='grid gap-2 rounded-lg border p-3 sm:grid-cols-6'
+                          key={benefit.id}
                         >
-                          {t('common.save')}
-                        </Button>
-                      </div>
-                    );
-                  })
+                          <Input
+                            disabled={!canEdit}
+                            value={draft.benefitCode}
+                            onChange={(e) =>
+                              setBenefitDrafts({
+                                ...benefitDrafts,
+                                [benefit.id]: { ...draft, benefitCode: e.target.value }
+                              })
+                            }
+                          />
+                          <Input
+                            disabled={!canEdit}
+                            value={draft.benefitName}
+                            onChange={(e) =>
+                              setBenefitDrafts({
+                                ...benefitDrafts,
+                                [benefit.id]: { ...draft, benefitName: e.target.value }
+                              })
+                            }
+                          />
+                          <Input
+                            disabled={!canEdit}
+                            value={draft.amount}
+                            onChange={(e) =>
+                              setBenefitDrafts({
+                                ...benefitDrafts,
+                                [benefit.id]: { ...draft, amount: e.target.value }
+                              })
+                            }
+                          />
+                          <Input
+                            disabled={!canEdit}
+                            type='date'
+                            value={draft.effectiveFrom}
+                            onChange={(e) =>
+                              setBenefitDrafts({
+                                ...benefitDrafts,
+                                [benefit.id]: { ...draft, effectiveFrom: e.target.value }
+                              })
+                            }
+                          />
+                          <Input
+                            disabled={!canEdit}
+                            type='date'
+                            value={draft.effectiveTo}
+                            onChange={(e) =>
+                              setBenefitDrafts({
+                                ...benefitDrafts,
+                                [benefit.id]: { ...draft, effectiveTo: e.target.value }
+                              })
+                            }
+                          />
+                          <Button
+                            disabled={!canEdit || update.isPending}
+                            onClick={() => saveBenefit(draft)}
+                          >
+                            {t('common.save')}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -836,7 +895,7 @@ function ProfilePage() {
                 <CardTitle>{t('payroll.bankHistory')}</CardTitle>
               </CardHeader>
               <CardContent className='space-y-3'>
-                {data.bankAccounts.length === 0 ? (
+                {data.bankAccounts.length === 0 || newBankDraft ? (
                   newBankDraft ? (
                     <div className='grid gap-2 sm:grid-cols-5'>
                       <Input
@@ -896,68 +955,85 @@ function ProfilePage() {
                     </Button>
                   )
                 ) : (
-                  data.bankAccounts.map((bank) => {
-                    const draft = bankDrafts[bank.id];
-                    if (!draft) return null;
-                    return (
-                      <div className='space-y-2 rounded-lg border p-3' key={bank.id}>
-                        <p className='text-sm'>
-                          {bank.bank_name} • {maskBankAccount(bank.account_number)} •{' '}
-                          {bank.account_name}
-                        </p>
-                        <div className='grid gap-2 sm:grid-cols-5'>
-                          <Input
-                            disabled={!canEdit}
-                            value={draft.bankName}
-                            onChange={(e) =>
-                              setBankDrafts({
-                                ...bankDrafts,
-                                [bank.id]: { ...draft, bankName: e.target.value }
-                              })
-                            }
-                          />
-                          <Input
-                            disabled={!canEdit}
-                            value={draft.accountName}
-                            onChange={(e) =>
-                              setBankDrafts({
-                                ...bankDrafts,
-                                [bank.id]: { ...draft, accountName: e.target.value }
-                              })
-                            }
-                          />
-                          <Input
-                            disabled={!canEdit}
-                            placeholder={t('payroll.reenterAccount')}
-                            value={draft.accountNumber}
-                            onChange={(e) =>
-                              setBankDrafts({
-                                ...bankDrafts,
-                                [bank.id]: { ...draft, accountNumber: e.target.value }
-                              })
-                            }
-                          />
-                          <Input
-                            disabled={!canEdit}
-                            type='date'
-                            value={draft.effectiveFrom}
-                            onChange={(e) =>
-                              setBankDrafts({
-                                ...bankDrafts,
-                                [bank.id]: { ...draft, effectiveFrom: e.target.value }
-                              })
-                            }
-                          />
-                          <Button
-                            disabled={!canEdit || update.isPending}
-                            onClick={() => saveBank(draft)}
-                          >
-                            {t('common.save')}
-                          </Button>
+                  <>
+                    <Button
+                      disabled={!canEdit}
+                      onClick={() =>
+                        setNewBankDraft({
+                          bankName: '',
+                          accountName: '',
+                          accountNumber: '',
+                          isPrimary: true,
+                          effectiveFrom: '',
+                          effectiveTo: ''
+                        })
+                      }
+                    >
+                      {t('payroll.addProfile')}
+                    </Button>
+                    {data.bankAccounts.map((bank) => {
+                      const draft = bankDrafts[bank.id];
+                      if (!draft) return null;
+                      return (
+                        <div className='space-y-2 rounded-lg border p-3' key={bank.id}>
+                          <p className='text-sm'>
+                            {bank.bank_name} • {maskBankAccount(bank.account_number)} •{' '}
+                            {bank.account_name}
+                          </p>
+                          <div className='grid gap-2 sm:grid-cols-5'>
+                            <Input
+                              disabled={!canEdit}
+                              value={draft.bankName}
+                              onChange={(e) =>
+                                setBankDrafts({
+                                  ...bankDrafts,
+                                  [bank.id]: { ...draft, bankName: e.target.value }
+                                })
+                              }
+                            />
+                            <Input
+                              disabled={!canEdit}
+                              value={draft.accountName}
+                              onChange={(e) =>
+                                setBankDrafts({
+                                  ...bankDrafts,
+                                  [bank.id]: { ...draft, accountName: e.target.value }
+                                })
+                              }
+                            />
+                            <Input
+                              disabled={!canEdit}
+                              placeholder={t('payroll.reenterAccount')}
+                              value={draft.accountNumber}
+                              onChange={(e) =>
+                                setBankDrafts({
+                                  ...bankDrafts,
+                                  [bank.id]: { ...draft, accountNumber: e.target.value }
+                                })
+                              }
+                            />
+                            <Input
+                              disabled={!canEdit}
+                              type='date'
+                              value={draft.effectiveFrom}
+                              onChange={(e) =>
+                                setBankDrafts({
+                                  ...bankDrafts,
+                                  [bank.id]: { ...draft, effectiveFrom: e.target.value }
+                                })
+                              }
+                            />
+                            <Button
+                              disabled={!canEdit || update.isPending}
+                              onClick={() => saveBank(draft)}
+                            >
+                              {t('common.save')}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </>
                 )}
               </CardContent>
             </Card>
