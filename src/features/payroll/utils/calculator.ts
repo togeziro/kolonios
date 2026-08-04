@@ -294,6 +294,13 @@ function applyBrackets(income: Money, brackets: { upTo: Money | null; rate: numb
   return { amount: roundMoney(amount), bracket };
 }
 
+function applyTerRate(income: Money, brackets: { upTo: Money | null; rate: number }[]) {
+  const index = brackets.findIndex((bracket) => bracket.upTo === null || income <= bracket.upTo);
+  const selected = brackets[index === -1 ? brackets.length - 1 : index];
+  if (!selected) return { amount: 0, bracket: 'none' };
+  return { amount: roundMoney((income * selected.rate) / 100), bracket: String(index) };
+}
+
 export function calculateProgressiveTax(income: Money, profile: TaxProfile): TaxResult {
   const taxableIncome = nonNegative(roundMoney(income - profile.ptkp));
   const applied = applyBrackets(taxableIncome, profile.settings?.progressive ?? []);
@@ -309,7 +316,7 @@ export function calculateProgressiveTax(income: Money, profile: TaxProfile): Tax
 export function calculateTerTax(income: Money, profile: TaxProfile): TaxResult {
   const taxableIncome = nonNegative(roundMoney(income));
   const category = profile.category ?? 'default';
-  const applied = applyBrackets(taxableIncome, profile.settings?.ter?.[category] ?? []);
+  const applied = applyTerRate(taxableIncome, profile.settings?.ter?.[category] ?? []);
   return {
     method: 'ter',
     taxableIncome,

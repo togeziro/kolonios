@@ -203,6 +203,34 @@ describe('calculatePayroll', () => {
     expect(result.netSalary).toBe(9_500_000);
   });
 
+  it('applies the selected TER category rate to the full gross income', () => {
+    const result = calculatePayroll(
+      baseInput({
+        tax: {
+          method: 'ter',
+          ptkp: 3_000_000,
+          category: 'A',
+          settings: {
+            ter: {
+              A: [
+                { upTo: 5_000_000, rate: 5 },
+                { upTo: null, rate: 10 }
+              ]
+            }
+          }
+        }
+      })
+    );
+
+    expect(result.tax).toMatchObject({
+      method: 'ter',
+      category: 'A',
+      taxableIncome: 10_000_000,
+      bracket: '1',
+      amount: 1_000_000
+    });
+  });
+
   it('prorates monthly salary only when configured and clamps net salary at zero', () => {
     const result = calculatePayroll(
       baseInput({
