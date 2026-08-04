@@ -72,3 +72,12 @@
 - `bun run typecheck`: `$ tsc --noEmit` completed successfully.
 - `bun run i18n:check`: `i18n key parity OK (733 keys in both locales)`.
 - `bunx oxlint src/routes/dashboard/admin/payroll src/features/payroll/components`: completed with no output and no findings.
+
+## Attendance Deduction Fix
+
+- `aggregatePayrollRows` now maps calculator `attendance-deduction` line items into normalized `deduction` component totals, while continuing to exclude `base` and `tax` line items and dividing calculator minor units by 100 exactly once.
+- Extended the aggregation regression with an attendance deduction and asserted its persisted display-unit amount.
+
+## Attendance Deduction Verification
+
+- `bun test src/features/payroll/api/service.test.ts`: `9 pass`, `0 fail`, `15 expect() calls`.

@@ -118,6 +118,7 @@ describe('payroll service boundaries', () => {
             { name: 'Base salary', type: 'base', amount: 10000 },
             { name: 'Transport', type: 'allowance', amount: 2000 },
             { name: 'Loan', type: 'deduction', amount: 500 },
+            { name: 'Absent day', type: 'attendance-deduction', amount: 1000 },
             { name: 'PPh 21', type: 'tax', amount: 300 }
           ]
         }
@@ -127,7 +128,8 @@ describe('payroll service boundaries', () => {
     expect(result.taxTotal).toBe(3);
     expect(result.componentTotals).toEqual([
       { name: 'Transport', type: 'allowance', amount: 20 },
-      { name: 'Loan', type: 'deduction', amount: 5 }
+      { name: 'Loan', type: 'deduction', amount: 5 },
+      { name: 'Absent day', type: 'deduction', amount: 10 }
     ]);
   });
 

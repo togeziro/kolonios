@@ -333,12 +333,17 @@ export function aggregatePayrollRows(rows: PayrollReportRow[]) {
       const lineType = typeof line.type === 'string' ? line.type : null;
       if (
         !lineType ||
-        !['allowance', 'deduction'].includes(lineType) ||
+        !['allowance', 'deduction', 'attendance-deduction'].includes(lineType) ||
         typeof line.name !== 'string'
       )
         continue;
-      const key = `${lineType}:${line.name}`;
-      const component = componentsByKey.get(key) ?? { name: line.name, type: lineType, amount: 0 };
+      const componentType = lineType === 'attendance-deduction' ? 'deduction' : lineType;
+      const key = `${componentType}:${line.name}`;
+      const component = componentsByKey.get(key) ?? {
+        name: line.name,
+        type: componentType,
+        amount: 0
+      };
       component.amount += Number(line.amount ?? 0) / 100;
       componentsByKey.set(key, component);
     }
