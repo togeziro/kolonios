@@ -16,6 +16,17 @@ import { SelfieCapture } from './selfie-capture';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
+export function clearSelfieAfterSuccess(
+  res: { success?: boolean; code?: string; message?: string } | null | undefined,
+  setCheckOutSelfie: (selfie: string | null) => void,
+  invalidate: () => void
+): boolean {
+  if (!res?.success) return false;
+  setCheckOutSelfie(null);
+  invalidate();
+  return true;
+}
+
 const ERROR_I18N_KEYS: Record<string, string> = {
   GPS_REQUIRED: 'attendanceAdmin.errGpsRequired',
   GPS_STALE: 'attendanceAdmin.errGpsStale',
@@ -114,9 +125,7 @@ export default function AttendanceCheckCard() {
         }
       }),
     onSuccess: (res) => {
-      if (res?.success) {
-        invalidateAttendance();
-      } else {
+      if (!clearSelfieAfterSuccess(res, setCheckOutSelfie, invalidateAttendance)) {
         toast.error(errorMessage(res));
       }
     },
