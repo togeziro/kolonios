@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### TanStack alignment
+
+- **Dependencies** — bumped `@tanstack/react-start` to 1.168.35, `@tanstack/react-router` to 1.170.18, `@tanstack/react-query` to 5.101.4, `@tanstack/react-form` to 1.33.3, `@tanstack/router-plugin` to 1.168.23; added `@tanstack/react-devtools` (centralized devtools panel).
+- **CSRF protection** — `createCsrfMiddleware` now guards all server functions via `requestMiddleware` in `src/start.ts` (previously skipped because a custom `src/start.ts` existed).
+- **Request-id plumbing** — request-id is now set by a global `requestIdMiddleware` instead of a per-server-fn `withRequestContext` wrapper; all `*/api/service.ts` handlers were de-wrapped.
+- **Devtools** — React Query and Router devtools consolidated into a single `TanStackDevtools` panel.
+- **Removed** — `kbar` command palette (dependency, components, search input, layout wiring).
+
 ### Attendance expansion
 
 - **Work schedules** — `shifts` is now the master schedule; new `shift_weekday_rules`, `schedule_assignments`, `date_overrides`, `day_offs`, and `attendance_corrections` tables; effective-schedule resolution with day-off precedence.

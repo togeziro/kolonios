@@ -57,10 +57,8 @@ src/features/users/components/users-table/cell-action.tsx:57
 src/features/users/components/users-table/columns.tsx:14
 src/features/users/components/users-table/columns.tsx:35
 src/features/users/components/users-table/columns.tsx:54
-src/routes/__root.tsx:111
 src/routes/__root.tsx:112
-src/routes/__root.tsx:124
-src/routes/__root.tsx:125
+src/routes/__root.tsx:113
 src/routes/about.tsx:15
 src/routes/about.tsx:16
 src/routes/about.tsx:20
@@ -73,7 +71,7 @@ src/routes/about.tsx:48
 src/routes/auth/v2.tsx:27
 src/routes/auth/v2/sign-in/index.tsx:22
 src/routes/auth/v2/sign-up/index.tsx:22
-src/routes/dashboard.tsx:56
+src/routes/dashboard.tsx:50
 src/routes/dashboard/overview.tsx:47
 src/routes/privacy-policy.tsx:14
 src/routes/privacy-policy.tsx:16
