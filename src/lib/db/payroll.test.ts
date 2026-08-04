@@ -37,7 +37,9 @@ import {
 } from './payroll';
 import {
   createEmployeeTaxProfile,
+  createPayrollRecord,
   createPayrollPeriod,
+  createSalaryAssignment,
   generatePayrollRecords,
   getEffectiveTaxProfile,
   getPrimaryBankAccount,
@@ -191,7 +193,9 @@ describe('payroll schema contract', () => {
         (index) => index.config.name === 'employee_bank_accounts_primary_effective_unique'
       )
     ).toBe(true);
-    expect(effectiveBankMigration).toContain('ADD COLUMN "effective_from" date');
+    expect(effectiveBankMigration).toContain('ADD COLUMN "effective_from" date;');
+    expect(effectiveBankMigration).toContain('"created_at"::date');
+    expect(effectiveBankMigration).not.toContain("'1900-01-01'");
     expect(effectiveBankMigration).toContain('ADD COLUMN "effective_to" date');
   });
 });
@@ -358,6 +362,58 @@ describe('payroll data access (integration)', () => {
     ).rejects.toThrow(/duplicate/i);
     expect(await db.select().from(payrollRecords)).toHaveLength(0);
     expect((await db.select().from(payrollPeriods))[0].status).toBe('draft');
+  });
+
+  it('rejects record creation after a period is locked and serializes overlapping assignments', async () => {
+    const department = await seedDepartment({ code: 'PAY-CONCURRENCY-DEPT' });
+    const designation = await seedDesignation(department.id, { code: 'PAY-CONCURRENCY-DESIG' });
+    await seedUser('payroll-concurrency-employee');
+    await db.insert(employees).values({
+      id: 'payroll-concurrency-employee',
+      employee_code: 'PAY-CONCURRENCY-1',
+      full_name: 'Concurrency Employee',
+      email: 'payroll-concurrency-employee@test.com',
+      birth_date: '1990-01-01',
+      department_id: department.id,
+      designation_id: designation.id,
+      join_date: '2024-01-01'
+    });
+    const period = await createPayrollPeriod({
+      name: 'Locked Period',
+      period_start: '2026-08-01',
+      period_end: '2026-08-31'
+    });
+    await transitionPayrollPeriod(period.id, 'processing');
+    await transitionPayrollPeriod(period.id, 'ready_to_pay');
+    await transitionPayrollPeriod(period.id, 'paid');
+    await transitionPayrollPeriod(period.id, 'locked');
+    await expect(
+      createPayrollRecord({
+        payroll_period_id: period.id,
+        employee_id: 'payroll-concurrency-employee',
+        gross_salary: '100',
+        net_salary: '100'
+      })
+    ).rejects.toThrow(/locked/i);
+
+    const results = await Promise.allSettled([
+      createSalaryAssignment({
+        employee_id: 'payroll-concurrency-employee',
+        salary_type: 'monthly',
+        amount: '100',
+        effective_from: '2026-01-01',
+        effective_to: null
+      }),
+      createSalaryAssignment({
+        employee_id: 'payroll-concurrency-employee',
+        salary_type: 'monthly',
+        amount: '200',
+        effective_from: '2026-01-01',
+        effective_to: null
+      })
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
   });
 
   it('requires tax data and applies employee, department, and status record filters', async () => {

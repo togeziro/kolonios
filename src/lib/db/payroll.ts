@@ -417,23 +417,32 @@ export async function deleteSalaryComponent(id: number) {
 export async function createSalaryAssignment(data: NewEmployeeSalaryAssignment) {
   try {
     assertDateRange(data.effective_from, data.effective_to ?? '9999-12-31');
-    const existing = await db
-      .select()
-      .from(employeeSalaryAssignments)
-      .where(eq(employeeSalaryAssignments.employee_id, data.employee_id));
-    if (
-      existing.some((row) =>
-        rangesOverlap(data.effective_from, data.effective_to, row.effective_from, row.effective_to)
-      )
-    ) {
-      throw new DomainError(
-        'Salary assignment effective dates overlap.',
-        'OVERLAPPING_EFFECTIVE_RECORDS'
-      );
-    }
-    const [row] = await db.insert(employeeSalaryAssignments).values(data).returning();
-    if (!row) throw new DomainError('Failed to create salary assignment.');
-    return row;
+    return await db.transaction(async (tx) => {
+      const employee = await lockEmployee(tx, data.employee_id);
+      if (!employee) throw new DomainError('Employee was not found.', 'EMPLOYEE_NOT_FOUND');
+      const existing = await tx
+        .select()
+        .from(employeeSalaryAssignments)
+        .where(eq(employeeSalaryAssignments.employee_id, data.employee_id));
+      if (
+        existing.some((row) =>
+          rangesOverlap(
+            data.effective_from,
+            data.effective_to,
+            row.effective_from,
+            row.effective_to
+          )
+        )
+      ) {
+        throw new DomainError(
+          'Salary assignment effective dates overlap.',
+          'OVERLAPPING_EFFECTIVE_RECORDS'
+        );
+      }
+      const [row] = await tx.insert(employeeSalaryAssignments).values(data).returning();
+      if (!row) throw new DomainError('Failed to create salary assignment.');
+      return row;
+    });
   } catch (e) {
     mapDbError(e, 'payroll.createSalaryAssignment');
   }
@@ -450,35 +459,42 @@ export async function updateSalaryAssignment(
       .where(eq(employeeSalaryAssignments.id, id))
       .limit(1);
     if (!existing) throw new DomainError('Salary assignment was not found.', 'NOT_FOUND');
+    if (data.employee_id !== undefined && data.employee_id !== existing.employee_id) {
+      throw new DomainError('Salary assignment employee is immutable.', 'IMMUTABLE_PAYROLL_RECORD');
+    }
     const next = { ...existing, ...data };
     assertDateRange(next.effective_from, next.effective_to ?? '9999-12-31');
-    const siblings = await db
-      .select()
-      .from(employeeSalaryAssignments)
-      .where(eq(employeeSalaryAssignments.employee_id, next.employee_id));
-    if (
-      siblings.some(
-        (row) =>
-          row.id !== id &&
-          rangesOverlap(
-            next.effective_from,
-            next.effective_to,
-            row.effective_from,
-            row.effective_to
-          )
-      )
-    ) {
-      throw new DomainError(
-        'Salary assignment effective dates overlap.',
-        'OVERLAPPING_EFFECTIVE_RECORDS'
-      );
-    }
-    const [row] = await db
-      .update(employeeSalaryAssignments)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(employeeSalaryAssignments.id, id))
-      .returning();
-    return row;
+    return await db.transaction(async (tx) => {
+      const employee = await lockEmployee(tx, existing.employee_id);
+      if (!employee) throw new DomainError('Employee was not found.', 'EMPLOYEE_NOT_FOUND');
+      const siblings = await tx
+        .select()
+        .from(employeeSalaryAssignments)
+        .where(eq(employeeSalaryAssignments.employee_id, next.employee_id));
+      if (
+        siblings.some(
+          (row) =>
+            row.id !== id &&
+            rangesOverlap(
+              next.effective_from,
+              next.effective_to,
+              row.effective_from,
+              row.effective_to
+            )
+        )
+      ) {
+        throw new DomainError(
+          'Salary assignment effective dates overlap.',
+          'OVERLAPPING_EFFECTIVE_RECORDS'
+        );
+      }
+      const [row] = await tx
+        .update(employeeSalaryAssignments)
+        .set({ ...data, updated_at: new Date() })
+        .where(eq(employeeSalaryAssignments.id, id))
+        .returning();
+      return row;
+    });
   } catch (e) {
     mapDbError(e, 'payroll.updateSalaryAssignment');
   }
@@ -502,28 +518,37 @@ export async function deleteSalaryAssignment(id: number) {
 export async function createEmployeeSalaryComponent(data: NewEmployeeSalaryComponent) {
   try {
     assertDateRange(data.effective_from, data.effective_to ?? '9999-12-31');
-    const existing = await db
-      .select()
-      .from(employeeSalaryComponents)
-      .where(
-        and(
-          eq(employeeSalaryComponents.assignment_id, data.assignment_id),
-          eq(employeeSalaryComponents.salary_component_id, data.salary_component_id)
+    return await db.transaction(async (tx) => {
+      const assignment = await lockSalaryAssignment(tx, data.assignment_id);
+      if (!assignment) throw new DomainError('Salary assignment was not found.', 'NOT_FOUND');
+      const existing = await tx
+        .select()
+        .from(employeeSalaryComponents)
+        .where(
+          and(
+            eq(employeeSalaryComponents.assignment_id, data.assignment_id),
+            eq(employeeSalaryComponents.salary_component_id, data.salary_component_id)
+          )
+        );
+      if (
+        existing.some((row) =>
+          rangesOverlap(
+            data.effective_from,
+            data.effective_to,
+            row.effective_from,
+            row.effective_to
+          )
         )
-      );
-    if (
-      existing.some((row) =>
-        rangesOverlap(data.effective_from, data.effective_to, row.effective_from, row.effective_to)
-      )
-    ) {
-      throw new DomainError(
-        'Salary component effective dates overlap.',
-        'OVERLAPPING_EFFECTIVE_RECORDS'
-      );
-    }
-    const [row] = await db.insert(employeeSalaryComponents).values(data).returning();
-    if (!row) throw new DomainError('Failed to create employee salary component.');
-    return row;
+      ) {
+        throw new DomainError(
+          'Salary component effective dates overlap.',
+          'OVERLAPPING_EFFECTIVE_RECORDS'
+        );
+      }
+      const [row] = await tx.insert(employeeSalaryComponents).values(data).returning();
+      if (!row) throw new DomainError('Failed to create employee salary component.');
+      return row;
+    });
   } catch (e) {
     mapDbError(e, 'payroll.createEmployeeSalaryComponent');
   }
@@ -540,40 +565,51 @@ export async function updateEmployeeSalaryComponent(
       .where(eq(employeeSalaryComponents.id, id))
       .limit(1);
     if (!existing) throw new DomainError('Employee salary component was not found.', 'NOT_FOUND');
+    if (
+      (data.assignment_id !== undefined && data.assignment_id !== existing.assignment_id) ||
+      (data.salary_component_id !== undefined &&
+        data.salary_component_id !== existing.salary_component_id)
+    ) {
+      throw new DomainError('Salary component identity is immutable.', 'IMMUTABLE_PAYROLL_RECORD');
+    }
     const next = { ...existing, ...data };
     assertDateRange(next.effective_from, next.effective_to ?? '9999-12-31');
-    const siblings = await db
-      .select()
-      .from(employeeSalaryComponents)
-      .where(
-        and(
-          eq(employeeSalaryComponents.assignment_id, next.assignment_id),
-          eq(employeeSalaryComponents.salary_component_id, next.salary_component_id)
-        )
-      );
-    if (
-      siblings.some(
-        (row) =>
-          row.id !== id &&
-          rangesOverlap(
-            next.effective_from,
-            next.effective_to,
-            row.effective_from,
-            row.effective_to
+    return await db.transaction(async (tx) => {
+      const assignment = await lockSalaryAssignment(tx, existing.assignment_id);
+      if (!assignment) throw new DomainError('Salary assignment was not found.', 'NOT_FOUND');
+      const siblings = await tx
+        .select()
+        .from(employeeSalaryComponents)
+        .where(
+          and(
+            eq(employeeSalaryComponents.assignment_id, next.assignment_id),
+            eq(employeeSalaryComponents.salary_component_id, next.salary_component_id)
           )
-      )
-    ) {
-      throw new DomainError(
-        'Salary component effective dates overlap.',
-        'OVERLAPPING_EFFECTIVE_RECORDS'
-      );
-    }
-    const [row] = await db
-      .update(employeeSalaryComponents)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(employeeSalaryComponents.id, id))
-      .returning();
-    return row;
+        );
+      if (
+        siblings.some(
+          (row) =>
+            row.id !== id &&
+            rangesOverlap(
+              next.effective_from,
+              next.effective_to,
+              row.effective_from,
+              row.effective_to
+            )
+        )
+      ) {
+        throw new DomainError(
+          'Salary component effective dates overlap.',
+          'OVERLAPPING_EFFECTIVE_RECORDS'
+        );
+      }
+      const [row] = await tx
+        .update(employeeSalaryComponents)
+        .set({ ...data, updated_at: new Date() })
+        .where(eq(employeeSalaryComponents.id, id))
+        .returning();
+      return row;
+    });
   } catch (e) {
     mapDbError(e, 'payroll.updateEmployeeSalaryComponent');
   }
@@ -597,23 +633,32 @@ export async function deleteEmployeeSalaryComponent(id: number) {
 export async function createEmployeeTaxProfile(data: NewEmployeeTaxProfile) {
   try {
     assertDateRange(data.effective_from, data.effective_to ?? '9999-12-31');
-    const existing = await db
-      .select()
-      .from(employeeTaxProfiles)
-      .where(eq(employeeTaxProfiles.employee_id, data.employee_id));
-    if (
-      existing.some((row) =>
-        rangesOverlap(data.effective_from, data.effective_to, row.effective_from, row.effective_to)
-      )
-    ) {
-      throw new DomainError(
-        'Tax profile effective dates overlap.',
-        'OVERLAPPING_EFFECTIVE_RECORDS'
-      );
-    }
-    const [row] = await db.insert(employeeTaxProfiles).values(data).returning();
-    if (!row) throw new DomainError('Failed to create tax profile.');
-    return row;
+    return await db.transaction(async (tx) => {
+      const employee = await lockEmployee(tx, data.employee_id);
+      if (!employee) throw new DomainError('Employee was not found.', 'EMPLOYEE_NOT_FOUND');
+      const existing = await tx
+        .select()
+        .from(employeeTaxProfiles)
+        .where(eq(employeeTaxProfiles.employee_id, data.employee_id));
+      if (
+        existing.some((row) =>
+          rangesOverlap(
+            data.effective_from,
+            data.effective_to,
+            row.effective_from,
+            row.effective_to
+          )
+        )
+      ) {
+        throw new DomainError(
+          'Tax profile effective dates overlap.',
+          'OVERLAPPING_EFFECTIVE_RECORDS'
+        );
+      }
+      const [row] = await tx.insert(employeeTaxProfiles).values(data).returning();
+      if (!row) throw new DomainError('Failed to create tax profile.');
+      return row;
+    });
   } catch (e) {
     mapDbError(e, 'payroll.createEmployeeTaxProfile');
   }
@@ -627,36 +672,43 @@ export async function updateEmployeeTaxProfile(id: number, data: Partial<NewEmpl
       .where(eq(employeeTaxProfiles.id, id))
       .limit(1);
     if (!existing) throw new DomainError('Tax profile was not found.', 'NOT_FOUND');
+    if (data.employee_id !== undefined && data.employee_id !== existing.employee_id) {
+      throw new DomainError('Tax profile employee is immutable.', 'IMMUTABLE_PAYROLL_RECORD');
+    }
     const next = { ...existing, ...data };
     assertDateRange(next.effective_from, next.effective_to ?? '9999-12-31');
-    const siblings = await db
-      .select()
-      .from(employeeTaxProfiles)
-      .where(eq(employeeTaxProfiles.employee_id, next.employee_id));
-    if (
-      siblings.some(
-        (row) =>
-          row.id !== id &&
-          rangesOverlap(
-            next.effective_from,
-            next.effective_to,
-            row.effective_from,
-            row.effective_to
-          )
-      )
-    ) {
-      throw new DomainError(
-        'Tax profile effective dates overlap.',
-        'OVERLAPPING_EFFECTIVE_RECORDS'
-      );
-    }
-    const [row] = await db
-      .update(employeeTaxProfiles)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(employeeTaxProfiles.id, id))
-      .returning();
-    if (!row) throw new DomainError('Tax profile was not found.', 'NOT_FOUND');
-    return row;
+    return await db.transaction(async (tx) => {
+      const employee = await lockEmployee(tx, existing.employee_id);
+      if (!employee) throw new DomainError('Employee was not found.', 'EMPLOYEE_NOT_FOUND');
+      const siblings = await tx
+        .select()
+        .from(employeeTaxProfiles)
+        .where(eq(employeeTaxProfiles.employee_id, next.employee_id));
+      if (
+        siblings.some(
+          (row) =>
+            row.id !== id &&
+            rangesOverlap(
+              next.effective_from,
+              next.effective_to,
+              row.effective_from,
+              row.effective_to
+            )
+        )
+      ) {
+        throw new DomainError(
+          'Tax profile effective dates overlap.',
+          'OVERLAPPING_EFFECTIVE_RECORDS'
+        );
+      }
+      const [row] = await tx
+        .update(employeeTaxProfiles)
+        .set({ ...data, updated_at: new Date() })
+        .where(eq(employeeTaxProfiles.id, id))
+        .returning();
+      if (!row) throw new DomainError('Tax profile was not found.', 'NOT_FOUND');
+      return row;
+    });
   } catch (e) {
     mapDbError(e, 'payroll.updateEmployeeTaxProfile');
   }
@@ -880,23 +932,25 @@ export async function createPayrollRecord(data: NewPayrollRecord) {
   try {
     const employeeId = data.employee_id;
     assertEmployeeScope(employeeId);
-    const period = await getPayrollPeriod(data.payroll_period_id);
-    if (!period) throw new DomainError('Payroll period was not found.', 'NOT_FOUND');
-    assertPeriodMutable(period.status);
-    const [duplicate] = await db
-      .select({ id: payrollRecords.id })
-      .from(payrollRecords)
-      .where(
-        and(
-          eq(payrollRecords.payroll_period_id, data.payroll_period_id),
-          eq(payrollRecords.employee_id, employeeId)
+    return await db.transaction(async (tx) => {
+      const period = await lockPayrollPeriod(tx, data.payroll_period_id);
+      if (!period) throw new DomainError('Payroll period was not found.', 'NOT_FOUND');
+      assertPeriodMutable(period.status);
+      const [duplicate] = await tx
+        .select({ id: payrollRecords.id })
+        .from(payrollRecords)
+        .where(
+          and(
+            eq(payrollRecords.payroll_period_id, data.payroll_period_id),
+            eq(payrollRecords.employee_id, employeeId)
+          )
         )
-      )
-      .limit(1);
-    assertPayrollRecordUnique(Boolean(duplicate));
-    const [row] = await db.insert(payrollRecords).values(data).returning();
-    if (!row) throw new DomainError('Failed to create payroll record.');
-    return row;
+        .limit(1);
+      assertPayrollRecordUnique(Boolean(duplicate));
+      const [row] = await tx.insert(payrollRecords).values(data).returning();
+      if (!row) throw new DomainError('Failed to create payroll record.');
+      return row;
+    });
   } catch (e) {
     mapDbError(e, 'payroll.createPayrollRecord');
   }
@@ -927,6 +981,26 @@ async function lockPayrollPeriod(tx: any, id: number) {
   );
   const [period] = await tx.select().from(payrollPeriods).where(eq(payrollPeriods.id, id)).limit(1);
   return period ?? null;
+}
+
+async function lockEmployee(tx: any, employeeId: string) {
+  await tx.execute(
+    sql`select ${employees.id} from ${employees} where ${employees.id} = ${employeeId} for update`
+  );
+  const [employee] = await tx.select().from(employees).where(eq(employees.id, employeeId)).limit(1);
+  return employee ?? null;
+}
+
+async function lockSalaryAssignment(tx: any, assignmentId: number) {
+  await tx.execute(
+    sql`select ${employeeSalaryAssignments.id} from ${employeeSalaryAssignments} where ${employeeSalaryAssignments.id} = ${assignmentId} for update`
+  );
+  const [assignment] = await tx
+    .select()
+    .from(employeeSalaryAssignments)
+    .where(eq(employeeSalaryAssignments.id, assignmentId))
+    .limit(1);
+  return assignment ?? null;
 }
 
 export async function updatePayrollRecord(id: number, data: Partial<NewPayrollRecord>) {
