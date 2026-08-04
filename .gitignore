@@ -40,6 +40,10 @@ lerna-debug.log*
 public/openapi.json
 public/api-docs.html
 
+# Local development documentation
+*.md
+!README.md
+
 # Testing
 coverage
 test-results
