@@ -150,13 +150,6 @@ async function seedMasterdata() {
       radius: 50,
       selfie_required: true,
       description: 'Main office Jakarta'
-    },
-    {
-      name: 'Branch Office 1',
-      latitude: -6.5,
-      longitude: 106.8,
-      radius: 50,
-      description: 'Bandung Branch'
     }
   ] satisfies NewLocation[];
 
@@ -385,10 +378,7 @@ async function seedEmployees() {
       birth_date: '1990-01-01',
       department_id: deptMap.get(emp.department_code) ?? 0,
       designation_id: desigMap.get(emp.designation_code) ?? 0,
-      location_id:
-        emp.email === 'technician@example.com'
-          ? (locMap.get('Branch Office 1') ?? null)
-          : (locMap.get('Head Office') ?? null),
+      location_id: locMap.get('Head Office') ?? null,
       join_date: '2024-01-01'
     };
   });
@@ -506,19 +496,19 @@ async function seedTasks() {
         task_type: 'maintenance',
         status: 'assigned',
         priority: 'high',
-        location_id: locMap.get('Branch Office 1') ?? null,
+        location_id: locMap.get('Head Office') ?? null,
         due_at: due(1),
         estimated_minutes: 120,
         assigned_to: techId,
         created_by: adminId
       },
       {
-        title: 'Install Fiber Router — Kemang',
-        description: 'New customer install at Branch Office 1. Two-hour window.',
+        title: 'Install Fiber Router — Jakarta',
+        description: 'New customer install at Head Office. Two-hour window.',
         task_type: 'installation',
         status: 'available',
         priority: 'high',
-        location_id: locMap.get('Branch Office 1') ?? null,
+        location_id: locMap.get('Head Office') ?? null,
         due_at: due(2),
         estimated_minutes: 120,
         created_by: adminId
@@ -540,7 +530,7 @@ async function seedTasks() {
         task_type: 'maintenance',
         status: 'available',
         priority: 'medium',
-        location_id: locMap.get('Branch Office 1') ?? null,
+        location_id: locMap.get('Head Office') ?? null,
         due_at: due(1),
         estimated_minutes: 90,
         created_by: adminId

@@ -1,5 +1,71 @@
 # Changelog
 
+## [Unreleased — 2026-08-05]
+
+### TanStack Table Upgrade & Mobile Responsiveness Fix
+
+- **TanStack Table implementation** — Upgraded all data tables to use TanStack Table v8 for consistency:
+  - `src/features/role-groups/components/role-group-listing.tsx` — Full upgrade with filters, pagination, tabs, alert notifications
+  - `src/features/attendance/components/admin-attendance-report.tsx` — Server-side pagination with TanStack Table UI
+  - `src/features/audit/components/audit-log-page.tsx` — Client-side pagination (20 rows per page)
+  - Created column definitions files: `feature-columns.tsx` for each feature
+  - Added `lucide-react` dependency for icons
+
+- **Mobile responsiveness fixes** — Fixed "desktop mode" feeling on mobile:
+  - **Root cause** — flex layout chain (SidebarInset → InfobarProvider → PageContainer) had no `overflow-x-hidden` or `min-w-0`, so table `minWidth` style expanded the entire page
+  - **Table horizontal scroll fix** — Applied upstream pattern: `style={{ minWidth: table.getTotalSize() }}` on Table components
+  - **Overflow containment** — Added `overflow-x-hidden` + `min-w-0` to `SidebarInset`, `InfobarProvider`, and `PageContainer` to constrain table width within containers
+  - **Table wrappers** — Added `overflow-x-auto` wrapper div around all tables
+  - **Tailwind fixes** — Fixed invalid class `sm:w-82` → `sm:w-80`
+  - **Result** — Tables now scroll horizontally on mobile without page feeling like desktop mode
+
+- **Documentation** — Updated developer documentation:
+  - Added "Mobile Responsiveness" section to `AGENTS.md`
+  - Added "Mobile Responsiveness" section to `docs/TANASTACK_TABLE_GUIDE.md`
+  - Created comprehensive TanStack Table guide (745 lines)
+
+**Files modified:**
+- `src/features/role-groups/components/role-group-listing.tsx` (major upgrade)
+- `src/features/role-groups/components/role-group-columns.tsx` (new)
+- `src/features/attendance/components/admin-attendance-report.tsx` (upgrade)
+- `src/features/attendance/components/admin-attendance-columns.tsx` (new)
+- `src/features/audit/components/audit-log-page.tsx` (upgrade)
+- `src/features/audit/components/audit-log-columns.tsx` (new)
+- `src/components/layout/page-container.tsx` (mobile fix)
+- `AGENTS.md` (documentation update)
+- `docs/TANASTACK_TABLE_GUIDE.md` (new comprehensive guide)
+
+---
+
+## [Unreleased — 2026-08-05 (Session 2)]
+
+### Data Table Standardization & Column Pinning
+
+- **Column pinning for actions** — Added `columnPinning: { right: ['actions'] }` to all masterdata tables for sticky action buttons on mobile horizontal scroll:
+  - `src/features/masterdata/components/designation-manage-page.tsx` — Added `ColumnPinningState` type + pinning config
+  - `src/features/masterdata/components/department-manage-page.tsx` — Added `ColumnPinningState` type + pinning config
+  - `src/features/role-groups/components/role-group-listing.tsx` — Added `columnPinning` to `useReactTable` initialState
+
+- **DataTable component upgrade** — Replaced custom table markup with `DataTable` component for consistency:
+  - `src/features/role-groups/components/role-group-listing.tsx` — Replaced custom `<Table>` + custom pagination with `<DataTable table={table} />`, removed unused imports (`Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow`, `Pagination`, `flexRender`)
+  - `src/features/audit/components/audit-log-page.tsx` — Replaced custom table + pagination with `<DataTable table={table} />`, removed unused imports
+  - `src/features/attendance/components/admin-attendance-report.tsx` — Replaced custom table + pagination with `<DataTable table={table} />`, added `onPaginationChange` wiring to `setFilters` for server-side pagination
+
+- **DataTable minimum height fix** — Fixed table viewport visibility without fixed-height parent:
+  - `src/components/ui/table/data-table.tsx` — Added `min-h-64` to table viewport div
+  - `src/components/ui/table/data-table.test.tsx` — Added regression test for minimum height
+
+**Files modified:**
+- `src/features/masterdata/components/designation-manage-page.tsx` (column pinning)
+- `src/features/masterdata/components/department-manage-page.tsx` (column pinning)
+- `src/features/role-groups/components/role-group-listing.tsx` (DataTable upgrade + column pinning)
+- `src/features/audit/components/audit-log-page.tsx` (DataTable upgrade)
+- `src/features/attendance/components/admin-attendance-report.tsx` (DataTable upgrade)
+- `src/components/ui/table/data-table.tsx` (min-h-64 fix)
+- `src/components/ui/table/data-table.test.tsx` (new regression test)
+
+---
+
 ## [Unreleased]
 
 ### TanStack alignment

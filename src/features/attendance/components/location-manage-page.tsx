@@ -66,11 +66,14 @@ export function LocationManagePage() {
                     )}
                   </div>
                 </div>
-                <div className='flex gap-2'>
+                <div className='flex gap-2 relative z-10'>
                   <Button
+                    type='button'
                     variant='outline'
                     size='sm'
-                    onClick={() =>
+                    className='cursor-pointer'
+                    onClick={() => {
+                      console.log('Edit button clicked for location:', loc.id);
                       setEditing({
                         id: loc.id,
                         name: loc.name,
@@ -82,15 +85,22 @@ export function LocationManagePage() {
                         selfieRequired: loc.selfie_required ?? false,
                         maxAccuracyMeters: loc.max_accuracy_meters ?? 50,
                         maxStaleMs: loc.max_stale_ms ?? 30000
-                      })
-                    }
+                      });
+                    }}
                   >
                     {t('common.edit')}
                   </Button>
                   <Button
+                    type='button'
                     variant='destructive'
                     size='sm'
-                    onClick={() => deleteMutation.mutate(loc.id)}
+                    className='cursor-pointer'
+                    onClick={() => {
+                      console.log('Delete button clicked for location:', loc.id);
+                      if (confirm('Are you sure you want to delete this location?')) {
+                        deleteMutation.mutate(loc.id);
+                      }
+                    }}
                     disabled={deleteMutation.isPending}
                   >
                     {t('common.delete')}

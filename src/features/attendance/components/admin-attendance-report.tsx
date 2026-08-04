@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DataTable } from '@/components/ui/table/data-table';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,6 +17,7 @@ import { exportAttendanceReportFn } from '../api/service';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
 import type { AdminAttendanceFilters, ExportFormat } from '../api/types';
+import { adminAttendanceColumns } from './admin-attendance-columns';
 
 const STATUS_OPTIONS = ['present', 'late', 'absent', 'excused', 'pending'] as const;
 
@@ -59,6 +62,31 @@ export function AdminAttendanceReport() {
   });
 
   const records = data?.records ?? [];
+
+  const table = useReactTable({
+    data: records,
+    columns: adminAttendanceColumns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    pageCount: totalPages,
+    state: {
+      pagination: {
+        pageIndex: currentPage - 1,
+        pageSize: limit
+      }
+    },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === 'function'
+          ? updater({ pageIndex: currentPage - 1, pageSize: limit })
+          : updater;
+      setFilters((f) => ({
+        ...f,
+        page: next.pageIndex + 1,
+        limit: next.pageSize
+      }));
+    }
+  });
 
   return (
     <Card>
@@ -194,61 +222,12 @@ export function AdminAttendanceReport() {
           </span>
         </div>
 
-        <div className='flex flex-wrap items-center gap-2'>
-          <Button
-            variant='outline'
-            size='sm'
-            disabled={currentPage <= 1 || isFetching}
-            onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, currentPage - 1) }))}
-          >
-            {t('common.previous')}
-          </Button>
-          <span className='text-sm text-muted-foreground'>
-            {t('common.pageOf', { page: currentPage, total: totalPages })}
-          </span>
-          <Button
-            variant='outline'
-            size='sm'
-            disabled={currentPage >= totalPages || isFetching}
-            onClick={() => setFilters((f) => ({ ...f, page: currentPage + 1 }))}
-          >
-            {t('common.next')}
-          </Button>
-        </div>
-
         {isFetching ? (
           <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>
         ) : records.length === 0 ? (
           <p className='text-sm text-muted-foreground'>{t('attendanceAdmin.noData')}</p>
         ) : (
-          <div className='overflow-x-auto rounded-lg border'>
-            <table className='w-full text-left text-sm'>
-              <thead className='bg-muted/50 text-muted-foreground'>
-                <tr>
-                  <th className='p-3 font-medium'>{t('attendance.startDate')}</th>
-                  <th className='p-3 font-medium'>{t('attendanceAdmin.employee')}</th>
-                  <th className='p-3 font-medium'>{t('attendanceAdmin.department')}</th>
-                  <th className='p-3 font-medium'>{t('attendance.shift')}</th>
-                  <th className='p-3 font-medium'>{t('attendance.checkInLabel')}</th>
-                  <th className='p-3 font-medium'>{t('attendance.checkOutLabel')}</th>
-                  <th className='p-3 font-medium'>{t('attendance.statusLabel')}</th>
-                </tr>
-              </thead>
-              <tbody className='divide-y'>
-                {records.map((r) => (
-                  <tr key={r.attendance.id}>
-                    <td className='p-3'>{r.attendance.date}</td>
-                    <td className='p-3'>{r.employee?.full_name ?? r.attendance.user_id}</td>
-                    <td className='p-3'>{r.department?.name ?? '-'}</td>
-                    <td className='p-3'>{r.shift?.name ?? '-'}</td>
-                    <td className='p-3'>{r.attendance.check_in_time ?? '-'}</td>
-                    <td className='p-3'>{r.attendance.check_out_time ?? '-'}</td>
-                    <td className='p-3'>{r.attendance.attendance_status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable table={table} />
         )}
       </CardContent>
     </Card>

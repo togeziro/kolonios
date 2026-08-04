@@ -1,19 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  type SortingState,
+  type ColumnPinningState,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable
+} from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { designationsQueryOptions, departmentsQueryOptions } from '../api/queries';
 import { createDesignationFn, updateDesignationFn, deleteDesignationFn } from '../api/service';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
+import { DataTable } from '@/components/ui/table/data-table';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { getDesignationColumns, type DesignationRow } from './designation-columns';
 
 interface DesignationForm {
   id?: number;
@@ -57,29 +58,68 @@ export default function DesignationManagePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<DesignationForm>(emptyForm);
   const [isEdit, setIsEdit] = useState(false);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const { data: deptData } = useQuery(departmentsQueryOptions());
   const { data, isLoading } = useQuery(designationsQueryOptions());
 
   const departments = deptData?.departments ?? [];
 
-  const displayData = (data?.designations ?? []).map(
-    (r: {
-      designation: {
-        id: number;
-        name: string;
-        code: string;
-        department_id: number | null;
-        description: string | null;
-        base_salary: number | null;
-        is_active: boolean | null;
-      };
-      department: { name: string } | null;
-    }) => ({
-      ...r.designation,
-      department_name: r.department?.name ?? '-'
-    })
-  );
+  const displayData = useMemo(() => {
+    return (data?.designations ?? []).map(
+      (r: {
+        designation: {
+          id: number;
+          name: string;
+          code: string;
+          department_id: number | null;
+          description: string | null;
+          base_salary: number | null;
+          is_active: boolean | null;
+          created_at: Date;
+        };
+        department: { name: string } | null;
+      }) => ({
+        ...r.designation,
+        department_name: r.department?.name ?? '-'
+      })
+    );
+  }, [data]);
+
+  function handleEdit(row: DesignationRow) {
+    setForm({
+      id: row.id,
+      name: row.name,
+      code: row.code,
+      department_id: row.department_id,
+      description: row.description ?? '',
+      base_salary: row.base_salary ? String(row.base_salary) : ''
+    });
+    setIsEdit(true);
+    setDialogOpen(true);
+  }
+
+  function handleDelete(row: DesignationRow) {
+    if (confirm(t('masterdata.deleteDesignationConfirm'))) {
+      deleteMutation.mutate(row.id);
+    }
+  }
+
+  const columns = useMemo(() => getDesignationColumns(handleEdit, handleDelete, t), [t]);
+
+  const table = useReactTable({
+    data: displayData,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      pagination: { pageSize: 10 },
+      columnPinning: { right: ['actions'] } as ColumnPinningState
+    }
+  });
 
   const createMutation = useMutation({
     mutationFn: (d: DesignationForm) =>
@@ -141,19 +181,6 @@ export default function DesignationManagePage() {
     onError: () => toast.error(t('masterdata.designationDeleteFailed'))
   });
 
-  function openEdit(item: (typeof displayData)[number]) {
-    setForm({
-      id: item.id,
-      name: item.name,
-      code: item.code,
-      department_id: item.department_id,
-      description: item.description ?? '',
-      base_salary: item.base_salary ? String(item.base_salary) : ''
-    });
-    setIsEdit(true);
-    setDialogOpen(true);
-  }
-
   function openCreate() {
     setForm(emptyForm);
     setIsEdit(false);
@@ -190,66 +217,7 @@ export default function DesignationManagePage() {
               {t('masterdata.noJobTitles')}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('common.code')}</TableHead>
-                  <TableHead>{t('common.name')}</TableHead>
-                  <TableHead>{t('masterdata.department')}</TableHead>
-                  <TableHead>{t('masterdata.baseSalaryRp')}</TableHead>
-                  <TableHead>{t('common.status')}</TableHead>
-                  <TableHead className='w-24'>{t('table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayData.map(
-                  (item: {
-                    id: number;
-                    name: string;
-                    code: string;
-                    department_id: number | null;
-                    description: string | null;
-                    base_salary: number | null;
-                    is_active: boolean | null;
-                    department_name: string;
-                  }) => (
-                    <TableRow key={item.id}>
-                      <TableCell className='font-mono text-xs'>{item.code}</TableCell>
-                      <TableCell className='font-medium'>{item.name}</TableCell>
-                      <TableCell>{item.department_name}</TableCell>
-                      <TableCell>
-                        {item.base_salary
-                          ? `Rp ${Number(item.base_salary).toLocaleString('id')}`
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                          {item.is_active ? t('common.active') : t('common.inactive')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex gap-1'>
-                          <Button variant='ghost' size='icon' onClick={() => openEdit(item)}>
-                            <Icons.edit className='h-4 w-4' />
-                          </Button>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            onClick={() => {
-                              if (confirm(t('masterdata.deleteDesignationConfirm'))) {
-                                deleteMutation.mutate(item.id);
-                              }
-                            }}
-                          >
-                            <Icons.trash className='h-4 w-4' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                )}
-              </TableBody>
-            </Table>
+            <DataTable table={table} />
           )}
         </CardContent>
       </Card>

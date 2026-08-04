@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/table/data-table';
 import { auditLogQueryOptions } from '../api/queries';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { auditLogColumns } from './audit-log-columns';
 
 const ENTITY_TYPES = ['attendance', 'location', 'task', 'customer', 'employee', 'product', 'user'];
 
@@ -15,6 +18,10 @@ export function AuditLogPage() {
   const [action, setAction] = useState('');
   const [entityType, setEntityType] = useState('');
   const [search, setSearch] = useState('');
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20
+  });
 
   const { data, isFetching } = useQuery(
     auditLogQueryOptions({ perPage: 100, action: search, entityType: entityType || undefined })
@@ -23,15 +30,26 @@ export function AuditLogPage() {
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
 
+  const table = useReactTable({
+    data: rows,
+    columns: auditLogColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 20 } }
+  });
+
   return (
     <div className='space-y-4'>
       <div className='flex flex-wrap items-center gap-2'>
-        <Input
-          value={action}
-          onChange={(e) => setAction(e.target.value)}
-          placeholder={t('audit.filterByAction')}
-          className='max-w-sm'
-        />
+        <div className='relative max-w-sm'>
+          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+          <Input
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            placeholder={t('audit.filterByAction')}
+            className='pl-9'
+          />
+        </div>
         <select
           value={entityType}
           onChange={(e) => setEntityType(e.target.value)}
@@ -45,45 +63,13 @@ export function AuditLogPage() {
           ))}
         </select>
         <Button variant='outline' onClick={() => setSearch(action)} disabled={isFetching}>
-          {isFetching ? t('common.loading') : t('common.save')}
+          {isFetching ? t('common.loading') : t('common.search')}
         </Button>
       </div>
       <p className='text-muted-foreground text-sm'>
         {t('audit.recordedActions', { count: total })}
       </p>
-      <div className='rounded-lg border'>
-        <table className='w-full text-left text-sm'>
-          <thead className='bg-muted/50 text-muted-foreground'>
-            <tr>
-              <th className='p-3 font-medium'>{t('audit.time')}</th>
-              <th className='p-3 font-medium'>{t('audit.actor')}</th>
-              <th className='p-3 font-medium'>{t('audit.action')}</th>
-              <th className='p-3 font-medium'>{t('audit.entity')}</th>
-              <th className='p-3 font-medium'>{t('audit.id')}</th>
-            </tr>
-          </thead>
-          <tbody className='divide-y'>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td className='p-3 whitespace-nowrap'>
-                  {format(new Date(row.createdAt), 'yyyy-MM-dd HH:mm')}
-                </td>
-                <td className='p-3'>{row.actorUserId}</td>
-                <td className='p-3 font-mono text-xs'>{row.action}</td>
-                <td className='p-3'>{row.entityType}</td>
-                <td className='p-3 font-mono text-xs'>{row.entityId ?? '—'}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={5} className='text-muted-foreground p-6 text-center'>
-                  {t('audit.noEntries')}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable table={table} />
     </div>
   );
 }

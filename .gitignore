@@ -64,6 +64,5 @@ graphify-out/
 .tanstack/tmp/
 .worktrees/
 
-# Documentation files are now tracked
-*.md
+# e2e auth
 e2e/.auth/

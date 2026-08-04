@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +38,13 @@ export function LocationForm({ initial }: { initial?: Partial<LocationFormState>
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<LocationFormState>({ ...emptyForm, ...initial });
+
+  // Update form when initial prop changes (for editing)
+  useEffect(() => {
+    if (initial) {
+      setForm({ ...emptyForm, ...initial });
+    }
+  }, [initial]);
 
   const set = <K extends keyof LocationFormState>(key: K, value: LocationFormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));

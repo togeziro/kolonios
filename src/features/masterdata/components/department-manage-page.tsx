@@ -1,19 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  type SortingState,
+  type ColumnPinningState,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable
+} from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { departmentsQueryOptions } from '../api/queries';
 import { createDepartmentFn, updateDepartmentFn, deleteDepartmentFn } from '../api/service';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
+import { DataTable } from '@/components/ui/table/data-table';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { getDepartmentColumns, type DepartmentRow } from './department-columns';
 
 interface DepartmentForm {
   id?: number;
@@ -43,9 +44,38 @@ export default function DepartmentManagePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<DepartmentForm>(emptyForm);
   const [isEdit, setIsEdit] = useState(false);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const { data, isLoading } = useQuery(departmentsQueryOptions());
   const departments = data?.departments ?? [];
+
+  function handleEdit(row: DepartmentRow) {
+    setForm({ id: row.id, name: row.name, code: row.code, description: row.description ?? '' });
+    setIsEdit(true);
+    setDialogOpen(true);
+  }
+
+  function handleDelete(row: DepartmentRow) {
+    if (confirm(t('masterdata.deleteDepartmentConfirm'))) {
+      deleteMutation.mutate(row.id);
+    }
+  }
+
+  const columns = useMemo(() => getDepartmentColumns(handleEdit, handleDelete, t), [t]);
+
+  const table = useReactTable({
+    data: departments,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      pagination: { pageSize: 10 },
+      columnPinning: { right: ['actions'] } as ColumnPinningState
+    }
+  });
 
   const createMutation = useMutation({
     mutationFn: (d: DepartmentForm) =>
@@ -99,12 +129,6 @@ export default function DepartmentManagePage() {
     onError: () => toast.error(t('masterdata.departmentDeleteFailed'))
   });
 
-  function openEdit(dept: (typeof departments)[number]) {
-    setForm({ id: dept.id, name: dept.name, code: dept.code, description: dept.description ?? '' });
-    setIsEdit(true);
-    setDialogOpen(true);
-  }
-
   function openCreate() {
     setForm(emptyForm);
     setIsEdit(false);
@@ -141,51 +165,7 @@ export default function DepartmentManagePage() {
               {t('masterdata.noDepartments')}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('common.code')}</TableHead>
-                  <TableHead>{t('common.name')}</TableHead>
-                  <TableHead>{t('masterdata.description')}</TableHead>
-                  <TableHead>{t('common.status')}</TableHead>
-                  <TableHead className='w-24'>{t('table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {departments.map((dept) => (
-                  <TableRow key={dept.id}>
-                    <TableCell className='font-mono text-xs'>{dept.code}</TableCell>
-                    <TableCell className='font-medium'>{dept.name}</TableCell>
-                    <TableCell className='text-muted-foreground'>
-                      {dept.description ?? '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={dept.is_active ? 'default' : 'secondary'}>
-                        {dept.is_active ? t('common.active') : t('common.inactive')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className='flex gap-1'>
-                        <Button variant='ghost' size='icon' onClick={() => openEdit(dept)}>
-                          <Icons.edit className='h-4 w-4' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          onClick={() => {
-                            if (confirm(t('masterdata.deleteDepartmentConfirm'))) {
-                              deleteMutation.mutate(dept.id);
-                            }
-                          }}
-                        >
-                          <Icons.trash className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable table={table} />
           )}
         </CardContent>
       </Card>
