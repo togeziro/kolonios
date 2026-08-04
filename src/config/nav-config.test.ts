@@ -40,7 +40,6 @@ describe('nav-config', () => {
     const management = navGroups.find((g) => g.label === 'Management');
     expect(management).toBeDefined();
     const titles = management!.items.map((item) => item.title);
-    expect(titles).toContain('Product');
     expect(titles).toContain('Customers');
     expect(titles).toContain('Employees');
   });
@@ -77,6 +76,11 @@ describe('nav-config', () => {
     const labels = navGroups.map((g) => g.label);
     expect(labels).toEqual(['Overview', 'Management', 'Settings']);
   });
+
+  it('does not include removed product pages', () => {
+    const urls = allUrls(navGroups);
+    expect(urls).not.toContain('/dashboard/product');
+  });
 });
 
 describe('filterNavGroupsByRole', () => {
@@ -94,7 +98,6 @@ describe('filterNavGroupsByRole', () => {
     attendance: { view: true },
     leave: { view: true },
     profile: { view: true },
-    products: { view: true, add: true, edit: true },
     customers: { view: true, add: true, edit: true },
     employees: { view: true },
     users: { view: true, add: true, edit: true, delete: true },
@@ -123,7 +126,6 @@ describe('filterNavGroupsByRole', () => {
     expect(titles).toContain('Dashboard');
     expect(titles).toContain('My Work');
     expect(titles).not.toContain('Attendance Locations');
-    expect(titles).not.toContain('Product');
     expect(titles).not.toContain('Users');
   });
 

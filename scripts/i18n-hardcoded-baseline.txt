@@ -51,12 +51,6 @@ src/features/overview/components/pie-graph.tsx:73
 src/features/overview/components/pie-graph.tsx:79
 src/features/overview/components/pie-graph.tsx:80
 src/features/overview/components/pie-graph.tsx:83
-src/features/products/components/product-tables/cell-action.tsx:56
-src/features/products/components/product-tables/columns.tsx:13
-src/features/products/components/product-tables/columns.tsx:31
-src/features/products/components/product-tables/columns.tsx:47
-src/features/products/components/product-tables/columns.tsx:68
-src/features/products/components/product-tables/columns.tsx:74
 src/features/role-groups/components/role-group-form-sheet.tsx:115
 src/features/role-groups/components/role-group-form-sheet.tsx:132
 src/features/role-groups/components/role-group-form-sheet.tsx:152

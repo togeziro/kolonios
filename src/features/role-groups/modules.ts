@@ -1,7 +1,6 @@
 const MODULES = [
   { key: 'overview', label: 'Dashboard', hasCrud: false },
   { key: 'my_work', label: 'My Work', hasCrud: false },
-  { key: 'products', label: 'Products', hasCrud: true },
   { key: 'customers', label: 'Customers', hasCrud: true },
   { key: 'employees', label: 'Employees', hasCrud: true },
   { key: 'attendance', label: 'Attendance', hasCrud: false },

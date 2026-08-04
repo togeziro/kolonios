@@ -73,12 +73,6 @@ async function seedNotifications(userId: string) {
       actionLabel: 'View workspace'
     },
     {
-      title: 'New product added',
-      body: 'A new product "Dashboard Pro" has been added to the catalog.',
-      actionId: 'view-product',
-      actionLabel: 'View products'
-    },
-    {
       title: 'Billing cycle updated',
       body: 'Your Pro plan has been renewed. Next invoice on April 24, 2026.',
       actionId: 'billing',
