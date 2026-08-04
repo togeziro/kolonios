@@ -17,7 +17,7 @@
 
 | Layer | Technology |
 |-------|------------|
-| Frontend (UI) | [React 19](https://react.dev), [TanStack Router](https://tanstack.com/router) (file-based, type-safe), [TanStack Form](https://tanstack.com/form) + [Zod](https://zod.dev), [shadcn/ui](https://ui.shadcn.com), [Tailwind CSS v4](https://tailwindcss.com), [Recharts](https://recharts.org), [motion](https://motion.dev), [kbar](https://kbar.vercel.app/) |
+| Frontend (UI) | [React 19](https://react.dev), [TanStack Router](https://tanstack.com/router) (file-based, type-safe), [TanStack Form](https://tanstack.com/form) + [Zod](https://zod.dev), [shadcn/ui](https://ui.shadcn.com), [Tailwind CSS v4](https://tailwindcss.com), [Recharts](https://recharts.org), [motion](https://motion.dev) |
 | Middle (server runtime & data) | [TanStack Start](https://tanstack.com/start) on [Vite 7](https://vite.dev) + [Nitro](https://nitro.build), [TanStack React Query](https://tanstack.com/query) with SSR dehydration via `@tanstack/react-router-ssr-query`, `createServerFn()` RPC boundary, server-side prefetch via route `loader` + `ensureQueryData({ ssr: 'data-only' })`, [Better Auth](https://better-auth.com) session + RBAC middleware |
 | Backend (data & persistence) | [PostgreSQL](https://www.postgresql.org) + [Drizzle ORM](https://orm.drizzle.team) (`postgres` driver), Better Auth DB-session store, server-only data-access layer with Zod-validated inputs and mapped DB errors, Nitro deploy presets (Vercel / Cloudflare / Node.js) |
 | Tooling | [Bun](https://bun.sh) (runtime + scripts), [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) (tests), [oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) (lint/format) |
@@ -33,11 +33,10 @@
 - **Data tables** — TanStack Table with React Query route loaders, client-side cache, search, filter & pagination driven by URL search params
 - **Analytics overview** — Recharts cards with Suspense-based independent loading
 - **Notification center** — bell icon badge, popover preview, and full page view (PostgreSQL-backed)
-- **Command palette** — Cmd+K quick navigation
 - **Multi-theme support** — 10+ OKLCH themes with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
 - **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
-- **Testing** — 532 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Testing** — 535 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
@@ -77,7 +76,6 @@ src/
 │   ├── ui/                        # UI primitives (buttons, inputs, skeletons, etc.)
 │   ├── layout/                    # Layout components (header, sidebar, mobile-shell, bottom-nav)
 │   ├── themes/                    # Theme system (selector, mode toggle, config)
-│   └── kbar/                      # Command+K interface
 │
 ├── features/                      # Feature-sliced modules
 │   ├── attendance/                # Check-in/out, leave, performance (Haversine geo-fencing)
@@ -270,7 +268,7 @@ Detailed docs live in [`docs/`](./docs/):
 - **Shared DB utilities**: Common patterns extracted to `src/lib/db/utils.ts` to reduce code duplication across DB modules (pagination, sorting, search conditions, filtering)
 - **Consistent error handling**: All DB functions use `mapDbError` with consistent response format (`{ success, time, message, data? }`)
 - **Type safety**: Server-only DB layer with Zod-validated inputs and proper error mapping
-- **Testing**: 532+ Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
+- **Testing**: 535+ Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
 - **Code organization**: Feature-based structure with clear separation between routes, features, and shared libraries
 
 ## License

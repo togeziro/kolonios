@@ -25,9 +25,10 @@ imports to prevent the `postgres` driver from leaking into the client bundle.
   (`src/lib/errors.ts`); intentional errors throw `DomainError` and pass
   through, unexpected errors become a generic message and are logged to
   pino + Sentry with a `request_id` tag.
-- **Request correlation**: every handler runs inside
-  `withRequestContext(...)` (`src/lib/request-id.ts`); the response carries
-  an `x-request-id` header echoed from the client (or generated).
+- **Request correlation**: a global `requestIdMiddleware` (`src/lib/server-middleware.ts`)
+  runs on every server function request and attaches a `x-request-id` header
+  (echoed from the client or generated). `withRequestContext` is retained in
+  `src/lib/request-id.ts` for non-request contexts (tests, scripts).
 
 The "Required permission" column uses `<module>.<action>` keys from the
 role-group permission matrix (`src/config/nav-config.ts` module keys). The

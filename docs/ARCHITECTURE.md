@@ -58,7 +58,6 @@ src/
 │   ├── ui/                     # shadcn/ui primitives
 │   ├── layout/                 # Sidebar, header, mobile-shell, bottom-nav, mobile-header
 │   ├── themes/                 # Theme system (selector, mode toggle, config)
-│   └── kbar/                   # Command+K interface
 ├── hooks/                      # Custom hooks
 ├── config/                     # Navigation, infobar, data table config
 ├── i18n/                       # Internationalization (i18next, EN/ID)
@@ -121,7 +120,7 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 | Technology            | Version          | Purpose                    |
 | --------------------- | ---------------- | -------------------------- |
-| TanStack Start        | v1.168.27        | Full-stack meta-framework  |
+| TanStack Start        | v1.168.35        | Full-stack meta-framework  |
 | React                 | v19.0.0          | UI library                 |
 | Vite                  | v7.0.2           | Build tool / dev server    |
 | Nitro                 | v3.0.260415-beta | Server engine / deployment |
@@ -132,12 +131,12 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 | Technology                       | Version   | Purpose                                       |
 | -------------------------------- | --------- | --------------------------------------------- |
-| TanStack Router                  | v1.170.17 | File-based type-safe routing                  |
-| TanStack Router DevTools         | v1.167.0  | Route dev tools                               |
-| TanStack React Query             | v5.101.2  | Server state / data fetching                  |
-| TanStack React Query DevTools    | v5.101.2  | Query dev tools                               |
-| @tanstack/react-router-ssr-query | v1.167.1  | Router + Query SSR bridge (dehydrate/hydrate) |
-| @tanstack/router-plugin          | v1.168.19 | Vite plugin for route generation              |
+| TanStack Router                  | v1.170.18 | File-based type-safe routing                  |
+| TanStack Router DevTools         | v1.170.18  | Route dev tools                               |
+| TanStack React Query             | v5.101.4  | Server state / data fetching                  |
+| TanStack React Query DevTools    | v5.101.4  | Query dev tools                               |
+| @tanstack/react-router-ssr-query | v1.170.18  | Router + Query SSR bridge (dehydrate/hydrate) |
+| @tanstack/router-plugin          | v1.168.23 | Vite plugin for route generation              |
 | @tanstack/zod-adapter            | v1.167.0  | Zod validation for route params               |
 
 ### UI Components
@@ -161,7 +160,7 @@ Because the client sidebar and server guards read the same map, UI visibility an
 
 | Technology       | Version  | Purpose               |
 | ---------------- | -------- | --------------------- |
-| TanStack Form    | v1.33.0  | Form state management |
+| TanStack Form    | v1.33.3  | Form state management |
 | Zod              | v4.3.6   | Schema validation     |
 | react-dropzone   | v14.4.1  | File upload           |
 | react-day-picker | v9.14.0  | Date picker           |
@@ -211,12 +210,6 @@ Because the client sidebar and server guards read the same map, UI visibility an
 | JetBrains Mono Variable   | @fontsource-variable/jetbrains-mono v5.1.3   |
 | Space Mono                | @fontsource/space-mono v5.0.20               |
 | Architects Daughter       | @fontsource/architects-daughter v5.0.17      |
-
-### Command Palette
-
-| Technology | Version        | Purpose               |
-| ---------- | -------------- | --------------------- |
-| kbar       | v0.1.0-beta.48 | Cmd+K command palette |
 
 ### Icons
 
