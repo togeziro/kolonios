@@ -78,6 +78,17 @@ export function assertEmployeeScope(
   }
 }
 
+export function assertProfileReferenceScope(
+  actor: { user: { id: string; role?: string | null } },
+  employeeId: string,
+  referencedEmployeeId: string
+) {
+  assertEmployeeScope(actor, employeeId);
+  if (referencedEmployeeId !== employeeId) {
+    throw new Error('Forbidden: payroll profile reference belongs to another employee');
+  }
+}
+
 export function resolvePayrollRecordScope(
   actor: { user: { id: string; role?: string | null } },
   filters: { scope?: 'admin' | 'employee'; employeeId?: string }
@@ -414,6 +425,19 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
           return row;
         }
         if (data.kind === 'component') {
+          const [assignment] = await tx
+            .select({ employee_id: employeeSalaryAssignments.employee_id })
+            .from(employeeSalaryAssignments)
+            .where(eq(employeeSalaryAssignments.id, data.values.assignmentId))
+            .limit(1);
+          if (!assignment) throw new Error('Salary assignment was not found.');
+          assertProfileReferenceScope(session, data.employeeId, assignment.employee_id);
+          const [definition] = await tx
+            .select({ id: salaryComponents.id })
+            .from(salaryComponents)
+            .where(eq(salaryComponents.id, data.values.salaryComponentId))
+            .limit(1);
+          if (!definition) throw new Error('Salary component was not found.');
           const values = {
             assignment_id: data.values.assignmentId,
             salary_component_id: data.values.salaryComponentId,
@@ -422,6 +446,21 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             effective_to: data.values.effectiveTo ?? null
           };
           if (data.values.id) {
+            const [existing] = await tx
+              .select({
+                assignment_id: employeeSalaryComponents.assignment_id,
+                salary_component_id: employeeSalaryComponents.salary_component_id
+              })
+              .from(employeeSalaryComponents)
+              .where(eq(employeeSalaryComponents.id, data.values.id))
+              .limit(1);
+            if (!existing) throw new Error('Employee salary component was not found.');
+            if (
+              existing.assignment_id !== data.values.assignmentId ||
+              existing.salary_component_id !== data.values.salaryComponentId
+            ) {
+              throw new Error('Salary component identity is immutable.');
+            }
             const [row] = await tx
               .update(employeeSalaryComponents)
               .set({

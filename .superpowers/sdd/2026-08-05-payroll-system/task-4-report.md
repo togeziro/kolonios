@@ -49,3 +49,15 @@
 
 - Task 2 stores no component calculation mode, so payroll generation still treats persisted employee salary components as fixed amounts.
 - Worked hours remain derived from attendance check-in/check-out timestamps; no persisted shift-duration aggregate exists.
+
+## Final Review Fixes
+
+- Changed single-family `payrollMutationKeys` helpers to return the registered query-key tuples directly, removing the extra wrapper array; regression tests now compare the exact registered key shape.
+- Added `assertProfileReferenceScope` and enforced assignment ownership plus salary-component definition/existing-row ownership checks before component profile inserts and updates. Staff payroll editors cannot use another employee's assignment/component IDs.
+
+## Final Verification
+
+- `bun run test:run src/features/payroll/api/queries.test.ts src/features/payroll/api/service.test.ts`: passed, 2 files / 10 tests during focused red/green verification.
+- `bun run test:run src/features/payroll src/lib/db/payroll.test.ts src/features/role-groups/modules.test.ts`: passed, 6 files / 54 tests.
+- `bun run typecheck`: passed.
+- `bun x oxlint src/features/payroll src/features/role-groups/modules.ts src/features/role-groups/modules.test.ts src/features/role-groups/components/role-permissions-page.tsx src/lib/db/payroll.ts src/lib/db/payroll.test.ts`: passed with warnings only.

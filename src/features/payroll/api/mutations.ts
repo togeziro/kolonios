@@ -13,9 +13,9 @@ import {
 import { payrollKeys } from './queries';
 
 export const payrollMutationKeys = {
-  components: () => [payrollKeys.components()] as const,
-  profile: (employeeId: string) => [payrollKeys.profile(employeeId)] as const,
-  periods: () => [payrollKeys.periods()] as const,
+  components: () => payrollKeys.components(),
+  profile: (employeeId: string) => payrollKeys.profile(employeeId),
+  periods: () => payrollKeys.periods(),
   generation: () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()] as const,
   workflow: () =>
     [

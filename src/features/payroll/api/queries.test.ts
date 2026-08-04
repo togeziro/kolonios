@@ -25,7 +25,7 @@ describe('payroll query options', () => {
   });
 
   it('narrows mutation invalidation to affected query families', () => {
-    expect(payrollMutationKeys.components()).toEqual([['payroll', 'components']]);
+    expect(payrollMutationKeys.components()).toEqual(['payroll', 'components']);
     expect(payrollMutationKeys.generation()).toEqual([
       ['payroll', 'periods', {}],
       ['payroll', 'records', {}],

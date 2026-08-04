@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertEmployeeScope,
+  assertProfileReferenceScope,
   buildAttendanceTotals,
   mapTaxProfile,
   resolvePayrollRecordScope,
@@ -18,6 +19,16 @@ describe('payroll service boundaries', () => {
     expect(() =>
       assertEmployeeScope({ user: { id: 'hr-1', role: 'hr' } }, 'employee-2')
     ).not.toThrow();
+  });
+
+  it('rejects cross-employee payroll component references for staff payroll editors', () => {
+    expect(() =>
+      assertProfileReferenceScope(
+        { user: { id: 'employee-1', role: 'employee' } },
+        'employee-1',
+        'employee-2'
+      )
+    ).toThrow(/forbidden/i);
   });
 
   it('ignores client scope and employee filters for staff record reads', () => {
