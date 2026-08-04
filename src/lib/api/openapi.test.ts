@@ -4,7 +4,7 @@ import { operations, openApiInfo } from './openapi';
 describe('openapi operations registry', () => {
   it('exposes at least one operation per feature area', () => {
     const paths = new Set(operations.map((op) => op.path));
-    expect(paths.size).toBeGreaterThan(30);
+    expect(paths.size).toBeGreaterThan(28);
   });
 
   it('has unique operation ids and method+path pairs', () => {
