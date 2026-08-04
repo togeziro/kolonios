@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockSessionUser = vi.hoisted(() => ({ role: 'employee' as string }));
+const mockSessionUser = vi.hoisted(() => ({ id: 'user-1', role: 'employee' as string }));
 
 vi.mock('./auth.server', () => ({
   auth: {
@@ -22,11 +22,22 @@ vi.mock('@/lib/db/role-groups', () => ({
   getUserRoleGroup: getUserRoleGroupMock
 }));
 
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
 import { hasModulePermission, requirePermission, requireSession } from './session';
 import { auth } from './auth.server';
+import { logger } from '@/lib/logger';
 import type { Permissions } from '@/features/role-groups/api/types';
 
 const getSessionMock = vi.mocked(auth.api.getSession);
+const loggerMock = vi.mocked(logger);
 
 describe('requireSession', () => {
   beforeEach(() => {
@@ -78,17 +89,11 @@ describe('hasModulePermission', () => {
 });
 
 describe('requirePermission', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
     mockSessionUser.role = 'employee';
     getUserRoleGroupMock.mockReset();
     getSessionMock.mockClear();
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    consoleWarnSpy.mockRestore();
+    loggerMock.warn.mockClear();
   });
 
   it('passes for a role group with is_admin', async () => {
@@ -129,7 +134,10 @@ describe('requirePermission', () => {
     await expect(requirePermission('users', 'view')).resolves.toMatchObject({
       user: { role: 'admin' }
     });
-    expect(consoleWarnSpy).toHaveBeenCalledWith('User has admin role but no role group assignment');
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: expect.any(String) }),
+      'User has admin role but no role group assignment'
+    );
   });
 
   it('rejects for legacy non-admin role without a role group', async () => {

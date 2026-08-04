@@ -7,6 +7,15 @@ vi.mock('./service', () => ({
   removeNotificationFn: vi.fn()
 }));
 
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
 import { notificationKeys } from './queries';
 import {
   addNotificationMutation,
@@ -15,6 +24,9 @@ import {
   removeNotificationMutation
 } from './mutations';
 import { addNotificationFn, markAllAsReadFn, markAsReadFn, removeNotificationFn } from './service';
+import { logger } from '@/lib/logger';
+
+const loggerMock = vi.mocked(logger);
 
 describe('notificationKeys', () => {
   it('shapes query keys', () => {
@@ -70,7 +82,6 @@ describe('notification mutations', () => {
   });
 
   it('logs on error without throwing', () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() =>
       markAsReadMutation.onError!(
         new Error('boom'),
@@ -79,10 +90,9 @@ describe('notification mutations', () => {
         undefined as never
       )
     ).not.toThrow();
-    expect(errorSpy).toHaveBeenCalledWith(
-      'Failed to mark notification as read:',
-      expect.any(Error)
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      'Failed to mark notification as read'
     );
-    errorSpy.mockRestore();
   });
 });
