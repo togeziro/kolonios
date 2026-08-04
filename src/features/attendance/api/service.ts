@@ -541,11 +541,8 @@ export const exportAttendanceReportFn = createServerFn({ method: 'POST' })
       }
 
       if (format === 'xlsx') {
-        const XLSX = await import('xlsx');
-        const sheet = XLSX.utils.json_to_sheet(rows);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, sheet, 'Attendance');
-        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const { writeXlsxBuffer } = await import('./export-adapter');
+        const buffer = writeXlsxBuffer(rows);
         return {
           success: true,
           format,
