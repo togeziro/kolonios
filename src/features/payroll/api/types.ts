@@ -1,3 +1,4 @@
+/** Integer minor units, e.g. 100.00 in storage becomes 10_000 here. */
 export type Money = number;
 export type SalaryType = 'monthly' | 'daily' | 'hourly';
 export type ComponentType = 'allowance' | 'deduction';
@@ -23,7 +24,8 @@ export interface AttendancePolicy {
   absence: { enabled: boolean; amount?: Money };
   late: { mode: 'none' } | { mode: 'fixed'; amount: Money } | { mode: 'partial'; rate: number };
   unpaidLeave: { enabled: boolean; amount?: Money };
-  prorateMonthlySalary?: boolean;
+  /** Monthly absence/unpaid leave is either prorated into base salary, separately deducted, or ignored. */
+  monthlyAttendanceMode: 'none' | 'deduct' | 'prorate';
 }
 
 export interface SalaryComponentInput {

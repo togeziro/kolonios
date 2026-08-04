@@ -14,11 +14,91 @@ import type {
 
 /** Money is integer minor units. Every derived amount is rounded half-up. */
 export function roundMoney(value: number): Money {
-  return value < 0 ? Math.ceil(value - 0.5) : Math.floor(value + 0.5);
+  if (!Number.isFinite(value)) throw new RangeError('Money calculations must be finite.');
+  const normalized = Number(value.toFixed(12));
+  const rounded = normalized < 0 ? Math.ceil(normalized - 0.5) : Math.floor(normalized + 0.5);
+  if (!Number.isSafeInteger(rounded)) throw new RangeError('Money exceeds the safe integer range.');
+  return rounded;
 }
 
 function nonNegative(value: number) {
   return Math.max(0, value);
+}
+
+export function isMoney(value: unknown): value is Money {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+/** Converts a database numeric with scale 2 into integer minor units. */
+export function parseDbDecimalToMoney(value: string): Money {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(value)) {
+    throw new RangeError('Database money must be a non-negative decimal with at most 2 decimals.');
+  }
+  const [whole, fraction = ''] = value.split('.');
+  const minor = BigInt(whole!) * 100n + BigInt(fraction.padEnd(2, '0') || '0');
+  const result = Number(minor);
+  if (!isMoney(result)) throw new RangeError('Database money exceeds the safe integer range.');
+  return result;
+}
+
+function assertNonNegativeFinite(value: number, name: string) {
+  if (!Number.isFinite(value) || value < 0)
+    throw new RangeError(`${name} must be non-negative and finite.`);
+}
+
+function assertInput(input: PayrollCalculationInput) {
+  const moneyValues: [number, string][] = [
+    [input.salary.amount, 'salary.amount'],
+    [input.tax.ptkp, 'tax.ptkp']
+  ];
+  for (const component of input.components)
+    moneyValues.push([component.amount, `component:${component.name}`]);
+  for (const adjustment of input.manualAdjustments) {
+    moneyValues.push([adjustment.amount, `adjustment:${adjustment.name}`]);
+  }
+  if (input.attendancePolicy.absence.amount !== undefined) {
+    moneyValues.push([input.attendancePolicy.absence.amount, 'absence.amount']);
+  }
+  if (input.attendancePolicy.unpaidLeave.amount !== undefined) {
+    moneyValues.push([input.attendancePolicy.unpaidLeave.amount, 'unpaidLeave.amount']);
+  }
+  if (input.attendancePolicy.late.mode === 'fixed') {
+    moneyValues.push([input.attendancePolicy.late.amount, 'late.amount']);
+  }
+  for (const [value, name] of moneyValues) {
+    if (!isMoney(value)) throw new RangeError(`${name} must be an integer minor-unit amount.`);
+  }
+  const attendanceValues: [number, string][] = [
+    [input.attendance.scheduledDays, 'scheduledDays'],
+    [input.attendance.payableDays, 'payableDays'],
+    [input.attendance.workedHours, 'workedHours'],
+    [input.attendance.absentDays, 'absentDays'],
+    [input.attendance.lateCount, 'lateCount'],
+    [input.attendance.unpaidLeaveDays, 'unpaidLeaveDays']
+  ];
+  for (const [value, name] of attendanceValues) assertNonNegativeFinite(value, name);
+  if (input.salary.dailyHours !== undefined)
+    assertNonNegativeFinite(input.salary.dailyHours, 'dailyHours');
+  if (input.attendancePolicy.late.mode === 'partial') {
+    assertNonNegativeFinite(input.attendancePolicy.late.rate, 'late.rate');
+  }
+  for (const component of input.components) {
+    if (component.mode === 'percentage') {
+      assertNonNegativeFinite(component.amount, `component:${component.name}.rate`);
+    }
+  }
+  const taxSettings = input.tax.settings;
+  for (const brackets of [
+    ...(taxSettings?.progressive ? [taxSettings.progressive] : []),
+    ...Object.values(taxSettings?.ter ?? {})
+  ]) {
+    for (const bracket of brackets) {
+      if (bracket.upTo !== null && !isMoney(bracket.upTo)) {
+        throw new RangeError('Tax bracket limits must be integer minor-unit amounts.');
+      }
+      assertNonNegativeFinite(bracket.rate, 'tax.rate');
+    }
+  }
 }
 
 function dailyRate(input: Pick<PayrollCalculationInput, 'salary' | 'attendance'>): Money {
@@ -37,7 +117,11 @@ export function calculateBaseSalary(input: PayrollCalculationInput): Money {
     return roundMoney(salary.amount * nonNegative(attendance.payableDays));
   if (salary.type === 'hourly')
     return roundMoney(salary.amount * nonNegative(attendance.workedHours));
-  if (attendancePolicy.prorateMonthlySalary && attendance.scheduledDays > 0) {
+  if (
+    salary.type === 'monthly' &&
+    attendancePolicy.monthlyAttendanceMode === 'prorate' &&
+    attendance.scheduledDays > 0
+  ) {
     return roundMoney(
       (salary.amount * nonNegative(attendance.payableDays)) / attendance.scheduledDays
     );
@@ -60,27 +144,58 @@ function attendanceValue(component: SalaryComponentInput, attendance: Attendance
 function componentAmount(
   component: SalaryComponentInput,
   baseSalary: Money,
-  grossSalary: Money,
+  grossBase: Money,
   attendance: AttendanceTotals
 ): Money {
   if (component.mode === 'fixed') return roundMoney(component.amount);
   if (component.mode === 'per-attendance') {
     return roundMoney(component.amount * attendanceValue(component, attendance));
   }
-  const base = component.percentageBase === 'gross-salary' ? grossSalary : baseSalary;
+  const base = component.percentageBase === 'gross-salary' ? grossBase : baseSalary;
   return roundMoney((base * component.amount) / 100);
+}
+
+function manualBonusItems(manualAdjustments: ManualAdjustment[]): PayrollLineItem[] {
+  return manualAdjustments
+    .filter((adjustment) => adjustment.type === 'bonus')
+    .map((adjustment) => ({
+      name: adjustment.name,
+      type: 'allowance' as const,
+      amount: roundMoney(adjustment.amount),
+      taxable: adjustment.taxable ?? true,
+      source: 'manual'
+    }));
+}
+
+function stableGrossBase(
+  components: SalaryComponentInput[],
+  baseSalary: Money,
+  attendance: AttendanceTotals,
+  manualBonuses: PayrollLineItem[]
+) {
+  const componentBase = components
+    .filter(
+      (component) =>
+        component.type === 'allowance' &&
+        !(component.mode === 'percentage' && component.percentageBase === 'gross-salary')
+    )
+    .reduce(
+      (sum, component) => sum + componentAmount(component, baseSalary, baseSalary, attendance),
+      baseSalary
+    );
+  return roundMoney(componentBase + manualBonuses.reduce((sum, item) => sum + item.amount, 0));
 }
 
 export function calculateAllowances(
   components: SalaryComponentInput[],
   baseSalary: Money,
-  attendance: AttendanceTotals
+  attendance: AttendanceTotals,
+  manualBonuses: PayrollLineItem[] = []
 ): { total: Money; items: PayrollLineItem[] } {
-  let grossSalary = baseSalary;
+  const grossBase = stableGrossBase(components, baseSalary, attendance, manualBonuses);
   const items: PayrollLineItem[] = [];
   for (const component of components.filter((item) => item.type === 'allowance')) {
-    const amount = componentAmount(component, baseSalary, grossSalary, attendance);
-    grossSalary = roundMoney(grossSalary + amount);
+    const amount = componentAmount(component, baseSalary, grossBase, attendance);
     items.push({
       name: component.name,
       type: 'allowance',
@@ -89,7 +204,7 @@ export function calculateAllowances(
       source: `component:${component.mode}`
     });
   }
-  return { total: roundMoney(grossSalary - baseSalary), items };
+  return { total: roundMoney(items.reduce((sum, item) => sum + item.amount, 0)), items };
 }
 
 export function calculateDeductions(
@@ -133,14 +248,16 @@ export function calculateAttendanceDeductions(
     if (amount > 0)
       items.push({ name, type: 'attendance-deduction', amount, taxable: false, source });
   };
-  if (attendancePolicy.absence.enabled) {
+  const monthlySeparate =
+    salary.type !== 'monthly' || attendancePolicy.monthlyAttendanceMode === 'deduct';
+  if (monthlySeparate && attendancePolicy.absence.enabled) {
     add(
       'Absence',
       roundMoney((attendancePolicy.absence.amount ?? rate) * attendance.absentDays),
       'absence'
     );
   }
-  if (attendancePolicy.unpaidLeave.enabled) {
+  if (monthlySeparate && attendancePolicy.unpaidLeave.enabled) {
     add(
       'Unpaid leave',
       roundMoney((attendancePolicy.unpaidLeave.amount ?? rate) * attendance.unpaidLeaveDays),
@@ -190,7 +307,7 @@ export function calculateProgressiveTax(income: Money, profile: TaxProfile): Tax
 }
 
 export function calculateTerTax(income: Money, profile: TaxProfile): TaxResult {
-  const taxableIncome = nonNegative(roundMoney(income - profile.ptkp));
+  const taxableIncome = nonNegative(roundMoney(income));
   const category = profile.category ?? 'default';
   const applied = applyBrackets(taxableIncome, profile.settings?.ter?.[category] ?? []);
   return {
@@ -219,9 +336,18 @@ export function calculateOvertime(): OvertimeResult {
 }
 
 export function calculatePayroll(input: PayrollCalculationInput): PayrollCalculationResult {
+  assertInput(input);
   const baseSalary = calculateBaseSalary(input);
-  const allowances = calculateAllowances(input.components, baseSalary, input.attendance);
-  const grossSalary = roundMoney(baseSalary + allowances.total);
+  const manualBonuses = manualBonusItems(input.manualAdjustments);
+  const allowances = calculateAllowances(
+    input.components,
+    baseSalary,
+    input.attendance,
+    manualBonuses
+  );
+  const grossSalary = roundMoney(
+    baseSalary + allowances.total + manualBonuses.reduce((sum, item) => sum + item.amount, 0)
+  );
   const deductions = calculateDeductions(
     input.components,
     input.manualAdjustments,
@@ -230,20 +356,8 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     input.attendance
   );
   const attendanceDeductions = calculateAttendanceDeductions(input);
-  const manualBonuses = input.manualAdjustments
-    .filter((adjustment) => adjustment.type === 'bonus')
-    .map((adjustment) => ({
-      name: adjustment.name,
-      type: 'allowance' as const,
-      amount: roundMoney(adjustment.amount),
-      taxable: adjustment.taxable ?? true,
-      source: 'manual'
-    }));
   const allowanceTotal = roundMoney(
     allowances.total + manualBonuses.reduce((sum, item) => sum + item.amount, 0)
-  );
-  const grossWithBonuses = roundMoney(
-    grossSalary + manualBonuses.reduce((sum, item) => sum + item.amount, 0)
   );
   const taxableIncome = roundMoney(
     baseSalary +
@@ -278,7 +392,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
       : [])
   ];
   const deductionTotal = roundMoney(deductions.total + attendanceDeductions.total + tax.amount);
-  const netSalary = nonNegative(roundMoney(grossWithBonuses - deductionTotal));
+  const netSalary = nonNegative(roundMoney(grossSalary - deductionTotal));
   const snapshot = {
     input,
     baseSalary,
@@ -286,7 +400,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     deductionTotal,
     attendanceDeductions: attendanceDeductions.total,
     tax,
-    grossSalary: grossWithBonuses,
+    grossSalary,
     netSalary,
     overtime,
     lineItems

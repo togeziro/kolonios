@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculatePayroll, roundMoney } from './calculator';
+import { calculatePayroll, isMoney, parseDbDecimalToMoney, roundMoney } from './calculator';
 import type { PayrollCalculationInput } from '../api/types';
 
 const baseInput = (overrides: Partial<PayrollCalculationInput> = {}): PayrollCalculationInput => ({
@@ -15,7 +15,8 @@ const baseInput = (overrides: Partial<PayrollCalculationInput> = {}): PayrollCal
   attendancePolicy: {
     absence: { enabled: false },
     late: { mode: 'none' },
-    unpaidLeave: { enabled: false }
+    unpaidLeave: { enabled: false },
+    monthlyAttendanceMode: 'deduct'
   },
   components: [],
   manualAdjustments: [],
@@ -113,7 +114,8 @@ describe('calculatePayroll', () => {
         attendancePolicy: {
           absence: { enabled: true },
           late: { mode: 'fixed', amount: 50_000 },
-          unpaidLeave: { enabled: true }
+          unpaidLeave: { enabled: true },
+          monthlyAttendanceMode: 'deduct'
         }
       })
     );
@@ -130,7 +132,8 @@ describe('calculatePayroll', () => {
         attendancePolicy: {
           absence: { enabled: false },
           late: { mode: 'partial', rate: 25 },
-          unpaidLeave: { enabled: false }
+          unpaidLeave: { enabled: false },
+          monthlyAttendanceMode: 'deduct'
         }
       })
     );
@@ -184,7 +187,7 @@ describe('calculatePayroll', () => {
       baseInput({
         tax: {
           method: 'ter',
-          ptkp: 0,
+          ptkp: 3_000_000,
           category: 'A',
           settings: { ter: { A: [{ upTo: 20_000_000, rate: 5 }] } }
         }
@@ -209,7 +212,7 @@ describe('calculatePayroll', () => {
           absence: { enabled: true },
           late: { mode: 'none' },
           unpaidLeave: { enabled: false },
-          prorateMonthlySalary: true
+          monthlyAttendanceMode: 'prorate'
         },
         manualAdjustments: [{ name: 'Large deduction', type: 'deduction', amount: 20_000_000 }]
       })
@@ -217,6 +220,176 @@ describe('calculatePayroll', () => {
 
     expect(result.baseSalary).toBe(5_000_000);
     expect(result.netSalary).toBe(0);
+  });
+
+  it('charges monthly absence once when using proration and not as a separate deduction', () => {
+    const result = calculatePayroll(
+      baseInput({
+        attendance: {
+          ...baseInput().attendance,
+          scheduledDays: 20,
+          payableDays: 18,
+          absentDays: 2
+        },
+        attendancePolicy: {
+          absence: { enabled: true },
+          late: { mode: 'none' },
+          unpaidLeave: { enabled: false },
+          monthlyAttendanceMode: 'prorate'
+        }
+      })
+    );
+
+    expect(result.baseSalary).toBe(9_000_000);
+    expect(result.attendanceDeductions).toBe(0);
+    expect(result.netSalary).toBe(9_000_000);
+  });
+
+  it('charges unpaid leave once according to the selected monthly attendance policy', () => {
+    const separate = calculatePayroll(
+      baseInput({
+        attendance: { ...baseInput().attendance, payableDays: 19, unpaidLeaveDays: 1 },
+        attendancePolicy: {
+          absence: { enabled: false },
+          late: { mode: 'none' },
+          unpaidLeave: { enabled: true },
+          monthlyAttendanceMode: 'deduct'
+        }
+      })
+    );
+    const prorated = calculatePayroll(
+      baseInput({
+        attendance: { ...baseInput().attendance, payableDays: 19, unpaidLeaveDays: 1 },
+        attendancePolicy: {
+          absence: { enabled: false },
+          late: { mode: 'none' },
+          unpaidLeave: { enabled: true },
+          monthlyAttendanceMode: 'prorate'
+        }
+      })
+    );
+
+    expect(separate.attendanceDeductions).toBe(500_000);
+    expect(separate.netSalary).toBe(9_500_000);
+    expect(prorated.attendanceDeductions).toBe(0);
+    expect(prorated.netSalary).toBe(9_500_000);
+  });
+
+  it('uses a stable gross base including manual bonuses for gross-based percentages', () => {
+    const components = [
+      {
+        name: 'Gross percentage',
+        type: 'allowance' as const,
+        mode: 'percentage' as const,
+        amount: 10,
+        percentageBase: 'gross-salary' as const
+      },
+      {
+        name: 'Fixed allowance',
+        type: 'allowance' as const,
+        mode: 'fixed' as const,
+        amount: 1_000_000
+      }
+    ];
+    const first = calculatePayroll(
+      baseInput({
+        components,
+        manualAdjustments: [{ name: 'Bonus', type: 'bonus', amount: 500_000 }]
+      })
+    );
+    const reversed = calculatePayroll(
+      baseInput({
+        components: [...components].reverse(),
+        manualAdjustments: [{ name: 'Bonus', type: 'bonus', amount: 500_000 }]
+      })
+    );
+
+    expect(first.grossSalary).toBe(12_650_000);
+    expect(first.grossSalary).toBe(reversed.grossSalary);
+    expect(first.lineItems.find((item) => item.name === 'Gross percentage')?.amount).toBe(
+      1_150_000
+    );
+  });
+
+  it('supports custom attendance amounts and every per-attendance metric', () => {
+    const result = calculatePayroll(
+      baseInput({
+        attendancePolicy: {
+          absence: { enabled: true, amount: 100_000 },
+          late: { mode: 'none' },
+          unpaidLeave: { enabled: true, amount: 80_000 },
+          monthlyAttendanceMode: 'deduct'
+        },
+        components: [
+          {
+            name: 'Days',
+            type: 'allowance',
+            mode: 'per-attendance',
+            amount: 1_000,
+            attendanceMetric: 'payable-days'
+          },
+          {
+            name: 'Hours',
+            type: 'allowance',
+            mode: 'per-attendance',
+            amount: 2_000,
+            attendanceMetric: 'worked-hours'
+          },
+          {
+            name: 'Lates',
+            type: 'allowance',
+            mode: 'per-attendance',
+            amount: 3_000,
+            attendanceMetric: 'late-count'
+          }
+        ],
+        attendance: {
+          scheduledDays: 20,
+          payableDays: 18,
+          workedHours: 150,
+          absentDays: 1,
+          lateCount: 2,
+          unpaidLeaveDays: 1
+        }
+      })
+    );
+
+    expect(result.allowanceTotal).toBe(324_000);
+    expect(result.attendanceDeductions).toBe(180_000);
+  });
+
+  it('selects tax bracket boundaries deterministically and rounds tax at the final boundary', () => {
+    const result = calculatePayroll(
+      baseInput({
+        salary: { type: 'monthly', amount: 1_000_001 },
+        tax: {
+          method: 'progressive',
+          ptkp: 0,
+          settings: {
+            progressive: [
+              { upTo: 1_000_000, rate: 5 },
+              { upTo: null, rate: 10 }
+            ]
+          }
+        }
+      })
+    );
+
+    expect(result.tax.bracket).toBe('1');
+    expect(result.tax.amount).toBe(50_000);
+    expect(roundMoney(100_000.5)).toBe(100_001);
+  });
+
+  it('converts DB decimal strings to minor units and rejects unsafe money values', () => {
+    expect(parseDbDecimalToMoney('100.00')).toBe(10_000);
+    expect(parseDbDecimalToMoney('0.5')).toBe(50);
+    expect(isMoney(10_000)).toBe(true);
+    expect(isMoney(10_000.5)).toBe(false);
+    expect(() => parseDbDecimalToMoney('100.001')).toThrow(RangeError);
+    expect(() => parseDbDecimalToMoney('-1.00')).toThrow(RangeError);
+    expect(() => calculatePayroll(baseInput({ salary: { type: 'monthly', amount: -1 } }))).toThrow(
+      RangeError
+    );
   });
 
   it('returns a JSON-serializable snapshot containing the calculation inputs and outputs', () => {
