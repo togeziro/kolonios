@@ -875,7 +875,7 @@ export async function seedDatabase() {
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');
-  await dbClient.end();
+  await dbClient?.end();
 }
 
 if (import.meta.main) {
