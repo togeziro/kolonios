@@ -26,9 +26,8 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export const db = isServer
-  ? ((await import(/* @vite-ignore */ drizzleAdapterSpecifier)).drizzle(
-      client,
-      { schema }
-    ) as PayrollDb)
+  ? ((await import(/* @vite-ignore */ drizzleAdapterSpecifier)).drizzle(client, {
+      schema
+    }) as PayrollDb)
   : (undefined as unknown as PayrollDb);
 export { client };

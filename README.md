@@ -15,12 +15,12 @@
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend (UI) | [React 19](https://react.dev), [TanStack Router](https://tanstack.com/router) (file-based, type-safe), [TanStack Form](https://tanstack.com/form) + [Zod](https://zod.dev), [shadcn/ui](https://ui.shadcn.com), [Tailwind CSS v4](https://tailwindcss.com), [Recharts](https://recharts.org), [motion](https://motion.dev) |
+| Layer                          | Technology                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend (UI)                  | [React 19](https://react.dev), [TanStack Router](https://tanstack.com/router) (file-based, type-safe), [TanStack Form](https://tanstack.com/form) + [Zod](https://zod.dev), [shadcn/ui](https://ui.shadcn.com), [Tailwind CSS v4](https://tailwindcss.com), [Recharts](https://recharts.org), [motion](https://motion.dev)                                                                                      |
 | Middle (server runtime & data) | [TanStack Start](https://tanstack.com/start) on [Vite 7](https://vite.dev) + [Nitro](https://nitro.build), [TanStack React Query](https://tanstack.com/query) with SSR dehydration via `@tanstack/react-router-ssr-query`, `createServerFn()` RPC boundary, server-side prefetch via route `loader` + `ensureQueryData({ ssr: 'data-only' })`, [Better Auth](https://better-auth.com) session + RBAC middleware |
-| Backend (data & persistence) | [PostgreSQL](https://www.postgresql.org) + [Drizzle ORM](https://orm.drizzle.team) (`postgres` driver), Better Auth DB-session store, server-only data-access layer with Zod-validated inputs and mapped DB errors, Nitro deploy presets (Vercel / Cloudflare / Node.js) |
-| Tooling | [Bun](https://bun.sh) (runtime + scripts), [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) (tests), [oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) (lint/format) |
+| Backend (data & persistence)   | [PostgreSQL](https://www.postgresql.org) + [Drizzle ORM](https://orm.drizzle.team) (`postgres` driver), Better Auth DB-session store, server-only data-access layer with Zod-validated inputs and mapped DB errors, Nitro deploy presets (Vercel / Cloudflare / Node.js)                                                                                                                                        |
+| Tooling                        | [Bun](https://bun.sh) (runtime + scripts), [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) (tests), [oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) (lint/format)                                                                                                                                                                                                                        |
 
 ## Features
 
@@ -41,25 +41,25 @@
 
 ## Pages
 
-| Page | Description |
-| :--- | :---------- |
-| [Dashboard Overview](/dashboard/overview) | Cards with Recharts graphs, Suspense-bound loading. Mobile staff dashboard for employee/technician. |
-| [Attendance](/dashboard/attendance) | Check-in/out with geo-fencing validation, today's status, attendance history table. |
-| [Locations](/dashboard/admin/attendance/locations) | Manage work locations with geofence radius and GPS/selfie policy (MapLibre map). |
-| [Schedules](/dashboard/admin/attendance/schedules) | Create shifts with per-weekday rules. |
-| [Assignments](/dashboard/admin/attendance/assignments) | Assign schedules to employees (individual/bulk) and create day offs. |
-| [Reports](/dashboard/admin/attendance/reports) | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF. |
-| [Leave](/dashboard/leave) | Leave request form with type/date selection and leave history list. |
-| [Customers](/dashboard/customers) | Customer CRUD with search, filter & pagination. |
-| [Employees](/dashboard/employees) | Employee CRUD with department joins and filtering. |
-| [Departments](/dashboard/admin/departments) | CRUD management for company departments. |
-| [Job Titles](/dashboard/admin/designations) | CRUD for designations with department assignment and base salary. |
-| [Role Groups](/dashboard/admin/role-groups) | RBAC group management: per-module permission toggles for each role group. |
-| [Users (Table)](/dashboard/users) | Users table with React Query + URL state pattern. |
-| [Notifications](/dashboard/notifications) | Notification center with bell badge, popover preview, and full page with tabs. |
-| [Payroll](/dashboard/admin/payroll/overview) | Admin payroll dashboard: overview, components, periods, generate/review, records, reports. |
-| [My Payslips](/dashboard/payroll/payslips) | Employee self-service: payslip history with PDF download. |
-| [Not Found](/notfound) | Custom 404 page via TanStack Router's `defaultNotFoundComponent`. |
+| Page                                                   | Description                                                                                         |
+| :----------------------------------------------------- | :-------------------------------------------------------------------------------------------------- |
+| [Dashboard Overview](/dashboard/overview)              | Cards with Recharts graphs, Suspense-bound loading. Mobile staff dashboard for employee/technician. |
+| [Attendance](/dashboard/attendance)                    | Check-in/out with geo-fencing validation, today's status, attendance history table.                 |
+| [Locations](/dashboard/admin/attendance/locations)     | Manage work locations with geofence radius and GPS/selfie policy (MapLibre map).                    |
+| [Schedules](/dashboard/admin/attendance/schedules)     | Create shifts with per-weekday rules.                                                               |
+| [Assignments](/dashboard/admin/attendance/assignments) | Assign schedules to employees (individual/bulk) and create day offs.                                |
+| [Reports](/dashboard/admin/attendance/reports)         | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                        |
+| [Leave](/dashboard/leave)                              | Leave request form with type/date selection and leave history list.                                 |
+| [Customers](/dashboard/customers)                      | Customer CRUD with search, filter & pagination.                                                     |
+| [Employees](/dashboard/employees)                      | Employee CRUD with department joins and filtering.                                                  |
+| [Departments](/dashboard/admin/departments)            | CRUD management for company departments.                                                            |
+| [Job Titles](/dashboard/admin/designations)            | CRUD for designations with department assignment and base salary.                                   |
+| [Role Groups](/dashboard/admin/role-groups)            | RBAC group management: per-module permission toggles for each role group.                           |
+| [Users (Table)](/dashboard/users)                      | Users table with React Query + URL state pattern.                                                   |
+| [Notifications](/dashboard/notifications)              | Notification center with bell badge, popover preview, and full page with tabs.                      |
+| [Payroll](/dashboard/admin/payroll/overview)           | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.          |
+| [My Payslips](/dashboard/payroll/payslips)             | Employee self-service: payslip history with PDF download.                                           |
+| [Not Found](/notfound)                                 | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                   |
 
 ## Feature-based Organization
 
@@ -156,11 +156,11 @@ Access the app at **http://localhost:3000**.
 
 Log in with a seeded demo account:
 
-| Email | Password | Role |
-|-------|----------|------|
-| `admin@example.com` | `Password123!` | admin |
-| `hr@example.com` | `Password123!` | hr |
-| `employee@example.com` | `Password123!` | employee |
+| Email                    | Password       | Role       |
+| ------------------------ | -------------- | ---------- |
+| `admin@example.com`      | `Password123!` | admin      |
+| `hr@example.com`         | `Password123!` | hr         |
+| `employee@example.com`   | `Password123!` | employee   |
 | `technician@example.com` | `Password123!` | technician |
 
 ### Database Migrations
@@ -234,9 +234,9 @@ To target a different host, change the Nitro preset in `vite.config.ts`:
 
 ```ts
 nitro({ preset: 'cloudflare-pages' }); // Cloudflare Pages
-nitro({ preset: 'node-server' });      // Node.js server
-nitro({ preset: 'netlify' });          // Netlify
-nitro({ preset: 'vercel' });           // Vercel
+nitro({ preset: 'node-server' }); // Node.js server
+nitro({ preset: 'netlify' }); // Netlify
+nitro({ preset: 'vercel' }); // Vercel
 ```
 
 > **Note:** Vercel/Cloudflare/Netlify presets are supported by Nitro but not the default build target. The maintained, tested path is the `bun` preset.
@@ -257,19 +257,19 @@ The server-function RPC boundary is hardened at every endpoint:
 
 Detailed docs live in [`docs/`](./docs/):
 
-| Doc | Contents |
-|-----|----------|
-| [docs/PRD.md](./docs/PRD.md) | Product requirements, features, security, roadmap |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Tech stack, data flow, patterns |
-| [docs/API.md](./docs/API.md) | Server function & auth reference |
-| [docs/CHANGELOG.md](./docs/CHANGELOG.md) | Notable changes |
-| [docs/TODO.md](./docs/TODO.md) | Task tracking |
-| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md) | Attendance module deep-dive |
-| [docs/MOBILE.md](./docs/MOBILE.md) | Mobile staff dashboard |
-| [docs/PAYROLL.md](./docs/PAYROLL.md) | Payroll module deep-dive 🆕 |
-| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md) | Kerjoo payroll requirement reference (finish-payroll scope) 🆕 |
-| [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕 |
-| [docs/audit/](./docs/audit/) | Repository audit + implementation summary |
+| Doc                                                                                    | Contents                                                       |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [docs/PRD.md](./docs/PRD.md)                                                           | Product requirements, features, security, roadmap              |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                         | Tech stack, data flow, patterns                                |
+| [docs/API.md](./docs/API.md)                                                           | Server function & auth reference                               |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                               | Notable changes                                                |
+| [docs/TODO.md](./docs/TODO.md)                                                         | Task tracking                                                  |
+| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                             | Attendance module deep-dive                                    |
+| [docs/MOBILE.md](./docs/MOBILE.md)                                                     | Mobile staff dashboard                                         |
+| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                   | Payroll module deep-dive 🆕                                    |
+| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                 | Kerjoo payroll requirement reference (finish-payroll scope) 🆕 |
+| [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕  |
+| [docs/audit/](./docs/audit/)                                                           | Repository audit + implementation summary                      |
 
 ## Code Quality & Architecture
 
