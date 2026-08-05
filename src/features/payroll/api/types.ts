@@ -4,6 +4,9 @@ export type SalaryType = 'monthly' | 'daily' | 'hourly';
 export type ComponentType = 'allowance' | 'deduction';
 export type ComponentMode = 'fixed' | 'percentage' | 'per-attendance';
 export type TaxMethod = 'none' | 'progressive' | 'ter';
+export type BpjsProgram = 'jkk' | 'jkm' | 'jht' | 'jp' | 'kesehatan';
+export type JkkRiskCategory = 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+export type Pph21Method = 'gross' | 'gross_up';
 
 export interface SalaryComponentDefinition {
   id: number;
@@ -65,12 +68,16 @@ export interface AttendanceTotals {
   absentDays: number;
   lateCount: number;
   unpaidLeaveDays: number;
+  permitHours: number;
+  shortfallHours: number;
 }
 
 export interface AttendancePolicy {
   absence: { enabled: boolean; amount?: Money };
   late: { mode: 'none' } | { mode: 'fixed'; amount: Money } | { mode: 'partial'; rate: number };
   unpaidLeave: { enabled: boolean; amount?: Money };
+  permitHour: { enabled: boolean; amount?: Money };
+  shortfall: { enabled: boolean; amount?: Money };
   /** Monthly absence/unpaid leave is either prorated into base salary, separately deducted, or ignored. */
   monthlyAttendanceMode: 'none' | 'deduct' | 'prorate';
 }
@@ -112,6 +119,7 @@ export interface TaxProfile {
   ptkp: Money;
   category?: string;
   settings?: TaxSettings;
+  pph21?: Pph21Method;
 }
 
 export interface PayrollCalculationInput {
@@ -121,6 +129,7 @@ export interface PayrollCalculationInput {
   components: SalaryComponentInput[];
   manualAdjustments: ManualAdjustment[];
   tax: TaxProfile;
+  bpjs?: BpjsInput;
 }
 
 export interface PayrollLineItem {
@@ -157,6 +166,7 @@ export interface PayrollCalculationSnapshot {
   netSalary: Money;
   overtime: OvertimeResult;
   lineItems: PayrollLineItem[];
+  employerCosts: EmployerCost[];
 }
 
 export interface PayrollCalculationResult {
@@ -170,4 +180,33 @@ export interface PayrollCalculationResult {
   overtime: OvertimeResult;
   lineItems: PayrollLineItem[];
   snapshot: PayrollCalculationSnapshot;
+  employerCosts: EmployerCost[];
+}
+
+export interface BpjsEnrollmentInput {
+  program: BpjsProgram;
+  registeredWage: Money;
+  jkkCategoryOverride?: JkkRiskCategory;
+}
+
+export interface BpjsRates {
+  jkk: Record<JkkRiskCategory, number>;
+  jkmCompany: number;
+  jhtCompany: number;
+  jhtEmployee: number;
+  jpCompany: number;
+  jpEmployee: number;
+  kesehatanCompany: number;
+  kesehatanEmployee: number;
+}
+
+export interface BpjsInput {
+  enrollments: BpjsEnrollmentInput[];
+  rates: BpjsRates;
+  enabled: Record<BpjsProgram, boolean>;
+}
+
+export interface EmployerCost {
+  program: BpjsProgram;
+  amount: Money;
 }
