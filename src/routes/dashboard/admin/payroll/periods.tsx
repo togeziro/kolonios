@@ -65,7 +65,7 @@ function PeriodsPage() {
       pageTitle={t('payroll.periods')}
       pageDescription={t('payroll.periodsDescription')}
     >
-      <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]'>
+      <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] [&>*]:min-w-0'>
         <Card>
           <CardHeader>
             <CardTitle>{t('payroll.periods')}</CardTitle>
@@ -115,6 +115,7 @@ function PeriodsPage() {
             <div>
               <Label>{t('payroll.name')}</Label>
               <Input
+                className='w-full'
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
@@ -122,6 +123,7 @@ function PeriodsPage() {
             <div>
               <Label>{t('payroll.start')}</Label>
               <Input
+                className='w-full'
                 type='date'
                 value={form.periodStart}
                 onChange={(e) => setForm({ ...form, periodStart: e.target.value })}
@@ -130,6 +132,7 @@ function PeriodsPage() {
             <div>
               <Label>{t('payroll.end')}</Label>
               <Input
+                className='w-full'
                 type='date'
                 value={form.periodEnd}
                 onChange={(e) => setForm({ ...form, periodEnd: e.target.value })}
@@ -138,6 +141,7 @@ function PeriodsPage() {
             <div>
               <Label>{t('payroll.paymentDate')}</Label>
               <Input
+                className='w-full'
                 type='date'
                 value={form.paymentDate}
                 onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
