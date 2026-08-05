@@ -26,6 +26,7 @@
 
 - **Admin dashboard layout** — sidebar, header, content area; responsive `MobileShell` for staff on mobile
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
+- **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
 - **Customer management** — full CRUD with search, filter & pagination; auto-generated customer codes
 - **Employee management** — full CRUD with department joins and filtering
 - **Masterdata CRUD** — department and designation management from the UI (create/edit/delete)
@@ -56,6 +57,8 @@
 | [Role Groups](/dashboard/admin/role-groups) | RBAC group management: per-module permission toggles for each role group. |
 | [Users (Table)](/dashboard/users) | Users table with React Query + URL state pattern. |
 | [Notifications](/dashboard/notifications) | Notification center with bell badge, popover preview, and full page with tabs. |
+| [Payroll](/dashboard/admin/payroll/overview) | Admin payroll dashboard: overview, components, periods, generate/review, records, reports. |
+| [My Payslips](/dashboard/payroll/payslips) | Employee self-service: payslip history with PDF download. |
 | [Not Found](/notfound) | Custom 404 page via TanStack Router's `defaultNotFoundComponent`. |
 
 ## Feature-based Organization
@@ -82,6 +85,7 @@ src/
 │   ├── customers/                 # Customer CRUD, code generation
 │   ├── employees/                 # Employee CRUD with department joins
 │   ├── masterdata/                # Departments & designations CRUD
+│   ├── payroll/                   # Payroll calculation engine, payslips, admin UI
 │   ├── role-groups/               # RBAC role groups (permission matrix UI + queries)
 │   ├── users/                     # User management table (React Query)
 │   ├── notifications/             # Notification center (React Query + PostgreSQL)
@@ -94,9 +98,10 @@ src/
 │   │   ├── utils.ts               # Shared DB utilities (pagination, sorting, conditions)
 │   │   ├── schema/                # Drizzle schema definitions
 │   │   ├── customers.ts           # Customer CRUD (uses utils)
-│   │   ├── employees.ts           # Employee CRUD (uses utils)
+│   │   ├── employees.ts           # Employee CRUD with joins (uses utils)
 │   │   ├── masterdata.ts          # Department/designation CRUD (uses utils)
-│   │   ├── attendance.ts          # Attendance CRUD (uses utils)
+│   │   ├── attendance.ts          # Attendance CRUD with Haversine (uses utils)
+│   │   ├── payroll.ts             # Payroll data access with effective-date resolution (uses utils)
 │   │   ├── audit.ts               # Audit log (uses utils)
 │   │   └── tasks.ts               # Task management (uses utils)
 │   ├── errors.ts                  # DomainError + mapDbError
@@ -261,6 +266,7 @@ Detailed docs live in [`docs/`](./docs/):
 | [docs/TODO.md](./docs/TODO.md) | Task tracking |
 | [docs/ATTENDANCE.md](./docs/ATTENDANCE.md) | Attendance module deep-dive |
 | [docs/MOBILE.md](./docs/MOBILE.md) | Mobile staff dashboard |
+| [docs/PAYROLL.md](./docs/PAYROLL.md) | Payroll module deep-dive 🆕 |
 | [docs/audit/](./docs/audit/) | Repository audit + implementation summary |
 
 ## Code Quality & Architecture

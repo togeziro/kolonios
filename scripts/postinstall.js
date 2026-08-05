@@ -8,6 +8,13 @@
 const fs = require('fs');
 const path = require('path');
 
+// Remove nested Vite inside vitest to prevent type conflicts with root Vite v7
+const nestedVite = path.resolve(__dirname, '..', 'node_modules/vitest/node_modules/vite');
+if (fs.existsSync(nestedVite)) {
+  fs.rmSync(nestedVite, { recursive: true, force: true });
+  console.log('[postinstall] removed nested vitest/node_modules/vite');
+}
+
 const target = 'node_modules/@tanstack/start-server-core/dist/esm/createStartHandler.js';
 
 const sentinel = 'const isSplat = foundRoute';
