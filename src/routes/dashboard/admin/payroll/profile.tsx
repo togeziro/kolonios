@@ -10,30 +10,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
-import {
-  employeeBpjsEnrollmentsQueryOptions,
   employeePayrollProfileQueryOptions,
   salaryComponentsQueryOptions
 } from '@/features/payroll/api/queries';
-import {
-  useCreateEmployeeBpjsFamilyMember,
-  useDeleteEmployeeBpjsFamilyMember,
-  useOverrideEmployeeTaxRecord,
-  useUpdateEmployeePayrollProfile,
-  useUpsertEmployeeBpjsEnrollment
-} from '@/features/payroll/api/mutations';
+import { useUpdateEmployeePayrollProfile } from '@/features/payroll/api/mutations';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
 import { updateEmployeePayrollProfileFn } from '@/features/payroll/api/service';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
-import { maskBankAccount, formatPayrollMoney } from './-components';
+import { maskBankAccount, validDates } from './-components';
+import { BpjsEnrollmentCard } from './-profile-bpjs';
+import {
+  TaxDraft,
+  TaxHistoryCard,
+  TaxProfileSelects,
+  type TaxRecord
+} from './-profile-tax-history';
+import { PaymentHistoryCard, type PaymentHistoryRow } from './-profile-payment-history';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/profile')({
   beforeLoad: async () => {
@@ -112,48 +105,6 @@ type ProfileData = {
   taxRecords: TaxRecord[];
   paymentHistory: PaymentHistoryRow[];
 };
-type TaxRecord = {
-  id: number;
-  employee_id: string;
-  payroll_record_id: number | null;
-  tax_period: string;
-  taxable_income: string;
-  tax_amount: string;
-  details: unknown;
-  source: 'calculated' | 'manual';
-  is_overridden: boolean;
-  created_at: string;
-};
-type PaymentHistoryRow = {
-  id: number;
-  period_name: string;
-  period_start: string;
-  period_end: string;
-  payment_date: string;
-  net_salary: string;
-  period_status: string;
-};
-type BpjsFamilyMember = {
-  id: number;
-  enrollment_id: number;
-  name: string;
-  relationship: string;
-  birth_date: string | null;
-  is_core: boolean;
-};
-type BpjsEnrollment = {
-  id: number;
-  employee_id: string;
-  program: string;
-  membership_number: string;
-  registration_date: string | null;
-  registered_wage: string;
-  jkk_category_override: string | null;
-  is_active: boolean;
-  effective_from: string;
-  effective_to: string | null;
-  familyMembers: BpjsFamilyMember[];
-};
 type ComponentDraft = {
   id?: number;
   assignmentId: number;
@@ -166,29 +117,6 @@ type ComponentDraft = {
   effectiveFrom: string;
   effectiveTo: string;
 };
-type TaxDraft = {
-  id?: number;
-  taxSettingId?: number;
-  taxIdentifier: string;
-  filingStatus: string;
-  employmentStatus: 'permanent' | 'contract' | 'freelance' | '';
-  ptkpStatus: 'TK/0' | 'TK/1' | 'TK/2' | 'TK/3' | 'K/0' | 'K/1' | 'K/2' | 'K/3' | '';
-  residency: 'resident' | 'foreign' | '';
-  taxFacility: 'none' | 'dtp' | 'etc' | '';
-  taxObjectCode: '21-100-01' | '21-100-02' | '21-100-32' | '';
-  pph21Method: 'gross' | 'gross_up' | '';
-  effectiveFrom: string;
-  effectiveTo: string;
-};
-type BpjsDraft = {
-  id?: number;
-  program: 'jkk' | 'jkm' | 'jht' | 'jp' | 'kesehatan';
-  registeredWage: string;
-  isActive: boolean;
-  effectiveFrom: string;
-  effectiveTo: string;
-};
-type FamilyForm = { name: string; relationship: string; isCore: boolean };
 type BenefitDraft = {
   id?: number;
   benefitCode: string;
@@ -209,27 +137,6 @@ type BankDraft = {
 };
 type ProfileMutation = Parameters<typeof updateEmployeePayrollProfileFn>[0]['data'];
 
-const TAX_EMPLOYMENT_STATUS_OPTIONS = ['permanent', 'contract', 'freelance'] as const;
-const TAX_PTKP_STATUS_OPTIONS = [
-  'TK/0',
-  'TK/1',
-  'TK/2',
-  'TK/3',
-  'K/0',
-  'K/1',
-  'K/2',
-  'K/3'
-] as const;
-const TAX_RESIDENCY_OPTIONS = ['resident', 'foreign'] as const;
-const TAX_FACILITY_OPTIONS = ['none', 'dtp', 'etc'] as const;
-const TAX_OBJECT_CODE_OPTIONS = ['21-100-01', '21-100-02', '21-100-32'] as const;
-const TAX_PPH21_METHOD_OPTIONS = ['gross', 'gross_up'] as const;
-const BPJS_PROGRAM_OPTIONS = ['jkk', 'jkm', 'jht', 'jp', 'kesehatan'] as const;
-
-function validDates(from: string, to: string) {
-  return Boolean(from) && (!to || from <= to);
-}
-
 export function profileRecordId(id: number | undefined) {
   return id && id > 0 ? id : undefined;
 }
@@ -245,28 +152,16 @@ function ProfilePage() {
     ...employeePayrollProfileQueryOptions(employeeId),
     enabled: Boolean(employeeId)
   });
-  const bpjsQuery = useQuery({
-    ...employeeBpjsEnrollmentsQueryOptions(employeeId),
-    enabled: Boolean(employeeId)
-  });
   const update = useUpdateEmployeePayrollProfile();
-  const upsertBpjs = useUpsertEmployeeBpjsEnrollment();
-  const createMember = useCreateEmployeeBpjsFamilyMember();
-  const deleteMember = useDeleteEmployeeBpjsFamilyMember();
-  const overrideTax = useOverrideEmployeeTaxRecord();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [componentDrafts, setComponentDrafts] = useState<Record<number, ComponentDraft>>({});
   const [taxDrafts, setTaxDrafts] = useState<Record<number, TaxDraft>>({});
   const [benefitDrafts, setBenefitDrafts] = useState<Record<number, BenefitDraft>>({});
   const [bankDrafts, setBankDrafts] = useState<Record<number, BankDraft>>({});
-  const [bpjsDrafts, setBpjsDrafts] = useState<Record<number, BpjsDraft>>({});
   const [newTaxDraft, setNewTaxDraft] = useState<TaxDraft | null>(null);
   const [newBenefitDraft, setNewBenefitDraft] = useState<BenefitDraft | null>(null);
   const [newBankDraft, setNewBankDraft] = useState<BankDraft | null>(null);
   const [newComponentDraft, setNewComponentDraft] = useState<ComponentDraft | null>(null);
-  const [newBpjsDraft, setNewBpjsDraft] = useState<BpjsDraft | null>(null);
-  const [familyForms, setFamilyForms] = useState<Record<number, FamilyForm>>({});
-  const [taxOverrideDrafts, setTaxOverrideDrafts] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!employeeId && employeesQuery.data?.employees[0])
@@ -349,25 +244,6 @@ function ProfilePage() {
       )
     );
   }, [data]);
-  const bpjsEnrollments = bpjsQuery.data as { enrollments: BpjsEnrollment[] } | undefined;
-  useEffect(() => {
-    if (!bpjsEnrollments) return;
-    setBpjsDrafts(
-      Object.fromEntries(
-        bpjsEnrollments.enrollments.map((enrollment) => [
-          enrollment.id,
-          {
-            id: enrollment.id,
-            program: enrollment.program as BpjsDraft['program'],
-            registeredWage: enrollment.registered_wage,
-            isActive: enrollment.is_active,
-            effectiveFrom: enrollment.effective_from,
-            effectiveTo: enrollment.effective_to ?? ''
-          }
-        ])
-      )
-    );
-  }, [bpjsEnrollments]);
   const save = async (payload: ProfileMutation) => {
     try {
       await update.mutateAsync(payload);
@@ -438,74 +314,6 @@ function ProfilePage() {
         effectiveTo: draft.effectiveTo || undefined
       }
     });
-  };
-  const saveBpjs = (draft: BpjsDraft) => {
-    if (!draft.registeredWage || !validDates(draft.effectiveFrom, draft.effectiveTo))
-      return toast.error(t('payroll.invalidProfile'));
-    void upsertBpjs
-      .mutateAsync({
-        employeeId,
-        program: draft.program,
-        registeredWage: draft.registeredWage,
-        isActive: draft.isActive,
-        effectiveFrom: draft.effectiveFrom,
-        effectiveTo: draft.effectiveTo || undefined
-      })
-      .then(() => {
-        setNewBpjsDraft(null);
-        toast.success(t('payroll.saved'));
-      })
-      .catch(() => toast.error(t('payroll.failed')));
-  };
-  const saveTaxOverride = (record: TaxRecord) => {
-    const amount = taxOverrideDrafts[record.id];
-    if (!amount) return toast.error(t('payroll.invalidProfile'));
-    void overrideTax
-      .mutateAsync({ id: record.id, amount })
-      .then(() => {
-        setTaxOverrideDrafts((prev) => {
-          const next = { ...prev };
-          delete next[record.id];
-          return next;
-        });
-        toast.success(t('payroll.updated'));
-      })
-      .catch(() => toast.error(t('payroll.failed')));
-  };
-  const cancelTaxOverride = (id: number) =>
-    setTaxOverrideDrafts((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-  const addMember = async (enrollmentId: number) => {
-    const form = familyForms[enrollmentId];
-    if (!form || !form.name.trim() || !form.relationship.trim())
-      return toast.error(t('payroll.requiredFields'));
-    try {
-      await createMember.mutateAsync({
-        enrollmentId,
-        name: form.name,
-        relationship: form.relationship,
-        isCore: form.isCore
-      });
-      setFamilyForms((prev) => ({
-        ...prev,
-        [enrollmentId]: { name: '', relationship: '', isCore: true }
-      }));
-      toast.success(t('payroll.saved'));
-    } catch {
-      toast.error(t('payroll.failed'));
-    }
-  };
-  const removeMember = async (member: BpjsFamilyMember) => {
-    if (!window.confirm(t('payroll.deleteConfirm'))) return;
-    try {
-      await deleteMember.mutateAsync({ id: member.id });
-      toast.success(t('payroll.saved'));
-    } catch {
-      toast.error(t('payroll.failed'));
-    }
   };
   const saveBenefit = (draft: BenefitDraft) => {
     if (!validDates(draft.effectiveFrom, draft.effectiveTo))
@@ -904,120 +712,11 @@ function ProfilePage() {
                           setNewTaxDraft({ ...newTaxDraft, effectiveTo: e.target.value })
                         }
                       />
-                      <select
+                      <TaxProfileSelects
+                        value={newTaxDraft}
                         disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        aria-label={t('payroll.employmentStatus')}
-                        value={newTaxDraft.employmentStatus}
-                        onChange={(e) =>
-                          setNewTaxDraft({
-                            ...newTaxDraft,
-                            employmentStatus: e.target.value as TaxDraft['employmentStatus']
-                          })
-                        }
-                      >
-                        <option value=''>{t('payroll.select')}</option>
-                        {TAX_EMPLOYMENT_STATUS_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {t(`payroll.${option}`)}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        aria-label={t('payroll.ptkpStatus')}
-                        value={newTaxDraft.ptkpStatus}
-                        onChange={(e) =>
-                          setNewTaxDraft({
-                            ...newTaxDraft,
-                            ptkpStatus: e.target.value as TaxDraft['ptkpStatus']
-                          })
-                        }
-                      >
-                        <option value=''>{t('payroll.select')}</option>
-                        {TAX_PTKP_STATUS_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        aria-label={t('payroll.residency')}
-                        value={newTaxDraft.residency}
-                        onChange={(e) =>
-                          setNewTaxDraft({
-                            ...newTaxDraft,
-                            residency: e.target.value as TaxDraft['residency']
-                          })
-                        }
-                      >
-                        <option value=''>{t('payroll.select')}</option>
-                        {TAX_RESIDENCY_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {t(`payroll.${option}`)}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        aria-label={t('payroll.taxFacility')}
-                        value={newTaxDraft.taxFacility}
-                        onChange={(e) =>
-                          setNewTaxDraft({
-                            ...newTaxDraft,
-                            taxFacility: e.target.value as TaxDraft['taxFacility']
-                          })
-                        }
-                      >
-                        <option value=''>{t('payroll.select')}</option>
-                        {TAX_FACILITY_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {t(`payroll.${option}`)}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        aria-label={t('payroll.taxObjectCode')}
-                        value={newTaxDraft.taxObjectCode}
-                        onChange={(e) =>
-                          setNewTaxDraft({
-                            ...newTaxDraft,
-                            taxObjectCode: e.target.value as TaxDraft['taxObjectCode']
-                          })
-                        }
-                      >
-                        <option value=''>{t('payroll.select')}</option>
-                        {TAX_OBJECT_CODE_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        aria-label={t('payroll.pph21Method')}
-                        value={newTaxDraft.pph21Method}
-                        onChange={(e) =>
-                          setNewTaxDraft({
-                            ...newTaxDraft,
-                            pph21Method: e.target.value as TaxDraft['pph21Method']
-                          })
-                        }
-                      >
-                        <option value=''>{t('payroll.select')}</option>
-                        {TAX_PPH21_METHOD_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {t(`payroll.${option === 'gross_up' ? 'grossUp' : 'gross'}`)}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(next) => setNewTaxDraft(next)}
+                      />
                       <Button
                         disabled={!canEdit || update.isPending}
                         onClick={() => saveTax(newTaxDraft)}
@@ -1119,138 +818,11 @@ function ProfilePage() {
                               })
                             }
                           />
-                          <select
+                          <TaxProfileSelects
+                            value={draft}
                             disabled={!canEdit}
-                            className='rounded-md border bg-background px-2 text-sm'
-                            aria-label={t('payroll.employmentStatus')}
-                            value={draft.employmentStatus}
-                            onChange={(e) =>
-                              setTaxDrafts({
-                                ...taxDrafts,
-                                [tax.id]: {
-                                  ...draft,
-                                  employmentStatus: e.target.value as TaxDraft['employmentStatus']
-                                }
-                              })
-                            }
-                          >
-                            <option value=''>{t('payroll.select')}</option>
-                            {TAX_EMPLOYMENT_STATUS_OPTIONS.map((option) => (
-                              <option key={option} value={option}>
-                                {t(`payroll.${option}`)}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            disabled={!canEdit}
-                            className='rounded-md border bg-background px-2 text-sm'
-                            aria-label={t('payroll.ptkpStatus')}
-                            value={draft.ptkpStatus}
-                            onChange={(e) =>
-                              setTaxDrafts({
-                                ...taxDrafts,
-                                [tax.id]: {
-                                  ...draft,
-                                  ptkpStatus: e.target.value as TaxDraft['ptkpStatus']
-                                }
-                              })
-                            }
-                          >
-                            <option value=''>{t('payroll.select')}</option>
-                            {TAX_PTKP_STATUS_OPTIONS.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            disabled={!canEdit}
-                            className='rounded-md border bg-background px-2 text-sm'
-                            aria-label={t('payroll.residency')}
-                            value={draft.residency}
-                            onChange={(e) =>
-                              setTaxDrafts({
-                                ...taxDrafts,
-                                [tax.id]: {
-                                  ...draft,
-                                  residency: e.target.value as TaxDraft['residency']
-                                }
-                              })
-                            }
-                          >
-                            <option value=''>{t('payroll.select')}</option>
-                            {TAX_RESIDENCY_OPTIONS.map((option) => (
-                              <option key={option} value={option}>
-                                {t(`payroll.${option}`)}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            disabled={!canEdit}
-                            className='rounded-md border bg-background px-2 text-sm'
-                            aria-label={t('payroll.taxFacility')}
-                            value={draft.taxFacility}
-                            onChange={(e) =>
-                              setTaxDrafts({
-                                ...taxDrafts,
-                                [tax.id]: {
-                                  ...draft,
-                                  taxFacility: e.target.value as TaxDraft['taxFacility']
-                                }
-                              })
-                            }
-                          >
-                            <option value=''>{t('payroll.select')}</option>
-                            {TAX_FACILITY_OPTIONS.map((option) => (
-                              <option key={option} value={option}>
-                                {t(`payroll.${option}`)}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            disabled={!canEdit}
-                            className='rounded-md border bg-background px-2 text-sm'
-                            aria-label={t('payroll.taxObjectCode')}
-                            value={draft.taxObjectCode}
-                            onChange={(e) =>
-                              setTaxDrafts({
-                                ...taxDrafts,
-                                [tax.id]: {
-                                  ...draft,
-                                  taxObjectCode: e.target.value as TaxDraft['taxObjectCode']
-                                }
-                              })
-                            }
-                          >
-                            <option value=''>{t('payroll.select')}</option>
-                            {TAX_OBJECT_CODE_OPTIONS.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            disabled={!canEdit}
-                            className='rounded-md border bg-background px-2 text-sm'
-                            aria-label={t('payroll.pph21Method')}
-                            value={draft.pph21Method}
-                            onChange={(e) =>
-                              setTaxDrafts({
-                                ...taxDrafts,
-                                [tax.id]: {
-                                  ...draft,
-                                  pph21Method: e.target.value as TaxDraft['pph21Method']
-                                }
-                              })
-                            }
-                          >
-                            <option value=''>{t('payroll.select')}</option>
-                            {TAX_PPH21_METHOD_OPTIONS.map((option) => (
-                              <option key={option} value={option}>
-                                {t(`payroll.${option === 'gross_up' ? 'grossUp' : 'gross'}`)}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(next) => setTaxDrafts({ ...taxDrafts, [tax.id]: next })}
+                          />
                           <Button
                             disabled={!canEdit || update.isPending}
                             onClick={() => saveTax(draft)}
@@ -1264,97 +836,7 @@ function ProfilePage() {
                 )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('payroll.taxHistory')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='overflow-x-auto'>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('payroll.taxPeriod')}</TableHead>
-                        <TableHead className='text-right'>{t('payroll.taxableIncome')}</TableHead>
-                        <TableHead className='text-right'>{t('payroll.taxAmount')}</TableHead>
-                        <TableHead>{t('payroll.source')}</TableHead>
-                        <TableHead className='text-right'>{t('payroll.actions')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.taxRecords.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className='text-center text-muted-foreground'>
-                            {t('payroll.noTaxHistory')}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        data.taxRecords.map((record) => (
-                          <TableRow key={record.id}>
-                            <TableCell>{record.tax_period}</TableCell>
-                            <TableCell className='text-right'>
-                              {formatPayrollMoney(record.taxable_income)}
-                            </TableCell>
-                            <TableCell className='text-right'>
-                              {formatPayrollMoney(record.tax_amount)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={record.source === 'manual' ? 'secondary' : 'outline'}>
-                                {record.source === 'manual'
-                                  ? t('payroll.manual')
-                                  : t('payroll.calculated')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className='text-right'>
-                              {taxOverrideDrafts[record.id] !== undefined ? (
-                                <div className='flex items-center justify-end gap-2'>
-                                  <Input
-                                    className='w-32'
-                                    value={taxOverrideDrafts[record.id]}
-                                    onChange={(e) =>
-                                      setTaxOverrideDrafts({
-                                        ...taxOverrideDrafts,
-                                        [record.id]: e.target.value
-                                      })
-                                    }
-                                  />
-                                  <Button
-                                    size='sm'
-                                    disabled={!canEdit || overrideTax.isPending}
-                                    onClick={() => saveTaxOverride(record)}
-                                  >
-                                    {t('common.save')}
-                                  </Button>
-                                  <Button
-                                    size='sm'
-                                    variant='ghost'
-                                    onClick={() => cancelTaxOverride(record.id)}
-                                  >
-                                    {t('common.cancel')}
-                                  </Button>
-                                </div>
-                              ) : record.source === 'calculated' && canEdit ? (
-                                <Button
-                                  size='sm'
-                                  variant='outline'
-                                  onClick={() =>
-                                    setTaxOverrideDrafts({
-                                      ...taxOverrideDrafts,
-                                      [record.id]: record.tax_amount
-                                    })
-                                  }
-                                >
-                                  {t('payroll.override')}
-                                </Button>
-                              ) : null}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <TaxHistoryCard taxRecords={data.taxRecords} />
             <Card>
               <CardHeader>
                 <CardTitle>{t('payroll.bpjs')}</CardTitle>
@@ -1509,317 +991,7 @@ function ProfilePage() {
                 )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('payroll.bpjsEnrollment')}</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-3'>
-                {bpjsQuery.isLoading ? (
-                  <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>
-                ) : bpjsQuery.isError ? (
-                  <p className='text-sm text-destructive'>{t('payroll.loadFailed')}</p>
-                ) : (bpjsEnrollments?.enrollments.length ?? 0) === 0 || newBpjsDraft ? (
-                  newBpjsDraft ? (
-                    <div className='grid gap-2 sm:grid-cols-5'>
-                      <select
-                        disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        value={newBpjsDraft.program}
-                        onChange={(e) =>
-                          setNewBpjsDraft({
-                            ...newBpjsDraft,
-                            program: e.target.value as BpjsDraft['program']
-                          })
-                        }
-                      >
-                        {BPJS_PROGRAM_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {t(`payroll.${option === 'kesehatan' ? 'bpjsKesehatan' : option}`)}
-                          </option>
-                        ))}
-                      </select>
-                      <Input
-                        disabled={!canEdit}
-                        placeholder={t('payroll.registeredWage')}
-                        value={newBpjsDraft.registeredWage}
-                        onChange={(e) =>
-                          setNewBpjsDraft({ ...newBpjsDraft, registeredWage: e.target.value })
-                        }
-                      />
-                      <Input
-                        disabled={!canEdit}
-                        type='date'
-                        value={newBpjsDraft.effectiveFrom}
-                        onChange={(e) =>
-                          setNewBpjsDraft({ ...newBpjsDraft, effectiveFrom: e.target.value })
-                        }
-                      />
-                      <select
-                        disabled={!canEdit}
-                        className='rounded-md border bg-background px-2 text-sm'
-                        value={newBpjsDraft.isActive ? 'active' : 'inactive'}
-                        onChange={(e) =>
-                          setNewBpjsDraft({
-                            ...newBpjsDraft,
-                            isActive: e.target.value === 'active'
-                          })
-                        }
-                      >
-                        <option value='active'>{t('common.active')}</option>
-                        <option value='inactive'>{t('common.inactive')}</option>
-                      </select>
-                      <Button
-                        disabled={!canEdit || upsertBpjs.isPending}
-                        onClick={() => saveBpjs(newBpjsDraft)}
-                      >
-                        {t('common.save')}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      disabled={!canEdit}
-                      onClick={() =>
-                        setNewBpjsDraft({
-                          program: 'jkk',
-                          registeredWage: '',
-                          isActive: true,
-                          effectiveFrom: '',
-                          effectiveTo: ''
-                        })
-                      }
-                    >
-                      {t('payroll.addProfile')}
-                    </Button>
-                  )
-                ) : (
-                  <>
-                    <Button
-                      disabled={!canEdit}
-                      onClick={() =>
-                        setNewBpjsDraft({
-                          program: 'jkk',
-                          registeredWage: '',
-                          isActive: true,
-                          effectiveFrom: '',
-                          effectiveTo: ''
-                        })
-                      }
-                    >
-                      {t('payroll.addProfile')}
-                    </Button>
-                    {bpjsEnrollments?.enrollments.map((enrollment) => {
-                      const draft = bpjsDrafts[enrollment.id];
-                      if (!draft) return null;
-                      const form = familyForms[enrollment.id] ?? {
-                        name: '',
-                        relationship: '',
-                        isCore: true
-                      };
-                      return (
-                        <div className='space-y-2 rounded-lg border p-3' key={enrollment.id}>
-                          <div className='flex items-center justify-between'>
-                            <span className='font-medium'>
-                              {t(
-                                `payroll.${enrollment.program === 'kesehatan' ? 'bpjsKesehatan' : enrollment.program}`
-                              )}
-                            </span>
-                            <Badge variant={enrollment.is_active ? 'default' : 'secondary'}>
-                              {enrollment.is_active ? t('common.active') : t('common.inactive')}
-                            </Badge>
-                          </div>
-                          <div className='grid gap-1 text-sm text-muted-foreground sm:grid-cols-2'>
-                            <span>
-                              {`${t('payroll.membershipNumber')}: `}
-                              <span className='text-foreground'>
-                                {enrollment.membership_number || '—'}
-                              </span>
-                            </span>
-                            <span>
-                              {`${t('payroll.registrationDate')}: `}
-                              <span className='text-foreground'>
-                                {enrollment.registration_date || '—'}
-                              </span>
-                            </span>
-                            <span>
-                              {`${t('payroll.registeredWage')}: `}
-                              <span className='text-foreground'>
-                                {formatPayrollMoney(enrollment.registered_wage)}
-                              </span>
-                            </span>
-                            <span>
-                              {`${t('payroll.jkkOverride')}: `}
-                              <span className='text-foreground'>
-                                {enrollment.jkk_category_override || '—'}
-                              </span>
-                            </span>
-                          </div>
-                          <div className='grid gap-2 sm:grid-cols-5'>
-                            <select
-                              disabled={!canEdit}
-                              className='rounded-md border bg-background px-2 text-sm'
-                              value={draft.program}
-                              onChange={(e) =>
-                                setBpjsDrafts({
-                                  ...bpjsDrafts,
-                                  [enrollment.id]: {
-                                    ...draft,
-                                    program: e.target.value as BpjsDraft['program']
-                                  }
-                                })
-                              }
-                            >
-                              {BPJS_PROGRAM_OPTIONS.map((option) => (
-                                <option key={option} value={option}>
-                                  {t(
-                                    `payroll.${option === 'kesehatan' ? 'bpjsKesehatan' : option}`
-                                  )}
-                                </option>
-                              ))}
-                            </select>
-                            <Input
-                              disabled={!canEdit}
-                              value={draft.registeredWage}
-                              onChange={(e) =>
-                                setBpjsDrafts({
-                                  ...bpjsDrafts,
-                                  [enrollment.id]: { ...draft, registeredWage: e.target.value }
-                                })
-                              }
-                            />
-                            <select
-                              disabled={!canEdit}
-                              className='rounded-md border bg-background px-2 text-sm'
-                              value={draft.isActive ? 'active' : 'inactive'}
-                              onChange={(e) =>
-                                setBpjsDrafts({
-                                  ...bpjsDrafts,
-                                  [enrollment.id]: {
-                                    ...draft,
-                                    isActive: e.target.value === 'active'
-                                  }
-                                })
-                              }
-                            >
-                              <option value='active'>{t('common.active')}</option>
-                              <option value='inactive'>{t('common.inactive')}</option>
-                            </select>
-                            <Input
-                              disabled={!canEdit}
-                              type='date'
-                              value={draft.effectiveFrom}
-                              onChange={(e) =>
-                                setBpjsDrafts({
-                                  ...bpjsDrafts,
-                                  [enrollment.id]: { ...draft, effectiveFrom: e.target.value }
-                                })
-                              }
-                            />
-                            <Input
-                              disabled={!canEdit}
-                              type='date'
-                              value={draft.effectiveTo}
-                              onChange={(e) =>
-                                setBpjsDrafts({
-                                  ...bpjsDrafts,
-                                  [enrollment.id]: { ...draft, effectiveTo: e.target.value }
-                                })
-                              }
-                            />
-                            <Button
-                              disabled={!canEdit || upsertBpjs.isPending}
-                              size='sm'
-                              onClick={() => saveBpjs(draft)}
-                            >
-                              {t('common.save')}
-                            </Button>
-                          </div>
-                          <div className='space-y-2'>
-                            <p className='text-sm font-medium'>{t('payroll.familyMembers')}</p>
-                            {enrollment.familyMembers.length > 0 ? (
-                              <ul className='space-y-1'>
-                                {enrollment.familyMembers.map((member) => (
-                                  <li
-                                    key={member.id}
-                                    className='flex items-center justify-between gap-2 text-sm'
-                                  >
-                                    <span>
-                                      {member.name} {t('payroll.separator')} {member.relationship}
-                                      {member.is_core ? (
-                                        <Badge variant='outline' className='ml-2'>
-                                          {t('payroll.isCore')}
-                                        </Badge>
-                                      ) : null}
-                                    </span>
-                                    <Button
-                                      variant='ghost'
-                                      size='sm'
-                                      disabled={!canEdit}
-                                      onClick={() => removeMember(member)}
-                                    >
-                                      {t('common.delete')}
-                                    </Button>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className='text-xs text-muted-foreground'>
-                                {t('payroll.noFamilyMembers')}
-                              </p>
-                            )}
-                            <div className='flex flex-wrap items-center gap-2'>
-                              <Input
-                                className='w-40'
-                                disabled={!canEdit}
-                                placeholder={t('payroll.name')}
-                                value={form.name}
-                                onChange={(e) =>
-                                  setFamilyForms({
-                                    ...familyForms,
-                                    [enrollment.id]: { ...form, name: e.target.value }
-                                  })
-                                }
-                              />
-                              <Input
-                                className='w-40'
-                                disabled={!canEdit}
-                                placeholder={t('payroll.relationship')}
-                                value={form.relationship}
-                                onChange={(e) =>
-                                  setFamilyForms({
-                                    ...familyForms,
-                                    [enrollment.id]: { ...form, relationship: e.target.value }
-                                  })
-                                }
-                              />
-                              <label className='flex items-center gap-2 text-sm'>
-                                <input
-                                  type='checkbox'
-                                  checked={form.isCore}
-                                  onChange={(e) =>
-                                    setFamilyForms({
-                                      ...familyForms,
-                                      [enrollment.id]: { ...form, isCore: e.target.checked }
-                                    })
-                                  }
-                                />
-                                {t('payroll.isCore')}
-                              </label>
-                              <Button
-                                size='sm'
-                                disabled={!canEdit || createMember.isPending}
-                                onClick={() => addMember(enrollment.id)}
-                              >
-                                {t('common.add')}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <BpjsEnrollmentCard employeeId={employeeId} />
             <Card>
               <CardHeader>
                 <CardTitle>{t('payroll.bankHistory')}</CardTitle>
@@ -1968,53 +1140,7 @@ function ProfilePage() {
                 )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('payroll.paymentHistory')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='overflow-x-auto'>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('payroll.period')}</TableHead>
-                        <TableHead>{t('payroll.paymentDate')}</TableHead>
-                        <TableHead className='text-right'>{t('payroll.thp')}</TableHead>
-                        <TableHead>{t('payroll.status')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.paymentHistory.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className='text-center text-muted-foreground'>
-                            {t('payroll.noPaymentHistory')}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        data.paymentHistory.map((record) => {
-                          const paid =
-                            record.period_status === 'paid' || record.period_status === 'locked';
-                          return (
-                            <TableRow key={record.id}>
-                              <TableCell>{record.period_name}</TableCell>
-                              <TableCell>{record.payment_date}</TableCell>
-                              <TableCell className='text-right'>
-                                {formatPayrollMoney(record.net_salary)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={paid ? 'default' : 'outline'}>
-                                  {paid ? t('payroll.paidLabel') : t('payroll.unpaidLabel')}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <PaymentHistoryCard paymentHistory={data.paymentHistory} />
             <p className='text-xs text-muted-foreground'>{t('payroll.profileEditHint')}</p>
           </>
         )}

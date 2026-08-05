@@ -32,6 +32,10 @@ import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
 import type { SalaryComponentDefinition } from '@/features/payroll/api/types';
 
+export function validDates(from: string, to: string) {
+  return Boolean(from) && (!to || from <= to);
+}
+
 export function maskBankAccount(value: string) {
   if (value.length <= 4) return '*'.repeat(value.length);
   return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
