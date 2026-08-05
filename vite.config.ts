@@ -33,6 +33,11 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['maplibre-gl']
   },
+  build: {
+    rollupOptions: {
+      external: ['postgres']
+    }
+  },
   plugins: [
     tsconfigPaths(),
     tailwindcss(),
@@ -73,4 +78,4 @@ export default defineConfig({
       }
     }
   }
-});
+} as Parameters<typeof defineConfig>[0]);

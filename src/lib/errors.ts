@@ -1,5 +1,4 @@
 import { logger } from './logger';
-import { getRequestId } from './request-id';
 import { captureError } from './sentry';
 
 export class DomainError extends Error {
@@ -14,7 +13,7 @@ export class DomainError extends Error {
 
 export function mapDbError(error: unknown, context: string): never {
   if (error instanceof DomainError) throw error;
-  const requestId = getRequestId();
+  const requestId = undefined;
   logger.error({ context, requestId, err: error }, `[db:${context}]`);
   captureError(error, { context, requestId: requestId ?? '' });
   throw new DomainError('An internal error occurred. Please try again.', 'INTERNAL_ERROR');

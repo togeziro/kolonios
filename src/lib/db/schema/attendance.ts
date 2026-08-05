@@ -130,6 +130,7 @@ export const leaveTypeConfigs = pgTable('leave_type_configs', {
   id: serial('id').primaryKey(),
   leave_type: leaveTypeEnum('leave_type').notNull().unique(),
   attachment_required: boolean('attachment_required').default(false),
+  is_paid: boolean('is_paid').notNull().default(true),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });

@@ -20,7 +20,20 @@ import {
   dayOffs,
   attendanceCorrections,
   employeeShifts,
-  leaveTypeConfigs
+  leaveTypeConfigs,
+  auditLog,
+  employeeSalaryAssignments,
+  employeeSalaryComponents,
+  employeeTaxProfiles,
+  employeeBenefitEnrollments,
+  employeeBankAccounts,
+  employeeEmploymentEvents,
+  employeeDocuments,
+  payslips,
+  payrollRecords,
+  payrollPeriods,
+  salaryComponents,
+  taxSettings
 } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
 import {
@@ -388,6 +401,133 @@ async function seedEmployees() {
   console.log(`Seeded ${employeeRecords.length} employee records`);
 }
 
+async function seedPayroll() {
+  await db.delete(payslips);
+  await db.delete(employeeSalaryComponents);
+  await db.delete(employeeSalaryAssignments);
+  await db.delete(employeeTaxProfiles);
+  await db.delete(employeeBenefitEnrollments);
+  await db.delete(employeeBankAccounts);
+  await db.delete(employeeEmploymentEvents);
+  await db.delete(employeeDocuments);
+  await db.delete(payrollRecords);
+  await db.delete(payrollPeriods);
+  await db.delete(salaryComponents);
+  await db.delete(taxSettings);
+  await db.delete(auditLog);
+
+  const users = await db.select({ id: user.id, email: user.email }).from(user);
+  const byEmail = new Map(users.map((row) => [row.email, row.id]));
+  const adminId = byEmail.get('admin@example.com');
+  if (!adminId) throw new Error('Admin user not found for payroll seed');
+
+  const componentRows = await db
+    .insert(salaryComponents)
+    .values([
+      { code: 'DEMO-TRANSPORT', name: 'Demo Transport Allowance', type: 'allowance' },
+      { code: 'DEMO-MEAL', name: 'Demo Meal Allowance', type: 'allowance' },
+      { code: 'DEMO-LOAN', name: 'Demo Loan Deduction', type: 'deduction' }
+    ])
+    .returning({ id: salaryComponents.id, code: salaryComponents.code });
+  const components = new Map(componentRows.map((row) => [row.code, row.id]));
+
+  const [taxSetting] = await db
+    .insert(taxSettings)
+    .values({
+      code: 'DEMO-NONE',
+      name: 'Demo tax-free setting',
+      rates: { method: 'none', ptkp: '0' },
+      effective_from: '2026-01-01'
+    })
+    .returning({ id: taxSettings.id });
+  if (!taxSetting) throw new Error('Failed to seed demo tax setting');
+
+  const employeeRows = await db
+    .select({
+      id: employees.id,
+      email: employees.email,
+      department_id: employees.department_id,
+      designation_id: employees.designation_id
+    })
+    .from(employees);
+  const salaryByEmail: Record<string, { type: 'monthly' | 'daily' | 'hourly'; amount: string }> = {
+    'admin@example.com': { type: 'monthly', amount: '10000000.00' },
+    'hr@example.com': { type: 'monthly', amount: '5000000.00' },
+    'employee@example.com': { type: 'daily', amount: '250000.00' },
+    'technician@example.com': { type: 'hourly', amount: '50000.00' }
+  };
+
+  for (const employee of employeeRows) {
+    const salary = salaryByEmail[employee.email];
+    if (!salary) continue;
+    const [assignment] = await db
+      .insert(employeeSalaryAssignments)
+      .values({
+        employee_id: employee.id,
+        department_id: employee.department_id,
+        designation_id: employee.designation_id,
+        salary_type: salary.type,
+        amount: salary.amount,
+        effective_from: '2026-01-01',
+        created_by: adminId
+      })
+      .returning({ id: employeeSalaryAssignments.id });
+    if (!assignment) throw new Error(`Failed to seed salary assignment for ${employee.email}`);
+    await db.insert(employeeSalaryComponents).values([
+      {
+        assignment_id: assignment.id,
+        salary_component_id: components.get('DEMO-TRANSPORT')!,
+        amount: '250000.00',
+        effective_from: '2026-01-01'
+      },
+      {
+        assignment_id: assignment.id,
+        salary_component_id: components.get('DEMO-MEAL')!,
+        amount: '150000.00',
+        effective_from: '2026-01-01'
+      },
+      {
+        assignment_id: assignment.id,
+        salary_component_id: components.get('DEMO-LOAN')!,
+        amount: '50000.00',
+        effective_from: '2026-01-01'
+      }
+    ]);
+    await db.insert(employeeTaxProfiles).values({
+      employee_id: employee.id,
+      tax_setting_id: taxSetting.id,
+      tax_identifier: 'TAX-DEMO-001',
+      filing_status: 'single',
+      effective_from: '2026-01-01'
+    });
+    await db.insert(employeeBenefitEnrollments).values({
+      employee_id: employee.id,
+      benefit_code: 'BPJS-DEMO',
+      benefit_name: 'Demo BPJS enrollment',
+      amount: '100000.00',
+      effective_from: '2026-01-01'
+    });
+    await db.insert(employeeBankAccounts).values({
+      employee_id: employee.id,
+      bank_name: 'Demo Bank',
+      account_name: employee.email,
+      account_number: '000000000001',
+      is_primary: true,
+      effective_from: '2026-01-01'
+    });
+  }
+
+  await db.insert(payrollPeriods).values({
+    name: 'Task 7 Demo Payroll',
+    period_start: '2026-08-01',
+    period_end: '2026-08-31',
+    payment_date: '2026-09-05',
+    status: 'draft',
+    created_by: adminId
+  });
+  console.log(`Seeded payroll profile data for ${employeeRows.length} demo employees`);
+}
+
 async function seedCustomers() {
   const adminUsers = await db
     .select({ id: user.id, email: user.email })
@@ -598,7 +738,16 @@ async function seedRoleGroups() {
           designations: { view: true, add: true, edit: true },
           users: { view: true },
           audit_log: { view: true },
-          attendance_admin: { view: true }
+          attendance_admin: { view: true },
+          payroll: {
+            view: true,
+            add: true,
+            edit: true,
+            delete: true,
+            approve: true,
+            pay: true,
+            reports: true
+          }
         },
         is_admin: false
       },
@@ -609,7 +758,8 @@ async function seedRoleGroups() {
         permissions: {
           ...coreModules,
           jobs: { view: true },
-          notifications: { view: true }
+          notifications: { view: true },
+          payroll: { view: true }
         },
         is_admin: false
       },
@@ -620,7 +770,8 @@ async function seedRoleGroups() {
         permissions: {
           ...coreModules,
           jobs: { view: true },
-          notifications: { view: true }
+          notifications: { view: true },
+          payroll: { view: true }
         },
         is_admin: false
       }
@@ -716,6 +867,7 @@ export async function seedDatabase() {
   await seedMasterdata();
   await seedDemoUsers();
   await seedEmployees();
+  await seedPayroll();
   await seedCustomers();
   await seedTasks();
   await seedRoleGroups();
@@ -723,7 +875,7 @@ export async function seedDatabase() {
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');
-  await dbClient.end();
+  await dbClient?.end();
 }
 
 if (import.meta.main) {

@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger';
 
 export type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'customer' | 'user';
 
-export type PermissionAction = 'view' | 'add' | 'edit' | 'delete';
+export type PermissionAction = 'view' | 'add' | 'edit' | 'delete' | 'approve' | 'pay' | 'reports';
 
 export function hasModulePermission(
   permissions: Permissions | undefined,

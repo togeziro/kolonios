@@ -686,7 +686,7 @@ describe('check-out validation with stored policies', () => {
       .insert(employeeShifts)
       .values({
         user_id: TEST_USER_ID,
-        date: '2026-08-04',
+        date: businessDateInTimeZone(new Date()),
         shift_id: 1,
         check_in_time: '08:00',
         attendance_status: 'present',
@@ -753,7 +753,7 @@ describe('check-out validation with stored policies', () => {
       .insert(employeeShifts)
       .values({
         user_id: TEST_USER_ID,
-        date: '2026-08-04',
+        date: businessDateInTimeZone(new Date()),
         check_in_time: '08:00',
         attendance_status: 'present',
         gps_validation_enabled: false,

@@ -50,7 +50,11 @@ export function MobileHeader() {
       className='relative flex items-center justify-between px-4 pt-4 pb-2'
     >
       <div ref={ref} className='relative'>
-        <button onClick={() => setOpen((o) => !o)} className='flex items-center gap-3'>
+        <button
+          aria-label={t('navigation.openUserMenu')}
+          onClick={() => setOpen((o) => !o)}
+          className='flex items-center gap-3'
+        >
           <Avatar className='h-10 w-10 border'>
             <AvatarFallback className='bg-primary/10 text-primary text-xs font-medium'>
               {initials}

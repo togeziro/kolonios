@@ -7,4 +7,5 @@ export * from './customers';
 export * from './audit-log';
 export * from './role-groups';
 export * from './user-role-groups';
+export * from './payroll';
 export * from '../auth-schema';

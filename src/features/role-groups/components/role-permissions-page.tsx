@@ -13,6 +13,19 @@ import { MODULES } from '../modules';
 import type { Permissions } from '../api/types';
 import { toast } from 'sonner';
 
+const ACTIONS = ['view', 'add', 'edit', 'delete', 'approve', 'pay', 'reports'] as const;
+const ACTION_LABELS = {
+  view: 'view',
+  add: 'add',
+  edit: 'edit',
+  delete: 'delete',
+  approve: 'approve',
+  pay: 'pay',
+  reports: 'reports'
+} as const;
+const moduleActions = (key: string) =>
+  MODULES.find((module) => module.key === key)?.actions ?? ['view'];
+
 export default function RolePermissionsPage() {
   const { t } = useTranslation();
   const { id } = useParams({ from: '/dashboard/admin/role-groups/$id' });
@@ -51,7 +64,7 @@ export default function RolePermissionsPage() {
       if (enabled) {
         return {
           ...prev,
-          [mod]: { view: true, add: false, edit: false, delete: false }
+          [mod]: Object.fromEntries(moduleActions(mod).map((action) => [action, action === 'view']))
         };
       }
       const next = { ...prev };
@@ -114,18 +127,11 @@ export default function RolePermissionsPage() {
           <thead>
             <tr className='border-b bg-muted/50'>
               <th className='px-4 py-3 text-left text-sm font-medium'>{t('roleGroups.module')}</th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
-                {t('roleGroups.view')}
-              </th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
-                {t('roleGroups.add')}
-              </th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
-                {t('roleGroups.edit')}
-              </th>
-              <th className='px-4 py-3 text-center text-sm font-medium w-16'>
-                {t('roleGroups.delete')}
-              </th>
+              {ACTIONS.map((action) => (
+                <th key={action} className='px-4 py-3 text-center text-sm font-medium w-16'>
+                  {t(`roleGroups.${ACTION_LABELS[action]}`)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -138,34 +144,19 @@ export default function RolePermissionsPage() {
                   className={`border-b hover:bg-muted/30 ${isAdmin ? 'opacity-60' : ''}`}
                 >
                   <td className='px-4 py-3 text-sm font-medium'>{mod.label}</td>
-                  <td className='px-4 py-3 text-center'>
-                    <Checkbox
-                      checked={isEnabled}
-                      disabled={isAdmin}
-                      onCheckedChange={(v) => toggleModule(mod.key, !!v)}
-                    />
-                  </td>
-                  <td className='px-4 py-3 text-center'>
-                    <Checkbox
-                      checked={modPerm?.add ?? false}
-                      disabled={!isEnabled || isAdmin || !mod.hasCrud}
-                      onCheckedChange={(v) => toggleAction(mod.key, 'add', !!v)}
-                    />
-                  </td>
-                  <td className='px-4 py-3 text-center'>
-                    <Checkbox
-                      checked={modPerm?.edit ?? false}
-                      disabled={!isEnabled || isAdmin || !mod.hasCrud}
-                      onCheckedChange={(v) => toggleAction(mod.key, 'edit', !!v)}
-                    />
-                  </td>
-                  <td className='px-4 py-3 text-center'>
-                    <Checkbox
-                      checked={modPerm?.delete ?? false}
-                      disabled={!isEnabled || isAdmin || !mod.hasCrud}
-                      onCheckedChange={(v) => toggleAction(mod.key, 'delete', !!v)}
-                    />
-                  </td>
+                  {ACTIONS.map((action) => (
+                    <td key={action} className='px-4 py-3 text-center'>
+                      <Checkbox
+                        checked={action === 'view' ? isEnabled : (modPerm?.[action] ?? false)}
+                        disabled={isAdmin || !(mod.actions as readonly string[]).includes(action)}
+                        onCheckedChange={(v) =>
+                          action === 'view'
+                            ? toggleModule(mod.key, !!v)
+                            : toggleAction(mod.key, action, !!v)
+                        }
+                      />
+                    </td>
+                  ))}
                 </tr>
               );
             })}
