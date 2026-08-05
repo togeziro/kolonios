@@ -70,6 +70,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/lib/**', 'src/features/**/schemas/**', 'src/features/**/api/**'],
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.output/**',
+        'e2e/**',
+        'src/lib/db/migrations/**'
+      ],
       thresholds: {
         lines: 69,
         branches: 55,
