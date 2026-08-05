@@ -12,6 +12,8 @@ import {
   deleteDesignation,
   getDesignationsAsOptions
 } from './masterdata';
+import { db } from '@/lib/db';
+import { sql } from 'drizzle-orm';
 import { resetAllTables, seedDepartment } from '@/test-utils/db';
 
 describe('departments data access (integration)', () => {
@@ -195,5 +197,75 @@ describe('designations data access (integration)', () => {
       value: expect.any(String),
       label: expect.stringContaining('Engineer')
     });
+  });
+});
+
+describe('company settings (integration)', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  afterAll(async () => {
+    await resetAllTables();
+  });
+
+  it('should have holiday_api_provider column with default value', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'holiday_api_provider'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].column_default).toContain('nager_date');
+  });
+
+  it('should have holiday_api_country_code column with default value', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'holiday_api_country_code'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].column_default).toContain('ID');
+  });
+
+  it('should have holiday_api_url column (nullable)', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'holiday_api_url'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].is_nullable).toBe('YES');
+  });
+
+  it('should have holiday_api_key column (nullable)', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'holiday_api_key'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].is_nullable).toBe('YES');
+  });
+
+  it('should have holiday_api_headers column with default empty JSON', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'holiday_api_headers'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].column_default).toContain('{}');
+  });
+
+  it('should have holiday_api_response_mapping column with default empty JSON', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'holiday_api_response_mapping'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].column_default).toContain('{}');
   });
 });

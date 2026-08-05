@@ -1,4 +1,13 @@
-import { pgTable, serial, text, timestamp, boolean, real, integer } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  boolean,
+  real,
+  integer,
+  json
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { employees } from './employees';
 
@@ -31,6 +40,19 @@ export const designations = pgTable('designations', {
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });
 
+// company_settings table (singleton - one row only)
+export const companySettings = pgTable('company_settings', {
+  id: serial('id').primaryKey(),
+  holiday_api_provider: text('holiday_api_provider').notNull().default('nager_date'),
+  holiday_api_url: text('holiday_api_url'),
+  holiday_api_key: text('holiday_api_key'),
+  holiday_api_country_code: text('holiday_api_country_code').notNull().default('ID'),
+  holiday_api_headers: json('holiday_api_headers').notNull().default({}),
+  holiday_api_response_mapping: json('holiday_api_response_mapping').notNull().default({}),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
+});
+
 export const departmentRelations = relations(departments, ({ many }) => ({
   employees: many(employees),
   designations: many(designations)
@@ -49,3 +71,6 @@ export type NewDepartment = typeof departments.$inferInsert;
 
 export type Designation = typeof designations.$inferSelect;
 export type NewDesignation = typeof designations.$inferInsert;
+
+export type CompanySetting = typeof companySettings.$inferSelect;
+export type NewCompanySetting = typeof companySettings.$inferInsert;
