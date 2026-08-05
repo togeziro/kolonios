@@ -44,6 +44,39 @@ describe('nav-config', () => {
     expect(titles).toContain('Employees');
   });
 
+  it('nests payroll admin pages under a Payroll dropdown', () => {
+    const management = navGroups.find((g) => g.label === 'Management');
+    const payroll = management!.items.find((item) => item.title === 'Payroll');
+    expect(payroll).toBeDefined();
+    const children = payroll!.items?.map((item) => item.title) ?? [];
+    expect(children).toContain('Payroll Profiles');
+    expect(children).toContain('Payroll Settings');
+  });
+
+  it('nests attendance admin pages under an Attendance Management dropdown', () => {
+    const management = navGroups.find((g) => g.label === 'Management');
+    const attendance = management!.items.find((item) => item.title === 'Attendance Management');
+    expect(attendance).toBeDefined();
+    const children = attendance!.items?.map((item) => item.title) ?? [];
+    expect(children).toEqual([
+      'Attendance Locations',
+      'Attendance Schedules',
+      'Attendance Assignments',
+      'Attendance Reports'
+    ]);
+  });
+
+  it('gates dropdown parents by their module so children inherit access', () => {
+    const management = navGroups.find((g) => g.label === 'Management');
+    const payroll = management!.items.find((item) => item.title === 'Payroll');
+    const attendance = management!.items.find((item) => item.title === 'Attendance Management');
+    expect(payroll!.module).toBe('payroll');
+    expect(attendance!.module).toBe('attendance_admin');
+    for (const child of [...(payroll!.items ?? []), ...(attendance!.items ?? [])]) {
+      expect(child.module).toBeDefined();
+    }
+  });
+
   it('has Settings group with admin items', () => {
     const settings = navGroups.find((g) => g.label === 'Settings');
     expect(settings).toBeDefined();

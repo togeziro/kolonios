@@ -30,7 +30,9 @@
     "goodMorning": "Good morning",
     "goodAfternoon": "Good afternoon",
     "goodEvening": "Good evening",
-    "openUserMenu": "Open user menu"
+    "openUserMenu": "Open user menu",
+    "attendanceManagement": "Attendance Management",
+    "payrollSettings": "Payroll Settings"
   },
   "common": {
     "cancel": "Cancel",

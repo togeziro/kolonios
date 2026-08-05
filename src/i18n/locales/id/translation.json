@@ -30,7 +30,9 @@
     "goodMorning": "Selamat pagi",
     "goodAfternoon": "Selamat siang",
     "goodEvening": "Selamat malam",
-    "openUserMenu": "Buka menu pengguna"
+    "openUserMenu": "Buka menu pengguna",
+    "attendanceManagement": "Manajemen Absensi",
+    "payrollSettings": "Pengaturan Penggajian"
   },
   "common": {
     "cancel": "Batal",

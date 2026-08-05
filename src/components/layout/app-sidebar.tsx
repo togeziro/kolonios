@@ -14,6 +14,7 @@ import { Link } from '@tanstack/react-router';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import type { NavItem } from '@/types';
 import { Icons } from '../icons';
 import {
   Sidebar,
@@ -44,17 +45,95 @@ export const navTitleKeys: Record<string, string> = {
   Payroll: 'navigation.payroll',
   Payslips: 'navigation.payslips',
   'Payroll Profiles': 'navigation.payrollProfiles',
+  'Payroll Settings': 'navigation.payrollSettings',
   Settings: 'navigation.settings',
   'Attendance Locations': 'navigation.attendanceLocations',
   'Attendance Schedules': 'navigation.attendanceSchedules',
   'Attendance Assignments': 'navigation.attendanceAssignments',
   'Attendance Reports': 'navigation.attendanceReports',
+  'Attendance Management': 'navigation.attendanceManagement',
   Users: 'navigation.users',
   Departments: 'navigation.departments',
   'Job Titles': 'navigation.jobTitles',
   'Audit Log': 'navigation.auditLog',
   'Role Groups': 'navigation.roleGroups'
 };
+
+function isPathActive(pathname: string, url: string): boolean {
+  return pathname === url || pathname.startsWith(`${url}/`);
+}
+
+function isItemActive(item: NavItem, pathname: string): boolean {
+  if (item.items && item.items.length > 0) {
+    return item.items.some((sub) => isPathActive(pathname, sub.url));
+  }
+  return isPathActive(pathname, item.url);
+}
+
+function isSubItemActive(pathname: string, url: string): boolean {
+  return pathname === url;
+}
+
+function NavItemMenu({
+  item,
+  pathname,
+  t
+}: {
+  item: NavItem;
+  pathname: string;
+  t: (key: string) => string;
+}) {
+  const active = isItemActive(item, pathname);
+  const [open, setOpen] = React.useState(active);
+
+  React.useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
+
+  const label = t(navTitleKeys[item.title] ?? item.title);
+  const Icon =
+    item.icon && item.icon in Icons ? Icons[item.icon as keyof typeof Icons] : Icons.logo;
+
+  if (item.items && item.items.length > 0) {
+    return (
+      <Collapsible open={open} onOpenChange={setOpen} asChild className='group/collapsible'>
+        <SidebarMenuItem>
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton tooltip={label} isActive={active}>
+              {item.icon && <Icon />}
+              <span>{label}</span>
+              <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              {item.items.map((subItem) => (
+                <SidebarMenuSubItem key={subItem.title}>
+                  <SidebarMenuSubButton asChild isActive={isSubItemActive(pathname, subItem.url)}>
+                    <Link to={subItem.url}>
+                      <span>{t(navTitleKeys[subItem.title] ?? subItem.title)}</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    );
+  }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild tooltip={label} isActive={active}>
+        <Link to={item.url}>
+          <Icon />
+          <span>{label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
 
 export default function AppSidebar() {
   const { t } = useTranslation();
@@ -74,7 +153,7 @@ export default function AppSidebar() {
                   <Icons.logo className='size-4' />
                 </div>
                 <div className='grid flex-1 text-left text-sm leading-tight'>
-                  <span className='truncate font-semibold'>TanStack Start</span>
+                  <span className='truncate font-semibold'>Kolonios</span>
                   <span className='text-muted-foreground truncate text-xs'>
                     {t('navigation.dashboard')}
                   </span>
@@ -91,59 +170,9 @@ export default function AppSidebar() {
               <SidebarGroupLabel>{t(navTitleKeys[group.label] ?? group.label)}</SidebarGroupLabel>
             )}
             <SidebarMenu>
-              {group.items.map((item) => {
-                const Icon =
-                  item.icon && item.icon in Icons
-                    ? Icons[item.icon as keyof typeof Icons]
-                    : Icons.logo;
-                return item?.items && item?.items?.length > 0 ? (
-                  <Collapsible
-                    key={item.title}
-                    asChild
-                    defaultOpen={item.isActive}
-                    className='group/collapsible'
-                  >
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          tooltip={t(navTitleKeys[item.title] ?? item.title)}
-                          isActive={pathname === item.url}
-                        >
-                          {item.icon && <Icon />}
-                          <span>{t(navTitleKeys[item.title] ?? item.title)}</span>
-                          <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {item.items?.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.title}>
-                              <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                                <Link to={subItem.url}>
-                                  <span>{t(navTitleKeys[subItem.title] ?? subItem.title)}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
-                ) : (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={t(navTitleKeys[item.title] ?? item.title)}
-                      isActive={pathname === item.url}
-                    >
-                      <Link to={item.url}>
-                        <Icon />
-                        <span>{t(navTitleKeys[item.title] ?? item.title)}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {group.items.map((item) => (
+                <NavItemMenu key={item.title} item={item} pathname={pathname} t={t} />
+              ))}
             </SidebarMenu>
           </SidebarGroup>
         ))}

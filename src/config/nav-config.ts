@@ -84,55 +84,73 @@ export const navGroups: NavGroup[] = [
         icon: 'wallet',
         isActive: false,
         module: 'payroll',
-        items: []
+        items: [
+          {
+            title: 'Payroll',
+            url: '/dashboard/admin/payroll',
+            icon: 'wallet',
+            isActive: false,
+            module: 'payroll',
+            items: []
+          },
+          {
+            title: 'Payroll Profiles',
+            url: '/dashboard/admin/payroll/profile',
+            icon: 'employee',
+            isActive: false,
+            module: 'payroll',
+            items: []
+          },
+          {
+            title: 'Payroll Settings',
+            url: '/dashboard/admin/payroll/settings',
+            icon: 'wallet',
+            isActive: false,
+            module: 'payroll',
+            items: []
+          }
+        ]
       },
       {
-        title: 'Payroll Profiles',
-        url: '/dashboard/admin/payroll/profile',
-        icon: 'employee',
-        isActive: false,
-        module: 'payroll',
-        items: []
-      },
-      {
-        title: 'Settings',
-        url: '/dashboard/admin/payroll/settings',
-        icon: 'wallet',
-        isActive: false,
-        module: 'payroll',
-        items: []
-      },
-      {
-        title: 'Attendance Locations',
+        title: 'Attendance Management',
         url: '/dashboard/admin/attendance/locations',
         icon: 'clock',
         isActive: false,
         module: 'attendance_admin',
-        items: []
-      },
-      {
-        title: 'Attendance Schedules',
-        url: '/dashboard/admin/attendance/schedules',
-        icon: 'clock',
-        isActive: false,
-        module: 'attendance_admin',
-        items: []
-      },
-      {
-        title: 'Attendance Assignments',
-        url: '/dashboard/admin/attendance/assignments',
-        icon: 'clock',
-        isActive: false,
-        module: 'attendance_admin',
-        items: []
-      },
-      {
-        title: 'Attendance Reports',
-        url: '/dashboard/admin/attendance/reports',
-        icon: 'clock',
-        isActive: false,
-        module: 'attendance_admin',
-        items: []
+        items: [
+          {
+            title: 'Attendance Locations',
+            url: '/dashboard/admin/attendance/locations',
+            icon: 'clock',
+            isActive: false,
+            module: 'attendance_admin',
+            items: []
+          },
+          {
+            title: 'Attendance Schedules',
+            url: '/dashboard/admin/attendance/schedules',
+            icon: 'clock',
+            isActive: false,
+            module: 'attendance_admin',
+            items: []
+          },
+          {
+            title: 'Attendance Assignments',
+            url: '/dashboard/admin/attendance/assignments',
+            icon: 'clock',
+            isActive: false,
+            module: 'attendance_admin',
+            items: []
+          },
+          {
+            title: 'Attendance Reports',
+            url: '/dashboard/admin/attendance/reports',
+            icon: 'clock',
+            isActive: false,
+            module: 'attendance_admin',
+            items: []
+          }
+        ]
       }
     ]
   },
