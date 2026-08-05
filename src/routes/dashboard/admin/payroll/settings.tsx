@@ -114,7 +114,7 @@ function SettingsPage() {
   const { t } = useTranslation();
   const { isAdmin, permissions } = useRoleGroupPermissions();
   const canEdit = canPayrollAction(permissions, isAdmin, 'edit');
-  const { data: settings } = useQuery(companyPayrollSettingsQueryOptions());
+  const { data: settings, isLoading, isError } = useQuery(companyPayrollSettingsQueryOptions());
   const update = useUpdateCompanyPayrollSettings();
   const [form, setForm] = useState<SettingsForm>(defaultForm);
 
@@ -184,133 +184,146 @@ function SettingsPage() {
       pageDescription={t('payroll.settingsDescription')}
     >
       <div className='grid max-w-4xl gap-4'>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('payroll.dasar')}</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <div className='space-y-2'>
-              <Label htmlFor='settings-companyNpwp'>{t('payroll.companyNpwp')}</Label>
-              <Input
-                id='settings-companyNpwp'
-                value={form.companyNpwp}
-                disabled={!canEdit}
-                onChange={(e) => set('companyNpwp', e.target.value)}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='settings-cutOffDay'>{t('payroll.cutOffDay')}</Label>
-              <Input
-                id='settings-cutOffDay'
-                type='number'
-                min={1}
-                max={31}
-                step={1}
-                disabled={!canEdit}
-                value={form.cutOffDay}
-                onChange={(e) =>
-                  set('cutOffDay', e.target.value === '' ? 0 : Number(e.target.value))
-                }
-              />
-            </div>
-            {toggleRow(t('payroll.pph21Enabled'), form.pph21Enabled, (v) => set('pph21Enabled', v))}
-            <div className='space-y-2'>
-              <Label>{t('payroll.pph21Method')}</Label>
-              <Select
-                value={form.pph21Method}
-                disabled={!canEdit}
-                onValueChange={(v) => set('pph21Method', v as Pph21Method)}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='gross'>{t('payroll.gross')}</SelectItem>
-                  <SelectItem value='gross_up'>{t('payroll.grossUp')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          <p>{t('common.loading')}</p>
+        ) : isError ? (
+          <p className='text-sm text-destructive'>{t('payroll.loadFailed')}</p>
+        ) : (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('payroll.dasar')}</CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-3'>
+                <div className='space-y-2'>
+                  <Label htmlFor='settings-companyNpwp'>{t('payroll.companyNpwp')}</Label>
+                  <Input
+                    id='settings-companyNpwp'
+                    value={form.companyNpwp}
+                    disabled={!canEdit}
+                    onChange={(e) => set('companyNpwp', e.target.value)}
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='settings-cutOffDay'>{t('payroll.cutOffDay')}</Label>
+                  <Input
+                    id='settings-cutOffDay'
+                    type='number'
+                    min={1}
+                    max={31}
+                    step={1}
+                    disabled={!canEdit}
+                    value={form.cutOffDay}
+                    onChange={(e) =>
+                      set('cutOffDay', e.target.value === '' ? 0 : Number(e.target.value))
+                    }
+                  />
+                </div>
+                {toggleRow(t('payroll.pph21Enabled'), form.pph21Enabled, (v) =>
+                  set('pph21Enabled', v)
+                )}
+                <div className='space-y-2'>
+                  <Label>{t('payroll.pph21Method')}</Label>
+                  <Select
+                    value={form.pph21Method}
+                    disabled={!canEdit}
+                    onValueChange={(v) => set('pph21Method', v as Pph21Method)}
+                  >
+                    <SelectTrigger className='w-full'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='gross'>{t('payroll.gross')}</SelectItem>
+                      <SelectItem value='gross_up'>{t('payroll.grossUp')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('payroll.bpjs')}</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <div className='grid gap-3 sm:grid-cols-2'>
-              {toggleRow(t('payroll.jkk'), form.jkkEnabled, (v) => set('jkkEnabled', v))}
-              {toggleRow(t('payroll.jkm'), form.jkmEnabled, (v) => set('jkmEnabled', v))}
-              {toggleRow(t('payroll.jht'), form.jhtEnabled, (v) => set('jhtEnabled', v))}
-              {toggleRow(t('payroll.jp'), form.jpEnabled, (v) => set('jpEnabled', v))}
-            </div>
-            <div className='space-y-2'>
-              <Label>{t('payroll.riskCategory')}</Label>
-              <Select
-                value={form.jkkRiskCategory}
-                disabled={!canEdit}
-                onValueChange={(v) => set('jkkRiskCategory', v as JkkRiskCategory)}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {jkkCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {t(jkkCategoryKeys[category])}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='grid gap-3 sm:grid-cols-2'>
-              {numberField('jkmCompanyRate', `${t('payroll.jkm')} ${t('payroll.companyRate')}`)}
-              {numberField('jhtCompanyRate', `${t('payroll.jht')} ${t('payroll.companyRate')}`)}
-              {numberField('jhtEmployeeRate', `${t('payroll.jht')} ${t('payroll.employeeRate')}`)}
-              {numberField('jpCompanyRate', `${t('payroll.jp')} ${t('payroll.companyRate')}`)}
-              {numberField('jpEmployeeRate', `${t('payroll.jp')} ${t('payroll.employeeRate')}`)}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('payroll.bpjs')}</CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-3'>
+                <div className='grid gap-3 sm:grid-cols-2'>
+                  {toggleRow(t('payroll.jkk'), form.jkkEnabled, (v) => set('jkkEnabled', v))}
+                  {toggleRow(t('payroll.jkm'), form.jkmEnabled, (v) => set('jkmEnabled', v))}
+                  {toggleRow(t('payroll.jht'), form.jhtEnabled, (v) => set('jhtEnabled', v))}
+                  {toggleRow(t('payroll.jp'), form.jpEnabled, (v) => set('jpEnabled', v))}
+                </div>
+                <div className='space-y-2'>
+                  <Label>{t('payroll.riskCategory')}</Label>
+                  <Select
+                    value={form.jkkRiskCategory}
+                    disabled={!canEdit}
+                    onValueChange={(v) => set('jkkRiskCategory', v as JkkRiskCategory)}
+                  >
+                    <SelectTrigger className='w-full'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {jkkCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {t(jkkCategoryKeys[category])}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='grid gap-3 sm:grid-cols-2'>
+                  {numberField('jkmCompanyRate', `${t('payroll.jkm')} ${t('payroll.companyRate')}`)}
+                  {numberField('jhtCompanyRate', `${t('payroll.jht')} ${t('payroll.companyRate')}`)}
+                  {numberField(
+                    'jhtEmployeeRate',
+                    `${t('payroll.jht')} ${t('payroll.employeeRate')}`
+                  )}
+                  {numberField('jpCompanyRate', `${t('payroll.jp')} ${t('payroll.companyRate')}`)}
+                  {numberField('jpEmployeeRate', `${t('payroll.jp')} ${t('payroll.employeeRate')}`)}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('payroll.bpjsKesehatan')}</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            {toggleRow(t('payroll.bpjsKesehatan'), form.bpjsKesehatanEnabled, (v) =>
-              set('bpjsKesehatanEnabled', v)
-            )}
-            <div className='grid gap-3 sm:grid-cols-2'>
-              {numberField(
-                'kesehatanCompanyRate',
-                `${t('payroll.bpjsKesehatan')} ${t('payroll.companyRate')}`
-              )}
-              {numberField(
-                'kesehatanEmployeeRate',
-                `${t('payroll.bpjsKesehatan')} ${t('payroll.employeeRate')}`
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('payroll.bpjsKesehatan')}</CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-3'>
+                {toggleRow(t('payroll.bpjsKesehatan'), form.bpjsKesehatanEnabled, (v) =>
+                  set('bpjsKesehatanEnabled', v)
+                )}
+                <div className='grid gap-3 sm:grid-cols-2'>
+                  {numberField(
+                    'kesehatanCompanyRate',
+                    `${t('payroll.bpjsKesehatan')} ${t('payroll.companyRate')}`
+                  )}
+                  {numberField(
+                    'kesehatanEmployeeRate',
+                    `${t('payroll.bpjsKesehatan')} ${t('payroll.employeeRate')}`
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('payroll.potongan')}</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <div className='grid gap-3 sm:grid-cols-2'>
-              {numberField('potonganIzinJamDefault', t('payroll.potonganIzinJamDefault'))}
-              {numberField('potonganShortfallDefault', t('payroll.potonganShortfallDefault'))}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('payroll.potongan')}</CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-3'>
+                <div className='grid gap-3 sm:grid-cols-2'>
+                  {numberField('potonganIzinJamDefault', t('payroll.potonganIzinJamDefault'))}
+                  {numberField('potonganShortfallDefault', t('payroll.potonganShortfallDefault'))}
+                </div>
+              </CardContent>
+            </Card>
 
-        <div>
-          <Button onClick={save} disabled={!canEdit || update.isPending}>
-            {t('common.save')}
-          </Button>
-        </div>
+            <div>
+              <Button onClick={save} disabled={!canEdit || update.isPending || !settings}>
+                {t('common.save')}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </PageContainer>
   );
