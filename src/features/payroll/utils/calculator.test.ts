@@ -535,4 +535,41 @@ describe('calculatePayroll', () => {
 
     expect(result.snapshot.employerCosts).toEqual([{ program: 'jkk', amount: 174_000 }]);
   });
+
+  it('deducts permit hours and shortfall hours at configured per-hour rates', () => {
+    const result = calculatePayroll(
+      baseInput({
+        attendance: { ...baseInput().attendance, permitHours: 2, shortfallHours: 3 },
+        attendancePolicy: {
+          absence: { enabled: false },
+          late: { mode: 'none' },
+          unpaidLeave: { enabled: false },
+          monthlyAttendanceMode: 'deduct',
+          permitHour: { enabled: true, amount: 50_000 },
+          shortfall: { enabled: true, amount: 40_000 }
+        }
+      })
+    );
+
+    expect(result.attendanceDeductions).toBe(220_000);
+    expect(result.netSalary).toBe(9_780_000);
+  });
+
+  it('does not apply shortfall deductions when the employee was late', () => {
+    const result = calculatePayroll(
+      baseInput({
+        attendance: { ...baseInput().attendance, shortfallHours: 3, lateCount: 1 },
+        attendancePolicy: {
+          absence: { enabled: false },
+          late: { mode: 'fixed', amount: 25_000 },
+          unpaidLeave: { enabled: false },
+          monthlyAttendanceMode: 'deduct',
+          permitHour: { enabled: false },
+          shortfall: { enabled: true, amount: 40_000 }
+        }
+      })
+    );
+
+    expect(result.attendanceDeductions).toBe(25_000);
+  });
 });

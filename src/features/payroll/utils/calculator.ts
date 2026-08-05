@@ -276,6 +276,20 @@ export function calculateAttendanceDeductions(
       'late:partial'
     );
   }
+  if (attendancePolicy.permitHour?.enabled) {
+    add(
+      'Permit hours',
+      roundMoney((attendancePolicy.permitHour.amount ?? rate) * attendance.permitHours),
+      'permit-hour'
+    );
+  }
+  if (attendancePolicy.shortfall?.enabled && attendance.lateCount === 0) {
+    add(
+      'Shortfall hours',
+      roundMoney((attendancePolicy.shortfall.amount ?? rate) * attendance.shortfallHours),
+      'shortfall'
+    );
+  }
   return { total: roundMoney(items.reduce((sum, item) => sum + item.amount, 0)), items };
 }
 
