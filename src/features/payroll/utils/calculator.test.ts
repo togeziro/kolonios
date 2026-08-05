@@ -572,4 +572,44 @@ describe('calculatePayroll', () => {
 
     expect(result.attendanceDeductions).toBe(25_000);
   });
+
+  it('grosses up PPh21 when pph21 method is gross_up', () => {
+    const result = calculatePayroll(
+      baseInput({
+        tax: {
+          method: 'progressive',
+          ptkp: 0,
+          pph21: 'gross_up',
+          settings: {
+            progressive: [{ upTo: null, rate: 5 }]
+          }
+        }
+      })
+    );
+
+    // Tax is computed on grossed-up taxable income (10M + tax), so tax ≈ 526_315.
+    expect(result.tax.amount).toBeGreaterThan(500_000);
+    expect(result.lineItems.some((item) => item.source === 'pph21:gross-up')).toBe(true);
+    // True gross-up: the tax is ADDED to gross, not deducted, so the employee
+    // nets more than the nominal gross (10M + tax).
+    expect(result.netSalary).toBeGreaterThan(10_000_000);
+  });
+
+  it('deducts PPh21 from net when pph21 method is gross', () => {
+    const result = calculatePayroll(
+      baseInput({
+        tax: {
+          method: 'progressive',
+          ptkp: 0,
+          pph21: 'gross',
+          settings: {
+            progressive: [{ upTo: 10_000_000, rate: 5 }]
+          }
+        }
+      })
+    );
+
+    expect(result.tax.amount).toBe(500_000);
+    expect(result.netSalary).toBe(9_500_000);
+  });
 });

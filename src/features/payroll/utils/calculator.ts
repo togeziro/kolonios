@@ -355,6 +355,16 @@ export function calculateTax(income: Money, profile: TaxProfile): TaxResult {
   };
 }
 
+export function grossUpTax(taxableBase: Money, profile: TaxProfile): TaxResult {
+  let tax = 0;
+  let previous = -1;
+  for (let index = 0; index < 10 && tax !== previous; index += 1) {
+    previous = tax;
+    tax = calculateTax(taxableBase + tax, profile).amount;
+  }
+  return calculateTax(taxableBase + tax, profile);
+}
+
 export function calculateOvertime(): OvertimeResult {
   return { hours: 0, amount: 0, source: 'mvp-disabled' };
 }
@@ -421,8 +431,21 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     input.attendance,
     manualBonuses
   );
+  const taxableIncome = roundMoney(
+    baseSalary +
+      [...allowances.items, ...manualBonuses]
+        .filter((item) => item.taxable)
+        .reduce((sum, item) => sum + item.amount, 0)
+  );
+  const grossUp = input.tax.pph21 === 'gross_up';
+  const tax = grossUp
+    ? grossUpTax(taxableIncome, input.tax)
+    : calculateTax(taxableIncome, input.tax);
   const grossSalary = roundMoney(
-    baseSalary + allowances.total + manualBonuses.reduce((sum, item) => sum + item.amount, 0)
+    baseSalary +
+      allowances.total +
+      manualBonuses.reduce((sum, item) => sum + item.amount, 0) +
+      (grossUp ? tax.amount : 0)
   );
   const deductions = calculateDeductions(
     input.components,
@@ -436,13 +459,6 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
   const allowanceTotal = roundMoney(
     allowances.total + manualBonuses.reduce((sum, item) => sum + item.amount, 0)
   );
-  const taxableIncome = roundMoney(
-    baseSalary +
-      [...allowances.items, ...manualBonuses]
-        .filter((item) => item.taxable)
-        .reduce((sum, item) => sum + item.amount, 0)
-  );
-  const tax = calculateTax(taxableIncome, input.tax);
   const overtime = calculateOvertime();
   const lineItems: PayrollLineItem[] = [
     {
@@ -460,11 +476,11 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     ...(tax.amount > 0
       ? [
           {
-            name: 'Income tax',
+            name: grossUp ? 'PPh21 (Gross-Up)' : 'Income tax',
             type: 'tax' as const,
             amount: tax.amount,
             taxable: false,
-            source: `tax:${tax.method}`
+            source: grossUp ? 'pph21:gross-up' : `tax:${tax.method}`
           }
         ]
       : [])
@@ -472,7 +488,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
   const deductionTotal = roundMoney(
     deductions.total +
       attendanceDeductions.total +
-      tax.amount +
+      (grossUp ? 0 : tax.amount) +
       bpjsDeductions.reduce((sum, item) => sum + item.amount, 0)
   );
   const netSalary = nonNegative(roundMoney(grossSalary - deductionTotal));
