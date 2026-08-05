@@ -95,6 +95,14 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
+        title: 'Settings',
+        url: '/dashboard/admin/payroll/settings',
+        icon: 'wallet',
+        isActive: false,
+        module: 'payroll',
+        items: []
+      },
+      {
         title: 'Attendance Locations',
         url: '/dashboard/admin/attendance/locations',
         icon: 'clock',
