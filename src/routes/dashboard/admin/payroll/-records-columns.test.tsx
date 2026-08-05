@@ -9,10 +9,12 @@ describe('payroll record columns', () => {
       canPay: true,
       canLock: true,
       canAdjust: true,
+      canOverride: true,
       onApprove: vi.fn(),
       onPay: vi.fn(),
       onLock: vi.fn(),
       onAdjust: vi.fn(),
+      onOverride: vi.fn(),
       onDetail: vi.fn()
     });
     const actions = columns.find((column) => column.id === 'actions');

@@ -697,7 +697,19 @@
     "noPayslips": "Belum ada slip gaji yang dibayar",
     "download": "Unduh PDF",
     "downloading": "Menyiapkan PDF...",
-    "downloadFailed": "Gagal mengunduh slip gaji"
+    "downloadFailed": "Gagal mengunduh slip gaji",
+    "totalWork": "Total Kerja",
+    "totalLembur": "Total Lembur",
+    "paidLabel": "Sudah Dibayar",
+    "unpaidLabel": "Belum Dibayar",
+    "override": "Override",
+    "attendanceOverride": "Override Kehadiran",
+    "overrideHint": "Biarkan kosong untuk memakai data kehadiran.",
+    "scheduledDays": "Hari Terjadwal",
+    "payableDays": "Hari Dibayar",
+    "workedHours": "Jam Kerja",
+    "permitHours": "Jam Izin",
+    "shortfallHours": "Jam Kekurangan"
   },
   "attendanceAdmin": {
     "locationsTitle": "Lokasi Absensi",

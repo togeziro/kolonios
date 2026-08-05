@@ -697,7 +697,19 @@
     "noPayslips": "No paid payslips found",
     "download": "Download PDF",
     "downloading": "Preparing PDF...",
-    "downloadFailed": "Could not download payslip"
+    "downloadFailed": "Could not download payslip",
+    "totalWork": "Total Work",
+    "totalLembur": "Total Overtime",
+    "paidLabel": "Paid",
+    "unpaidLabel": "Unpaid",
+    "override": "Override",
+    "attendanceOverride": "Attendance Override",
+    "overrideHint": "Leave blank to use live attendance data.",
+    "scheduledDays": "Scheduled Days",
+    "payableDays": "Payable Days",
+    "workedHours": "Worked Hours",
+    "permitHours": "Permit Hours",
+    "shortfallHours": "Shortfall Hours"
   },
   "attendanceAdmin": {
     "locationsTitle": "Attendance Locations",

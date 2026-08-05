@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button';
 import type { PayrollReportRow } from '@/features/payroll/api/types';
 import { formatPayrollMoney } from './-components';
 
-type RecordRow = PayrollReportRow;
+type RecordRow = PayrollReportRow & {
+  worked_hours?: number | null;
+  total_lembur?: number | null;
+  has_override?: boolean;
+};
 
 export function createPayrollRecordColumns(options: {
   t: TFunction;
@@ -13,10 +17,12 @@ export function createPayrollRecordColumns(options: {
   canPay: boolean;
   canLock: boolean;
   canAdjust: boolean;
+  canOverride: boolean;
   onApprove: (id: number) => void;
   onPay: (id: number) => void;
   onLock: (id: number) => void;
   onAdjust: (row: RecordRow) => void;
+  onOverride: (row: RecordRow) => void;
   onDetail: (row: RecordRow) => void;
 }): ColumnDef<RecordRow>[] {
   const { t } = options;
@@ -53,10 +59,33 @@ export function createPayrollRecordColumns(options: {
     {
       accessorKey: 'period_status',
       header: t('payroll.status'),
-      cell: ({ row }) => (
-        <Badge variant='outline'>{t(`payroll.statuses.${row.original.period_status}`)}</Badge>
-      ),
+      cell: ({ row }) => {
+        const status = row.original.period_status;
+        const paid = status === 'paid' || status === 'locked';
+        return (
+          <Badge variant={paid ? 'default' : 'outline'}>
+            {paid ? t('payroll.paidLabel') : t('payroll.unpaidLabel')}
+          </Badge>
+        );
+      },
       meta: { label: t('payroll.status') }
+    },
+    {
+      accessorKey: 'worked_hours',
+      header: t('payroll.totalWork'),
+      cell: ({ row }) => {
+        const hours = Number(row.original.worked_hours ?? 0);
+        const whole = Math.floor(hours);
+        const minutes = Math.round((hours - whole) * 60);
+        return `${whole}j ${minutes}m`;
+      },
+      meta: { label: t('payroll.totalWork') }
+    },
+    {
+      accessorKey: 'total_lembur',
+      header: t('payroll.totalLembur'),
+      cell: () => '0j 0m',
+      meta: { label: t('payroll.totalLembur') }
     },
     {
       id: 'actions',
@@ -74,6 +103,12 @@ export function createPayrollRecordColumns(options: {
                 {t('payroll.adjust')}
               </Button>
             )}
+            {options.canOverride &&
+              (record.period_status === 'draft' || record.period_status === 'processing') && (
+                <Button size='sm' variant='ghost' onClick={() => options.onOverride(record)}>
+                  {t('payroll.override')}
+                </Button>
+              )}
             {options.canApprove && record.period_status === 'processing' && (
               <Button
                 size='sm'

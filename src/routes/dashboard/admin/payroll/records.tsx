@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { DataTable } from '@/components/ui/table/data-table';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import {
+  payrollKeys,
   payrollPeriodsQueryOptions,
   payrollRecordsQueryOptions
 } from '@/features/payroll/api/queries';
@@ -20,8 +21,10 @@ import {
   useAdjustPayrollRecord,
   useApprovePayroll,
   useLockPayroll,
-  useMarkPayrollPaid
+  useMarkPayrollPaid,
+  useUpsertAttendanceOverride
 } from '@/features/payroll/api/mutations';
+import { getAttendanceOverrideFn } from '@/features/payroll/api/service';
 import type { PayrollRecordFilters, PayrollReportRow } from '@/features/payroll/api/types';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
@@ -36,6 +39,20 @@ export const Route = createFileRoute('/dashboard/admin/payroll/records')({
 });
 
 type Adjustment = { name: string; type: 'bonus' | 'deduction'; amount: string; taxable: boolean };
+type OverrideDraft = {
+  scheduledDays: string;
+  payableDays: string;
+  workedHours: string;
+  permitHours: string;
+  shortfallHours: string;
+};
+const EMPTY_OVERRIDE_DRAFT: OverrideDraft = {
+  scheduledDays: '',
+  payableDays: '',
+  workedHours: '',
+  permitHours: '',
+  shortfallHours: ''
+};
 
 function RecordsPage() {
   const { t } = useTranslation();
@@ -44,8 +61,11 @@ function RecordsPage() {
   const canPay = canPayrollAction(permissions, isAdmin, 'pay');
   const canLock = canPayrollAction(permissions, isAdmin, 'edit');
   const canAdjust = canPayrollAction(permissions, isAdmin, 'edit');
+  const canOverride = canPayrollAction(permissions, isAdmin, 'edit');
   const [filters, setFilters] = useState<PayrollRecordFilters>({ page: 1, limit: 25 });
   const [selected, setSelected] = useState<PayrollReportRow | null>(null);
+  const [overrideTarget, setOverrideTarget] = useState<PayrollReportRow | null>(null);
+  const [overrideDraft, setOverrideDraft] = useState<OverrideDraft>(EMPTY_OVERRIDE_DRAFT);
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [draftAdjustment, setDraftAdjustment] = useState<Adjustment>({
     name: '',
@@ -60,6 +80,21 @@ function RecordsPage() {
   const paid = useMarkPayrollPaid();
   const lock = useLockPayroll();
   const adjust = useAdjustPayrollRecord();
+  const upsertOverride = useUpsertAttendanceOverride();
+  const overrideQuery = useQuery({
+    queryKey: payrollKeys.attendanceOverride(
+      overrideTarget?.payroll_period_id ?? 0,
+      overrideTarget?.employee_id ?? ''
+    ),
+    queryFn: () =>
+      getAttendanceOverrideFn({
+        data: {
+          payrollPeriodId: overrideTarget!.payroll_period_id,
+          employeeId: overrideTarget!.employee_id
+        }
+      }),
+    enabled: Boolean(overrideTarget)
+  });
   const periods = periodsQuery.data?.rows ?? [];
   const records = (recordsQuery.data?.rows ?? []) as PayrollReportRow[];
   const pageCount = Math.max(1, Math.ceil((recordsQuery.data?.total ?? 0) / (filters.limit ?? 25)));
@@ -82,12 +117,17 @@ function RecordsPage() {
     canPay,
     canLock,
     canAdjust,
+    canOverride,
     onApprove: (id) => void run(approve, id),
     onPay: (id) => void run(paid, id),
     onLock: (id) => void run(lock, id),
     onAdjust: (row) => {
       setSelected(row);
       setAdjustments([]);
+    },
+    onOverride: (row) => {
+      setOverrideTarget(row);
+      setOverrideDraft(EMPTY_OVERRIDE_DRAFT);
     },
     onDetail: (row) => {
       setSelected(row);
@@ -124,6 +164,36 @@ function RecordsPage() {
       await adjust.mutateAsync({ id: selected.id, adjustments });
       toast.success(t('payroll.updated'));
       setSelected(null);
+    } catch {
+      toast.error(t('payroll.failed'));
+    }
+  };
+  useEffect(() => {
+    if (!overrideTarget || !overrideQuery.data) return;
+    const row = overrideQuery.data;
+    setOverrideDraft({
+      scheduledDays: row.scheduled_days != null ? String(row.scheduled_days) : '',
+      payableDays: row.payable_days != null ? String(row.payable_days) : '',
+      workedHours: row.worked_hours != null ? String(row.worked_hours) : '',
+      permitHours: row.permit_hours != null ? String(row.permit_hours) : '',
+      shortfallHours: row.shortfall_hours != null ? String(row.shortfall_hours) : ''
+    });
+  }, [overrideTarget, overrideQuery.data]);
+  const saveOverride = async () => {
+    if (!overrideTarget) return;
+    const values = (field: string) => (field.trim() === '' ? undefined : Number(field));
+    try {
+      await upsertOverride.mutateAsync({
+        payrollPeriodId: overrideTarget.payroll_period_id,
+        employeeId: overrideTarget.employee_id,
+        scheduledDays: values(overrideDraft.scheduledDays),
+        payableDays: values(overrideDraft.payableDays),
+        workedHours: values(overrideDraft.workedHours),
+        permitHours: values(overrideDraft.permitHours),
+        shortfallHours: values(overrideDraft.shortfallHours)
+      });
+      toast.success(t('payroll.updated'));
+      setOverrideTarget(null);
     } catch {
       toast.error(t('payroll.failed'));
     }
@@ -289,6 +359,60 @@ function RecordsPage() {
                   </Button>
                 </>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(overrideTarget)}
+        onOpenChange={(open) => !open && setOverrideTarget(null)}
+      >
+        <DialogContent className='max-w-lg'>
+          <DialogHeader>
+            <DialogTitle>{t('payroll.attendanceOverride')}</DialogTitle>
+          </DialogHeader>
+          {overrideTarget && (
+            <div className='space-y-4'>
+              <p className='text-sm text-muted-foreground'>{t('payroll.overrideHint')}</p>
+              {overrideQuery.isLoading ? (
+                <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>
+              ) : (
+                <div className='grid gap-3 sm:grid-cols-2'>
+                  {[
+                    ['scheduledDays', t('payroll.scheduledDays')],
+                    ['payableDays', t('payroll.payableDays')],
+                    ['workedHours', t('payroll.workedHours')],
+                    ['permitHours', t('payroll.permitHours')],
+                    ['shortfallHours', t('payroll.shortfallHours')]
+                  ].map(([field, label]) => (
+                    <div key={field}>
+                      <Label htmlFor={`override-${field}`}>{label}</Label>
+                      <Input
+                        id={`override-${field}`}
+                        type='number'
+                        value={overrideDraft[field as keyof OverrideDraft]}
+                        onChange={(e) =>
+                          setOverrideDraft((draft) => ({
+                            ...draft,
+                            [field]: e.target.value
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button
+                onClick={saveOverride}
+                disabled={
+                  upsertOverride.isPending ||
+                  overrideQuery.isLoading ||
+                  (overrideTarget.period_status !== 'draft' &&
+                    overrideTarget.period_status !== 'processing')
+                }
+              >
+                {t('common.save')}
+              </Button>
             </div>
           )}
         </DialogContent>
