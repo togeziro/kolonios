@@ -128,3 +128,62 @@ export const payrollRecordAdjustmentSchema = z.object({
 export const reportFiltersSchema = payrollRecordFiltersSchema.extend({
   format: z.enum(['json', 'csv', 'xlsx']).default('json')
 });
+
+const jkkCategorySchema = z.enum(['very_low', 'low', 'medium', 'high', 'very_high']);
+
+export const companyPayrollSettingsSchema = z.object({
+  companyNpwp: z.string().max(100).optional(),
+  cutOffDay: z.number().int().min(1).max(31).optional(),
+  pph21Enabled: z.boolean().optional(),
+  pph21Method: z.enum(['gross', 'gross_up']).optional(),
+  jkkEnabled: z.boolean().optional(),
+  jkmEnabled: z.boolean().optional(),
+  jhtEnabled: z.boolean().optional(),
+  jpEnabled: z.boolean().optional(),
+  bpjsKesehatanEnabled: z.boolean().optional(),
+  jkkRiskCategory: jkkCategorySchema.optional(),
+  jkmCompanyRate: moneySchema.optional(),
+  jhtCompanyRate: moneySchema.optional(),
+  jhtEmployeeRate: moneySchema.optional(),
+  jpCompanyRate: moneySchema.optional(),
+  jpEmployeeRate: moneySchema.optional(),
+  kesehatanCompanyRate: moneySchema.optional(),
+  kesehatanEmployeeRate: moneySchema.optional(),
+  potonganIzinJamDefault: moneySchema.optional(),
+  potonganShortfallDefault: moneySchema.optional()
+});
+
+export const bpjsEnrollmentSchema = effectiveDatesSchema.extend({
+  id: idSchema.optional(),
+  employeeId: employeeIdSchema,
+  program: z.enum(['jkk', 'jkm', 'jht', 'jp', 'kesehatan']),
+  membershipNumber: z.string().max(100).optional(),
+  registrationDate: dateSchema.nullish(),
+  registeredWage: moneySchema,
+  jkkCategoryOverride: jkkCategorySchema.nullish(),
+  isActive: z.boolean().default(true)
+});
+
+export const bpjsFamilyMemberSchema = z.object({
+  enrollmentId: idSchema,
+  name: z.string().trim().min(1).max(200),
+  relationship: z.string().trim().min(1).max(100),
+  birthDate: dateSchema.nullish(),
+  isCore: z.boolean().default(true)
+});
+export const bpjsFamilyMemberIdSchema = z.object({ id: idSchema });
+
+export const attendanceOverrideSchema = z.object({
+  payrollPeriodId: idSchema,
+  employeeId: employeeIdSchema,
+  scheduledDays: z.number().finite().nonnegative().nullish(),
+  payableDays: z.number().finite().nonnegative().nullish(),
+  workedHours: z.number().finite().nonnegative().nullish(),
+  permitHours: z.number().finite().nonnegative().nullish(),
+  shortfallHours: z.number().finite().nonnegative().nullish()
+});
+
+export const taxRecordOverrideSchema = z.object({
+  id: idSchema,
+  amount: moneySchema
+});
