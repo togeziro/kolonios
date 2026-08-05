@@ -1,6 +1,8 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type postgres from 'postgres';
 import * as schema from './schema';
+
+type PayrollDb = PostgresJsDatabase<typeof schema> & { $client: ReturnType<typeof postgres> };
 
 const connectionString =
   process.env.DATABASE_URL || 'postgres://tanstack:tanstack@localhost:5432/kolonios';
@@ -10,6 +12,7 @@ const globalForDb = globalThis as unknown as {
 };
 
 const postgresSpecifier = ['post', 'gres'].join('');
+const drizzleAdapterSpecifier = ['drizzle-orm', 'postgres-js'].join('/');
 
 const isServer = typeof window === 'undefined';
 
@@ -23,6 +26,9 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export const db = isServer
-  ? drizzle(client as ReturnType<typeof postgres>, { schema })
-  : (undefined as unknown as ReturnType<typeof drizzle>);
+  ? ((await import(/* @vite-ignore */ drizzleAdapterSpecifier)).drizzle(
+      client,
+      { schema }
+    ) as PayrollDb)
+  : (undefined as unknown as PayrollDb);
 export { client };
