@@ -27,8 +27,10 @@ import {
   employeeTaxProfiles,
   employeeBenefitEnrollments,
   employeeBankAccounts,
+  employeeBpjsEnrollments,
   employeeEmploymentEvents,
   employeeDocuments,
+  companyPayrollSettings,
   payslips,
   payrollRecords,
   payrollPeriods,
@@ -414,6 +416,8 @@ async function seedPayroll() {
   await db.delete(payrollPeriods);
   await db.delete(salaryComponents);
   await db.delete(taxSettings);
+  await db.delete(companyPayrollSettings);
+  await db.delete(employeeBpjsEnrollments);
   await db.delete(auditLog);
 
   const users = await db.select({ id: user.id, email: user.email }).from(user);
@@ -441,6 +445,31 @@ async function seedPayroll() {
     })
     .returning({ id: taxSettings.id });
   if (!taxSetting) throw new Error('Failed to seed demo tax setting');
+
+  const existingSettings = await db.select().from(companyPayrollSettings).limit(1);
+  if (existingSettings.length === 0) {
+    await db.insert(companyPayrollSettings).values({
+      company_npwp: '000000000000000',
+      cut_off_day: 7,
+      pph21_enabled: true,
+      pph21_method: 'gross',
+      jkk_enabled: true,
+      jkm_enabled: true,
+      jht_enabled: true,
+      jp_enabled: true,
+      bpjs_kesehatan_enabled: true,
+      jkk_risk_category: 'low',
+      jkm_company_rate: '0.3',
+      jht_company_rate: '3.7',
+      jht_employee_rate: '2',
+      jp_company_rate: '2',
+      jp_employee_rate: '1',
+      kesehatan_company_rate: '4',
+      kesehatan_employee_rate: '1',
+      potongan_izin_jam_default: '0',
+      potongan_shortfall_default: '0'
+    });
+  }
 
   const employeeRows = await db
     .select({
@@ -515,6 +544,29 @@ async function seedPayroll() {
       is_primary: true,
       effective_from: '2026-01-01'
     });
+    await db.insert(employeeBpjsEnrollments).values([
+      {
+        employee_id: employee.id,
+        program: 'jht',
+        membership_number: 'B-0001',
+        registered_wage: salary.amount,
+        effective_from: '2026-01-01'
+      },
+      {
+        employee_id: employee.id,
+        program: 'jp',
+        membership_number: 'P-0001',
+        registered_wage: salary.amount,
+        effective_from: '2026-01-01'
+      },
+      {
+        employee_id: employee.id,
+        program: 'kesehatan',
+        membership_number: 'K-0001',
+        registered_wage: salary.amount,
+        effective_from: '2026-01-01'
+      }
+    ]);
   }
 
   await db.insert(payrollPeriods).values({
