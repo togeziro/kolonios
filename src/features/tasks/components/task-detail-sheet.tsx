@@ -10,7 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import TaskCard, { formatDue } from './task-card';
+import { formatDue } from './task-card';
 import { useTakeTask, useCompleteTask } from '../api/hooks';
 import type { Task } from '../api/types';
 

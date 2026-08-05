@@ -46,7 +46,7 @@ export type AuditLogResponse = {
 
 export async function getAuditLog(filters: AuditFilters = {}): Promise<AuditLogResponse> {
   try {
-    const { page, limit, offset } = buildPagination({ page: filters.page, limit: filters.perPage });
+    const { limit, offset } = buildPagination({ page: filters.page, limit: filters.perPage });
     const where = and(
       filters.action ? like(auditLog.action, `%${filters.action}%`) : undefined,
       filters.entityType ? eq(auditLog.entityType, filters.entityType) : undefined

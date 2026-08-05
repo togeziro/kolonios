@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockSessionUser = vi.hoisted(() => ({ id: 'user-1', role: 'employee' as string }));
 

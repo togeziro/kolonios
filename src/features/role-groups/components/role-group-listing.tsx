@@ -22,26 +22,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DataTable } from '@/components/ui/table/data-table';
 import { useQuery } from '@tanstack/react-query';
-import { useMutation } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
 import { RoleGroupFormSheetTrigger } from './role-group-form-sheet';
 import { useTranslation } from 'react-i18next';
 import { roleGroupsQueryOptions } from '../api/queries';
-import { deleteRoleGroupMutation } from '../api/mutations';
-import { mergeMutationCallbacks } from '@/lib/mutation-options';
-import { toast } from 'sonner';
 import type { RoleGroup } from '../api/types';
 import { roleGroupColumns } from './role-group-columns';
 
 export default function RoleGroupListingPage() {
   const { t } = useTranslation();
   const { data, isLoading } = useQuery(roleGroupsQueryOptions());
-  const { mutate: deleteGroup } = useMutation(
-    mergeMutationCallbacks(deleteRoleGroupMutation, {
-      onSuccess: () => toast.success(t('roleGroups.deleted')),
-      onError: () => toast.error(t('roleGroups.deleteFailed'))
-    })
-  );
 
   const groups = (data as { role_groups?: RoleGroup[] } | undefined)?.role_groups ?? [];
 

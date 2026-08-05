@@ -343,7 +343,7 @@ describe('calculatePayroll', () => {
     );
     const reversed = calculatePayroll(
       baseInput({
-        components: [...components].reverse(),
+        components: [...components].toReversed(),
         manualAdjustments: [{ name: 'Bonus', type: 'bonus', amount: 500_000 }]
       })
     );

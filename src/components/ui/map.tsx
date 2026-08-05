@@ -2,6 +2,7 @@ import * as React from 'react';
 // MapLibre CSS is imported once here; both the admin geofence map and the
 // employee check-in map render through this component.
 import 'maplibre-gl/dist/maplibre-gl.css';
+import type { GeoJSONSource, Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl';
 import type { Polygon, Position } from 'geojson';
 
 export type MapCoordinates = { lat: number; lng: number };
@@ -59,15 +60,16 @@ export function Map({
   style
 }: MapProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const mapRef = React.useRef<any | null>(null);
-  const markerRef = React.useRef<any | null>(null);
-  const deviceMarkerRef = React.useRef<any | null>(null);
+  const mapRef = React.useRef<MapLibreMap | null>(null);
+  const markerRef = React.useRef<MapLibreMarker | null>(null);
+  const deviceMarkerRef = React.useRef<MapLibreMarker | null>(null);
   const geofenceRef = React.useRef({ center: coordinates, radius });
   const layerIdsRef = React.useRef<string[]>([]);
+  const initialConfigRef = React.useRef({ coordinates, deviceLocation, readOnly, onChange });
 
-  const updateGeofence = React.useCallback((map: any) => {
-    const polygonSource = map.getSource('geofence');
-    const centerSource = map.getSource('geofence-center');
+  const updateGeofence = React.useCallback((map: MapLibreMap) => {
+    const polygonSource = map.getSource('geofence') as GeoJSONSource | undefined;
+    const centerSource = map.getSource('geofence-center') as GeoJSONSource | undefined;
     if (!polygonSource || !centerSource) return;
     const { center, radius: radiusMeters } = geofenceRef.current;
     const polygon = center ? buildGeofencePolygon(center, radiusMeters) : null;
@@ -85,9 +87,13 @@ export function Map({
     });
   }, []);
 
+  // Map is created once on mount; later coordinate/radius changes are applied
+  // through the effect below via refs, so the init effect reads the mount-time
+  // props from initialConfigRef instead of listing them as dependencies.
   React.useEffect(() => {
+    const { coordinates, deviceLocation, readOnly, onChange } = initialConfigRef.current;
     let cancelled = false;
-    let map: any = null;
+    let map: MapLibreMap | null = null;
     let ml: typeof import('maplibre-gl') | null = null;
 
     async function init() {
@@ -98,8 +104,7 @@ export function Map({
         // Raster tile template URL, e.g.
         // https://tile.openstreetmap.org/{z}/{x}/{y}.png — not a style JSON.
         const tileUrl =
-          (import.meta as any).env?.VITE_MAP_TILE_URL ??
-          'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+          import.meta.env?.VITE_MAP_TILE_URL ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
         const baseStyle = {
           version: 8,
@@ -195,7 +200,9 @@ export function Map({
         });
 
         // Keep the fence glued to the map while panning/zooming.
-        map.on('moveend', () => updateGeofence(map));
+        map.on('moveend', () => {
+          if (map) updateGeofence(map);
+        });
 
         if (!readOnly && onChange) {
           map.on('click', (e: { lngLat: { lat: number; lng: number } }) => {
@@ -224,12 +231,12 @@ export function Map({
       deviceMarkerRef.current = null;
       layerIdsRef.current = [];
     };
-  }, []);
+  }, [updateGeofence]);
 
   // Update marker/fence when coordinates or radius change from outside.
   React.useEffect(() => {
     geofenceRef.current = { center: coordinates, radius };
-    const map = mapRef.current as any;
+    const map = mapRef.current;
     if (!map || !coordinates) return;
     if (markerRef.current) markerRef.current.setLngLat([coordinates.lng, coordinates.lat]);
     updateGeofence(map);

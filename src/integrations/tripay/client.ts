@@ -1,6 +1,5 @@
 import { HttpClient } from '../shared/http-client';
 import type {
-  TripayConfig,
   TripayTransactionRequest,
   TripayTransactionResponse,
   TripayStatusResponse

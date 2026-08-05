@@ -1,8 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import type { AuditLogListItem } from '../api/service';
 import { format } from 'date-fns';
 
-// Use any for flexibility - type will be inferred from data
-export const auditLogColumns: ColumnDef<any>[] = [
+export const auditLogColumns: ColumnDef<AuditLogListItem>[] = [
   {
     id: 'time',
     accessorKey: 'createdAt',

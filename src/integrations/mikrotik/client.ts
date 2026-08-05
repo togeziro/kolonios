@@ -15,12 +15,12 @@ export class MikrotikClient {
     // TODO: Implement disconnection logic
   }
 
-  async addPPPoEUser(user: unknown): Promise<MikrotikResponse> {
+  async addPPPoEUser(_user: unknown): Promise<MikrotikResponse> {
     // TODO: Implement PPPoE user creation
     return { success: false };
   }
 
-  async removePPPoEUser(username: string): Promise<MikrotikResponse> {
+  async removePPPoEUser(_username: string): Promise<MikrotikResponse> {
     // TODO: Implement PPPoE user removal
     return { success: false };
   }

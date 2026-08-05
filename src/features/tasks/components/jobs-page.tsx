@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useSearch, useNavigate, Link } from '@tanstack/react-router';
+import { useSearch, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Route as JobsRoute } from '@/routes/dashboard/jobs/index';
 import {

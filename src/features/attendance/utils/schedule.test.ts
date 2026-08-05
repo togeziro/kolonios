@@ -7,7 +7,6 @@ import {
   isLocationStale,
   isAccuracyAcceptable,
   type EffectiveSchedule,
-  type AttendancePolicy,
   type WeekdayScheduleRule
 } from './schedule';
 

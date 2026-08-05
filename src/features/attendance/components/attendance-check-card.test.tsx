@@ -4,10 +4,30 @@ import { clearSelfieAfterSuccess } from './attendance-check-card';
 
 // The card's import graph pulls in maplibre-gl (via location-map); stub it so
 // importing the module under test is safe in jsdom.
+class MockMap {
+  addControl = vi.fn();
+  addSource = vi.fn();
+  addLayer = vi.fn();
+  on = vi.fn();
+  getSource = vi.fn(() => ({ setData: vi.fn() }));
+  remove = vi.fn();
+}
+
+class MockMarker {
+  setLngLat = vi.fn(() => this);
+  addTo = vi.fn(() => this);
+  on = vi.fn();
+  getLngLat = vi.fn(() => ({ lat: 0, lng: 0 }));
+}
+
+class MockNavigationControl {
+  render = vi.fn();
+}
+
 vi.mock('maplibre-gl', () => ({
-  Map: class {},
-  Marker: class {},
-  NavigationControl: class {}
+  Map: MockMap,
+  Marker: MockMarker,
+  NavigationControl: MockNavigationControl
 }));
 
 describe('clearSelfieAfterSuccess (checkout success handler)', () => {

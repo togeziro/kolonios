@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { buildPagination, parseSort, buildOrderBy, buildConditions } from './utils';
-import { asc, desc } from 'drizzle-orm';
 
 describe('buildPagination', () => {
   it('should return default pagination', () => {

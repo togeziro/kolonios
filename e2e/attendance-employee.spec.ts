@@ -62,28 +62,28 @@ test.describe('employee attendance', () => {
   });
 });
 
+// Position the employee inside the Head Office geofence with a fake GPS and
+// capture a selfie so the card reaches the check-out flow.
+async function checkInFromHeadOffice(page: Page) {
+  await page.context().grantPermissions(['geolocation'], {
+    origin: 'http://localhost:3000'
+  });
+  await page.context().setGeolocation({ latitude: -6.2088, longitude: 106.8456, accuracy: 5 });
+
+  await page.goto('/dashboard/attendance');
+  await page.waitForLoadState('networkidle');
+
+  await page.getByRole('button', { name: /Head Office/i }).click();
+  await page.getByRole('button', { name: /Get Location/i }).click();
+  await page.getByRole('button', { name: /Capture Selfie/i }).click();
+  await page.getByRole('button', { name: /Capture/i }).click();
+  await page.getByRole('button', { name: /Check In/i }).click();
+  await expect(page.getByRole('button', { name: /Check Out/i })).toBeVisible({
+    timeout: 15_000
+  });
+}
+
 test.describe('check-out selfie policy', () => {
-  // Position the employee inside the Head Office geofence with a fake GPS and
-  // capture a selfie so the card reaches the check-out flow.
-  async function checkInFromHeadOffice(page: Page) {
-    await page.context().grantPermissions(['geolocation'], {
-      origin: 'http://localhost:3000'
-    });
-    await page.context().setGeolocation({ latitude: -6.2088, longitude: 106.8456, accuracy: 5 });
-
-    await page.goto('/dashboard/attendance');
-    await page.waitForLoadState('networkidle');
-
-    await page.getByRole('button', { name: /Head Office/i }).click();
-    await page.getByRole('button', { name: /Get Location/i }).click();
-    await page.getByRole('button', { name: /Capture Selfie/i }).click();
-    await page.getByRole('button', { name: /Capture/i }).click();
-    await page.getByRole('button', { name: /Check In/i }).click();
-    await expect(page.getByRole('button', { name: /Check Out/i })).toBeVisible({
-      timeout: 15_000
-    });
-  }
-
   test('check-out without a selfie is rejected when the location requires one', async ({
     page
   }) => {

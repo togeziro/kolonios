@@ -45,17 +45,19 @@ export function buildOrderBy(sortInput: SortInput, columnMap: SortColumnMap) {
 // Common query conditions
 // ---------------------------------------------------------------------------
 
-export function buildSearchCondition(fields: any[], search?: string) {
+export function buildSearchCondition(fields: SQLWrapper[], search?: string) {
   if (!search?.trim()) return undefined;
-  return or(...fields.map((field) => ilike(field, `%${search.trim()}%`)));
+  return or(
+    ...fields.map((field) => ilike(field as Parameters<typeof ilike>[0], `%${search.trim()}%`))
+  );
 }
 
-export function buildStatusCondition(field: any, status?: string) {
+export function buildStatusCondition(field: SQLWrapper, status?: string) {
   if (!status?.trim() || status === 'all') return undefined;
   return eq(field, status);
 }
 
-export function buildConditions(conditions: any[]) {
+export function buildConditions(conditions: unknown[]) {
   const filtered = conditions.filter(Boolean);
-  return filtered.length > 0 ? and(...filtered) : undefined;
+  return filtered.length > 0 ? and(...(filtered as SQLWrapper[])) : undefined;
 }

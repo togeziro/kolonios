@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   type SortingState,
@@ -86,7 +86,20 @@ export default function DesignationManagePage() {
     );
   }, [data]);
 
-  function handleEdit(row: DesignationRow) {
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteDesignationFn({ data: { id } }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('masterdata.designationDeleted'));
+        queryClient.invalidateQueries({ queryKey: ['masterdata', 'designations'] });
+      } else {
+        toast.error(res?.message ?? t('masterdata.designationDeleteFailed'));
+      }
+    },
+    onError: () => toast.error(t('masterdata.designationDeleteFailed'))
+  });
+
+  const handleEdit = useCallback((row: DesignationRow) => {
     setForm({
       id: row.id,
       name: row.name,
@@ -97,15 +110,21 @@ export default function DesignationManagePage() {
     });
     setIsEdit(true);
     setDialogOpen(true);
-  }
+  }, []);
 
-  function handleDelete(row: DesignationRow) {
-    if (confirm(t('masterdata.deleteDesignationConfirm'))) {
-      deleteMutation.mutate(row.id);
-    }
-  }
+  const handleDelete = useCallback(
+    (row: DesignationRow) => {
+      if (confirm(t('masterdata.deleteDesignationConfirm'))) {
+        deleteMutation.mutate(row.id);
+      }
+    },
+    [deleteMutation, t]
+  );
 
-  const columns = useMemo(() => getDesignationColumns(handleEdit, handleDelete, t), [t]);
+  const columns = useMemo(
+    () => getDesignationColumns(handleEdit, handleDelete, t),
+    [handleEdit, handleDelete, t]
+  );
 
   const table = useReactTable({
     data: displayData,
@@ -166,19 +185,6 @@ export default function DesignationManagePage() {
       }
     },
     onError: () => toast.error(t('masterdata.designationUpdateFailed'))
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteDesignationFn({ data: { id } }),
-    onSuccess: (res) => {
-      if (res?.success) {
-        toast.success(t('masterdata.designationDeleted'));
-        queryClient.invalidateQueries({ queryKey: ['masterdata', 'designations'] });
-      } else {
-        toast.error(res?.message ?? t('masterdata.designationDeleteFailed'));
-      }
-    },
-    onError: () => toast.error(t('masterdata.designationDeleteFailed'))
   });
 
   function openCreate() {

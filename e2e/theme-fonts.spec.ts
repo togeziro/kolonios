@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const DEFAULT_THEME = 'vercel';
 
 // Font variables are set inline on document.documentElement by loadFont()
-function getFontVar(page: any, name: string) {
+function getFontVar(page: Page, name: string) {
   return page.evaluate(
     (n: string) => document.documentElement.style.getPropertyValue(`--font-${n}`),
     name

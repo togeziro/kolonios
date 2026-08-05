@@ -73,7 +73,6 @@ export function LocationManagePage() {
                     size='sm'
                     className='cursor-pointer'
                     onClick={() => {
-                      console.log('Edit button clicked for location:', loc.id);
                       setEditing({
                         id: loc.id,
                         name: loc.name,
@@ -96,7 +95,6 @@ export function LocationManagePage() {
                     size='sm'
                     className='cursor-pointer'
                     onClick={() => {
-                      console.log('Delete button clicked for location:', loc.id);
                       if (confirm('Are you sure you want to delete this location?')) {
                         deleteMutation.mutate(loc.id);
                       }

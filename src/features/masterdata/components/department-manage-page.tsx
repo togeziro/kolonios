@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   type SortingState,
@@ -49,19 +49,43 @@ export default function DepartmentManagePage() {
   const { data, isLoading } = useQuery(departmentsQueryOptions());
   const departments = data?.departments ?? [];
 
-  function handleEdit(row: DepartmentRow) {
-    setForm({ id: row.id, name: row.name, code: row.code, description: row.description ?? '' });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteDepartmentFn({ data: { id } }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('masterdata.departmentDeleted'));
+        queryClient.invalidateQueries({ queryKey: ['masterdata', 'departments'] });
+      } else {
+        toast.error(res?.message ?? t('masterdata.departmentDeleteFailed'));
+      }
+    },
+    onError: () => toast.error(t('masterdata.departmentDeleteFailed'))
+  });
+
+  const handleEdit = useCallback((row: DepartmentRow) => {
+    setForm({
+      id: row.id,
+      name: row.name,
+      code: row.code,
+      description: row.description ?? ''
+    });
     setIsEdit(true);
     setDialogOpen(true);
-  }
+  }, []);
 
-  function handleDelete(row: DepartmentRow) {
-    if (confirm(t('masterdata.deleteDepartmentConfirm'))) {
-      deleteMutation.mutate(row.id);
-    }
-  }
+  const handleDelete = useCallback(
+    (row: DepartmentRow) => {
+      if (confirm(t('masterdata.deleteDepartmentConfirm'))) {
+        deleteMutation.mutate(row.id);
+      }
+    },
+    [deleteMutation, t]
+  );
 
-  const columns = useMemo(() => getDepartmentColumns(handleEdit, handleDelete, t), [t]);
+  const columns = useMemo(
+    () => getDepartmentColumns(handleEdit, handleDelete, t),
+    [handleEdit, handleDelete, t]
+  );
 
   const table = useReactTable({
     data: departments,
@@ -114,19 +138,6 @@ export default function DepartmentManagePage() {
       }
     },
     onError: () => toast.error(t('masterdata.departmentUpdateFailed'))
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteDepartmentFn({ data: { id } }),
-    onSuccess: (res) => {
-      if (res?.success) {
-        toast.success(t('masterdata.departmentDeleted'));
-        queryClient.invalidateQueries({ queryKey: ['masterdata', 'departments'] });
-      } else {
-        toast.error(res?.message ?? t('masterdata.departmentDeleteFailed'));
-      }
-    },
-    onError: () => toast.error(t('masterdata.departmentDeleteFailed'))
   });
 
   function openCreate() {

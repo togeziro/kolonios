@@ -1,8 +1,20 @@
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
+import type { ComponentProps, ComponentType } from 'react';
+
+interface PasswordFieldApi {
+  name: string;
+  state: { value: string; meta: { isTouched: boolean; isValid: boolean } };
+  handleChange: (value: string) => void;
+  handleBlur: () => void;
+  Field: ComponentType<ComponentProps<'div'>>;
+  FieldSet: ComponentType<ComponentProps<'fieldset'>>;
+  FieldLabel: ComponentType<ComponentProps<'label'>>;
+  FieldError: ComponentType<ComponentProps<'p'>>;
+}
 
 interface PasswordFieldProps {
-  field: any;
+  field: PasswordFieldApi;
   show: boolean;
   onToggle: () => void;
   label: string;

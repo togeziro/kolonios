@@ -38,14 +38,17 @@ export function draftToOverrideValues(draft: OverrideDraft): {
   permitHours: number | undefined;
   shortfallHours: number | undefined;
 } {
-  const value = (field: string) => (field.trim() === '' ? undefined : Number(field));
   return {
-    scheduledDays: value(draft.scheduledDays),
-    payableDays: value(draft.payableDays),
-    workedHours: value(draft.workedHours),
-    permitHours: value(draft.permitHours),
-    shortfallHours: value(draft.shortfallHours)
+    scheduledDays: fieldToNumber(draft.scheduledDays),
+    payableDays: fieldToNumber(draft.payableDays),
+    workedHours: fieldToNumber(draft.workedHours),
+    permitHours: fieldToNumber(draft.permitHours),
+    shortfallHours: fieldToNumber(draft.shortfallHours)
   };
+}
+
+function fieldToNumber(field: string): number | undefined {
+  return field.trim() === '' ? undefined : Number(field);
 }
 
 function rowToDraft(row: PayrollAttendanceOverride): OverrideDraft {

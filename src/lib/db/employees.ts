@@ -206,15 +206,21 @@ export async function getEmployeeById(id: string): Promise<EmployeeByIdResponse>
   }
 }
 
+type AuthUserRecord = { id: string; role?: string };
+type AuthApi = {
+  createUser: (opts: { body: Record<string, unknown> }) => Promise<AuthUserRecord>;
+  updateUser: (opts: { body: Record<string, unknown> }) => Promise<unknown>;
+};
+
 export async function createEmployee(data: EmployeeMutationPayload & { created_by: string }) {
   try {
     const { auth } = await import('@/lib/auth/auth.server');
-    const created: any = await auth.api.createUser({
+    const created = await (auth.api as unknown as AuthApi).createUser({
       body: {
         email: data.email,
         name: data.full_name,
         password: 'ChangeMe123!',
-        role: 'employee' as any
+        role: 'employee'
       }
     });
 
@@ -269,7 +275,7 @@ export async function updateEmployee(id: string, data: EmployeeMutationPayload) 
     if (data.full_name !== existing.full_name || data.email !== existing.email) {
       const { auth } = await import('@/lib/auth/auth.server');
       try {
-        await (auth.api as any).updateUser({
+        await (auth.api as unknown as AuthApi).updateUser({
           body: {
             id,
             name: data.full_name,

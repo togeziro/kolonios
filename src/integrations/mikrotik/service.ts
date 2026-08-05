@@ -18,7 +18,7 @@ export class MikrotikService {
     return this.client.removePPPoEUser(username);
   }
 
-  async checkUserStatus(username: string): Promise<unknown> {
+  async checkUserStatus(_username: string): Promise<unknown> {
     // TODO: Implement user status check
     return {};
   }

@@ -1,8 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import type { AdminAttendanceReportRow } from '@/lib/db/attendance';
 import { Badge } from '@/components/ui/badge';
 
-// Use any for flexibility - type will be inferred from data
-export const adminAttendanceColumns: ColumnDef<any>[] = [
+export const adminAttendanceColumns: ColumnDef<AdminAttendanceReportRow>[] = [
   {
     id: 'date',
     accessorKey: 'attendance.date',

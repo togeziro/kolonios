@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireSession } from '@/lib/auth/session';
-import type { RoleGroup } from '@/features/role-groups/api/types';
 
 export const getCurrentUserRoleGroupFn = createServerFn({ method: 'GET' }).handler(async () => {
   const session = await requireSession();

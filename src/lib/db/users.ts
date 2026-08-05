@@ -40,16 +40,6 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
 
     const rgMap = new Map<string, { id: string; name: string }>();
     if (userIds.length > 0) {
-      const rows = await db
-        .select({
-          user_id: userRoleGroups.user_id,
-          id: roleGroups.id,
-          name: roleGroups.name
-        })
-        .from(userRoleGroups)
-        .innerJoin(roleGroups, eq(userRoleGroups.role_group_id, roleGroups.id))
-        .where(eq(userRoleGroups.user_id, ''));
-
       const allRows = await db
         .select({
           user_id: userRoleGroups.user_id,

@@ -18,10 +18,6 @@ export function AuditLogPage() {
   const [action, setAction] = useState('');
   const [entityType, setEntityType] = useState('');
   const [search, setSearch] = useState('');
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 20
-  });
 
   const { data, isFetching } = useQuery(
     auditLogQueryOptions({ perPage: 100, action: search, entityType: entityType || undefined })

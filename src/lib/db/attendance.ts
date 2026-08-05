@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql, desc, asc, inArray } from 'drizzle-orm';
+import { and, eq, gte, lte, sql, desc, asc } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { businessDateInTimeZone } from '@/lib/dates';
@@ -27,15 +27,11 @@ import type {
   LeaveListResponse,
   PerformanceStatsResponse,
   EffectiveSchedule,
-  WeekdayScheduleRule,
-  ScheduleAssignment,
-  DateOverride,
   LocationPolicy,
   AttendancePolicy
 } from '@/features/attendance/api/types';
 import { buildPagination, buildConditions } from './utils';
 import {
-  resolveEffectiveSchedule as resolveEffectiveScheduleUtil,
   resolveAttendancePolicy as resolveAttendancePolicyUtil,
   calculateLateMinutes,
   isLocationStale,
@@ -635,7 +631,7 @@ export async function getEffectiveEmployeeSchedule(
 
 export async function getAttendancePolicy(
   locationId: number | null,
-  shiftId: number | null
+  _shiftId: number | null
 ): Promise<AttendancePolicy> {
   try {
     let locationPolicy: LocationPolicy = {
@@ -1186,3 +1182,7 @@ export async function getAdminAttendanceReport(filters: AdminReportFilters = {})
     return { success: false, total: 0, offset: 0, limit: 0, records: [] };
   }
 }
+
+export type AdminAttendanceReportRow = Awaited<
+  ReturnType<typeof getAdminAttendanceReport>
+>['records'][number];

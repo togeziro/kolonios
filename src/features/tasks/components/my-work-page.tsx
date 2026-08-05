@@ -2,14 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/icons';
 import { myTasksQueryOptions } from '../api/queries';
 import TaskCard from './task-card';
 import TaskDetailSheet from './task-detail-sheet';
 
 export default function MyWorkPage() {
   const { t } = useTranslation();
-  const { data, isLoading } = useQuery(myTasksQueryOptions());
+  const { data } = useQuery(myTasksQueryOptions());
   const tasks = data?.tasks ?? [];
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = tasks.find((t) => t.id === selectedId) ?? null;

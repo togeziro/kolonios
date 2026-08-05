@@ -34,7 +34,10 @@ class FakeMap {
   });
   getSource = vi.fn(() => ({ setData: vi.fn() }));
   remove = vi.fn();
-  constructor(_opts: unknown) {}
+}
+
+class FakeNavigationControl {
+  render = vi.fn();
 }
 
 const layerIds: string[] = [];
@@ -42,7 +45,7 @@ const layerIds: string[] = [];
 vi.mock('maplibre-gl', () => ({
   Map: FakeMap,
   Marker: FakeMarker,
-  NavigationControl: class {}
+  NavigationControl: FakeNavigationControl
 }));
 
 beforeEach(() => {

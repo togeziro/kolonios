@@ -20,7 +20,7 @@ describe('breadcrumb segment keys', () => {
 
   it('resolves every mapped segment key in both locales', () => {
     const missing = Object.entries(breadcrumbSegmentKeys).filter(
-      ([segment, key]) => !resolveKey(en, key) || !resolveKey(id, key)
+      ([, key]) => !resolveKey(en, key) || !resolveKey(id, key)
     );
     expect(missing).toEqual([]);
   });

@@ -241,6 +241,10 @@ export function mapSalaryComponent(
   };
 }
 
+function maskAccountNumber(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 4 ? `******${value.slice(-4)}` : null;
+}
+
 export function sanitizePayrollProfileForActor<T extends Record<string, unknown>>(
   actor: PayrollProfileActor,
   profile: T
@@ -248,8 +252,6 @@ export function sanitizePayrollProfileForActor<T extends Record<string, unknown>
   if (!['employee', 'technician', 'user'].includes(actor.user.role ?? '')) return profile;
   const json = JSON.parse(JSON.stringify(profile)) as T;
   const record = json as Record<string, unknown>;
-  const mask = (value: unknown) =>
-    typeof value === 'string' && value.length > 4 ? `******${value.slice(-4)}` : null;
   const taxProfiles = Array.isArray(record.taxProfiles) ? record.taxProfiles : [];
   for (const item of taxProfiles) {
     if (item && typeof item === 'object') delete (item as Record<string, unknown>).tax_identifier;
@@ -260,12 +262,12 @@ export function sanitizePayrollProfileForActor<T extends Record<string, unknown>
   for (const item of bankAccounts) {
     if (item && typeof item === 'object') {
       const row = item as Record<string, unknown>;
-      row.account_number = mask(row.account_number);
+      row.account_number = maskAccountNumber(row.account_number);
     }
   }
   if (record.bank && typeof record.bank === 'object') {
     const bank = record.bank as Record<string, unknown>;
-    bank.account_number = mask(bank.account_number);
+    bank.account_number = maskAccountNumber(bank.account_number);
   }
   return json;
 }
@@ -476,16 +478,17 @@ export function buildAttendanceTotals(
   };
 }
 
+function escapeCsvValue(value: unknown): string {
+  const text = value == null ? '' : String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
 export function serializePayrollReport(
   result: { rows: Array<Record<string, unknown>> },
   format: 'json' | 'csv'
 ) {
   if (format === 'json') return result;
   const headers = [...new Set(result.rows.flatMap((row) => Object.keys(row)))];
-  const escape = (value: unknown) => {
-    const text = value == null ? '' : String(value);
-    return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-  };
   return {
     ...result,
     format,
@@ -494,7 +497,7 @@ export function serializePayrollReport(
     ext: 'csv',
     content: [
       headers.join(','),
-      ...result.rows.map((row) => headers.map((header) => escape(row[header])).join(','))
+      ...result.rows.map((row) => headers.map((header) => escapeCsvValue(row[header])).join(','))
     ].join('\n')
   };
 }

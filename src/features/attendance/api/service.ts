@@ -440,11 +440,12 @@ export const getAdminAttendanceReportFn = createServerFn({ method: 'GET' })
     return getAdminAttendanceReport(filters);
   });
 
+function escapeCsv(value: unknown): string {
+  const s = value == null ? '' : String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
 function toCsv(records: Array<Record<string, unknown>>): string {
-  const escape = (value: unknown) => {
-    const s = value == null ? '' : String(value);
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
   const headers = [
     'date',
     'employee',
@@ -457,7 +458,7 @@ function toCsv(records: Array<Record<string, unknown>>): string {
   ];
   const lines = records.map((r) =>
     [r.date, r.employee, r.department, r.shift, r.check_in, r.check_out, r.late_minutes, r.status]
-      .map(escape)
+      .map(escapeCsv)
       .join(',')
   );
   return [headers.join(','), ...lines].join('\n');

@@ -30,7 +30,6 @@ import {
   seedScheduleAssignment,
   seedDateOverride,
   seedDayOff,
-  seedAttendanceCorrection,
   seedEmployee
 } from '@/test-utils/db';
 import { db } from '@/lib/db';

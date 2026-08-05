@@ -12,7 +12,6 @@ import { db } from '@/lib/db';
 import { tasks } from './schema/tasks';
 import {
   resetAllTables,
-  seedUser,
   seedDepartment,
   seedDesignation,
   seedLocation,
@@ -42,7 +41,7 @@ describe('tasks data access (integration)', () => {
     });
 
     it('returns assigned and in-progress tasks for the user only', async () => {
-      const { employee, department, designation, location } = await seedEmployee(USER_A);
+      await seedEmployee(USER_A);
       await seedEmployee(USER_B);
       await seedTask({
         title: 'Mine assigned',
@@ -76,7 +75,7 @@ describe('tasks data access (integration)', () => {
 
   describe('getAvailableTasks', () => {
     it('returns only tasks whose requirements match the user', async () => {
-      const { employee, department, designation, location } = await seedEmployee(USER_A);
+      const { designation } = await seedEmployee(USER_A);
       await seedEmployeeSkill(USER_A, 'Fiber Optic');
 
       const matching = await seedTask({ title: 'Match', status: 'available', created_by: 'seed' });
@@ -110,7 +109,7 @@ describe('tasks data access (integration)', () => {
     });
 
     it('respects location and designation requirements', async () => {
-      const { employee, department, designation, location } = await seedEmployee(USER_A);
+      const { department, location } = await seedEmployee(USER_A);
       const otherLoc = await seedLocation({ name: 'Other Branch' });
 
       const locTask = await seedTask({
@@ -152,7 +151,7 @@ describe('tasks data access (integration)', () => {
     });
 
     it('filters by priority and location when filters are passed', async () => {
-      const { employee, department, designation, location } = await seedEmployee(USER_A);
+      const { location } = await seedEmployee(USER_A);
       await seedTask({
         title: 'High loc',
         status: 'available',
@@ -201,7 +200,7 @@ describe('tasks data access (integration)', () => {
 
   describe('takeTask', () => {
     it('claims an eligible available task', async () => {
-      const { employee, department, designation, location } = await seedEmployee(USER_A);
+      await seedEmployee(USER_A);
       const task = await seedTask({ title: 'Pool task', status: 'available', created_by: 'seed' });
 
       const res = await takeTask(USER_A, task.id);
@@ -215,7 +214,7 @@ describe('tasks data access (integration)', () => {
     });
 
     it('rejects a task the user is not eligible for', async () => {
-      const { employee, department, designation, location } = await seedEmployee(USER_A);
+      await seedEmployee(USER_A);
       const otherDept = await seedDepartment({ name: 'Finance', code: 'FIN' });
       const task = await seedTask({ title: 'Wrong dept', status: 'available', created_by: 'seed' });
       await seedTaskRequirement(task.id, { department_id: otherDept.id });
@@ -264,7 +263,7 @@ describe('tasks data access (integration)', () => {
     });
 
     it('rejects when the user is at the active task limit', async () => {
-      const { employee, department, designation, location } = await seedEmployee(USER_A);
+      await seedEmployee(USER_A);
       for (let i = 0; i < MAX_ACTIVE_TASKS; i++) {
         await seedTask({
           title: `Active ${i}`,
