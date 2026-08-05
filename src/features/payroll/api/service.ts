@@ -63,10 +63,14 @@ import {
 import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
 import type {
   AttendancePolicy,
+  BpjsInput,
+  BpjsProgram,
+  BpjsRates,
   ManualAdjustment,
   PayrollCalculationInput,
   PayrollCalculationResult,
   PayrollProfileActor,
+  Pph21Method,
   SalaryComponentInput,
   TaxProfile
 } from './types';
@@ -96,7 +100,9 @@ const emptyPolicy: AttendancePolicy = {
   absence: { enabled: true },
   late: { mode: 'none' },
   unpaidLeave: { enabled: true },
-  monthlyAttendanceMode: 'prorate'
+  monthlyAttendanceMode: 'prorate',
+  permitHour: { enabled: false },
+  shortfall: { enabled: false }
 };
 
 function recalculateSegmentsWithAdjustments(
@@ -469,7 +475,9 @@ export function buildAttendanceTotals(
     absentDays:
       validRows.filter((row) => row.attendance_status === 'absent').length || context.absentDays,
     lateCount: validRows.filter((row) => row.attendance_status === 'late').length,
-    unpaidLeaveDays
+    unpaidLeaveDays,
+    permitHours: 0,
+    shortfallHours: 0
   };
 }
 
@@ -1467,6 +1475,45 @@ export async function buildPayrollRecord(
         ''
     )
   );
+  const settings = (await getCompanyPayrollSettings()) ?? null;
+  const bpjsRows = (await tx
+    .select()
+    .from(employeeBpjsEnrollments)
+    .where(
+      and(
+        eq(employeeBpjsEnrollments.employee_id, employeeId),
+        eq(employeeBpjsEnrollments.is_active, true),
+        lte(employeeBpjsEnrollments.effective_from, period.period_end),
+        sql`${employeeBpjsEnrollments.effective_to} is null or ${employeeBpjsEnrollments.effective_to} >= ${period.period_start}`
+      )
+    )) as Array<typeof employeeBpjsEnrollments.$inferSelect>;
+  const override = await getAttendanceOverride(period.id, employeeId);
+  const enabled: Record<BpjsProgram, boolean> = {
+    jkk: settings?.jkk_enabled ?? false,
+    jkm: settings?.jkm_enabled ?? false,
+    jht: settings?.jht_enabled ?? false,
+    jp: settings?.jp_enabled ?? false,
+    kesehatan: settings?.bpjs_kesehatan_enabled ?? false
+  };
+  const rates: BpjsRates = {
+    jkk: { very_low: 0.24, low: 0.54, medium: 0.89, high: 1.27, very_high: 1.74 },
+    jkmCompany: Number(settings?.jkm_company_rate ?? 0.3),
+    jhtCompany: Number(settings?.jht_company_rate ?? 3.7),
+    jhtEmployee: Number(settings?.jht_employee_rate ?? 2),
+    jpCompany: Number(settings?.jp_company_rate ?? 2),
+    jpEmployee: Number(settings?.jp_employee_rate ?? 1),
+    kesehatanCompany: Number(settings?.kesehatan_company_rate ?? 4),
+    kesehatanEmployee: Number(settings?.kesehatan_employee_rate ?? 1)
+  };
+  const bpjsInput: BpjsInput = {
+    enrollments: bpjsRows.map((row) => ({
+      program: row.program,
+      registeredWage: parseDbDecimalToMoney(row.registered_wage),
+      ...(row.jkk_category_override ? { jkkCategoryOverride: row.jkk_category_override } : {})
+    })),
+    rates,
+    enabled
+  };
   const segmentResults = [];
   const segmentInputs: PayrollCalculationInput[] = [];
   for (let index = 0; index < boundaries.length; index += 1) {
@@ -1522,13 +1569,51 @@ export async function buildPayrollRecord(
       payableDays: 0,
       absentDays: 0
     });
+    const permitAmount =
+      settings?.potongan_izin_jam_default != null
+        ? parseDbDecimalToMoney(settings.potongan_izin_jam_default)
+        : undefined;
+    const shortfallAmount =
+      settings?.potongan_shortfall_default != null
+        ? parseDbDecimalToMoney(settings.potongan_shortfall_default)
+        : undefined;
+    const attendancePolicy: AttendancePolicy = {
+      ...emptyPolicy,
+      permitHour:
+        permitAmount != null ? { enabled: true, amount: permitAmount } : { enabled: false },
+      shortfall:
+        shortfallAmount != null ? { enabled: true, amount: shortfallAmount } : { enabled: false }
+    };
+    const mergedAttendance = override
+      ? {
+          ...attendance,
+          scheduledDays:
+            override.scheduled_days != null
+              ? Number(override.scheduled_days)
+              : attendance.scheduledDays,
+          payableDays:
+            override.payable_days != null ? Number(override.payable_days) : attendance.payableDays,
+          workedHours:
+            override.worked_hours != null ? Number(override.worked_hours) : attendance.workedHours,
+          permitHours:
+            override.permit_hours != null ? Number(override.permit_hours) : attendance.permitHours,
+          shortfallHours:
+            override.shortfall_hours != null
+              ? Number(override.shortfall_hours)
+              : attendance.shortfallHours
+        }
+      : attendance;
     const input: PayrollCalculationInput = {
       salary: { type: assignment.salary_type, amount: parseDbDecimalToMoney(assignment.amount) },
-      attendance,
-      attendancePolicy: emptyPolicy,
+      attendance: mergedAttendance,
+      attendancePolicy,
       components,
       manualAdjustments: [],
-      tax: mapTaxProfile(tax, setting)
+      tax: {
+        ...mapTaxProfile(tax, setting),
+        pph21: tax.pph21_method ?? (settings?.pph21_method as Pph21Method | undefined) ?? 'gross'
+      },
+      bpjs: bpjsInput
     };
     segmentInputs.push(input);
     segmentResults.push({
