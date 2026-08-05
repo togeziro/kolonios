@@ -77,7 +77,17 @@ const emptyPolicy: AttendancePolicy = {
 
 function recalculateSegmentsWithAdjustments(
   segmentInputs: PayrollCalculationInput[],
-  adjustments: ManualAdjustment[]
+  adjustments: ManualAdjustment[],
+  resolvedSegments?: Array<{
+    assignmentId: number;
+    taxId: number;
+    start: string;
+    end: string;
+    benefits: unknown;
+    bank: unknown;
+    employmentEvent: unknown;
+  }>,
+  employmentEvents?: unknown[]
 ) {
   const results = segmentInputs.map((segmentInput) =>
     calculatePayroll({
@@ -115,16 +125,20 @@ function recalculateSegmentsWithAdjustments(
       grossSalary: totals.grossSalary,
       netSalary: totals.netSalary,
       lineItems: totals.lineItems,
-      resolvedSegments: results.map((result, index) => ({
-        result,
-        assignmentId: segmentInputs[index]?.salary.type ?? '',
-        taxId: 0,
-        start: segmentInputs[index]?.salary.type ?? '',
-        end: '',
-        benefits: [],
-        bank: null
-      })),
-      employmentEvents: []
+      resolvedSegments: results.map((result, index) => {
+        const existing = resolvedSegments?.[index];
+        return {
+          result,
+          assignmentId: existing?.assignmentId ?? 0,
+          taxId: existing?.taxId ?? 0,
+          start: existing?.start ?? '',
+          end: existing?.end ?? '',
+          benefits: existing?.benefits ?? null,
+          bank: existing?.bank ?? null,
+          employmentEvent: existing?.employmentEvent ?? null
+        };
+      }),
+      employmentEvents: employmentEvents ?? []
     }
   };
 }
@@ -751,6 +765,29 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               );
             return row;
           }
+          const overlappingAssignment = await tx
+            .select()
+            .from(employeeSalaryAssignments)
+            .where(
+              and(
+                eq(employeeSalaryAssignments.employee_id, data.employeeId),
+                lte(employeeSalaryAssignments.effective_from, values.effective_from),
+                or(
+                  sql`${employeeSalaryAssignments.effective_to} is null`,
+                  gte(employeeSalaryAssignments.effective_to, values.effective_from)
+                )
+              )
+            )
+            .limit(1);
+          if (overlappingAssignment.length > 0) {
+            await tx
+              .update(employeeSalaryAssignments)
+              .set({
+                effective_to: previousDate(values.effective_from),
+                updated_at: new Date()
+              })
+              .where(eq(employeeSalaryAssignments.id, overlappingAssignment[0].id));
+          }
           const [row] = await tx.insert(employeeSalaryAssignments).values(values).returning();
           if (!row)
             throw new DomainError(
@@ -853,6 +890,30 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               );
             return row;
           }
+          const overlappingComponent = await tx
+            .select()
+            .from(employeeSalaryComponents)
+            .where(
+              and(
+                eq(employeeSalaryComponents.assignment_id, data.values.assignmentId),
+                eq(employeeSalaryComponents.salary_component_id, data.values.salaryComponentId),
+                lte(employeeSalaryComponents.effective_from, values.effective_from),
+                or(
+                  sql`${employeeSalaryComponents.effective_to} is null`,
+                  gte(employeeSalaryComponents.effective_to, values.effective_from)
+                )
+              )
+            )
+            .limit(1);
+          if (overlappingComponent.length > 0) {
+            await tx
+              .update(employeeSalaryComponents)
+              .set({
+                effective_to: previousDate(values.effective_from),
+                updated_at: new Date()
+              })
+              .where(eq(employeeSalaryComponents.id, overlappingComponent[0].id));
+          }
           const [row] = await tx.insert(employeeSalaryComponents).values(values).returning();
           if (!row)
             throw new DomainError(
@@ -925,6 +986,29 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               );
             return row;
           }
+          const overlappingTax = await tx
+            .select()
+            .from(employeeTaxProfiles)
+            .where(
+              and(
+                eq(employeeTaxProfiles.employee_id, data.employeeId),
+                lte(employeeTaxProfiles.effective_from, values.effective_from),
+                or(
+                  sql`${employeeTaxProfiles.effective_to} is null`,
+                  gte(employeeTaxProfiles.effective_to, values.effective_from)
+                )
+              )
+            )
+            .limit(1);
+          if (overlappingTax.length > 0) {
+            await tx
+              .update(employeeTaxProfiles)
+              .set({
+                effective_to: previousDate(values.effective_from),
+                updated_at: new Date()
+              })
+              .where(eq(employeeTaxProfiles.id, overlappingTax[0].id));
+          }
           const [row] = await tx.insert(employeeTaxProfiles).values(values).returning();
           if (!row)
             throw new DomainError('Failed to create tax profile.', 'TAX_PROFILE_CREATE_FAILED');
@@ -988,6 +1072,29 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
                 'BENEFIT_VERSION_FAILED'
               );
             return row;
+          }
+          const overlappingBenefit = await tx
+            .select()
+            .from(employeeBenefitEnrollments)
+            .where(
+              and(
+                eq(employeeBenefitEnrollments.employee_id, data.employeeId),
+                lte(employeeBenefitEnrollments.effective_from, values.effective_from),
+                or(
+                  sql`${employeeBenefitEnrollments.effective_to} is null`,
+                  gte(employeeBenefitEnrollments.effective_to, values.effective_from)
+                )
+              )
+            )
+            .limit(1);
+          if (overlappingBenefit.length > 0) {
+            await tx
+              .update(employeeBenefitEnrollments)
+              .set({
+                effective_to: previousDate(values.effective_from),
+                updated_at: new Date()
+              })
+              .where(eq(employeeBenefitEnrollments.id, overlappingBenefit[0].id));
           }
           const [row] = await tx.insert(employeeBenefitEnrollments).values(values).returning();
           if (!row)
@@ -1057,7 +1164,7 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               )
             )
             .limit(1);
-          if (overlapping.length > 1)
+          if (overlapping.length > 0)
             throw new DomainError(
               'Overlapping bank account versions exist.',
               'OVERLAPPING_EFFECTIVE_RECORDS'
@@ -1101,6 +1208,29 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               'A primary bank account already exists for this employee.',
               'DUPLICATE_PRIMARY_BANK_ACCOUNT'
             );
+        }
+        const overlappingBank = await tx
+          .select()
+          .from(employeeBankAccounts)
+          .where(
+            and(
+              eq(employeeBankAccounts.employee_id, data.employeeId),
+              lte(employeeBankAccounts.effective_from, values.effective_from),
+              or(
+                sql`${employeeBankAccounts.effective_to} is null`,
+                gte(employeeBankAccounts.effective_to, values.effective_from)
+              )
+            )
+          )
+          .limit(1);
+        if (overlappingBank.length > 0) {
+          await tx
+            .update(employeeBankAccounts)
+            .set({
+              effective_to: previousDate(values.effective_from),
+              updated_at: new Date()
+            })
+            .where(eq(employeeBankAccounts.id, overlappingBank[0].id));
         }
         const [row] = await tx.insert(employeeBankAccounts).values(values).returning();
         if (!row)
@@ -1551,8 +1681,26 @@ export const adjustPayrollRecordFn = createServerFn({ method: 'POST' })
           ...adjustment,
           amount: parseDbDecimalToMoney(adjustment.amount)
         }));
+        const existingSegments =
+          details?.resolvedSegments && Array.isArray(details.resolvedSegments)
+            ? (details.resolvedSegments as Array<{
+                assignmentId: number;
+                taxId: number;
+                start: string;
+                end: string;
+                benefits: unknown;
+                bank: unknown;
+                employmentEvent: unknown;
+              }>)
+            : undefined;
+        const existingEmploymentEvents = details?.employmentEvents as unknown[] | undefined;
         const result = Array.isArray(input)
-          ? recalculateSegmentsWithAdjustments(input, adjustments)
+          ? recalculateSegmentsWithAdjustments(
+              input,
+              adjustments,
+              existingSegments,
+              existingEmploymentEvents
+            )
           : calculatePayroll({
               ...(input as PayrollCalculationInput),
               manualAdjustments: adjustments
