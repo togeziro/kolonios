@@ -25,7 +25,7 @@ import {
 import type { PayrollRecordFilters, PayrollReportRow } from '@/features/payroll/api/types';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
-import { createPayrollRecordColumns } from './records-columns';
+import { createPayrollRecordColumns } from './-records-columns';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/records')({
   beforeLoad: async () => {
@@ -259,7 +259,6 @@ function RecordsPage() {
                     </select>
                     <Input
                       aria-label={t('payroll.amount')}
-                      inputMode='decimal'
                       value={draftAdjustment.amount}
                       onChange={(e) =>
                         setDraftAdjustment({ ...draftAdjustment, amount: e.target.value })
@@ -276,7 +275,10 @@ function RecordsPage() {
                         className='flex justify-between border-b py-1'
                       >
                         <span>
-                          {adjustment.name} ({adjustment.type})
+                          {t('payroll.adjustmentLabel', {
+                            name: adjustment.name,
+                            type: adjustment.type
+                          })}
                         </span>
                         <span>{adjustment.amount}</span>
                       </li>

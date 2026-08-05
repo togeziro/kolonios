@@ -42,7 +42,11 @@ const componentValuesSchema = effectiveDatesSchema.extend({
   id: idSchema.optional(),
   assignmentId: idSchema,
   salaryComponentId: idSchema,
-  amount: moneySchema
+  amount: moneySchema,
+  mode: z.enum(['fixed', 'percentage', 'per-attendance']).default('fixed'),
+  percentageBase: z.enum(['base-salary', 'gross-salary']).nullish(),
+  attendanceMetric: z.enum(['payable-days', 'worked-hours', 'late-count']).nullish(),
+  taxable: z.boolean().default(false)
 });
 const taxValuesSchema = effectiveDatesSchema.extend({
   id: idSchema.optional(),

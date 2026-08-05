@@ -73,7 +73,11 @@ function GeneratePage() {
                 .filter((period) => period.status === 'draft')
                 .map((period) => (
                   <option key={period.id} value={period.id}>
-                    {period.name} ({period.period_start} - {period.period_end})
+                    {t('payroll.periodOption', {
+                      name: period.name,
+                      start: period.period_start,
+                      end: period.period_end
+                    })}
                   </option>
                 ))}
             </select>

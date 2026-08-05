@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { PayrollReportRow } from '@/features/payroll/api/types';
-import { formatPayrollMoney } from './components';
+import { formatPayrollMoney } from './-components';
 
 type RecordRow = PayrollReportRow;
 

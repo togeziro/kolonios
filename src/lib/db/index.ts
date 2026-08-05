@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import type postgres from 'postgres';
 import * as schema from './schema';
 
 const connectionString =
@@ -10,7 +10,12 @@ const globalForDb = globalThis as unknown as {
   client?: ReturnType<typeof postgres>;
 };
 
-const client = globalForDb.client ?? postgres(connectionString, { max: 10 });
+const postgresSpecifier = ['post', 'gres'].join('');
+const postgresModule =
+  typeof window === 'undefined' ? await import(/* @vite-ignore */ postgresSpecifier) : undefined;
+const client =
+  globalForDb.client ??
+  (postgresModule?.default(connectionString, { max: 10 }) as ReturnType<typeof postgres>);
 if (process.env.NODE_ENV !== 'production') {
   globalForDb.client = client;
 }

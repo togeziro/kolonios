@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createPayrollRecordColumns } from './records-columns';
+import { createPayrollRecordColumns } from './-records-columns';
 
 describe('payroll record columns', () => {
   it('pins the action column and exposes workflow/detail callbacks', () => {

@@ -16,7 +16,7 @@ import { employeesQueryOptions } from '@/features/employees/api/queries';
 import { updateEmployeePayrollProfileFn } from '@/features/payroll/api/service';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
-import { maskBankAccount } from './components';
+import { maskBankAccount } from './-components';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/profile')({
   beforeLoad: async () => {
@@ -42,6 +42,10 @@ type ProfileComponent = {
     assignment_id: number;
     salary_component_id: number;
     amount: string;
+    mode: 'fixed' | 'percentage' | 'per-attendance';
+    percentage_base: 'base-salary' | 'gross-salary' | null;
+    attendance_metric: 'payable-days' | 'worked-hours' | 'late-count' | null;
+    taxable: boolean;
     effective_from: string;
     effective_to: string | null;
   };
@@ -88,6 +92,10 @@ type ComponentDraft = {
   assignmentId: number;
   salaryComponentId: number;
   amount: string;
+  mode: 'fixed' | 'percentage' | 'per-attendance';
+  percentageBase: 'base-salary' | 'gross-salary';
+  attendanceMetric: 'payable-days' | 'worked-hours' | 'late-count';
+  taxable: boolean;
   effectiveFrom: string;
   effectiveTo: string;
 };
@@ -166,6 +174,10 @@ function ProfilePage() {
             assignmentId: component.assignment_id,
             salaryComponentId: component.salary_component_id,
             amount: component.amount,
+            mode: component.mode,
+            percentageBase: component.percentage_base ?? 'base-salary',
+            attendanceMetric: component.attendance_metric ?? 'payable-days',
+            taxable: component.taxable,
             effectiveFrom: component.effective_from,
             effectiveTo: component.effective_to ?? ''
           }
@@ -260,6 +272,10 @@ function ProfilePage() {
         assignmentId: draft.assignmentId,
         salaryComponentId: draft.salaryComponentId,
         amount: draft.amount,
+        mode: draft.mode,
+        percentageBase: draft.percentageBase,
+        attendanceMetric: draft.attendanceMetric,
+        taxable: draft.taxable,
         effectiveFrom: draft.effectiveFrom,
         effectiveTo: draft.effectiveTo || undefined
       }
@@ -341,7 +357,10 @@ function ProfilePage() {
                   <option value=''>{t('payroll.selectEmployee')}</option>
                   {(employeesQuery.data?.employees ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.full_name} ({employee.employee_code})
+                      {t('payroll.employeeOption', {
+                        name: employee.full_name,
+                        code: employee.employee_code
+                      })}
                     </option>
                   ))}
                 </select>
@@ -475,6 +494,21 @@ function ProfilePage() {
                           setNewComponentDraft({ ...newComponentDraft, amount: e.target.value })
                         }
                       />
+                      <select
+                        disabled={!canEdit}
+                        className='rounded-md border bg-background px-2 text-sm'
+                        value={newComponentDraft.mode}
+                        onChange={(e) =>
+                          setNewComponentDraft({
+                            ...newComponentDraft,
+                            mode: e.target.value as ComponentDraft['mode']
+                          })
+                        }
+                      >
+                        <option value='fixed'>{t('payroll.fixed')}</option>
+                        <option value='percentage'>{t('payroll.percentage')}</option>
+                        <option value='per-attendance'>{t('payroll.perAttendance')}</option>
+                      </select>
                       <Input
                         disabled={!canEdit}
                         type='date'
@@ -512,6 +546,10 @@ function ProfilePage() {
                           assignmentId: selectedAssignmentId ?? 0,
                           salaryComponentId: 0,
                           amount: '',
+                          mode: 'fixed',
+                          percentageBase: 'base-salary',
+                          attendanceMetric: 'payable-days',
+                          taxable: false,
                           effectiveFrom: '',
                           effectiveTo: ''
                         })
@@ -529,6 +567,10 @@ function ProfilePage() {
                           assignmentId: selectedAssignmentId ?? 0,
                           salaryComponentId: 0,
                           amount: '',
+                          mode: 'fixed',
+                          percentageBase: 'base-salary',
+                          attendanceMetric: 'payable-days',
+                          taxable: false,
                           effectiveFrom: '',
                           effectiveTo: ''
                         })
@@ -557,6 +599,24 @@ function ProfilePage() {
                                 })
                               }
                             />
+                            <select
+                              disabled={!canEdit}
+                              className='rounded-md border bg-background px-2 text-sm'
+                              value={draft.mode}
+                              onChange={(e) =>
+                                setComponentDrafts({
+                                  ...componentDrafts,
+                                  [component.id]: {
+                                    ...draft,
+                                    mode: e.target.value as ComponentDraft['mode']
+                                  }
+                                })
+                              }
+                            >
+                              <option value='fixed'>{t('payroll.fixed')}</option>
+                              <option value='percentage'>{t('payroll.percentage')}</option>
+                              <option value='per-attendance'>{t('payroll.perAttendance')}</option>
+                            </select>
                             <Input
                               disabled={!canEdit}
                               type='date'
@@ -977,7 +1037,8 @@ function ProfilePage() {
                       return (
                         <div className='space-y-2 rounded-lg border p-3' key={bank.id}>
                           <p className='text-sm'>
-                            {bank.bank_name} • {maskBankAccount(bank.account_number)} •{' '}
+                            {bank.bank_name} {t('payroll.separator')}{' '}
+                            {maskBankAccount(bank.account_number)} {t('payroll.separator')}{' '}
                             {bank.account_name}
                           </p>
                           <div className='grid gap-2 sm:grid-cols-5'>

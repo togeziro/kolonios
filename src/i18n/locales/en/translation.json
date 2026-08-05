@@ -24,7 +24,8 @@
     "goToAttendance": "Go to attendance",
     "goodMorning": "Good morning",
     "goodAfternoon": "Good afternoon",
-    "goodEvening": "Good evening"
+    "goodEvening": "Good evening",
+    "openUserMenu": "Open user menu"
   },
   "common": {
     "cancel": "Cancel",
@@ -682,6 +683,13 @@
     "accountName": "Account name",
     "accountNumber": "Account number",
     "selectComponent": "Select component",
+    "fixed": "Fixed",
+    "percentage": "Percentage",
+    "perAttendance": "Per attendance",
+    "employeeOption": "{{name}} ({{code}})",
+    "periodOption": "{{name}} ({{start}} - {{end}})",
+    "separator": "•",
+    "adjustmentLabel": "{{name}} ({{type}})",
     "employeeCode": "Employee code",
     "tax": "Tax",
     "payslipsDescription": "View your paid and locked payroll snapshots.",

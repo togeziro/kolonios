@@ -57,6 +57,10 @@ const effectiveBankMigration = readFileSync(
   new URL('./migrations/0010_workable_gertrude_yorkes.sql', import.meta.url),
   'utf8'
 );
+const payrollModesMigration = readFileSync(
+  new URL('./migrations/0013_great_vivisector.sql', import.meta.url),
+  'utf8'
+);
 
 const requiredTables = [
   salaryComponents,
@@ -122,6 +126,8 @@ describe('payroll schema contract', () => {
     expect(employeeTaxRecords.employee_id.columnType).toBe('PgText');
     expect(employeeBankAccounts.effective_from.columnType).toBe('PgDateString');
     expect(employeeBankAccounts.effective_to.columnType).toBe('PgDateString');
+    expect(employeeSalaryComponents.mode).toBeDefined();
+    expect(employeeSalaryComponents.taxable).toBeDefined();
   });
 
   it('allows tax profile history while preventing duplicate effective dates', () => {
@@ -199,6 +205,12 @@ describe('payroll schema contract', () => {
     expect(effectiveBankMigration).toContain('"created_at"::date');
     expect(effectiveBankMigration).not.toContain("'1900-01-01'");
     expect(effectiveBankMigration).toContain('ADD COLUMN "effective_to" date');
+  });
+
+  it('migrates persisted salary component calculation modes and leave payability', () => {
+    expect(payrollModesMigration).toContain('ADD COLUMN "mode" text DEFAULT \'fixed\' NOT NULL');
+    expect(payrollModesMigration).toContain('ADD COLUMN "taxable" boolean DEFAULT false NOT NULL');
+    expect(payrollModesMigration).toContain('ADD COLUMN "is_paid" boolean DEFAULT true NOT NULL');
   });
 });
 

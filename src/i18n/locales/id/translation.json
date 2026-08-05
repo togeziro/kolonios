@@ -24,7 +24,8 @@
     "goToAttendance": "Ke absensi",
     "goodMorning": "Selamat pagi",
     "goodAfternoon": "Selamat siang",
-    "goodEvening": "Selamat malam"
+    "goodEvening": "Selamat malam",
+    "openUserMenu": "Buka menu pengguna"
   },
   "common": {
     "cancel": "Batal",
@@ -682,6 +683,13 @@
     "accountName": "Nama rekening",
     "accountNumber": "Nomor rekening",
     "selectComponent": "Pilih komponen",
+    "fixed": "Tetap",
+    "percentage": "Persentase",
+    "perAttendance": "Per kehadiran",
+    "employeeOption": "{{name}} ({{code}})",
+    "periodOption": "{{name}} ({{start}} - {{end}})",
+    "separator": "•",
+    "adjustmentLabel": "{{name}} ({{type}})",
     "employeeCode": "Kode karyawan",
     "tax": "Pajak",
     "payslipsDescription": "Lihat snapshot penggajian yang telah dibayar dan dikunci.",

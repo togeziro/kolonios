@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maskBankAccount, formatPayrollMoney } from './components';
+import { maskBankAccount, formatPayrollMoney } from './-components';
 
 describe('payroll admin display helpers', () => {
   it('masks bank account numbers while preserving the final four digits', () => {

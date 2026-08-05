@@ -5,7 +5,11 @@ import {
   buildAttendanceTotals,
   getCompanyProfile,
   mapTaxProfile,
+  mapSalaryComponent,
+  closeEffectiveRecordAt,
+  payrollPeriodBoundaries,
   resolvePayrollRecordScope,
+  sanitizePayrollProfileForActor,
   serializePayrollReport
 } from './service';
 
@@ -67,6 +71,61 @@ describe('payroll service boundaries', () => {
     expect(() => mapTaxProfile(profile, { rates: { ptkp: 'bad' } })).toThrow(/tax/i);
   });
 
+  it('maps persisted salary component mode and taxability without defaulting to fixed', () => {
+    expect(
+      mapSalaryComponent(
+        {
+          amount: '10.00',
+          mode: 'percentage',
+          percentage_base: 'gross-salary',
+          attendance_metric: null,
+          taxable: true
+        },
+        { name: 'Housing', type: 'allowance' },
+        4
+      )
+    ).toEqual({
+      name: 'Housing',
+      type: 'allowance',
+      mode: 'percentage',
+      amount: 10,
+      percentageBase: 'gross-salary',
+      attendanceMetric: 'payable-days',
+      taxable: true
+    });
+  });
+
+  it('masks tax identifiers and bank numbers for employee profile reads', () => {
+    const result = sanitizePayrollProfileForActor(
+      { user: { id: 'employee-1', role: 'employee' } },
+      {
+        taxProfiles: [{ tax_identifier: 'NPWP-123' }],
+        tax: { tax_identifier: 'NPWP-456' },
+        bankAccounts: [{ account_number: '123456789' }],
+        bank: { account_number: '987654321' }
+      }
+    );
+    expect(result.taxProfiles[0]).not.toHaveProperty('tax_identifier');
+    expect(result.tax).not.toHaveProperty('tax_identifier');
+    expect(result.bankAccounts[0].account_number).toBe('******6789');
+    expect(result.bank.account_number).toBe('******4321');
+  });
+
+  it('closes historical profile rows before inserting a later effective version', () => {
+    expect(closeEffectiveRecordAt('2026-01-01', '2026-07-01')).toBe('2026-06-30');
+    expect(() => closeEffectiveRecordAt('2026-07-01', '2026-07-01')).toThrow(/effective/i);
+  });
+
+  it('creates period segments for mid-period effective salary and tax changes', () => {
+    expect(
+      payrollPeriodBoundaries('2026-07-01', '2026-07-31', [
+        '2026-01-01',
+        '2026-07-16',
+        '2026-08-01'
+      ])
+    ).toEqual(['2026-07-01', '2026-07-16']);
+  });
+
   it('clips approved leave, excludes pending attendance, and does not invent a scheduled day', () => {
     expect(
       buildAttendanceTotals(
@@ -84,7 +143,15 @@ describe('payroll service boundaries', () => {
             check_out_time: '17:00'
           }
         ],
-        [{ start_date: '2026-06-25', end_date: '2026-07-10', total_days: 16, status: 'approved' }],
+        [
+          {
+            start_date: '2026-06-25',
+            end_date: '2026-07-10',
+            total_days: 16,
+            status: 'approved',
+            is_paid: false
+          }
+        ],
         {
           periodStart: '2026-07-01',
           periodEnd: '2026-07-31',
@@ -94,6 +161,30 @@ describe('payroll service boundaries', () => {
         }
       )
     ).toMatchObject({ scheduledDays: 0, payableDays: 1, workedHours: 8, unpaidLeaveDays: 10 });
+  });
+
+  it('does not deduct approved paid leave', () => {
+    expect(
+      buildAttendanceTotals(
+        [],
+        [
+          {
+            start_date: '2026-07-10',
+            end_date: '2026-07-12',
+            total_days: 3,
+            status: 'approved',
+            is_paid: true
+          }
+        ],
+        {
+          periodStart: '2026-07-01',
+          periodEnd: '2026-07-31',
+          scheduledDays: 20,
+          payableDays: 20,
+          absentDays: 0
+        }
+      )
+    ).toMatchObject({ unpaidLeaveDays: 0 });
   });
 
   it('emits CSV only when requested', () => {

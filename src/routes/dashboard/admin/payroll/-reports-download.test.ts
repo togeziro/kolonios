@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodePayrollExport } from './reports-download';
+import { decodePayrollExport } from './-reports-download';
 
 describe('payroll report downloads', () => {
   it('keeps CSV response text intact while decoding binary exports', () => {

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import PageContainer from '@/components/layout/page-container';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { SalaryComponentsPanel } from './components';
+import { SalaryComponentsPanel } from './-components';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/')({
   beforeLoad: async () => {

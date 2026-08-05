@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gte, getTableColumns, inArray, lte, or, sql } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { db } from './index';
 import { DomainError, mapDbError } from '../errors';
 import {
@@ -17,7 +18,6 @@ import { employees } from './schema/employees';
 import { departments, designations } from './schema/masterdata';
 import { buildConditions, buildPagination, buildStatusCondition } from './utils';
 import { auditLog } from './schema/audit-log';
-import { getRequestId } from '../request-id';
 import type {
   NewEmployeeSalaryAssignment,
   NewEmployeeSalaryComponent,
@@ -28,7 +28,7 @@ import type {
 } from './schema/payroll';
 
 type EffectiveRow = { id: number; effective_from: string; effective_to: string | null };
-export type PayrollTransaction = any;
+export type PayrollTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export async function withPayrollAuditTransaction<T>(
   actorUserId: string,
@@ -45,7 +45,7 @@ export async function withPayrollAuditTransaction<T>(
         entityId: entry.entityId == null ? null : String(entry.entityId),
         before: null,
         after: entry.after,
-        requestId: getRequestId() ?? null
+        requestId: null
       });
       return result;
     });
@@ -148,9 +148,9 @@ function effectiveWhere(
   employeeId: string,
   periodStart: string,
   periodEnd: string,
-  effectiveFrom: any,
-  effectiveTo: any,
-  employeeField: any
+  effectiveFrom: AnyPgColumn,
+  effectiveTo: AnyPgColumn,
+  employeeField: AnyPgColumn
 ) {
   return and(
     eq(employeeField, employeeId),
@@ -186,7 +186,7 @@ export async function getEffectiveSalaryAssignment(
   periodStart: string,
   periodEnd: string,
   tx?: PayrollTransaction
-): Promise<any> {
+): Promise<typeof employeeSalaryAssignments.$inferSelect> {
   try {
     assertEmployeeId(employeeId);
     assertDateRange(periodStart, periodEnd);
@@ -206,7 +206,12 @@ export async function getEffectiveSalaryComponents(
   periodStart: string,
   periodEnd: string,
   tx?: PayrollTransaction
-): Promise<any> {
+): Promise<
+  Array<{
+    component: typeof employeeSalaryComponents.$inferSelect;
+    definition: typeof salaryComponents.$inferSelect | null;
+  }>
+> {
   try {
     assertEmployeeId(employeeId);
     assertDateRange(periodStart, periodEnd);
@@ -249,7 +254,7 @@ export async function getEffectiveSalaryComponents(
         list.push(row.component);
         byComponent.set(row.component.salary_component_id, list);
       }
-      const definitions = new Map(rows.map((row: any) => [row.component.id, row.definition]));
+      const definitions = new Map(rows.map((row) => [row.component.id, row.definition]));
       for (const componentRows of byComponent.values()) {
         for (const component of resolveEffectiveRecords(
           employeeId,
@@ -257,7 +262,7 @@ export async function getEffectiveSalaryComponents(
           periodEnd,
           componentRows
         )) {
-          resolved.push({ component, definition: definitions.get(component.id) });
+          resolved.push({ component, definition: definitions.get(component.id) ?? null });
         }
       }
     }
@@ -271,7 +276,7 @@ export async function getEffectiveTaxProfile(
   employeeId: string,
   asOfDate: string,
   tx?: PayrollTransaction
-): Promise<any> {
+): Promise<typeof employeeTaxProfiles.$inferSelect> {
   try {
     assertEmployeeId(employeeId);
     assertEffectiveDate(asOfDate);
@@ -1055,7 +1060,7 @@ export async function getPayrollRecord(id: number, employeeId?: string) {
   }
 }
 
-async function getPayrollRecordForTransaction(tx: any, id: number) {
+async function getPayrollRecordForTransaction(tx: PayrollTransaction, id: number) {
   const [row] = await tx.select().from(payrollRecords).where(eq(payrollRecords.id, id)).limit(1);
   return row ?? null;
 }
@@ -1068,7 +1073,7 @@ export async function lockPayrollPeriod(tx: PayrollTransaction, id: number) {
   return period ?? null;
 }
 
-async function lockEmployee(tx: any, employeeId: string) {
+async function lockEmployee(tx: PayrollTransaction, employeeId: string) {
   await tx.execute(
     sql`select ${employees.id} from ${employees} where ${employees.id} = ${employeeId} for update`
   );
@@ -1076,7 +1081,7 @@ async function lockEmployee(tx: any, employeeId: string) {
   return employee ?? null;
 }
 
-async function lockSalaryAssignment(tx: any, assignmentId: number) {
+async function lockSalaryAssignment(tx: PayrollTransaction, assignmentId: number) {
   await tx.execute(
     sql`select ${employeeSalaryAssignments.id} from ${employeeSalaryAssignments} where ${employeeSalaryAssignments.id} = ${assignmentId} for update`
   );

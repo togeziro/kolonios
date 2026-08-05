@@ -82,6 +82,10 @@ export const employeeSalaryComponents = pgTable(
       .notNull()
       .references(() => salaryComponents.id, { onDelete: 'cascade' }),
     amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+    mode: text('mode').notNull().default('fixed'),
+    percentage_base: text('percentage_base'),
+    attendance_metric: text('attendance_metric'),
+    taxable: boolean('taxable').notNull().default(false),
     effective_from: date('effective_from').notNull(),
     effective_to: date('effective_to'),
     created_at: timestamp('created_at').defaultNow().notNull(),

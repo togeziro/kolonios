@@ -14,6 +14,10 @@ export interface SalaryComponentDefinition {
   is_active: boolean;
 }
 
+export interface PayrollProfileActor {
+  user: { id: string; role?: string | null };
+}
+
 export interface PayrollRecordFilters {
   payrollPeriodId?: number;
   employeeId?: string;
