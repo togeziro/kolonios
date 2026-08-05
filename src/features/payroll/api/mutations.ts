@@ -2,14 +2,20 @@ import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-quer
 import {
   approvePayrollFn,
   adjustPayrollRecordFn,
+  createEmployeeBpjsFamilyMemberFn,
   createPayrollPeriodFn,
   createSalaryComponentFn,
+  deleteEmployeeBpjsFamilyMemberFn,
   deleteSalaryComponentFn,
   generatePayrollFn,
   lockPayrollFn,
   markPayrollPaidFn,
+  overrideEmployeeTaxRecordFn,
+  updateCompanyPayrollSettingsFn,
   updateSalaryComponentFn,
-  updateEmployeePayrollProfileFn
+  updateEmployeePayrollProfileFn,
+  upsertAttendanceOverrideFn,
+  upsertEmployeeBpjsEnrollmentFn
 } from './service';
 import { payrollKeys } from './queries';
 
@@ -101,4 +107,43 @@ export const useUpdateEmployeePayrollProfile = () =>
     (data: Parameters<typeof updateEmployeePayrollProfileFn>[0]['data']) =>
       updateEmployeePayrollProfileFn({ data }),
     (data) => [payrollKeys.profile(data.employeeId), payrollKeys.records()]
+  );
+export const useUpdateCompanyPayrollSettings = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof updateCompanyPayrollSettingsFn>[0]['data']) =>
+      updateCompanyPayrollSettingsFn({ data }),
+    () => [payrollKeys.companySettings()]
+  );
+export const useUpsertEmployeeBpjsEnrollment = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof upsertEmployeeBpjsEnrollmentFn>[0]['data']) =>
+      upsertEmployeeBpjsEnrollmentFn({ data }),
+    (data) => [payrollKeys.bpjs(data.employeeId)]
+  );
+export const useCreateEmployeeBpjsFamilyMember = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof createEmployeeBpjsFamilyMemberFn>[0]['data']) =>
+      createEmployeeBpjsFamilyMemberFn({ data }),
+    () => [payrollKeys.bpjsRoot()]
+  );
+export const useDeleteEmployeeBpjsFamilyMember = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof deleteEmployeeBpjsFamilyMemberFn>[0]['data']) =>
+      deleteEmployeeBpjsFamilyMemberFn({ data }),
+    () => [payrollKeys.bpjsRoot()]
+  );
+export const useUpsertAttendanceOverride = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof upsertAttendanceOverrideFn>[0]['data']) =>
+      upsertAttendanceOverrideFn({ data }),
+    (data) => [
+      payrollKeys.attendanceOverride(data.payrollPeriodId, data.employeeId),
+      payrollKeys.records()
+    ]
+  );
+export const useOverrideEmployeeTaxRecord = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof overrideEmployeeTaxRecordFn>[0]['data']) =>
+      overrideEmployeeTaxRecordFn({ data }),
+    () => [['payroll', 'profile'] as const]
   );

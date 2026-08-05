@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, eq, gte, lte, ne, or, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/session';
 import { DomainError } from '@/lib/errors';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -14,12 +15,17 @@ import {
   shiftWeekdayRules
 } from '@/lib/db/schema/attendance';
 import {
+  companyPayrollSettings,
   employeeBankAccounts,
   employeeBenefitEnrollments,
+  employeeBpjsEnrollments,
+  employeeBpjsFamilyMembers,
   employeeEmploymentEvents,
   employeeSalaryAssignments,
   employeeSalaryComponents,
   employeeTaxProfiles,
+  employeeTaxRecords,
+  payrollAttendanceOverrides,
   payrollPeriods,
   payrollRecords,
   salaryComponents,
@@ -40,6 +46,18 @@ import {
   withPayrollAuditTransaction,
   lockPayrollPeriod,
   assertPayrollTransition,
+  getCompanyPayrollSettings,
+  updateCompanyPayrollSettings,
+  listEmployeeBpjsEnrollments,
+  listEmployeeBpjsFamilyMembers,
+  upsertEmployeeBpjsEnrollment,
+  createEmployeeBpjsFamilyMember,
+  deleteEmployeeBpjsFamilyMember,
+  getAttendanceOverride,
+  upsertAttendanceOverride,
+  overrideEmployeeTaxRecord,
+  mapPtkpStatusToAmount,
+  mapJkkCategoryToRate,
   type PayrollTransaction
 } from '@/lib/db/payroll';
 import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
@@ -65,7 +83,13 @@ import {
   salaryComponentIdSchema,
   salaryComponentSchema,
   salaryComponentUpdateSchema,
-  myPayslipFiltersSchema
+  myPayslipFiltersSchema,
+  companyPayrollSettingsSchema,
+  bpjsEnrollmentSchema,
+  bpjsFamilyMemberSchema,
+  bpjsFamilyMemberIdSchema,
+  attendanceOverrideSchema,
+  taxRecordOverrideSchema
 } from './validation';
 
 const emptyPolicy: AttendancePolicy = {
@@ -1645,6 +1669,225 @@ export const listPayrollRecordsFn = createServerFn({ method: 'GET' })
           limit: data.limit
         })
       )
+    );
+  });
+
+export const getCompanyPayrollSettingsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  await requirePermission('payroll', 'view');
+  return JSON.parse(JSON.stringify(await getCompanyPayrollSettings()));
+});
+
+export const updateCompanyPayrollSettingsFn = createServerFn({ method: 'POST' })
+  .validator(companyPayrollSettingsSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    const updated = await withPayrollAuditTransaction(
+      session.user.id,
+      { action: 'payroll.company_settings.update', entityType: 'company_payroll_settings' },
+      async (tx) => {
+        const existing = await tx.select().from(companyPayrollSettings).limit(1);
+        if (existing.length === 0) await tx.insert(companyPayrollSettings).values({});
+        const [row] = await tx
+          .update(companyPayrollSettings)
+          .set({
+            company_npwp: data.companyNpwp,
+            cut_off_day: data.cutOffDay,
+            pph21_enabled: data.pph21Enabled,
+            pph21_method: data.pph21Method,
+            jkk_enabled: data.jkkEnabled,
+            jkm_enabled: data.jkmEnabled,
+            jht_enabled: data.jhtEnabled,
+            jp_enabled: data.jpEnabled,
+            bpjs_kesehatan_enabled: data.bpjsKesehatanEnabled,
+            jkk_risk_category: data.jkkRiskCategory,
+            jkm_company_rate: data.jkmCompanyRate,
+            jht_company_rate: data.jhtCompanyRate,
+            jht_employee_rate: data.jhtEmployeeRate,
+            jp_company_rate: data.jpCompanyRate,
+            jp_employee_rate: data.jpEmployeeRate,
+            kesehatan_company_rate: data.kesehatanCompanyRate,
+            kesehatan_employee_rate: data.kesehatanEmployeeRate,
+            potongan_izin_jam_default: data.potonganIzinJamDefault,
+            potongan_shortfall_default: data.potonganShortfallDefault,
+            updated_at: new Date()
+          })
+          .returning();
+        if (!row) throw new DomainError('Failed to update company payroll settings.');
+        return row;
+      }
+    );
+    return updated;
+  });
+
+export const listEmployeeBpjsEnrollmentsFn = createServerFn({ method: 'GET' })
+  .validator(employeePayrollProfileReadSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'view');
+    assertEmployeeScope(session, data.employeeId);
+    const enrollments = await listEmployeeBpjsEnrollments(data.employeeId);
+    const withFamily = await Promise.all(
+      enrollments.map(async (enrollment) => ({
+        ...enrollment,
+        familyMembers: await listEmployeeBpjsFamilyMembers(enrollment.id)
+      }))
+    );
+    return JSON.parse(
+      JSON.stringify(sanitizePayrollProfileForActor(session, { enrollments: withFamily }))
+    );
+  });
+
+export const upsertEmployeeBpjsEnrollmentFn = createServerFn({ method: 'POST' })
+  .validator(bpjsEnrollmentSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    assertEmployeeScope(session, data.employeeId);
+    return withPayrollAuditTransaction(
+      session.user.id,
+      {
+        action: 'payroll.bpjs_enrollment.upsert',
+        entityType: 'employee_bpjs_enrollment',
+        entityId: data.employeeId
+      },
+      async (tx) =>
+        upsertEmployeeBpjsEnrollment(
+          {
+            employee_id: data.employeeId,
+            program: data.program,
+            membership_number: data.membershipNumber ?? '',
+            registration_date: data.registrationDate ?? null,
+            registered_wage: data.registeredWage,
+            jkk_category_override: data.jkkCategoryOverride ?? null,
+            is_active: data.isActive,
+            effective_from: data.effectiveFrom,
+            effective_to: data.effectiveTo ?? null
+          },
+          tx
+        )
+    );
+  });
+
+export const createEmployeeBpjsFamilyMemberFn = createServerFn({ method: 'POST' })
+  .validator(bpjsFamilyMemberSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    const created = await withPayrollAuditTransaction(
+      session.user.id,
+      {
+        action: 'payroll.bpjs_family_member.create',
+        entityType: 'employee_bpjs_family_member'
+      },
+      async (tx) =>
+        tx
+          .insert(employeeBpjsFamilyMembers)
+          .values({
+            enrollment_id: data.enrollmentId,
+            name: data.name,
+            relationship: data.relationship,
+            birth_date: data.birthDate ?? null,
+            is_core: data.isCore
+          })
+          .returning()
+    );
+    if (!created) throw new DomainError('Failed to create BPJS family member.');
+    return created;
+  });
+
+export const deleteEmployeeBpjsFamilyMemberFn = createServerFn({ method: 'POST' })
+  .validator(bpjsFamilyMemberIdSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    return withPayrollAuditTransaction(
+      session.user.id,
+      {
+        action: 'payroll.bpjs_family_member.delete',
+        entityType: 'employee_bpjs_family_member',
+        entityId: data.id
+      },
+      async (tx) =>
+        (
+          await tx
+            .delete(employeeBpjsFamilyMembers)
+            .where(eq(employeeBpjsFamilyMembers.id, data.id))
+            .returning()
+        ).length > 0
+    );
+  });
+
+export const getAttendanceOverrideFn = createServerFn({ method: 'GET' })
+  .validator(
+    z.object({ payrollPeriodId: z.number().int().positive(), employeeId: z.string().min(1) })
+  )
+  .handler(async ({ data }) => {
+    await requirePermission('payroll', 'view');
+    return JSON.parse(
+      JSON.stringify(await getAttendanceOverride(data.payrollPeriodId, data.employeeId))
+    );
+  });
+
+export const upsertAttendanceOverrideFn = createServerFn({ method: 'POST' })
+  .validator(attendanceOverrideSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    const result = await withPayrollAuditTransaction(
+      session.user.id,
+      {
+        action: 'payroll.attendance_override.upsert',
+        entityType: 'payroll_attendance_override',
+        entityId: data.payrollPeriodId
+      },
+      async (tx) => {
+        const period = await tx
+          .select()
+          .from(payrollPeriods)
+          .where(eq(payrollPeriods.id, data.payrollPeriodId))
+          .limit(1);
+        if (!period[0])
+          throw new DomainError('Payroll period was not found.', 'PAYROLL_PERIOD_NOT_FOUND');
+        if (period[0].status !== 'draft' && period[0].status !== 'processing')
+          throw new DomainError(
+            'Attendance overrides require a draft or processing period.',
+            'OVERRIDE_NOT_ALLOWED'
+          );
+        return upsertAttendanceOverride(
+          data.payrollPeriodId,
+          data.employeeId,
+          {
+            scheduled_days: data.scheduledDays != null ? String(data.scheduledDays) : undefined,
+            payable_days: data.payableDays != null ? String(data.payableDays) : undefined,
+            worked_hours: data.workedHours != null ? String(data.workedHours) : undefined,
+            permit_hours: data.permitHours != null ? String(data.permitHours) : undefined,
+            shortfall_hours: data.shortfallHours != null ? String(data.shortfallHours) : undefined
+          },
+          session.user.id
+        );
+      }
+    );
+    return result;
+  });
+
+export const overrideEmployeeTaxRecordFn = createServerFn({ method: 'POST' })
+  .validator(taxRecordOverrideSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    return withPayrollAuditTransaction(
+      session.user.id,
+      {
+        action: 'payroll.tax_record.override',
+        entityType: 'employee_tax_record',
+        entityId: data.id
+      },
+      async (tx) =>
+        JSON.parse(
+          JSON.stringify(
+            (
+              await tx
+                .update(employeeTaxRecords)
+                .set({ tax_amount: data.amount, source: 'manual', is_overridden: true })
+                .where(eq(employeeTaxRecords.id, data.id))
+                .returning()
+            )[0]
+          )
+        )
     );
   });
 

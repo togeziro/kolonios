@@ -1318,7 +1318,40 @@ export async function listPayrollRecords(
         .innerJoin(employees, eq(payrollRecords.employee_id, employees.id))
         .where(where)
     ]);
-    return { rows, total: count, limit, offset };
+    const overrides = rows.length
+      ? await db
+          .select()
+          .from(payrollAttendanceOverrides)
+          .where(
+            and(
+              ...(filters.payroll_period_id
+                ? [eq(payrollAttendanceOverrides.payroll_period_id, filters.payroll_period_id)]
+                : []),
+              ...(filters.employee_id
+                ? [eq(payrollAttendanceOverrides.employee_id, filters.employee_id)]
+                : [])
+            )
+          )
+      : [];
+    const overrideByKey = new Map(
+      overrides.map((row) => [`${row.payroll_period_id}:${row.employee_id}`, row])
+    );
+    const rowsWithMeta = rows.map((row) => {
+      const override = overrideByKey.get(`${row.payroll_period_id}:${row.employee_id}`);
+      const details = (row.details as Record<string, unknown> | null) ?? {};
+      const input = Array.isArray(details.input)
+        ? (details.input[0] as Record<string, unknown> | undefined)
+        : undefined;
+      const attendance = (input?.attendance as Record<string, unknown> | undefined) ?? {};
+      return {
+        ...row,
+        worked_hours:
+          override?.worked_hours ??
+          (typeof attendance.workedHours === 'number' ? attendance.workedHours : null),
+        has_override: Boolean(override)
+      };
+    });
+    return { rows: rowsWithMeta, total: count, limit, offset };
   } catch (e) {
     mapDbError(e, 'payroll.listPayrollRecords');
   }
