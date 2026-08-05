@@ -267,6 +267,8 @@ Detailed docs live in [`docs/`](./docs/):
 | [docs/ATTENDANCE.md](./docs/ATTENDANCE.md) | Attendance module deep-dive |
 | [docs/MOBILE.md](./docs/MOBILE.md) | Mobile staff dashboard |
 | [docs/PAYROLL.md](./docs/PAYROLL.md) | Payroll module deep-dive 🆕 |
+| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md) | Kerjoo payroll requirement reference (finish-payroll scope) 🆕 |
+| [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕 |
 | [docs/audit/](./docs/audit/) | Repository audit + implementation summary |
 
 ## Code Quality & Architecture
