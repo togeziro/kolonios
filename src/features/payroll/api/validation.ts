@@ -52,7 +52,13 @@ const taxValuesSchema = effectiveDatesSchema.extend({
   id: idSchema.optional(),
   taxSettingId: idSchema.nullish(),
   taxIdentifier: z.string().max(100).nullish(),
-  filingStatus: z.string().max(50).nullish()
+  filingStatus: z.string().max(50).nullish(),
+  employmentStatus: z.enum(['permanent', 'contract', 'freelance']).optional(),
+  ptkpStatus: z.enum(['TK/0', 'TK/1', 'TK/2', 'TK/3', 'K/0', 'K/1', 'K/2', 'K/3']).optional(),
+  residency: z.enum(['resident', 'foreign']).optional(),
+  taxFacility: z.enum(['none', 'dtp', 'etc']).optional(),
+  taxObjectCode: z.enum(['21-100-01', '21-100-02', '21-100-32']).optional(),
+  pph21Method: z.enum(['gross', 'gross_up']).nullish()
 });
 const benefitValuesSchema = effectiveDatesSchema.extend({
   id: idSchema.optional(),

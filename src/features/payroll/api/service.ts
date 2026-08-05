@@ -1,8 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, eq, gte, lte, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, ne, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/session';
 import { DomainError } from '@/lib/errors';
+import { db } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { employees } from '@/lib/db/schema/employees';
 import {
@@ -676,9 +677,30 @@ export const getEmployeePayrollProfileFn = createServerFn({ method: 'GET' })
     const session = await requirePermission('payroll', 'view');
     assertEmployeeScope(session, data.employeeId);
     const asOfDate = new Date().toISOString().slice(0, 10);
-    const [employment, history] = await Promise.all([
+    const [employment, history, taxRecords, paymentHistory] = await Promise.all([
       getEmploymentContext(data.employeeId, asOfDate),
-      listEmployeePayrollProfileHistory(data.employeeId)
+      listEmployeePayrollProfileHistory(data.employeeId),
+      db
+        .select()
+        .from(employeeTaxRecords)
+        .where(eq(employeeTaxRecords.employee_id, data.employeeId))
+        .orderBy(desc(employeeTaxRecords.tax_period)),
+      db
+        .select({
+          id: payrollRecords.id,
+          period_name: payrollPeriods.name,
+          period_start: payrollPeriods.period_start,
+          period_end: payrollPeriods.period_end,
+          payment_date: payrollPeriods.payment_date,
+          net_salary: payrollRecords.net_salary,
+          period_status: payrollPeriods.status
+        })
+        .from(payrollRecords)
+        .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))
+        .where(
+          and(eq(payrollRecords.employee_id, data.employeeId), ne(payrollPeriods.status, 'draft'))
+        )
+        .orderBy(desc(payrollPeriods.period_start))
     ]);
     const assignment = history?.assignments
       ? resolveEffectiveRecord(data.employeeId, asOfDate, history.assignments)
@@ -708,7 +730,9 @@ export const getEmployeePayrollProfileFn = createServerFn({ method: 'GET' })
           taxProfiles: history?.taxProfiles ?? [],
           benefits: history?.benefits ?? [],
           bank,
-          bankAccounts: history?.bankAccounts ?? []
+          bankAccounts: history?.bankAccounts ?? [],
+          taxRecords,
+          paymentHistory
         })
       )
     );
@@ -960,6 +984,12 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             tax_setting_id: data.values.taxSettingId ?? null,
             tax_identifier: data.values.taxIdentifier ?? null,
             filing_status: data.values.filingStatus ?? null,
+            employment_status: data.values.employmentStatus ?? undefined,
+            ptkp_status: data.values.ptkpStatus ?? undefined,
+            residency: data.values.residency ?? undefined,
+            tax_facility: data.values.taxFacility ?? undefined,
+            tax_object_code: data.values.taxObjectCode ?? undefined,
+            pph21_method: data.values.pph21Method ?? null,
             effective_from: data.values.effectiveFrom,
             effective_to: data.values.effectiveTo ?? null
           };
