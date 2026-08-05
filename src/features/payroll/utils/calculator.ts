@@ -1,6 +1,9 @@
 import type {
   AttendancePolicy,
   AttendanceTotals,
+  BpjsProgram,
+  EmployerCost,
+  JkkRiskCategory,
   ManualAdjustment,
   Money,
   OvertimeResult,
@@ -342,6 +345,58 @@ export function calculateOvertime(): OvertimeResult {
   return { hours: 0, amount: 0, source: 'mvp-disabled' };
 }
 
+const JKK_RATES: Record<JkkRiskCategory, number> = {
+  very_low: 0.24,
+  low: 0.54,
+  medium: 0.89,
+  high: 1.27,
+  very_high: 1.74
+};
+
+export function calculateBpjs(input: Pick<PayrollCalculationInput, 'bpjs'>): {
+  deductions: PayrollLineItem[];
+  employerCosts: EmployerCost[];
+} {
+  const bpjs = input.bpjs;
+  if (!bpjs) return { deductions: [], employerCosts: [] };
+  const deductions: PayrollLineItem[] = [];
+  const employerCosts: EmployerCost[] = [];
+  for (const enrollment of bpjs.enrollments) {
+    if (!bpjs.enabled[enrollment.program]) continue;
+    const category =
+      enrollment.program === 'jkk' ? (enrollment.jkkCategoryOverride ?? 'low') : undefined;
+    let employeeRate = 0;
+    let companyRate = 0;
+    if (enrollment.program === 'jht') {
+      employeeRate = bpjs.rates.jhtEmployee;
+      companyRate = bpjs.rates.jhtCompany;
+    } else if (enrollment.program === 'jp') {
+      employeeRate = bpjs.rates.jpEmployee;
+      companyRate = bpjs.rates.jpCompany;
+    } else if (enrollment.program === 'kesehatan') {
+      employeeRate = bpjs.rates.kesehatanEmployee;
+      companyRate = bpjs.rates.kesehatanCompany;
+    } else if (enrollment.program === 'jkm') {
+      companyRate = bpjs.rates.jkmCompany;
+    } else if (enrollment.program === 'jkk') {
+      companyRate = JKK_RATES[category!];
+    }
+    const employeeAmount = roundMoney((enrollment.registeredWage * employeeRate) / 100);
+    const companyAmount = roundMoney((enrollment.registeredWage * companyRate) / 100);
+    if (employeeAmount > 0)
+      deductions.push({
+        name: enrollment.program.toUpperCase(),
+        type: 'deduction',
+        amount: employeeAmount,
+        taxable: false,
+        source: `bpjs:${enrollment.program}`
+      });
+    if (companyAmount > 0)
+      employerCosts.push({ program: enrollment.program, amount: companyAmount });
+  }
+  return { deductions, employerCosts };
+}
+
 export function calculatePayroll(input: PayrollCalculationInput): PayrollCalculationResult {
   assertInput(input);
   const baseSalary = calculateBaseSalary(input);
@@ -363,6 +418,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     input.attendance
   );
   const attendanceDeductions = calculateAttendanceDeductions(input);
+  const { deductions: bpjsDeductions, employerCosts } = calculateBpjs(input);
   const allowanceTotal = roundMoney(
     allowances.total + manualBonuses.reduce((sum, item) => sum + item.amount, 0)
   );
@@ -385,6 +441,7 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     ...allowances.items,
     ...manualBonuses,
     ...deductions.items,
+    ...bpjsDeductions,
     ...attendanceDeductions.items,
     ...(tax.amount > 0
       ? [
@@ -398,7 +455,12 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
         ]
       : [])
   ];
-  const deductionTotal = roundMoney(deductions.total + attendanceDeductions.total + tax.amount);
+  const deductionTotal = roundMoney(
+    deductions.total +
+      attendanceDeductions.total +
+      tax.amount +
+      bpjsDeductions.reduce((sum, item) => sum + item.amount, 0)
+  );
   const netSalary = nonNegative(roundMoney(grossSalary - deductionTotal));
   const snapshot = {
     input,
@@ -410,7 +472,8 @@ export function calculatePayroll(input: PayrollCalculationInput): PayrollCalcula
     grossSalary,
     netSalary,
     overtime,
-    lineItems
+    lineItems,
+    employerCosts
   };
   return { ...snapshot, snapshot };
 }

@@ -10,13 +10,17 @@ const baseInput = (overrides: Partial<PayrollCalculationInput> = {}): PayrollCal
     workedHours: 160,
     absentDays: 0,
     lateCount: 0,
-    unpaidLeaveDays: 0
+    unpaidLeaveDays: 0,
+    permitHours: 0,
+    shortfallHours: 0
   },
   attendancePolicy: {
     absence: { enabled: false },
     late: { mode: 'none' },
     unpaidLeave: { enabled: false },
-    monthlyAttendanceMode: 'deduct'
+    monthlyAttendanceMode: 'deduct',
+    permitHour: { enabled: false },
+    shortfall: { enabled: false }
   },
   components: [],
   manualAdjustments: [],
@@ -115,7 +119,9 @@ describe('calculatePayroll', () => {
           absence: { enabled: true },
           late: { mode: 'fixed', amount: 50_000 },
           unpaidLeave: { enabled: true },
-          monthlyAttendanceMode: 'deduct'
+          monthlyAttendanceMode: 'deduct',
+          permitHour: { enabled: false },
+          shortfall: { enabled: false }
         }
       })
     );
@@ -133,7 +139,9 @@ describe('calculatePayroll', () => {
           absence: { enabled: false },
           late: { mode: 'partial', rate: 25 },
           unpaidLeave: { enabled: false },
-          monthlyAttendanceMode: 'deduct'
+          monthlyAttendanceMode: 'deduct',
+          permitHour: { enabled: false },
+          shortfall: { enabled: false }
         }
       })
     );
@@ -240,7 +248,9 @@ describe('calculatePayroll', () => {
           absence: { enabled: true },
           late: { mode: 'none' },
           unpaidLeave: { enabled: false },
-          monthlyAttendanceMode: 'prorate'
+          monthlyAttendanceMode: 'prorate',
+          permitHour: { enabled: false },
+          shortfall: { enabled: false }
         },
         manualAdjustments: [{ name: 'Large deduction', type: 'deduction', amount: 20_000_000 }]
       })
@@ -263,7 +273,9 @@ describe('calculatePayroll', () => {
           absence: { enabled: true },
           late: { mode: 'none' },
           unpaidLeave: { enabled: false },
-          monthlyAttendanceMode: 'prorate'
+          monthlyAttendanceMode: 'prorate',
+          permitHour: { enabled: false },
+          shortfall: { enabled: false }
         }
       })
     );
@@ -281,7 +293,9 @@ describe('calculatePayroll', () => {
           absence: { enabled: false },
           late: { mode: 'none' },
           unpaidLeave: { enabled: true },
-          monthlyAttendanceMode: 'deduct'
+          monthlyAttendanceMode: 'deduct',
+          permitHour: { enabled: false },
+          shortfall: { enabled: false }
         }
       })
     );
@@ -292,7 +306,9 @@ describe('calculatePayroll', () => {
           absence: { enabled: false },
           late: { mode: 'none' },
           unpaidLeave: { enabled: true },
-          monthlyAttendanceMode: 'prorate'
+          monthlyAttendanceMode: 'prorate',
+          permitHour: { enabled: false },
+          shortfall: { enabled: false }
         }
       })
     );
@@ -346,7 +362,9 @@ describe('calculatePayroll', () => {
           absence: { enabled: true, amount: 100_000 },
           late: { mode: 'none' },
           unpaidLeave: { enabled: true, amount: 80_000 },
-          monthlyAttendanceMode: 'deduct'
+          monthlyAttendanceMode: 'deduct',
+          permitHour: { enabled: false },
+          shortfall: { enabled: false }
         },
         components: [
           {
@@ -377,7 +395,9 @@ describe('calculatePayroll', () => {
           workedHours: 150,
           absentDays: 1,
           lateCount: 2,
-          unpaidLeaveDays: 1
+          unpaidLeaveDays: 1,
+          permitHours: 0,
+          shortfallHours: 0
         }
       })
     );
@@ -426,5 +446,93 @@ describe('calculatePayroll', () => {
     expect(() => JSON.stringify(result.snapshot)).not.toThrow();
     expect(result.snapshot).toMatchObject({ grossSalary: 10_000_000, netSalary: 10_000_000 });
     expect(result.snapshot).not.toHaveProperty('snapshot');
+  });
+
+  it('computes BPJS employee deductions and company employer costs', () => {
+    const result = calculatePayroll(
+      baseInput({
+        bpjs: {
+          enrollments: [
+            { program: 'jkk', registeredWage: 10_000_000 },
+            { program: 'jkm', registeredWage: 10_000_000 },
+            { program: 'jht', registeredWage: 10_000_000 },
+            { program: 'jp', registeredWage: 10_000_000 },
+            { program: 'kesehatan', registeredWage: 10_000_000 }
+          ],
+          rates: {
+            jkk: { very_low: 0.24, low: 0.54, medium: 0.89, high: 1.27, very_high: 1.74 },
+            jkmCompany: 0.3,
+            jhtCompany: 3.7,
+            jhtEmployee: 2,
+            jpCompany: 2,
+            jpEmployee: 1,
+            kesehatanCompany: 4,
+            kesehatanEmployee: 1
+          },
+          enabled: { jkk: true, jkm: true, jht: true, jp: true, kesehatan: true }
+        }
+      })
+    );
+
+    expect(result.snapshot.employerCosts).toEqual([
+      { program: 'jkk', amount: 54_000 },
+      { program: 'jkm', amount: 30_000 },
+      { program: 'jht', amount: 370_000 },
+      { program: 'jp', amount: 200_000 },
+      { program: 'kesehatan', amount: 400_000 }
+    ]);
+    const bpjsDeductions = result.lineItems.filter((item) => item.source.startsWith('bpjs:'));
+    expect(bpjsDeductions.reduce((sum, item) => sum + item.amount, 0)).toBe(400_000);
+    expect(result.deductionTotal).toBe(400_000);
+    expect(result.netSalary).toBe(9_600_000);
+  });
+
+  it('skips disabled BPJS programs', () => {
+    const result = calculatePayroll(
+      baseInput({
+        bpjs: {
+          enrollments: [{ program: 'jht', registeredWage: 10_000_000 }],
+          rates: {
+            jkk: { very_low: 0.24, low: 0.54, medium: 0.89, high: 1.27, very_high: 1.74 },
+            jkmCompany: 0.3,
+            jhtCompany: 3.7,
+            jhtEmployee: 2,
+            jpCompany: 2,
+            jpEmployee: 1,
+            kesehatanCompany: 4,
+            kesehatanEmployee: 1
+          },
+          enabled: { jkk: true, jkm: true, jht: false, jp: true, kesehatan: true }
+        }
+      })
+    );
+
+    expect(result.snapshot.employerCosts).toEqual([]);
+    expect(result.lineItems.filter((item) => item.source.startsWith('bpjs:')).length).toBe(0);
+  });
+
+  it('applies a per-employee JKK category override rate', () => {
+    const result = calculatePayroll(
+      baseInput({
+        bpjs: {
+          enrollments: [
+            { program: 'jkk', registeredWage: 10_000_000, jkkCategoryOverride: 'very_high' }
+          ],
+          rates: {
+            jkk: { very_low: 0.24, low: 0.54, medium: 0.89, high: 1.27, very_high: 1.74 },
+            jkmCompany: 0.3,
+            jhtCompany: 3.7,
+            jhtEmployee: 2,
+            jpCompany: 2,
+            jpEmployee: 1,
+            kesehatanCompany: 4,
+            kesehatanEmployee: 1
+          },
+          enabled: { jkk: true, jkm: true, jht: true, jp: true, kesehatan: true }
+        }
+      })
+    );
+
+    expect(result.snapshot.employerCosts).toEqual([{ program: 'jkk', amount: 174_000 }]);
   });
 });
