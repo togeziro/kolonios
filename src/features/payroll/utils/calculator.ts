@@ -1,7 +1,5 @@
 import type {
-  AttendancePolicy,
   AttendanceTotals,
-  BpjsProgram,
   EmployerCost,
   JkkRiskCategory,
   ManualAdjustment,
@@ -369,7 +367,7 @@ export function calculateOvertime(): OvertimeResult {
   return { hours: 0, amount: 0, source: 'mvp-disabled' };
 }
 
-const JKK_RATES: Record<JkkRiskCategory, number> = {
+export const JKK_RATES: Record<JkkRiskCategory, number> = {
   very_low: 0.24,
   low: 0.54,
   medium: 0.89,
@@ -403,7 +401,7 @@ export function calculateBpjs(input: Pick<PayrollCalculationInput, 'bpjs'>): {
     } else if (enrollment.program === 'jkm') {
       companyRate = bpjs.rates.jkmCompany;
     } else if (enrollment.program === 'jkk') {
-      companyRate = JKK_RATES[category!];
+      companyRate = bpjs.rates.jkk[category!];
     }
     const employeeAmount = roundMoney((enrollment.registeredWage * employeeRate) / 100);
     const companyAmount = roundMoney((enrollment.registeredWage * companyRate) / 100);

@@ -14,6 +14,7 @@ import {
 } from '@/features/payroll/api/mutations';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
+import type { JkkRiskCategory } from '@/features/payroll/api/types';
 import { formatPayrollMoney, validDates } from './-components';
 
 export type BpjsFamilyMember = {
@@ -46,11 +47,20 @@ export type BpjsDraft = {
   isActive: boolean;
   effectiveFrom: string;
   effectiveTo: string;
+  jkkCategoryOverride: string;
 };
 
 type FamilyForm = { name: string; relationship: string; isCore: boolean };
 
 const BPJS_PROGRAM_OPTIONS = ['jkk', 'jkm', 'jht', 'jp', 'kesehatan'] as const;
+const JKK_CATEGORIES = ['very_low', 'low', 'medium', 'high', 'very_high'] as const;
+const JKK_CATEGORY_KEYS: Record<string, string> = {
+  very_low: 'payroll.veryLow',
+  low: 'payroll.low',
+  medium: 'payroll.medium',
+  high: 'payroll.high',
+  very_high: 'payroll.veryHigh'
+};
 
 export function BpjsEnrollmentCard({ employeeId }: { employeeId: string }) {
   const { t } = useTranslation();
@@ -80,7 +90,8 @@ export function BpjsEnrollmentCard({ employeeId }: { employeeId: string }) {
             registeredWage: enrollment.registered_wage,
             isActive: enrollment.is_active,
             effectiveFrom: enrollment.effective_from,
-            effectiveTo: enrollment.effective_to ?? ''
+            effectiveTo: enrollment.effective_to ?? '',
+            jkkCategoryOverride: enrollment.jkk_category_override ?? ''
           }
         ])
       )
@@ -97,7 +108,11 @@ export function BpjsEnrollmentCard({ employeeId }: { employeeId: string }) {
         registeredWage: draft.registeredWage,
         isActive: draft.isActive,
         effectiveFrom: draft.effectiveFrom,
-        effectiveTo: draft.effectiveTo || undefined
+        effectiveTo: draft.effectiveTo || undefined,
+        jkkCategoryOverride:
+          draft.program === 'jkk'
+            ? ((draft.jkkCategoryOverride || undefined) as JkkRiskCategory | undefined)
+            : undefined
       })
       .then(() => {
         setNewBpjsDraft(null);
@@ -147,63 +162,85 @@ export function BpjsEnrollmentCard({ employeeId }: { employeeId: string }) {
           <p className='text-sm text-destructive'>{t('payroll.loadFailed')}</p>
         ) : (bpjsEnrollments?.enrollments.length ?? 0) === 0 || newBpjsDraft ? (
           newBpjsDraft ? (
-            <div className='grid gap-2 sm:grid-cols-5'>
-              <select
-                disabled={!canEdit}
-                className='rounded-md border bg-background px-2 text-sm'
-                aria-label={t('payroll.program')}
-                value={newBpjsDraft.program}
-                onChange={(e) =>
-                  setNewBpjsDraft({
-                    ...newBpjsDraft,
-                    program: e.target.value as BpjsDraft['program']
-                  })
-                }
-              >
-                <option value=''>{t('payroll.select')}</option>
-                {BPJS_PROGRAM_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {t(`payroll.${option === 'kesehatan' ? 'bpjsKesehatan' : option}`)}
-                  </option>
-                ))}
-              </select>
-              <Input
-                disabled={!canEdit}
-                placeholder={t('payroll.registeredWage')}
-                value={newBpjsDraft.registeredWage}
-                onChange={(e) =>
-                  setNewBpjsDraft({ ...newBpjsDraft, registeredWage: e.target.value })
-                }
-              />
-              <Input
-                disabled={!canEdit}
-                type='date'
-                value={newBpjsDraft.effectiveFrom}
-                onChange={(e) =>
-                  setNewBpjsDraft({ ...newBpjsDraft, effectiveFrom: e.target.value })
-                }
-              />
-              <select
-                disabled={!canEdit}
-                className='rounded-md border bg-background px-2 text-sm'
-                value={newBpjsDraft.isActive ? 'active' : 'inactive'}
-                onChange={(e) =>
-                  setNewBpjsDraft({
-                    ...newBpjsDraft,
-                    isActive: e.target.value === 'active'
-                  })
-                }
-              >
-                <option value='active'>{t('common.active')}</option>
-                <option value='inactive'>{t('common.inactive')}</option>
-              </select>
-              <Button
-                disabled={!canEdit || upsertBpjs.isPending}
-                onClick={() => saveBpjs(newBpjsDraft)}
-              >
-                {t('common.save')}
-              </Button>
-            </div>
+            <>
+              <div className='grid gap-2 sm:grid-cols-5'>
+                <select
+                  disabled={!canEdit}
+                  className='rounded-md border bg-background px-2 text-sm'
+                  aria-label={t('payroll.program')}
+                  value={newBpjsDraft.program}
+                  onChange={(e) =>
+                    setNewBpjsDraft({
+                      ...newBpjsDraft,
+                      program: e.target.value as BpjsDraft['program']
+                    })
+                  }
+                >
+                  <option value=''>{t('payroll.select')}</option>
+                  {BPJS_PROGRAM_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {t(`payroll.${option === 'kesehatan' ? 'bpjsKesehatan' : option}`)}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  disabled={!canEdit}
+                  placeholder={t('payroll.registeredWage')}
+                  value={newBpjsDraft.registeredWage}
+                  onChange={(e) =>
+                    setNewBpjsDraft({ ...newBpjsDraft, registeredWage: e.target.value })
+                  }
+                />
+                <Input
+                  disabled={!canEdit}
+                  type='date'
+                  value={newBpjsDraft.effectiveFrom}
+                  onChange={(e) =>
+                    setNewBpjsDraft({ ...newBpjsDraft, effectiveFrom: e.target.value })
+                  }
+                />
+                <select
+                  disabled={!canEdit}
+                  className='rounded-md border bg-background px-2 text-sm'
+                  value={newBpjsDraft.isActive ? 'active' : 'inactive'}
+                  onChange={(e) =>
+                    setNewBpjsDraft({
+                      ...newBpjsDraft,
+                      isActive: e.target.value === 'active'
+                    })
+                  }
+                >
+                  <option value='active'>{t('common.active')}</option>
+                  <option value='inactive'>{t('common.inactive')}</option>
+                </select>
+                <Button
+                  disabled={!canEdit || upsertBpjs.isPending}
+                  onClick={() => saveBpjs(newBpjsDraft)}
+                >
+                  {t('common.save')}
+                </Button>
+              </div>
+              {newBpjsDraft.program === 'jkk' ? (
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm text-muted-foreground'>{t('payroll.riskCategory')}</span>
+                  <select
+                    disabled={!canEdit}
+                    className='rounded-md border bg-background px-2 text-sm'
+                    value={newBpjsDraft.jkkCategoryOverride}
+                    onChange={(e) =>
+                      setNewBpjsDraft({ ...newBpjsDraft, jkkCategoryOverride: e.target.value })
+                    }
+                  >
+                    <option value=''>{t('payroll.select')}</option>
+                    {JKK_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {t(JKK_CATEGORY_KEYS[category])}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+            </>
           ) : (
             <Button
               disabled={!canEdit}
@@ -213,7 +250,8 @@ export function BpjsEnrollmentCard({ employeeId }: { employeeId: string }) {
                   registeredWage: '',
                   isActive: true,
                   effectiveFrom: '',
-                  effectiveTo: ''
+                  effectiveTo: '',
+                  jkkCategoryOverride: ''
                 })
               }
             >
@@ -230,7 +268,8 @@ export function BpjsEnrollmentCard({ employeeId }: { employeeId: string }) {
                   registeredWage: '',
                   isActive: true,
                   effectiveFrom: '',
-                  effectiveTo: ''
+                  effectiveTo: '',
+                  jkkCategoryOverride: ''
                 })
               }
             >
@@ -356,6 +395,34 @@ export function BpjsEnrollmentCard({ employeeId }: { employeeId: string }) {
                       {t('common.save')}
                     </Button>
                   </div>
+                  {draft.program === 'jkk' ? (
+                    <div className='flex items-center gap-2'>
+                      <span className='text-sm text-muted-foreground'>
+                        {t('payroll.riskCategory')}
+                      </span>
+                      <select
+                        disabled={!canEdit}
+                        className='rounded-md border bg-background px-2 text-sm'
+                        value={draft.jkkCategoryOverride}
+                        onChange={(e) =>
+                          setBpjsDrafts({
+                            ...bpjsDrafts,
+                            [enrollment.id]: {
+                              ...draft,
+                              jkkCategoryOverride: e.target.value
+                            }
+                          })
+                        }
+                      >
+                        <option value=''>{t('payroll.select')}</option>
+                        {JKK_CATEGORIES.map((category) => (
+                          <option key={category} value={category}>
+                            {t(JKK_CATEGORY_KEYS[category])}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
                   <div className='space-y-2'>
                     <p className='text-sm font-medium'>{t('payroll.familyMembers')}</p>
                     {enrollment.familyMembers.length > 0 ? (

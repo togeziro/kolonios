@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { employees } from '@/lib/db/schema/employees';
 import {
@@ -30,6 +31,7 @@ import {
 import {
   createEmployeeBpjsFamilyMemberFn,
   deleteEmployeeBpjsFamilyMemberFn,
+  generatePayrollFn,
   getCompanyPayrollSettingsFn,
   getMyPayslipsFn,
   listEmployeeBpjsEnrollmentsFn,
@@ -46,6 +48,7 @@ import {
 import {
   createEmployeeBpjsFamilyMemberFn_createServerFn_handler,
   deleteEmployeeBpjsFamilyMemberFn_createServerFn_handler,
+  generatePayrollFn_createServerFn_handler,
   getCompanyPayrollSettingsFn_createServerFn_handler,
   getMyPayslipsFn_createServerFn_handler,
   listEmployeeBpjsEnrollmentsFn_createServerFn_handler,
@@ -455,5 +458,77 @@ describe('tax record override', () => {
     expect(updated.source).toBe('manual');
     expect(updated.is_overridden).toBe(true);
     expect(Number(updated.tax_amount)).toBe(500000);
+  });
+});
+
+describe('payroll generation writes calculated tax records', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    sessionUser.id = 'payroll-boundary-a';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  it('writes a calculated employee tax record for each generated payroll record', async () => {
+    const { employee } = await seedEmployee('payroll-boundary-a');
+    const [period] = await db
+      .insert(payrollPeriods)
+      .values({
+        name: 'Generate Draft Period',
+        period_start: '2026-07-01',
+        period_end: '2026-07-31',
+        payment_date: '2026-08-05',
+        status: 'draft'
+      })
+      .returning({ id: payrollPeriods.id });
+    const [taxSetting] = await db
+      .insert(taxSettings)
+      .values({
+        code: 'TEST-PROGRESSIVE',
+        name: 'Test progressive setting',
+        rates: {
+          method: 'progressive',
+          ptkp: '4500000',
+          progressive: [
+            { upTo: '50000000', rate: '5' },
+            { upTo: null, rate: '15' }
+          ]
+        },
+        effective_from: '2026-01-01'
+      })
+      .returning({ id: taxSettings.id });
+    await db.insert(employeeSalaryAssignments).values({
+      employee_id: employee.id,
+      salary_type: 'monthly',
+      amount: '5000000',
+      effective_from: '2026-01-01'
+    });
+    await db.insert(employeeTaxProfiles).values({
+      employee_id: employee.id,
+      tax_setting_id: taxSetting.id,
+      tax_identifier: 'TAX-TEST-001',
+      filing_status: 'single',
+      ptkp_status: 'TK/0',
+      effective_from: '2026-01-01'
+    });
+
+    serverFnProvider.handler = generatePayrollFn_createServerFn_handler;
+    const created = await generatePayrollFn({ data: { payrollPeriodId: period.id } });
+
+    expect(created).toHaveLength(1);
+    const records = await db
+      .select()
+      .from(employeeTaxRecords)
+      .where(eq(employeeTaxRecords.employee_id, employee.id));
+    expect(records).toHaveLength(1);
+    expect(records[0].source).toBe('calculated');
+    expect(records[0].is_overridden).toBe(false);
+    expect(records[0].payroll_record_id).toBe(created[0].id);
+    expect(records[0].tax_period).toBe('2026-07-01');
+    expect(Number(records[0].taxable_income)).toBe(500000);
+    expect(Number(records[0].tax_amount)).toBe(25000);
   });
 });

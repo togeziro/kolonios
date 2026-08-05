@@ -26,7 +26,6 @@ import {
   employeeSalaryComponents,
   employeeTaxProfiles,
   employeeTaxRecords,
-  payrollAttendanceOverrides,
   payrollPeriods,
   payrollRecords,
   salaryComponents,
@@ -48,20 +47,15 @@ import {
   lockPayrollPeriod,
   assertPayrollTransition,
   getCompanyPayrollSettings,
-  updateCompanyPayrollSettings,
   listEmployeeBpjsEnrollments,
   listEmployeeBpjsFamilyMembers,
   upsertEmployeeBpjsEnrollment,
-  createEmployeeBpjsFamilyMember,
-  deleteEmployeeBpjsFamilyMember,
   getAttendanceOverride,
   upsertAttendanceOverride,
-  overrideEmployeeTaxRecord,
   mapPtkpStatusToAmount,
-  mapJkkCategoryToRate,
   type PayrollTransaction
 } from '@/lib/db/payroll';
-import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
+import { calculatePayroll, JKK_RATES, parseDbDecimalToMoney } from '../utils/calculator';
 import type {
   AttendancePolicy,
   BpjsInput,
@@ -1526,7 +1520,7 @@ export async function buildPayrollRecord(
     kesehatan: settings?.bpjs_kesehatan_enabled ?? false
   };
   const rates: BpjsRates = {
-    jkk: { very_low: 0.24, low: 0.54, medium: 0.89, high: 1.27, very_high: 1.74 },
+    jkk: JKK_RATES,
     jkmCompany: Number(settings?.jkm_company_rate ?? 0.3),
     jhtCompany: Number(settings?.jht_company_rate ?? 3.7),
     jhtEmployee: Number(settings?.jht_employee_rate ?? 2),
@@ -1539,7 +1533,11 @@ export async function buildPayrollRecord(
     enrollments: bpjsRows.map((row) => ({
       program: row.program,
       registeredWage: parseDbDecimalToMoney(row.registered_wage),
-      ...(row.jkk_category_override ? { jkkCategoryOverride: row.jkk_category_override } : {})
+      ...(row.jkk_category_override
+        ? { jkkCategoryOverride: row.jkk_category_override }
+        : row.program === 'jkk'
+          ? { jkkCategoryOverride: settings?.jkk_risk_category ?? 'low' }
+          : {})
     })),
     rates,
     enabled
@@ -1633,6 +1631,7 @@ export async function buildPayrollRecord(
               : attendance.shortfallHours
         }
       : attendance;
+    const taxProfile = mapTaxProfile(tax, setting);
     const input: PayrollCalculationInput = {
       salary: { type: assignment.salary_type, amount: parseDbDecimalToMoney(assignment.amount) },
       attendance: mergedAttendance,
@@ -1640,7 +1639,9 @@ export async function buildPayrollRecord(
       components,
       manualAdjustments: [],
       tax: {
-        ...mapTaxProfile(tax, setting),
+        ...taxProfile,
+        method: settings?.pph21_enabled === false ? 'none' : taxProfile.method,
+        ptkp: tax.ptkp_status ? mapPtkpStatusToAmount(tax.ptkp_status) * 100 : taxProfile.ptkp,
         pph21: tax.pph21_method ?? (settings?.pph21_method as Pph21Method | undefined) ?? 'gross'
       },
       bpjs: bpjsInput
@@ -1749,6 +1750,26 @@ export const generatePayrollFn = createServerFn({ method: 'POST' })
               'Failed to create payroll record.',
               'PAYROLL_RECORD_CREATE_FAILED'
             );
+          const resolvedSegments = record.details.resolvedSegments;
+          if (resolvedSegments && resolvedSegments.length > 0) {
+            const taxableIncome = resolvedSegments.reduce(
+              (sum, segment) => sum + segment.result.tax.taxableIncome,
+              0
+            );
+            const taxAmount = resolvedSegments.reduce(
+              (sum, segment) => sum + segment.result.tax.amount,
+              0
+            );
+            await tx.insert(employeeTaxRecords).values({
+              employee_id: record.employee_id,
+              payroll_record_id: row.id,
+              tax_period: period.period_start,
+              taxable_income: (taxableIncome / 100).toFixed(2),
+              tax_amount: (taxAmount / 100).toFixed(2),
+              source: 'calculated',
+              is_overridden: false
+            });
+          }
           created.push(row);
         }
         const [updatedPeriod] = await tx
@@ -1788,7 +1809,7 @@ export const listPayrollRecordsFn = createServerFn({ method: 'GET' })
   });
 
 export const getCompanyPayrollSettingsFn = createServerFn({ method: 'GET' }).handler(async () => {
-  await requirePermission('payroll', 'view');
+  await requirePermission('payroll', 'edit');
   return JSON.parse(JSON.stringify(await getCompanyPayrollSettings()));
 });
 
@@ -1934,7 +1955,8 @@ export const getAttendanceOverrideFn = createServerFn({ method: 'GET' })
     z.object({ payrollPeriodId: z.number().int().positive(), employeeId: z.string().min(1) })
   )
   .handler(async ({ data }) => {
-    await requirePermission('payroll', 'view');
+    const session = await requirePermission('payroll', 'view');
+    assertEmployeeScope(session, data.employeeId);
     return JSON.parse(
       JSON.stringify(await getAttendanceOverride(data.payrollPeriodId, data.employeeId))
     );

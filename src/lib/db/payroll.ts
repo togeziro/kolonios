@@ -12,7 +12,6 @@ import {
   employeeSalaryAssignments,
   employeeSalaryComponents,
   employeeTaxProfiles,
-  employeeTaxRecords,
   payslips,
   payrollAttendanceOverrides,
   payrollPeriods,
@@ -24,9 +23,7 @@ import { departments, designations } from './schema/masterdata';
 import { buildConditions, buildPagination, buildStatusCondition } from './utils';
 import { auditLog } from './schema/audit-log';
 import type {
-  NewCompanyPayrollSetting,
   NewEmployeeBpjsEnrollment,
-  NewEmployeeBpjsFamilyMember,
   NewEmployeeSalaryAssignment,
   NewEmployeeSalaryComponent,
   NewEmployeeTaxProfile,
@@ -38,14 +35,6 @@ import type {
 
 type EffectiveRow = { id: number; effective_from: string; effective_to: string | null };
 export type PayrollTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-export const JKK_CATEGORY_RATES: Record<string, number> = {
-  very_low: 0.24,
-  low: 0.54,
-  medium: 0.89,
-  high: 1.27,
-  very_high: 1.74
-};
 
 const PTKP_STATUS_ANNUAL: Record<string, number> = {
   'TK/0': 54_000_000,
@@ -62,13 +51,6 @@ export function mapPtkpStatusToAmount(status: string): number {
   const annual = PTKP_STATUS_ANNUAL[status];
   if (!annual) throw new DomainError(`Invalid PTKP status: ${status}`, 'INVALID_PTKP_STATUS');
   return Math.round(annual / 12);
-}
-
-export function mapJkkCategoryToRate(category: string): number {
-  const rate = JKK_CATEGORY_RATES[category];
-  if (rate == null)
-    throw new DomainError(`Invalid JKK category: ${category}`, 'INVALID_JKK_CATEGORY');
-  return rate;
 }
 
 function previousDbDate(value: string): string {
@@ -1451,30 +1433,6 @@ export async function getCompanyPayrollSettings() {
   }
 }
 
-export async function updateCompanyPayrollSettings(values: Partial<NewCompanyPayrollSetting>) {
-  try {
-    const existing = await getCompanyPayrollSettings();
-    if (existing) {
-      const [row] = await db
-        .update(companyPayrollSettings)
-        .set({ ...values, updated_at: new Date() })
-        .where(eq(companyPayrollSettings.id, existing.id))
-        .returning();
-      if (!row)
-        throw new DomainError(
-          'Company payroll settings changed during update.',
-          'CONCURRENT_MODIFICATION'
-        );
-      return row;
-    }
-    const [row] = await db.insert(companyPayrollSettings).values(values).returning();
-    if (!row) throw new DomainError('Failed to create company payroll settings.');
-    return row;
-  } catch (e) {
-    mapDbError(e, 'payroll.updateCompanyPayrollSettings');
-  }
-}
-
 export async function listEmployeeBpjsEnrollments(employeeId: string) {
   try {
     assertEmployeeId(employeeId);
@@ -1559,31 +1517,6 @@ export async function upsertEmployeeBpjsEnrollment(
   }
 }
 
-export async function createEmployeeBpjsFamilyMember(data: NewEmployeeBpjsFamilyMember) {
-  try {
-    const [row] = await db.insert(employeeBpjsFamilyMembers).values(data).returning();
-    if (!row) throw new DomainError('Failed to create BPJS family member.');
-    return row;
-  } catch (e) {
-    mapDbError(e, 'payroll.createEmployeeBpjsFamilyMember');
-  }
-}
-
-export async function deleteEmployeeBpjsFamilyMember(id: number) {
-  try {
-    return (
-      (
-        await db
-          .delete(employeeBpjsFamilyMembers)
-          .where(eq(employeeBpjsFamilyMembers.id, id))
-          .returning()
-      ).length > 0
-    );
-  } catch (e) {
-    mapDbError(e, 'payroll.deleteEmployeeBpjsFamilyMember');
-  }
-}
-
 export async function getAttendanceOverride(periodId: number, employeeId: string) {
   try {
     const [row] = await db
@@ -1636,23 +1569,5 @@ export async function upsertAttendanceOverride(
     return row;
   } catch (e) {
     mapDbError(e, 'payroll.upsertAttendanceOverride');
-  }
-}
-
-export async function overrideEmployeeTaxRecord(recordId: number, amount: string, userId: string) {
-  try {
-    const [row] = await db
-      .update(employeeTaxRecords)
-      .set({
-        tax_amount: amount,
-        source: 'manual',
-        is_overridden: true
-      })
-      .where(eq(employeeTaxRecords.id, recordId))
-      .returning();
-    if (!row) throw new DomainError('Tax record was not found.', 'TAX_RECORD_NOT_FOUND');
-    return row;
-  } catch (e) {
-    mapDbError(e, 'payroll.overrideEmployeeTaxRecord');
   }
 }

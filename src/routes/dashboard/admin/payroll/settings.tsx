@@ -26,7 +26,7 @@ import { canPayrollAction } from '@/features/payroll/components/permissions';
 export const Route = createFileRoute('/dashboard/admin/payroll/settings')({
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
-    await requirePermissionRpc({ data: 'payroll.view' });
+    await requirePermissionRpc({ data: 'payroll.edit' });
   },
   component: SettingsPage
 });
