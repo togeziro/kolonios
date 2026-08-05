@@ -1770,14 +1770,14 @@ export const createEmployeeBpjsFamilyMemberFn = createServerFn({ method: 'POST' 
   .validator(bpjsFamilyMemberSchema)
   .handler(async ({ data }) => {
     const session = await requirePermission('payroll', 'edit');
-    const created = await withPayrollAuditTransaction(
+    return withPayrollAuditTransaction(
       session.user.id,
       {
         action: 'payroll.bpjs_family_member.create',
         entityType: 'employee_bpjs_family_member'
       },
-      async (tx) =>
-        tx
+      async (tx) => {
+        const [created] = await tx
           .insert(employeeBpjsFamilyMembers)
           .values({
             enrollment_id: data.enrollmentId,
@@ -1786,10 +1786,11 @@ export const createEmployeeBpjsFamilyMemberFn = createServerFn({ method: 'POST' 
             birth_date: data.birthDate ?? null,
             is_core: data.isCore
           })
-          .returning()
+          .returning();
+        if (!created) throw new DomainError('Failed to create BPJS family member.');
+        return created;
+      }
     );
-    if (!created) throw new DomainError('Failed to create BPJS family member.');
-    return created;
   });
 
 export const deleteEmployeeBpjsFamilyMemberFn = createServerFn({ method: 'POST' })
@@ -1876,18 +1877,15 @@ export const overrideEmployeeTaxRecordFn = createServerFn({ method: 'POST' })
         entityType: 'employee_tax_record',
         entityId: data.id
       },
-      async (tx) =>
-        JSON.parse(
-          JSON.stringify(
-            (
-              await tx
-                .update(employeeTaxRecords)
-                .set({ tax_amount: data.amount, source: 'manual', is_overridden: true })
-                .where(eq(employeeTaxRecords.id, data.id))
-                .returning()
-            )[0]
-          )
-        )
+      async (tx) => {
+        const [row] = await tx
+          .update(employeeTaxRecords)
+          .set({ tax_amount: data.amount, source: 'manual', is_overridden: true })
+          .where(eq(employeeTaxRecords.id, data.id))
+          .returning();
+        if (!row) throw new DomainError('Tax record was not found.', 'TAX_RECORD_NOT_FOUND');
+        return JSON.parse(JSON.stringify(row));
+      }
     );
   });
 
