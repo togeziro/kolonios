@@ -1,9 +1,18 @@
 import { z } from 'zod';
 import type { EmployeeFilters, EmployeeMutationPayload } from './types';
 
+export const EMPLOYEE_QUERY_LIMIT_MAX = 100;
+
+export function isEmployeeQueryTruncated(
+  total: number | undefined,
+  limit = EMPLOYEE_QUERY_LIMIT_MAX
+): boolean {
+  return typeof total === 'number' && total > limit;
+}
+
 export const employeeFiltersSchema: z.ZodType<EmployeeFilters> = z.object({
   page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
+  limit: z.coerce.number().int().positive().max(EMPLOYEE_QUERY_LIMIT_MAX).optional(),
   search: z.string().optional(),
   department_id: z.coerce.number().int().positive().optional(),
   status: z.string().optional(),

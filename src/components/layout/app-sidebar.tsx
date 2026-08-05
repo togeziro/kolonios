@@ -31,7 +31,7 @@ import {
   SidebarRail
 } from '@/components/ui/sidebar';
 
-const navTitleKeys: Record<string, string> = {
+export const navTitleKeys: Record<string, string> = {
   Overview: 'navigation.overview',
   Dashboard: 'navigation.dashboard',
   'My Work': 'navigation.myWork',
@@ -45,6 +45,10 @@ const navTitleKeys: Record<string, string> = {
   Payslips: 'navigation.payslips',
   'Payroll Profiles': 'navigation.payrollProfiles',
   Settings: 'navigation.settings',
+  'Attendance Locations': 'navigation.attendanceLocations',
+  'Attendance Schedules': 'navigation.attendanceSchedules',
+  'Attendance Assignments': 'navigation.attendanceAssignments',
+  'Attendance Reports': 'navigation.attendanceReports',
   Users: 'navigation.users',
   Departments: 'navigation.departments',
   'Job Titles': 'navigation.jobTitles',

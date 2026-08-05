@@ -21,7 +21,7 @@ import { useUpdateCompanyPayrollSettings } from '@/features/payroll/api/mutation
 import type { JkkRiskCategory, Pph21Method } from '@/features/payroll/api/types';
 import type { CompanyPayrollSetting } from '@/lib/db/schema/payroll';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
-import { canPayrollAction } from '@/features/payroll/components/permissions';
+import { canPayrollAction, settingsSaveDisabled } from '@/features/payroll/components/permissions';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/settings')({
   beforeLoad: async () => {
@@ -318,7 +318,7 @@ function SettingsPage() {
             </Card>
 
             <div>
-              <Button onClick={save} disabled={!canEdit || update.isPending || !settings}>
+              <Button onClick={save} disabled={settingsSaveDisabled(canEdit, update.isPending)}>
                 {t('common.save')}
               </Button>
             </div>

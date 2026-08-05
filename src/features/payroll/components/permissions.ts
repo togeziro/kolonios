@@ -9,3 +9,7 @@ export function canPayrollAction(
 ) {
   return isAdmin || permissions?.payroll?.[action] === true;
 }
+
+export function settingsSaveDisabled(canEdit: boolean, isPending: boolean) {
+  return !canEdit || isPending;
+}

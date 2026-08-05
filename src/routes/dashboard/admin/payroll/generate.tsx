@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button';
 import { payrollPeriodsQueryOptions } from '@/features/payroll/api/queries';
 import { useGeneratePayroll } from '@/features/payroll/api/mutations';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
+import {
+  EMPLOYEE_QUERY_LIMIT_MAX,
+  isEmployeeQueryTruncated
+} from '@/features/employees/api/validation';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
 
@@ -26,7 +30,7 @@ function GeneratePage() {
   const canEdit = canPayrollAction(permissions, isAdmin, 'edit');
   const periodsQuery = useQuery(payrollPeriodsQueryOptions({ limit: 100 }));
   const employeesQuery = useQuery(
-    employeesQueryOptions({ page: 1, limit: 1000, status: 'active' })
+    employeesQueryOptions({ page: 1, limit: EMPLOYEE_QUERY_LIMIT_MAX, status: 'active' })
   );
   const periods = periodsQuery.data?.rows ?? [];
   const [periodId, setPeriodId] = useState('');
@@ -104,6 +108,11 @@ function GeneratePage() {
           )}
           {employeesQuery.isError && (
             <p className='text-sm text-destructive'>{t('payroll.employeeLoadFailed')}</p>
+          )}
+          {isEmployeeQueryTruncated(employeesQuery.data?.total_employees) && (
+            <p className='text-sm text-amber-600'>
+              {t('payroll.employeeLimitWarning', { count: EMPLOYEE_QUERY_LIMIT_MAX })}
+            </p>
           )}
           {generate.isError && (
             <p className='text-sm text-destructive'>

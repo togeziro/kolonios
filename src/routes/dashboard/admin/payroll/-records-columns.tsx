@@ -11,6 +11,14 @@ type RecordRow = PayrollReportRow & {
   has_override?: boolean;
 };
 
+export function toHoursMinutes(hours: number | null | undefined): {
+  whole: number;
+  minutes: number;
+} {
+  const totalMinutes = Math.round((hours ?? 0) * 60);
+  return { whole: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+}
+
 export function createPayrollRecordColumns(options: {
   t: TFunction;
   canApprove: boolean;
@@ -74,17 +82,18 @@ export function createPayrollRecordColumns(options: {
       accessorKey: 'worked_hours',
       header: t('payroll.totalWork'),
       cell: ({ row }) => {
-        const hours = Number(row.original.worked_hours ?? 0);
-        const whole = Math.floor(hours);
-        const minutes = Math.round((hours - whole) * 60);
-        return `${whole}j ${minutes}m`;
+        const { whole, minutes } = toHoursMinutes(row.original.worked_hours);
+        return t('payroll.hoursDisplay', { whole, minutes });
       },
       meta: { label: t('payroll.totalWork') }
     },
     {
       accessorKey: 'total_lembur',
       header: t('payroll.totalLembur'),
-      cell: () => '0j 0m',
+      cell: () => {
+        const { whole, minutes } = toHoursMinutes(null);
+        return t('payroll.hoursDisplay', { whole, minutes });
+      },
       meta: { label: t('payroll.totalLembur') }
     },
     {

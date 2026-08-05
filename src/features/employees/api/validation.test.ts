@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { employeeFiltersSchema, employeeIdSchema, employeeMutationSchema } from './validation';
+import {
+  EMPLOYEE_QUERY_LIMIT_MAX,
+  employeeFiltersSchema,
+  employeeIdSchema,
+  employeeMutationSchema,
+  isEmployeeQueryTruncated
+} from './validation';
+
+describe('employee query limit', () => {
+  it('caps the employee query limit at 100', () => {
+    expect(EMPLOYEE_QUERY_LIMIT_MAX).toBe(100);
+    expect(employeeFiltersSchema.safeParse({ limit: EMPLOYEE_QUERY_LIMIT_MAX }).success).toBe(true);
+  });
+
+  it('detects when the active employee total exceeds the query limit', () => {
+    expect(isEmployeeQueryTruncated(101)).toBe(true);
+    expect(isEmployeeQueryTruncated(100)).toBe(false);
+    expect(isEmployeeQueryTruncated(0)).toBe(false);
+    expect(isEmployeeQueryTruncated(undefined)).toBe(false);
+  });
+});
 
 describe('employeeFiltersSchema', () => {
   it('accepts empty object', () => {

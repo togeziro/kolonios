@@ -38,6 +38,7 @@ import {
   listPayrollRecordsFn,
   overrideEmployeeTaxRecordFn,
   updateCompanyPayrollSettingsFn,
+  updateEmployeePayrollProfileFn,
   upsertAttendanceOverrideFn,
   upsertEmployeeBpjsEnrollmentFn
 } from './service';
@@ -55,6 +56,7 @@ import {
   listPayrollRecordsFn_createServerFn_handler,
   overrideEmployeeTaxRecordFn_createServerFn_handler,
   updateCompanyPayrollSettingsFn_createServerFn_handler,
+  updateEmployeePayrollProfileFn_createServerFn_handler,
   upsertAttendanceOverrideFn_createServerFn_handler,
   upsertEmployeeBpjsEnrollmentFn_createServerFn_handler
   // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
@@ -530,5 +532,64 @@ describe('payroll generation writes calculated tax records', () => {
     expect(records[0].tax_period).toBe('2026-07-01');
     expect(Number(records[0].taxable_income)).toBe(500000);
     expect(Number(records[0].tax_amount)).toBe(25000);
+  });
+});
+
+describe('tax profile versioning SET clause', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    sessionUser.id = 'payroll-boundary-a';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  it('closes the current tax profile row and inserts a later version on update', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [existing] = await db
+      .insert(employeeTaxProfiles)
+      .values({
+        employee_id: 'payroll-boundary-a',
+        tax_identifier: 'NPWP-OLD',
+        filing_status: 'single',
+        ptkp_status: 'TK/0',
+        effective_from: '2026-01-01'
+      })
+      .returning();
+
+    serverFnProvider.handler = updateEmployeePayrollProfileFn_createServerFn_handler;
+    const created = await updateEmployeePayrollProfileFn({
+      data: {
+        employeeId: 'payroll-boundary-a',
+        kind: 'tax',
+        values: {
+          id: existing.id,
+          taxIdentifier: 'NPWP-NEW',
+          filingStatus: 'married',
+          ptkpStatus: 'K/1',
+          effectiveFrom: '2026-07-01'
+        }
+      }
+    });
+
+    expect(created.employee_id).toBe('payroll-boundary-a');
+    expect(created.tax_identifier).toBe('NPWP-NEW');
+    expect(created.filing_status).toBe('married');
+    expect(created.ptkp_status).toBe('K/1');
+    expect(created.effective_from).toBe('2026-07-01');
+
+    const [closed] = await db
+      .select()
+      .from(employeeTaxProfiles)
+      .where(eq(employeeTaxProfiles.id, existing.id));
+    expect(closed.effective_to).toBe('2026-06-30');
+
+    const versions = await db
+      .select()
+      .from(employeeTaxProfiles)
+      .where(eq(employeeTaxProfiles.employee_id, 'payroll-boundary-a'));
+    expect(versions).toHaveLength(2);
   });
 });

@@ -7,7 +7,7 @@ type BreadcrumbItem = {
   link: string;
 };
 
-const segmentKeys: Record<string, string> = {
+export const breadcrumbSegmentKeys: Record<string, string> = {
   dashboard: 'navigation.dashboard',
   overview: 'navigation.overview',
   customers: 'navigation.customers',
@@ -20,7 +20,13 @@ const segmentKeys: Record<string, string> = {
   departments: 'navigation.departments',
   designations: 'navigation.jobTitles',
   'audit-log': 'navigation.auditLog',
-  'role-groups': 'navigation.roleGroups'
+  'role-groups': 'navigation.roleGroups',
+  payroll: 'navigation.payroll',
+  records: 'payroll.records',
+  generate: 'payroll.generate',
+  periods: 'payroll.periods',
+  reports: 'payroll.reports',
+  settings: 'navigation.settings'
 };
 
 // This allows to add custom title as well
@@ -47,7 +53,7 @@ export function useBreadcrumbs() {
     const segments = pathname.split('/').filter(Boolean);
     return segments.map((segment, index) => {
       const path = `/${segments.slice(0, index + 1).join('/')}`;
-      const key = segmentKeys[segment];
+      const key = breadcrumbSegmentKeys[segment];
       return {
         title: key ? t(key) : segment.charAt(0).toUpperCase() + segment.slice(1),
         link: path

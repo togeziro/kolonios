@@ -21,11 +21,21 @@ export interface PayrollProfileActor {
   user: { id: string; role?: string | null };
 }
 
+export const PAYROLL_PERIOD_STATUSES = [
+  'draft',
+  'processing',
+  'ready_to_pay',
+  'paid',
+  'locked'
+] as const;
+export type PayrollPeriodStatus = (typeof PAYROLL_PERIOD_STATUSES)[number];
+export const PAYROLL_EDITABLE_STATUSES: readonly PayrollPeriodStatus[] = ['draft', 'processing'];
+
 export interface PayrollRecordFilters {
   payrollPeriodId?: number;
   employeeId?: string;
   departmentId?: number;
-  status?: 'draft' | 'processing' | 'ready_to_pay' | 'paid' | 'locked';
+  status?: PayrollPeriodStatus;
   scope?: 'admin' | 'employee';
   page?: number;
   limit?: number;
