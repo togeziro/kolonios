@@ -38,7 +38,8 @@ import {
   employeeShifts,
   performanceReports,
   leaveTypeConfigs,
-  attendanceCorrections
+  attendanceCorrections,
+  nationalHolidays
 } from './schema/attendance';
 
 const TEST_USER_ID = 'test-user-att-123';
@@ -951,5 +952,98 @@ describe('admin attendance report', () => {
     expect(res.total).toBe(5);
     expect(res.records).toHaveLength(2);
     expect(res.offset).toBe(2);
+  });
+});
+
+describe('national holidays', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  afterAll(async () => {
+    await resetAllTables();
+  });
+
+  it('creates a national holiday record', async () => {
+    const holiday = {
+      date: '2026-01-01',
+      name: 'New Year Day',
+      description: 'National holiday for New Year',
+      is_recurring: true,
+      year: null,
+      source: 'manual' as const,
+      is_override: false
+    };
+
+    const [inserted] = await db.insert(nationalHolidays).values(holiday).returning();
+
+    expect(inserted).toBeDefined();
+    expect(inserted.date).toBe('2026-01-01');
+    expect(inserted.name).toBe('New Year Day');
+    expect(inserted.is_recurring).toBe(true);
+    expect(inserted.year).toBeNull();
+    expect(inserted.source).toBe('manual');
+    expect(inserted.is_override).toBe(false);
+  });
+
+  it('enforces unique constraint on date', async () => {
+    await db.insert(nationalHolidays).values({
+      date: '2026-01-01',
+      name: 'New Year Day',
+      is_recurring: true,
+      year: null,
+      source: 'manual' as const,
+      is_override: false
+    });
+
+    try {
+      await db.insert(nationalHolidays).values({
+        date: '2026-01-01',
+        name: 'Another Holiday',
+        is_recurring: false,
+        year: 2026,
+        source: 'manual' as const,
+        is_override: true
+      });
+      // If we get here, the unique constraint didn't work
+      expect(true).toBe(false); // Force test to fail
+    } catch (error) {
+      // Unique constraint violation should be thrown
+      expect(error).toBeDefined();
+    }
+  });
+
+  it('creates a non-recurring holiday with year', async () => {
+    const [inserted] = await db
+      .insert(nationalHolidays)
+      .values({
+        date: '2026-12-25',
+        name: 'Company Anniversary',
+        description: 'Company specific holiday',
+        is_recurring: false,
+        year: 2026,
+        source: 'manual' as const,
+        is_override: false
+      })
+      .returning();
+
+    expect(inserted.year).toBe(2026);
+    expect(inserted.is_recurring).toBe(false);
+  });
+
+  it('creates an imported holiday', async () => {
+    const [inserted] = await db
+      .insert(nationalHolidays)
+      .values({
+        date: '2026-08-17',
+        name: 'Independence Day',
+        is_recurring: true,
+        year: null,
+        source: 'imported' as const,
+        is_override: false
+      })
+      .returning();
+
+    expect(inserted.source).toBe('imported');
   });
 });

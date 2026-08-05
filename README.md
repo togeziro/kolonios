@@ -5,20 +5,20 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License" />
   <img src="https://img.shields.io/badge/TanStack_Start-1.x-FF4154" alt="TanStack Start" />
-  <img src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/PostgreSQL-17-336791" alt="PostgreSQL" />
 </p>
 
 # Kolonios
 
-**Kolonios** is a production-ready **ISP / property management admin dashboard** built with **TanStack Start** (React 19 + Vite 7 + Nitro), **shadcn/ui**, **Tailwind CSS v4**, **Better Auth**, and **PostgreSQL (Drizzle ORM)**. It provides attendance tracking with geo-fencing, customer and employee management, masterdata CRUD, and a notification center behind a type-safe, feature-based codebase.
+**Kolonios** is a production-ready **ISP / property management admin dashboard** built with **TanStack Start** (React 19 + Vite 8 + Nitro), **shadcn/ui**, **Tailwind CSS v4**, **Better Auth**, and **PostgreSQL (Drizzle ORM)**. It provides attendance tracking with geo-fencing, customer and employee management, masterdata CRUD, and a notification center behind a type-safe, feature-based codebase.
 
 ## Tech Stack
 
 | Layer                          | Technology                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Frontend (UI)                  | [React 19](https://react.dev), [TanStack Router](https://tanstack.com/router) (file-based, type-safe), [TanStack Form](https://tanstack.com/form) + [Zod](https://zod.dev), [shadcn/ui](https://ui.shadcn.com), [Tailwind CSS v4](https://tailwindcss.com), [Recharts](https://recharts.org), [motion](https://motion.dev)                                                                                      |
-| Middle (server runtime & data) | [TanStack Start](https://tanstack.com/start) on [Vite 7](https://vite.dev) + [Nitro](https://nitro.build), [TanStack React Query](https://tanstack.com/query) with SSR dehydration via `@tanstack/react-router-ssr-query`, `createServerFn()` RPC boundary, server-side prefetch via route `loader` + `ensureQueryData({ ssr: 'data-only' })`, [Better Auth](https://better-auth.com) session + RBAC middleware |
+| Middle (server runtime & data) | [TanStack Start](https://tanstack.com/start) on [Vite 8](https://vite.dev) + [Nitro](https://nitro.build), [TanStack React Query](https://tanstack.com/query) with SSR dehydration via `@tanstack/react-router-ssr-query`, `createServerFn()` RPC boundary, server-side prefetch via route `loader` + `ensureQueryData({ ssr: 'data-only' })`, [Better Auth](https://better-auth.com) session + RBAC middleware |
 | Backend (data & persistence)   | [PostgreSQL](https://www.postgresql.org) + [Drizzle ORM](https://orm.drizzle.team) (`postgres` driver), Better Auth DB-session store, server-only data-access layer with Zod-validated inputs and mapped DB errors, Nitro deploy presets (Vercel / Cloudflare / Node.js)                                                                                                                                        |
 | Tooling                        | [Bun](https://bun.sh) (runtime + scripts), [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) (tests), [oxlint](https://oxc.rs) + [oxfmt](https://oxc.rs) (lint/format)                                                                                                                                                                                                                        |
 

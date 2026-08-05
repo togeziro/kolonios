@@ -5,28 +5,48 @@
 // test start from a clean, known state by truncating every table and seeding
 // only what the test needs.
 import { db } from '@/lib/db';
-import { notifications } from '@/lib/db/schema/notifications';
-import { customers } from '@/lib/db/schema/customers';
-import { departments, designations } from '@/lib/db/schema/masterdata';
-import { employees } from '@/lib/db/schema/employees';
 import {
+  nationalHolidays,
+  attendanceCorrections,
+  leaveTypeConfigs,
+  dayOffs,
+  dateOverrides,
+  scheduleAssignments,
+  shiftWeekdayRules,
   employeeShifts,
   leaves,
   performanceReports,
   locations,
-  shifts,
-  shiftWeekdayRules,
-  scheduleAssignments,
-  dateOverrides,
-  dayOffs,
-  attendanceCorrections,
-  leaveTypeConfigs
+  shifts
 } from '@/lib/db/schema/attendance';
+import { customers } from '@/lib/db/schema/customers';
+import { departments, designations } from '@/lib/db/schema/masterdata';
+import { employees } from '@/lib/db/schema/employees';
+import { notifications } from '@/lib/db/schema/notifications';
 import { tasks, taskRequirements, employeeSkills } from '@/lib/db/schema/tasks';
 import { user, session, account, verification } from '@/lib/db/auth-schema';
 import { auditLog } from '@/lib/db/schema/audit-log';
 import { roleGroups } from '@/lib/db/schema/role-groups';
 import { userRoleGroups } from '@/lib/db/schema/user-role-groups';
+import {
+  salaryComponents,
+  employeeSalaryAssignments,
+  employeeSalaryComponents,
+  payrollPeriods,
+  payrollRecords,
+  payslips,
+  taxSettings,
+  employeeTaxProfiles,
+  employeeTaxRecords,
+  employeeBenefitEnrollments,
+  employeeBankAccounts,
+  employeeEmploymentEvents,
+  employeeDocuments,
+  companyPayrollSettings,
+  employeeBpjsEnrollments,
+  employeeBpjsFamilyMembers,
+  payrollAttendanceOverrides
+} from '@/lib/db/schema/payroll';
 
 export async function resetDatabase() {
   await db.delete(notifications);
@@ -34,6 +54,25 @@ export async function resetDatabase() {
 }
 
 export async function resetAllTables() {
+  // Delete in correct order (child tables before parent tables)
+  await db.delete(payrollAttendanceOverrides);
+  await db.delete(employeeBpjsFamilyMembers);
+  await db.delete(employeeBpjsEnrollments);
+  await db.delete(employeeDocuments);
+  await db.delete(employeeEmploymentEvents);
+  await db.delete(employeeBankAccounts);
+  await db.delete(employeeBenefitEnrollments);
+  await db.delete(employeeTaxRecords);
+  await db.delete(employeeTaxProfiles);
+  await db.delete(payslips);
+  await db.delete(payrollRecords);
+  await db.delete(payrollPeriods);
+  await db.delete(employeeSalaryComponents);
+  await db.delete(employeeSalaryAssignments);
+  await db.delete(salaryComponents);
+  await db.delete(companyPayrollSettings);
+  await db.delete(taxSettings);
+  await db.delete(nationalHolidays);
   await db.delete(attendanceCorrections);
   await db.delete(leaveTypeConfigs);
   await db.delete(dayOffs);

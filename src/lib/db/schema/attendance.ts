@@ -24,6 +24,8 @@ export const attendanceStatusEnum = pgEnum('attendance_status', [
   'pending'
 ]);
 
+export const holidaySourceEnum = pgEnum('holiday_source', ['manual', 'imported']);
+
 export const leaveTypeEnum = pgEnum('leave_type', [
   'annual',
   'sick',
@@ -234,6 +236,23 @@ export const attendanceCorrections = pgTable('attendance_corrections', {
   created_at: timestamp('created_at').defaultNow().notNull()
 });
 
+export const nationalHolidays = pgTable(
+  'national_holidays',
+  {
+    id: serial('id').primaryKey(),
+    date: text('date').notNull(), // YYYY-MM-DD
+    name: text('name').notNull(),
+    description: text('description'),
+    is_recurring: boolean('is_recurring').default(false).notNull(),
+    year: integer('year'),
+    source: holidaySourceEnum('source').default('manual').notNull(),
+    is_override: boolean('is_override').default(false).notNull(),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (t) => [uniqueIndex('national_holidays_date_unique').on(t.date)]
+);
+
 // Extend employee_shifts with policy context and validation state
 // (will be done in a separate edit)
 
@@ -360,3 +379,6 @@ export type NewAttendanceCorrection = typeof attendanceCorrections.$inferInsert;
 
 export type LeaveTypeConfig = typeof leaveTypeConfigs.$inferSelect;
 export type NewLeaveTypeConfig = typeof leaveTypeConfigs.$inferInsert;
+
+export type NationalHoliday = typeof nationalHolidays.$inferSelect;
+export type NewNationalHoliday = typeof nationalHolidays.$inferInsert;
