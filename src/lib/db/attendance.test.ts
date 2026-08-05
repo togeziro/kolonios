@@ -20,7 +20,12 @@ import {
   checkOut,
   requestAttendanceCorrection,
   reviewAttendanceCorrection,
-  getAdminAttendanceReport
+  getAdminAttendanceReport,
+  getNationalHolidays,
+  getNationalHoliday,
+  createNationalHoliday,
+  updateNationalHoliday,
+  deleteNationalHoliday
 } from './attendance';
 import {
   resetAllTables,
@@ -1045,5 +1050,147 @@ describe('national holidays', () => {
       .returning();
 
     expect(inserted.source).toBe('imported');
+  });
+});
+
+describe('national holidays CRUD functions', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  afterAll(async () => {
+    await resetAllTables();
+  });
+
+  it('getNationalHolidays returns all holidays when no year filter', async () => {
+    await db.insert(nationalHolidays).values([
+      {
+        date: '2026-01-01',
+        name: 'New Year',
+        is_recurring: true,
+        year: null,
+        source: 'manual' as const
+      },
+      {
+        date: '2026-12-25',
+        name: 'Christmas',
+        is_recurring: true,
+        year: null,
+        source: 'manual' as const
+      }
+    ]);
+
+    const res = await getNationalHolidays();
+    expect(res.success).toBe(true);
+    expect(res.holidays).toHaveLength(2);
+  });
+
+  it('getNationalHolidays filters by year', async () => {
+    await db.insert(nationalHolidays).values([
+      {
+        date: '2026-01-01',
+        name: 'New Year 2026',
+        is_recurring: false,
+        year: 2026,
+        source: 'manual' as const
+      },
+      {
+        date: '2027-01-01',
+        name: 'New Year 2027',
+        is_recurring: false,
+        year: 2027,
+        source: 'manual' as const
+      }
+    ]);
+
+    const res = await getNationalHolidays(2026);
+    expect(res.success).toBe(true);
+    expect(res.holidays).toHaveLength(1);
+    expect(res.holidays[0].name).toBe('New Year 2026');
+  });
+
+  it('getNationalHoliday returns a single holiday by id', async () => {
+    const [holiday] = await db
+      .insert(nationalHolidays)
+      .values({
+        date: '2026-01-01',
+        name: 'New Year',
+        is_recurring: true,
+        year: null,
+        source: 'manual' as const
+      })
+      .returning();
+
+    const res = await getNationalHoliday(holiday.id);
+    expect(res.success).toBe(true);
+    expect(res.holiday).toBeDefined();
+    expect(res.holiday!.name).toBe('New Year');
+  });
+
+  it('getNationalHoliday returns null for non-existent id', async () => {
+    const res = await getNationalHoliday(9999);
+    expect(res.success).toBe(false);
+    expect(res.holiday).toBeUndefined();
+  });
+
+  it('createNationalHoliday creates a new holiday', async () => {
+    const input = {
+      date: '2026-01-01',
+      name: 'New Year',
+      description: 'New Year Holiday',
+      is_recurring: true,
+      year: null,
+      source: 'manual' as const,
+      is_override: false
+    };
+
+    const res = await createNationalHoliday(input);
+    expect(res.success).toBe(true);
+    expect(res.holiday).toBeDefined();
+    expect(res.holiday!.name).toBe('New Year');
+    expect(res.holiday!.date).toBe('2026-01-01');
+  });
+
+  it('updateNationalHoliday updates an existing holiday', async () => {
+    const [holiday] = await db
+      .insert(nationalHolidays)
+      .values({
+        date: '2026-01-01',
+        name: 'New Year',
+        is_recurring: true,
+        year: null,
+        source: 'manual' as const
+      })
+      .returning();
+
+    const res = await updateNationalHoliday(holiday.id, { name: 'Updated New Year' });
+    expect(res.success).toBe(true);
+    expect(res.holiday).toBeDefined();
+    expect(res.holiday!.name).toBe('Updated New Year');
+  });
+
+  it('updateNationalHoliday returns null for non-existent holiday', async () => {
+    const res = await updateNationalHoliday(9999, { name: 'Non-existent' });
+    expect(res.success).toBe(false);
+    expect(res.holiday).toBeUndefined();
+  });
+
+  it('deleteNationalHoliday deletes an existing holiday', async () => {
+    const [holiday] = await db
+      .insert(nationalHolidays)
+      .values({
+        date: '2026-01-01',
+        name: 'New Year',
+        is_recurring: true,
+        year: null,
+        source: 'manual' as const
+      })
+      .returning();
+
+    const res = await deleteNationalHoliday(holiday.id);
+    expect(res.success).toBe(true);
+
+    const checkRes = await getNationalHoliday(holiday.id);
+    expect(checkRes.success).toBe(false);
   });
 });

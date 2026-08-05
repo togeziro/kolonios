@@ -13,7 +13,8 @@ import {
   dateOverrides,
   dayOffs,
   attendanceCorrections,
-  leaveTypeConfigs
+  leaveTypeConfigs,
+  nationalHolidays
 } from './schema/attendance';
 import { employees } from './schema/employees';
 import { departments } from './schema/masterdata';
@@ -1186,3 +1187,111 @@ export async function getAdminAttendanceReport(filters: AdminReportFilters = {})
 export type AdminAttendanceReportRow = Awaited<
   ReturnType<typeof getAdminAttendanceReport>
 >['records'][number];
+
+// --- National Holidays CRUD ---
+
+export type NewNationalHoliday = {
+  date: string;
+  name: string;
+  description?: string | null;
+  is_recurring?: boolean;
+  year?: number | null;
+  source?: 'manual' | 'imported';
+  is_override?: boolean;
+};
+
+export async function getNationalHolidays(year?: number) {
+  try {
+    const where = year !== undefined ? eq(nationalHolidays.year, year) : undefined;
+    const rows = await db
+      .select()
+      .from(nationalHolidays)
+      .where(where)
+      .orderBy(asc(nationalHolidays.date));
+
+    return { success: true, holidays: rows };
+  } catch (e) {
+    mapDbError(e, 'attendance.getNationalHolidays');
+    return { success: false, holidays: [] };
+  }
+}
+
+export async function getNationalHoliday(id: number) {
+  try {
+    const [holiday] = await db
+      .select()
+      .from(nationalHolidays)
+      .where(eq(nationalHolidays.id, id))
+      .limit(1);
+
+    if (!holiday) {
+      return { success: false, holiday: undefined };
+    }
+
+    return { success: true, holiday };
+  } catch (e) {
+    mapDbError(e, 'attendance.getNationalHoliday');
+    return { success: false, holiday: undefined };
+  }
+}
+
+export async function createNationalHoliday(input: NewNationalHoliday) {
+  try {
+    const [holiday] = await db
+      .insert(nationalHolidays)
+      .values({
+        date: input.date,
+        name: input.name,
+        description: input.description ?? null,
+        is_recurring: input.is_recurring ?? false,
+        year: input.year ?? null,
+        source: input.source ?? 'manual',
+        is_override: input.is_override ?? false
+      })
+      .returning();
+
+    return { success: true, holiday };
+  } catch (e) {
+    mapDbError(e, 'attendance.createNationalHoliday');
+    return { success: false };
+  }
+}
+
+export async function updateNationalHoliday(id: number, input: Partial<NewNationalHoliday>) {
+  try {
+    const patch: Record<string, unknown> = {};
+    if (input.date !== undefined) patch.date = input.date;
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.description !== undefined) patch.description = input.description;
+    if (input.is_recurring !== undefined) patch.is_recurring = input.is_recurring;
+    if (input.year !== undefined) patch.year = input.year;
+    if (input.source !== undefined) patch.source = input.source;
+    if (input.is_override !== undefined) patch.is_override = input.is_override;
+    patch.updated_at = new Date();
+
+    const [holiday] = await db
+      .update(nationalHolidays)
+      .set(patch)
+      .where(eq(nationalHolidays.id, id))
+      .returning();
+
+    if (!holiday) {
+      return { success: false, holiday: undefined };
+    }
+
+    return { success: true, holiday };
+  } catch (e) {
+    mapDbError(e, 'attendance.updateNationalHoliday');
+    return { success: false };
+  }
+}
+
+export async function deleteNationalHoliday(id: number) {
+  try {
+    await db.delete(nationalHolidays).where(eq(nationalHolidays.id, id));
+    return { success: true };
+  } catch (e) {
+    mapDbError(e, 'attendance.deleteNationalHoliday');
+    return { success: false };
+  }
+}
