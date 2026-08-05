@@ -7,7 +7,7 @@ updates:
       day: 'monday'
       time: '09:00'
       timezone: 'UTC'
-      open-pull-requests-limit: 10
+    open-pull-requests-limit: 10
     reviewers:
       - 'kermit'
     labels:
@@ -16,11 +16,21 @@ updates:
     commit-message:
       prefix: 'deps'
       include: 'scope'
+    groups:
+      tanstack:
+        patterns:
+          - '@tanstack/*'
+      radix-ui:
+        patterns:
+          - '@radix-ui/*'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'monthly'
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
     open-pull-requests-limit: 5
     labels:
       - 'dependencies'
