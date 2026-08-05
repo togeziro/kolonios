@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, ne, or, sql } from 'drizzle-orm';
 import { requirePermission } from '@/lib/auth/session';
 import { DomainError } from '@/lib/errors';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -45,6 +45,7 @@ import {
 import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
 import type {
   AttendancePolicy,
+  ManualAdjustment,
   PayrollCalculationInput,
   PayrollCalculationResult,
   PayrollProfileActor,
@@ -73,6 +74,60 @@ const emptyPolicy: AttendancePolicy = {
   unpaidLeave: { enabled: true },
   monthlyAttendanceMode: 'prorate'
 };
+
+function recalculateSegmentsWithAdjustments(
+  segmentInputs: PayrollCalculationInput[],
+  adjustments: ManualAdjustment[]
+) {
+  const results = segmentInputs.map((segmentInput) =>
+    calculatePayroll({
+      ...segmentInput,
+      manualAdjustments: adjustments
+    })
+  );
+  const totals = results.reduce(
+    (sum, segment) => ({
+      baseSalary: sum.baseSalary + segment.baseSalary,
+      allowanceTotal: sum.allowanceTotal + segment.allowanceTotal,
+      deductionTotal: sum.deductionTotal + segment.deductionTotal,
+      grossSalary: sum.grossSalary + segment.grossSalary,
+      netSalary: sum.netSalary + segment.netSalary,
+      tax: sum.tax + segment.tax.amount,
+      lineItems: [...sum.lineItems, ...segment.lineItems]
+    }),
+    {
+      baseSalary: 0,
+      allowanceTotal: 0,
+      deductionTotal: 0,
+      grossSalary: 0,
+      netSalary: 0,
+      tax: 0,
+      lineItems: [] as PayrollCalculationResult['lineItems']
+    }
+  );
+  return {
+    ...totals,
+    snapshot: {
+      input: segmentInputs,
+      baseSalary: totals.baseSalary,
+      allowanceTotal: totals.allowanceTotal,
+      deductionTotal: totals.deductionTotal,
+      grossSalary: totals.grossSalary,
+      netSalary: totals.netSalary,
+      lineItems: totals.lineItems,
+      resolvedSegments: results.map((result, index) => ({
+        result,
+        assignmentId: segmentInputs[index]?.salary.type ?? '',
+        taxId: 0,
+        start: segmentInputs[index]?.salary.type ?? '',
+        end: '',
+        benefits: [],
+        bank: null
+      })),
+      employmentEvents: []
+    }
+  };
+}
 
 export interface CompanyProfile {
   name: string;
@@ -215,20 +270,20 @@ export function resolvePayrollRecordScope(
 function parseTaxRate(value: unknown, name: string) {
   const text = typeof value === 'number' ? String(value) : value;
   if (typeof text !== 'string' || !/^\d+(?:\.\d+)?$/.test(text))
-    throw new Error(`Invalid tax rate: ${name}`);
+    throw new DomainError(`Invalid tax rate: ${name}`, 'INVALID_TAX_RATE');
   const rate = Number(text);
   if (!Number.isFinite(rate) || rate < 0 || rate > 100)
-    throw new Error(`Invalid tax rate: ${name}`);
+    throw new DomainError(`Invalid tax rate: ${name}`, 'INVALID_TAX_RATE');
   return rate;
 }
 
 function parseTaxMoney(value: unknown, name: string) {
   if (typeof value !== 'string' && typeof value !== 'number')
-    throw new Error(`Invalid tax amount: ${name}`);
+    throw new DomainError(`Invalid tax amount: ${name}`, 'INVALID_TAX_AMOUNT');
   try {
     return parseDbDecimalToMoney(typeof value === 'number' ? value.toFixed(2) : value);
   } catch {
-    throw new Error(`Invalid tax amount: ${name}`);
+    throw new DomainError(`Invalid tax amount: ${name}`, 'INVALID_TAX_AMOUNT');
   }
 }
 
@@ -239,21 +294,22 @@ export function mapTaxProfile(
   const rates = setting?.rates;
   if (rates == null || typeof rates !== 'object' || Array.isArray(rates)) {
     if (!setting) return { method: 'none', ptkp: 0, settings: {} };
-    throw new Error('Invalid tax settings JSON');
+    throw new DomainError('Invalid tax settings JSON', 'INVALID_TAX_SETTINGS');
   }
   const raw = rates as Record<string, unknown>;
   const method = raw.method;
   if (method !== 'none' && method !== 'progressive' && method !== 'ter')
-    throw new Error('Invalid tax method');
+    throw new DomainError('Invalid tax method', 'INVALID_TAX_METHOD');
   const progressive = raw.progressive;
   const parsedProgressive =
     progressive == null
       ? undefined
       : (() => {
-          if (!Array.isArray(progressive)) throw new Error('Invalid progressive tax brackets');
+          if (!Array.isArray(progressive))
+            throw new DomainError('Invalid progressive tax brackets', 'INVALID_TAX_BRACKETS');
           return progressive.map((bracket, index) => {
             if (!bracket || typeof bracket !== 'object' || Array.isArray(bracket))
-              throw new Error(`Invalid progressive bracket: ${index}`);
+              throw new DomainError(`Invalid progressive bracket: ${index}`, 'INVALID_TAX_BRACKET');
             const item = bracket as Record<string, unknown>;
             return {
               upTo:
@@ -268,16 +324,19 @@ export function mapTaxProfile(
       ? undefined
       : (() => {
           if (typeof ter !== 'object' || Array.isArray(ter))
-            throw new Error('Invalid TER tax categories');
+            throw new DomainError('Invalid TER tax categories', 'INVALID_TER_CATEGORIES');
           return Object.fromEntries(
             Object.entries(ter).map(([category, brackets]) => {
               if (!category.trim() || !Array.isArray(brackets))
-                throw new Error(`Invalid TER category: ${category}`);
+                throw new DomainError(`Invalid TER category: ${category}`, 'INVALID_TER_CATEGORY');
               return [
                 category,
                 brackets.map((bracket, index) => {
                   if (!bracket || typeof bracket !== 'object' || Array.isArray(bracket))
-                    throw new Error(`Invalid TER bracket: ${category}[${index}]`);
+                    throw new DomainError(
+                      `Invalid TER bracket: ${category}[${index}]`,
+                      'INVALID_TER_BRACKET'
+                    );
                   const item = bracket as Record<string, unknown>;
                   return {
                     upTo:
@@ -401,7 +460,10 @@ export function serializePayrollReport(
 
 export function assertPayrollAdjustmentAllowed(status: string) {
   if (status !== 'processing') {
-    throw new Error('Manual adjustments are only allowed before payroll approval.');
+    throw new DomainError(
+      'Manual adjustments are only allowed before payroll approval.',
+      'ADJUSTMENT_NOT_ALLOWED'
+    );
   }
 }
 
@@ -501,7 +563,11 @@ export const createSalaryComponentFn = createServerFn({ method: 'POST' })
             is_active: data.isActive
           })
           .returning();
-        if (!row) throw new Error('Failed to create salary component.');
+        if (!row)
+          throw new DomainError(
+            'Failed to create salary component.',
+            'PAYROLL_COMPONENT_CREATE_FAILED'
+          );
         return row;
       }
     );
@@ -532,7 +598,8 @@ export const updateSalaryComponentFn = createServerFn({ method: 'POST' })
           })
           .where(eq(salaryComponents.id, data.id))
           .returning();
-        if (!row) throw new Error('Salary component was not found.');
+        if (!row)
+          throw new DomainError('Salary component was not found.', 'PAYROLL_COMPONENT_NOT_FOUND');
         return row;
       }
     );
@@ -636,11 +703,35 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
                 )
               )
               .limit(1);
-            if (!existing) throw new Error('Salary assignment was not found.');
+            if (!existing)
+              throw new DomainError(
+                'Salary assignment was not found.',
+                'PAYROLL_ASSIGNMENT_NOT_FOUND'
+              );
             if (existing.effective_from >= values.effective_from)
               throw new DomainError(
                 'Create a new salary assignment version with a later effective date.',
                 'HISTORICAL_RECORD_IMMUTABLE'
+              );
+            const overlapping = await tx
+              .select()
+              .from(employeeSalaryAssignments)
+              .where(
+                and(
+                  eq(employeeSalaryAssignments.employee_id, data.employeeId),
+                  eq(employeeSalaryAssignments.id, data.values.id),
+                  lte(employeeSalaryAssignments.effective_from, values.effective_from),
+                  or(
+                    sql`${employeeSalaryAssignments.effective_to} is null`,
+                    gte(employeeSalaryAssignments.effective_to, values.effective_from)
+                  )
+                )
+              )
+              .limit(1);
+            if (overlapping.length > 1)
+              throw new DomainError(
+                'Overlapping salary assignment versions exist.',
+                'OVERLAPPING_EFFECTIVE_RECORDS'
               );
             await tx
               .update(employeeSalaryAssignments)
@@ -653,11 +744,19 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               })
               .where(eq(employeeSalaryAssignments.id, data.values.id));
             const [row] = await tx.insert(employeeSalaryAssignments).values(values).returning();
-            if (!row) throw new Error('Failed to create salary assignment version.');
+            if (!row)
+              throw new DomainError(
+                'Failed to create salary assignment version.',
+                'PAYROLL_ASSIGNMENT_VERSION_FAILED'
+              );
             return row;
           }
           const [row] = await tx.insert(employeeSalaryAssignments).values(values).returning();
-          if (!row) throw new Error('Failed to create salary assignment.');
+          if (!row)
+            throw new DomainError(
+              'Failed to create salary assignment.',
+              'PAYROLL_ASSIGNMENT_CREATE_FAILED'
+            );
           return row;
         }
         if (data.kind === 'component') {
@@ -666,14 +765,19 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             .from(employeeSalaryAssignments)
             .where(eq(employeeSalaryAssignments.id, data.values.assignmentId))
             .limit(1);
-          if (!assignment) throw new Error('Salary assignment was not found.');
+          if (!assignment)
+            throw new DomainError(
+              'Salary assignment was not found.',
+              'PAYROLL_ASSIGNMENT_NOT_FOUND'
+            );
           assertProfileReferenceScope(session, data.employeeId, assignment.employee_id);
           const [definition] = await tx
             .select({ id: salaryComponents.id })
             .from(salaryComponents)
             .where(eq(salaryComponents.id, data.values.salaryComponentId))
             .limit(1);
-          if (!definition) throw new Error('Salary component was not found.');
+          if (!definition)
+            throw new DomainError('Salary component was not found.', 'PAYROLL_COMPONENT_NOT_FOUND');
           const values = {
             assignment_id: data.values.assignmentId,
             salary_component_id: data.values.salaryComponentId,
@@ -695,17 +799,41 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               .from(employeeSalaryComponents)
               .where(eq(employeeSalaryComponents.id, data.values.id))
               .limit(1);
-            if (!existing) throw new Error('Employee salary component was not found.');
+            if (!existing)
+              throw new DomainError(
+                'Employee salary component was not found.',
+                'PAYROLL_COMPONENT_NOT_FOUND'
+              );
             if (
               existing.assignment_id !== data.values.assignmentId ||
               existing.salary_component_id !== data.values.salaryComponentId
             ) {
-              throw new Error('Salary component identity is immutable.');
+              throw new DomainError('Salary component identity is immutable.', 'IMMUTABLE_FIELD');
             }
             if (existing.effective_from >= values.effective_from)
               throw new DomainError(
                 'Create a new salary component version with a later effective date.',
                 'HISTORICAL_RECORD_IMMUTABLE'
+              );
+            const overlapping = await tx
+              .select()
+              .from(employeeSalaryComponents)
+              .where(
+                and(
+                  eq(employeeSalaryComponents.assignment_id, data.values.assignmentId),
+                  eq(employeeSalaryComponents.salary_component_id, data.values.salaryComponentId),
+                  lte(employeeSalaryComponents.effective_from, values.effective_from),
+                  or(
+                    sql`${employeeSalaryComponents.effective_to} is null`,
+                    gte(employeeSalaryComponents.effective_to, values.effective_from)
+                  )
+                )
+              )
+              .limit(1);
+            if (overlapping.length > 1)
+              throw new DomainError(
+                'Overlapping salary component versions exist.',
+                'OVERLAPPING_EFFECTIVE_RECORDS'
               );
             await tx
               .update(employeeSalaryComponents)
@@ -718,11 +846,19 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               })
               .where(eq(employeeSalaryComponents.id, data.values.id));
             const [row] = await tx.insert(employeeSalaryComponents).values(values).returning();
-            if (!row) throw new Error('Employee salary component was not found.');
+            if (!row)
+              throw new DomainError(
+                'Employee salary component was not found.',
+                'PAYROLL_COMPONENT_VERSION_FAILED'
+              );
             return row;
           }
           const [row] = await tx.insert(employeeSalaryComponents).values(values).returning();
-          if (!row) throw new Error('Failed to create employee salary component.');
+          if (!row)
+            throw new DomainError(
+              'Failed to create employee salary component.',
+              'PAYROLL_COMPONENT_CREATE_FAILED'
+            );
           return row;
         }
         if (data.kind === 'tax') {
@@ -745,11 +881,31 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
                 )
               )
               .limit(1);
-            if (!existing) throw new Error('Tax profile was not found.');
+            if (!existing)
+              throw new DomainError('Tax profile was not found.', 'TAX_PROFILE_NOT_FOUND');
             if (existing.effective_from >= values.effective_from)
               throw new DomainError(
                 'Create a new tax profile version with a later effective date.',
                 'HISTORICAL_RECORD_IMMUTABLE'
+              );
+            const overlapping = await tx
+              .select()
+              .from(employeeTaxProfiles)
+              .where(
+                and(
+                  eq(employeeTaxProfiles.employee_id, data.employeeId),
+                  lte(employeeTaxProfiles.effective_from, values.effective_from),
+                  or(
+                    sql`${employeeTaxProfiles.effective_to} is null`,
+                    gte(employeeTaxProfiles.effective_to, values.effective_from)
+                  )
+                )
+              )
+              .limit(1);
+            if (overlapping.length > 1)
+              throw new DomainError(
+                'Overlapping tax profile versions exist.',
+                'OVERLAPPING_EFFECTIVE_RECORDS'
               );
             await tx
               .update(employeeTaxProfiles)
@@ -762,11 +918,16 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               })
               .where(eq(employeeTaxProfiles.id, data.values.id));
             const [row] = await tx.insert(employeeTaxProfiles).values(values).returning();
-            if (!row) throw new Error('Failed to create tax profile version.');
+            if (!row)
+              throw new DomainError(
+                'Failed to create tax profile version.',
+                'TAX_PROFILE_VERSION_FAILED'
+              );
             return row;
           }
           const [row] = await tx.insert(employeeTaxProfiles).values(values).returning();
-          if (!row) throw new Error('Failed to create tax profile.');
+          if (!row)
+            throw new DomainError('Failed to create tax profile.', 'TAX_PROFILE_CREATE_FAILED');
           return row;
         }
         if (data.kind === 'benefit') {
@@ -790,22 +951,47 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
                 )
               )
               .limit(1);
-            if (!existing) throw new Error('Benefit enrollment was not found.');
+            if (!existing)
+              throw new DomainError('Benefit enrollment was not found.', 'BENEFIT_NOT_FOUND');
             if (existing.effective_from >= values.effective_from)
               throw new DomainError(
                 'Create a new benefit enrollment version with a later effective date.',
                 'HISTORICAL_RECORD_IMMUTABLE'
+              );
+            const overlapping = await tx
+              .select()
+              .from(employeeBenefitEnrollments)
+              .where(
+                and(
+                  eq(employeeBenefitEnrollments.employee_id, data.employeeId),
+                  lte(employeeBenefitEnrollments.effective_from, values.effective_from),
+                  or(
+                    sql`${employeeBenefitEnrollments.effective_to} is null`,
+                    gte(employeeBenefitEnrollments.effective_to, values.effective_from)
+                  )
+                )
+              )
+              .limit(1);
+            if (overlapping.length > 1)
+              throw new DomainError(
+                'Overlapping benefit enrollment versions exist.',
+                'OVERLAPPING_EFFECTIVE_RECORDS'
               );
             await tx
               .update(employeeBenefitEnrollments)
               .set({ effective_to: previousDate(values.effective_from), updated_at: new Date() })
               .where(eq(employeeBenefitEnrollments.id, data.values.id));
             const [row] = await tx.insert(employeeBenefitEnrollments).values(values).returning();
-            if (!row) throw new Error('Failed to create benefit enrollment version.');
+            if (!row)
+              throw new DomainError(
+                'Failed to create benefit enrollment version.',
+                'BENEFIT_VERSION_FAILED'
+              );
             return row;
           }
           const [row] = await tx.insert(employeeBenefitEnrollments).values(values).returning();
-          if (!row) throw new Error('Failed to create benefit enrollment.');
+          if (!row)
+            throw new DomainError('Failed to create benefit enrollment.', 'BENEFIT_CREATE_FAILED');
           return row;
         }
         const values = {
@@ -828,11 +1014,53 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               )
             )
             .limit(1);
-          if (!existing) throw new Error('Bank account was not found.');
+          if (!existing)
+            throw new DomainError('Bank account was not found.', 'BANK_ACCOUNT_NOT_FOUND');
           if (existing.effective_from >= values.effective_from)
             throw new DomainError(
               'Create a new bank account version with a later effective date.',
               'HISTORICAL_RECORD_IMMUTABLE'
+            );
+          if (values.is_primary) {
+            const activePrimary = await tx
+              .select()
+              .from(employeeBankAccounts)
+              .where(
+                and(
+                  eq(employeeBankAccounts.employee_id, data.employeeId),
+                  eq(employeeBankAccounts.is_primary, true),
+                  ne(employeeBankAccounts.id, data.values.id),
+                  or(
+                    sql`${employeeBankAccounts.effective_to} is null`,
+                    gte(employeeBankAccounts.effective_to, values.effective_from)
+                  )
+                )
+              )
+              .limit(1);
+            if (activePrimary.length > 0)
+              throw new DomainError(
+                'A primary bank account already exists for this employee.',
+                'DUPLICATE_PRIMARY_BANK_ACCOUNT'
+              );
+          }
+          const overlapping = await tx
+            .select()
+            .from(employeeBankAccounts)
+            .where(
+              and(
+                eq(employeeBankAccounts.employee_id, data.employeeId),
+                lte(employeeBankAccounts.effective_from, values.effective_from),
+                or(
+                  sql`${employeeBankAccounts.effective_to} is null`,
+                  gte(employeeBankAccounts.effective_to, values.effective_from)
+                )
+              )
+            )
+            .limit(1);
+          if (overlapping.length > 1)
+            throw new DomainError(
+              'Overlapping bank account versions exist.',
+              'OVERLAPPING_EFFECTIVE_RECORDS'
             );
           const nextValues = {
             ...values,
@@ -846,11 +1074,37 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             })
             .where(eq(employeeBankAccounts.id, data.values.id));
           const [row] = await tx.insert(employeeBankAccounts).values(nextValues).returning();
-          if (!row) throw new Error('Failed to create bank account version.');
+          if (!row)
+            throw new DomainError(
+              'Failed to create bank account version.',
+              'BANK_ACCOUNT_VERSION_FAILED'
+            );
           return row;
         }
+        if (values.is_primary) {
+          const activePrimary = await tx
+            .select()
+            .from(employeeBankAccounts)
+            .where(
+              and(
+                eq(employeeBankAccounts.employee_id, data.employeeId),
+                eq(employeeBankAccounts.is_primary, true),
+                or(
+                  sql`${employeeBankAccounts.effective_to} is null`,
+                  gte(employeeBankAccounts.effective_to, values.effective_from)
+                )
+              )
+            )
+            .limit(1);
+          if (activePrimary.length > 0)
+            throw new DomainError(
+              'A primary bank account already exists for this employee.',
+              'DUPLICATE_PRIMARY_BANK_ACCOUNT'
+            );
+        }
         const [row] = await tx.insert(employeeBankAccounts).values(values).returning();
-        if (!row) throw new Error('Failed to create bank account.');
+        if (!row)
+          throw new DomainError('Failed to create bank account.', 'BANK_ACCOUNT_CREATE_FAILED');
         return row;
       }
     );
@@ -876,7 +1130,8 @@ export const createPayrollPeriodFn = createServerFn({ method: 'POST' })
             created_by: session.user.id
           })
           .returning();
-        if (!row) throw new Error('Failed to create payroll period.');
+        if (!row)
+          throw new DomainError('Failed to create payroll period.', 'PAYROLL_PERIOD_CREATE_FAILED');
         return row;
       }
     );
@@ -1044,8 +1299,18 @@ export async function buildPayrollRecord(
   const boundaries = payrollPeriodBoundaries(
     period.period_start,
     period.period_end,
-    [...assignments, ...taxRows, ...componentRows.map(({ component }) => component)].map(
-      (row) => row.effective_from
+    [
+      ...assignments,
+      ...taxRows,
+      ...componentRows.map(({ component }) => component),
+      ...benefits,
+      ...bankAccounts,
+      ...employmentEvents
+    ].map(
+      (row) =>
+        (row as { effective_from?: string; effective_date?: string }).effective_from ??
+        (row as { effective_date?: string }).effective_date ??
+        ''
     )
   );
   const segmentResults = [];
@@ -1118,17 +1383,17 @@ export async function buildPayrollRecord(
       taxId: tax.id,
       start: segmentStart,
       end: segmentEnd,
-      benefits: benefits.filter(
-        (row) =>
-          row.effective_from <= segmentStart &&
-          (!row.effective_to || row.effective_to >= segmentStart)
-      ),
-      bank:
-        bankAccounts.find(
-          (row) =>
-            row.effective_from <= segmentStart &&
-            (!row.effective_to || row.effective_to >= segmentStart)
-        ) ?? null
+      benefits: resolveEffectiveRecord(employeeId, segmentStart, benefits),
+      bank: resolveEffectiveRecord(employeeId, segmentStart, bankAccounts),
+      employmentEvent: resolveEffectiveRecord(
+        employeeId,
+        segmentStart,
+        employmentEvents.map((event) => ({
+          id: event.id,
+          effective_from: event.effective_date,
+          effective_to: null
+        }))
+      )
     });
   }
   const totals = segmentResults.reduce(
@@ -1182,7 +1447,8 @@ export const generatePayrollFn = createServerFn({ method: 'POST' })
       { action: 'payroll.generate', entityType: 'payroll_period', entityId: data.payrollPeriodId },
       async (tx) => {
         const period = await lockPayrollPeriod(tx, data.payrollPeriodId);
-        if (!period) throw new Error('Payroll period was not found');
+        if (!period)
+          throw new DomainError('Payroll period was not found.', 'PAYROLL_PERIOD_NOT_FOUND');
         assertPayrollTransition(period.status, 'processing');
         const activeEmployees = await tx
           .select({ id: employees.id })
@@ -1203,9 +1469,17 @@ export const generatePayrollFn = createServerFn({ method: 'POST' })
               )
             )
             .limit(1);
-          if (duplicate) throw new Error('Duplicate payroll record for this employee and period.');
+          if (duplicate)
+            throw new DomainError(
+              'Duplicate payroll record for this employee and period.',
+              'DUPLICATE_PAYROLL_RECORD'
+            );
           const [row] = await tx.insert(payrollRecords).values(record).returning();
-          if (!row) throw new Error('Failed to create payroll record.');
+          if (!row)
+            throw new DomainError(
+              'Failed to create payroll record.',
+              'PAYROLL_RECORD_CREATE_FAILED'
+            );
           created.push(row);
         }
         const [updatedPeriod] = await tx
@@ -1213,7 +1487,11 @@ export const generatePayrollFn = createServerFn({ method: 'POST' })
           .set({ status: 'processing', updated_at: new Date() })
           .where(and(eq(payrollPeriods.id, period.id), eq(payrollPeriods.status, period.status)))
           .returning();
-        if (!updatedPeriod) throw new Error('Payroll period changed during generation.');
+        if (!updatedPeriod)
+          throw new DomainError(
+            'Payroll period changed during generation.',
+            'PAYROLL_PERIOD_CHANGED'
+          );
         return created;
       }
     );
@@ -1253,9 +1531,11 @@ export const adjustPayrollRecordFn = createServerFn({ method: 'POST' })
           .from(payrollRecords)
           .where(eq(payrollRecords.id, data.id))
           .limit(1);
-        if (!record) throw new Error('Payroll record was not found.');
+        if (!record)
+          throw new DomainError('Payroll record was not found.', 'PAYROLL_RECORD_NOT_FOUND');
         const period = await lockPayrollPeriod(tx, record.payroll_period_id);
-        if (!period) throw new Error('Payroll period was not found.');
+        if (!period)
+          throw new DomainError('Payroll period was not found.', 'PAYROLL_PERIOD_NOT_FOUND');
         assertPayrollAdjustmentAllowed(period.status);
         const details =
           record.details && typeof record.details === 'object'
@@ -1263,14 +1543,20 @@ export const adjustPayrollRecordFn = createServerFn({ method: 'POST' })
             : null;
         const input = details?.input;
         if (!input || typeof input !== 'object')
-          throw new Error('Payroll calculation input is unavailable.');
-        const result = calculatePayroll({
-          ...(input as PayrollCalculationInput),
-          manualAdjustments: data.adjustments.map((adjustment) => ({
-            ...adjustment,
-            amount: parseDbDecimalToMoney(adjustment.amount)
-          }))
-        });
+          throw new DomainError(
+            'Payroll calculation input is unavailable.',
+            'MISSING_PAYROLL_DATA'
+          );
+        const adjustments = data.adjustments.map((adjustment) => ({
+          ...adjustment,
+          amount: parseDbDecimalToMoney(adjustment.amount)
+        }));
+        const result = Array.isArray(input)
+          ? recalculateSegmentsWithAdjustments(input, adjustments)
+          : calculatePayroll({
+              ...(input as PayrollCalculationInput),
+              manualAdjustments: adjustments
+            });
         const [updated] = await tx
           .update(payrollRecords)
           .set({
@@ -1283,7 +1569,11 @@ export const adjustPayrollRecordFn = createServerFn({ method: 'POST' })
           })
           .where(eq(payrollRecords.id, data.id))
           .returning();
-        if (!updated) throw new Error('Payroll record changed during adjustment.');
+        if (!updated)
+          throw new DomainError(
+            'Payroll record changed during adjustment.',
+            'PAYROLL_RECORD_CHANGED'
+          );
         return JSON.parse(JSON.stringify(updated));
       }
     );
@@ -1300,7 +1590,8 @@ async function transitionPayrollWithAudit(
     { action, entityType: 'payroll_period', entityId: id },
     async (tx) => {
       const period = await lockPayrollPeriod(tx, id);
-      if (!period) throw new Error('Payroll period was not found.');
+      if (!period)
+        throw new DomainError('Payroll period was not found.', 'PAYROLL_PERIOD_NOT_FOUND');
       assertPayrollTransition(period.status, nextStatus);
       const [row] = await tx
         .update(payrollPeriods)
@@ -1312,7 +1603,11 @@ async function transitionPayrollWithAudit(
         })
         .where(and(eq(payrollPeriods.id, id), eq(payrollPeriods.status, period.status)))
         .returning();
-      if (!row) throw new Error('Payroll period changed during transition.');
+      if (!row)
+        throw new DomainError(
+          'Payroll period changed during transition.',
+          'PAYROLL_PERIOD_CHANGED'
+        );
       return row;
     }
   );
