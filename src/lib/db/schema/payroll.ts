@@ -31,6 +31,35 @@ export const salaryTypeEnum = pgEnum('salary_type', ['monthly', 'daily', 'hourly
 
 export const salaryComponentTypeEnum = pgEnum('salary_component_type', ['allowance', 'deduction']);
 
+export const bpjsProgramEnum = pgEnum('bpjs_program', ['jkk', 'jkm', 'jht', 'jp', 'kesehatan']);
+export const jkkRiskCategoryEnum = pgEnum('jkk_risk_category', [
+  'very_low',
+  'low',
+  'medium',
+  'high',
+  'very_high'
+]);
+export const pph21MethodEnum = pgEnum('pph21_method', ['gross', 'gross_up']);
+export const employmentStatusPayrollEnum = pgEnum('employment_status_payroll', [
+  'permanent',
+  'contract',
+  'freelance'
+]);
+export const ptkpStatusEnum = pgEnum('ptkp_status', [
+  'TK/0',
+  'TK/1',
+  'TK/2',
+  'TK/3',
+  'K/0',
+  'K/1',
+  'K/2',
+  'K/3'
+]);
+export const residencyEnum = pgEnum('residency', ['resident', 'foreign']);
+export const taxFacilityEnum = pgEnum('tax_facility', ['none', 'dtp', 'etc']);
+export const taxObjectCodeEnum = pgEnum('tax_object_code', ['21-100-01', '21-100-02', '21-100-32']);
+export const taxRecordSourceEnum = pgEnum('tax_record_source', ['calculated', 'manual']);
+
 export const salaryComponents = pgTable('salary_components', {
   id: serial('id').primaryKey(),
   code: text('code').notNull().unique(),
@@ -204,6 +233,14 @@ export const employeeTaxProfiles = pgTable(
     tax_setting_id: integer('tax_setting_id').references(() => taxSettings.id),
     tax_identifier: text('tax_identifier'),
     filing_status: text('filing_status'),
+    employment_status: employmentStatusPayrollEnum('employment_status')
+      .notNull()
+      .default('permanent'),
+    ptkp_status: ptkpStatusEnum('ptkp_status').notNull().default('TK/0'),
+    residency: residencyEnum('residency').notNull().default('resident'),
+    tax_facility: taxFacilityEnum('tax_facility').notNull().default('none'),
+    tax_object_code: taxObjectCodeEnum('tax_object_code').notNull().default('21-100-01'),
+    pph21_method: pph21MethodEnum('pph21_method'),
     effective_from: date('effective_from').notNull(),
     effective_to: date('effective_to'),
     created_at: timestamp('created_at').defaultNow().notNull(),
@@ -229,6 +266,8 @@ export const employeeTaxRecords = pgTable(
     taxable_income: numeric('taxable_income', { precision: 14, scale: 2 }).notNull(),
     tax_amount: numeric('tax_amount', { precision: 14, scale: 2 }).notNull(),
     details: jsonb('details'),
+    source: taxRecordSourceEnum('source').notNull().default('calculated'),
+    is_overridden: boolean('is_overridden').notNull().default(false),
     created_at: timestamp('created_at').defaultNow().notNull()
   },
   (table) => [
@@ -331,6 +370,118 @@ export const employeeDocuments = pgTable(
   ]
 );
 
+export const companyPayrollSettings = pgTable('company_payroll_settings', {
+  id: serial('id').primaryKey(),
+  company_npwp: text('company_npwp').notNull().default(''),
+  cut_off_day: integer('cut_off_day').notNull().default(7),
+  pph21_enabled: boolean('pph21_enabled').notNull().default(true),
+  pph21_method: pph21MethodEnum('pph21_method').notNull().default('gross'),
+  jkk_enabled: boolean('jkk_enabled').notNull().default(true),
+  jkm_enabled: boolean('jkm_enabled').notNull().default(true),
+  jht_enabled: boolean('jht_enabled').notNull().default(true),
+  jp_enabled: boolean('jp_enabled').notNull().default(true),
+  bpjs_kesehatan_enabled: boolean('bpjs_kesehatan_enabled').notNull().default(true),
+  jkk_risk_category: jkkRiskCategoryEnum('jkk_risk_category').notNull().default('low'),
+  jkm_company_rate: numeric('jkm_company_rate', { precision: 6, scale: 4 })
+    .notNull()
+    .default('0.3'),
+  jht_company_rate: numeric('jht_company_rate', { precision: 6, scale: 4 })
+    .notNull()
+    .default('3.7'),
+  jht_employee_rate: numeric('jht_employee_rate', { precision: 6, scale: 4 })
+    .notNull()
+    .default('2'),
+  jp_company_rate: numeric('jp_company_rate', { precision: 6, scale: 4 }).notNull().default('2'),
+  jp_employee_rate: numeric('jp_employee_rate', { precision: 6, scale: 4 }).notNull().default('1'),
+  kesehatan_company_rate: numeric('kesehatan_company_rate', { precision: 6, scale: 4 })
+    .notNull()
+    .default('4'),
+  kesehatan_employee_rate: numeric('kesehatan_employee_rate', { precision: 6, scale: 4 })
+    .notNull()
+    .default('1'),
+  potongan_izin_jam_default: numeric('potongan_izin_jam_default', { precision: 14, scale: 2 })
+    .notNull()
+    .default('0'),
+  potongan_shortfall_default: numeric('potongan_shortfall_default', { precision: 14, scale: 2 })
+    .notNull()
+    .default('0'),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const employeeBpjsEnrollments = pgTable(
+  'employee_bpjs_enrollments',
+  {
+    id: serial('id').primaryKey(),
+    employee_id: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    program: bpjsProgramEnum('program').notNull(),
+    membership_number: text('membership_number').notNull().default(''),
+    registration_date: date('registration_date'),
+    registered_wage: numeric('registered_wage', { precision: 14, scale: 2 }).notNull().default('0'),
+    jkk_category_override: jkkRiskCategoryEnum('jkk_category_override'),
+    is_active: boolean('is_active').notNull().default(true),
+    effective_from: date('effective_from').notNull(),
+    effective_to: date('effective_to'),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [
+    uniqueIndex('employee_bpjs_enrollments_employee_program_effective_unique').on(
+      table.employee_id,
+      table.program,
+      table.effective_from
+    ),
+    index('employee_bpjs_enrollments_employee_idx').on(table.employee_id)
+  ]
+);
+
+export const employeeBpjsFamilyMembers = pgTable(
+  'employee_bpjs_family_members',
+  {
+    id: serial('id').primaryKey(),
+    enrollment_id: integer('enrollment_id')
+      .notNull()
+      .references(() => employeeBpjsEnrollments.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    relationship: text('relationship').notNull(),
+    birth_date: date('birth_date'),
+    is_core: boolean('is_core').notNull().default(true),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [index('employee_bpjs_family_members_enrollment_idx').on(table.enrollment_id)]
+);
+
+export const payrollAttendanceOverrides = pgTable(
+  'payroll_attendance_overrides',
+  {
+    id: serial('id').primaryKey(),
+    payroll_period_id: integer('payroll_period_id')
+      .notNull()
+      .references(() => payrollPeriods.id, { onDelete: 'cascade' }),
+    employee_id: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    scheduled_days: numeric('scheduled_days', { precision: 8, scale: 2 }),
+    payable_days: numeric('payable_days', { precision: 8, scale: 2 }),
+    worked_hours: numeric('worked_hours', { precision: 8, scale: 2 }),
+    permit_hours: numeric('permit_hours', { precision: 8, scale: 2 }),
+    shortfall_hours: numeric('shortfall_hours', { precision: 8, scale: 2 }),
+    created_by: text('created_by').references(() => user.id),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [
+    uniqueIndex('payroll_attendance_overrides_period_employee_unique').on(
+      table.payroll_period_id,
+      table.employee_id
+    ),
+    index('payroll_attendance_overrides_employee_idx').on(table.employee_id)
+  ]
+);
+
 export const employeeSalaryAssignmentRelations = relations(
   employeeSalaryAssignments,
   ({ one, many }) => ({
@@ -376,3 +527,11 @@ export type EmployeeEmploymentEvent = typeof employeeEmploymentEvents.$inferSele
 export type NewEmployeeEmploymentEvent = typeof employeeEmploymentEvents.$inferInsert;
 export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
 export type NewEmployeeDocument = typeof employeeDocuments.$inferInsert;
+export type CompanyPayrollSetting = typeof companyPayrollSettings.$inferSelect;
+export type NewCompanyPayrollSetting = typeof companyPayrollSettings.$inferInsert;
+export type EmployeeBpjsEnrollment = typeof employeeBpjsEnrollments.$inferSelect;
+export type NewEmployeeBpjsEnrollment = typeof employeeBpjsEnrollments.$inferInsert;
+export type EmployeeBpjsFamilyMember = typeof employeeBpjsFamilyMembers.$inferSelect;
+export type NewEmployeeBpjsFamilyMember = typeof employeeBpjsFamilyMembers.$inferInsert;
+export type PayrollAttendanceOverride = typeof payrollAttendanceOverrides.$inferSelect;
+export type NewPayrollAttendanceOverride = typeof payrollAttendanceOverrides.$inferInsert;
