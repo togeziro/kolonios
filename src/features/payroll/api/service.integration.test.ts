@@ -1,10 +1,19 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/lib/db';
 import { employees } from '@/lib/db/schema/employees';
-import { resetAllTables, seedDepartment, seedDesignation, seedUser } from '@/test-utils/db';
 import {
+  resetAllTables,
+  seedDepartment,
+  seedDesignation,
+  seedEmployee,
+  seedUser
+} from '@/test-utils/db';
+import {
+  companyPayrollSettings,
   employeeBankAccounts,
   employeeBenefitEnrollments,
+  employeeBpjsEnrollments,
+  employeeBpjsFamilyMembers,
   employeeDocuments,
   employeeEmploymentEvents,
   employeeSalaryAssignments,
@@ -12,22 +21,47 @@ import {
   employeeTaxProfiles,
   employeeTaxRecords,
   payslips,
+  payrollAttendanceOverrides,
   payrollPeriods,
   payrollRecords,
   salaryComponents,
   taxSettings
 } from '@/lib/db/schema/payroll';
-import { getMyPayslipsFn } from './service';
-// The split query supplies the production provider handler behind the exported
+import {
+  createEmployeeBpjsFamilyMemberFn,
+  deleteEmployeeBpjsFamilyMemberFn,
+  getCompanyPayrollSettingsFn,
+  getMyPayslipsFn,
+  listEmployeeBpjsEnrollmentsFn,
+  listPayrollRecordsFn,
+  overrideEmployeeTaxRecordFn,
+  updateCompanyPayrollSettingsFn,
+  upsertAttendanceOverrideFn,
+  upsertEmployeeBpjsEnrollmentFn
+} from './service';
+// The split query supplies the production provider handler behind each exported
 // server-function caller, avoiding a network request while retaining its boundary.
-// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
-import { getMyPayslipsFn_createServerFn_handler } from './service?tss-serverfn-split';
+// The ssr-rpc mock funnels every caller through the single `serverFnProvider.handler`,
+// so each test points it at the split handler of the fn it exercises.
+import {
+  createEmployeeBpjsFamilyMemberFn_createServerFn_handler,
+  deleteEmployeeBpjsFamilyMemberFn_createServerFn_handler,
+  getCompanyPayrollSettingsFn_createServerFn_handler,
+  getMyPayslipsFn_createServerFn_handler,
+  listEmployeeBpjsEnrollmentsFn_createServerFn_handler,
+  listPayrollRecordsFn_createServerFn_handler,
+  overrideEmployeeTaxRecordFn_createServerFn_handler,
+  updateCompanyPayrollSettingsFn_createServerFn_handler,
+  upsertAttendanceOverrideFn_createServerFn_handler,
+  upsertEmployeeBpjsEnrollmentFn_createServerFn_handler
+  // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+} from './service?tss-serverfn-split';
 
 const sessionUser = vi.hoisted(() => ({ id: 'payroll-boundary-a', role: 'employee' }));
 const getSessionMock = vi.hoisted(() => vi.fn(async () => ({ user: sessionUser })));
 const getRequestHeadersMock = vi.hoisted(() => vi.fn(() => new Headers()));
 const getUserRoleGroupMock = vi.hoisted(() =>
-  vi.fn(async () => ({ is_admin: false, permissions: { payroll: { view: true } } }))
+  vi.fn(async () => ({ is_admin: false, permissions: { payroll: { view: true, edit: true } } }))
 );
 const serverFnProvider = vi.hoisted(() => ({
   handler: undefined as ((options: { data: unknown }) => unknown) | undefined
@@ -81,6 +115,10 @@ serverFnProvider.handler = getMyPayslipsFn_createServerFn_handler;
 
 async function resetPayrollTables() {
   await db.delete(employeeTaxRecords);
+  await db.delete(employeeBpjsFamilyMembers);
+  await db.delete(employeeBpjsEnrollments);
+  await db.delete(payrollAttendanceOverrides);
+  await db.delete(companyPayrollSettings);
   await db.delete(payslips);
   await db.delete(employeeSalaryComponents);
   await db.delete(employeeSalaryAssignments);
@@ -211,5 +249,211 @@ describe('getMyPayslipsFn authenticated boundary', () => {
     expect(getSessionMock).toHaveBeenCalled();
     expect(getRequestHeadersMock).toHaveBeenCalled();
     expect(getUserRoleGroupMock).toHaveBeenCalledWith('payroll-boundary-a');
+  });
+});
+
+describe('company payroll settings', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    await seedUser('payroll-boundary-a');
+    sessionUser.id = 'payroll-boundary-a';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  it('returns null when no settings row exists', async () => {
+    serverFnProvider.handler = getCompanyPayrollSettingsFn_createServerFn_handler;
+    const result = await getCompanyPayrollSettingsFn({ data: undefined } as never);
+    expect(result).toBeNull();
+  });
+
+  it('returns the seeded company payroll settings', async () => {
+    serverFnProvider.handler = getCompanyPayrollSettingsFn_createServerFn_handler;
+    await db.insert(companyPayrollSettings).values({});
+    const result = await getCompanyPayrollSettingsFn({ data: undefined } as never);
+    expect(result).not.toBeNull();
+    expect(result?.cut_off_day).toBe(7);
+    expect(result?.pph21_enabled).toBe(true);
+  });
+
+  it('updates the company payroll settings', async () => {
+    serverFnProvider.handler = updateCompanyPayrollSettingsFn_createServerFn_handler;
+    await db.insert(companyPayrollSettings).values({});
+    const result = await updateCompanyPayrollSettingsFn({
+      data: { companyNpwp: '1234567890', cutOffDay: 15 }
+    });
+    expect(result.cut_off_day).toBe(15);
+    expect(result.company_npwp).toBe('1234567890');
+  });
+});
+
+describe('BPJS enrollment and family members', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    sessionUser.id = 'payroll-boundary-a';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  it('upserts a BPJS enrollment, lists it, and manages its family members', async () => {
+    await seedEmployee('payroll-boundary-a');
+
+    serverFnProvider.handler = upsertEmployeeBpjsEnrollmentFn_createServerFn_handler;
+    const created = await upsertEmployeeBpjsEnrollmentFn({
+      data: {
+        employeeId: 'payroll-boundary-a',
+        program: 'jht',
+        registeredWage: '5000000.00',
+        effectiveFrom: '2026-01-01'
+      }
+    });
+    expect(created.program).toBe('jht');
+    expect(created.registered_wage).toBe('5000000.00');
+
+    serverFnProvider.handler = listEmployeeBpjsEnrollmentsFn_createServerFn_handler;
+    const listed = await listEmployeeBpjsEnrollmentsFn({
+      data: { employeeId: 'payroll-boundary-a' }
+    });
+    expect(listed.enrollments).toHaveLength(1);
+    expect(listed.enrollments[0].id).toBe(created.id);
+    expect(listed.enrollments[0].familyMembers).toEqual([]);
+
+    serverFnProvider.handler = createEmployeeBpjsFamilyMemberFn_createServerFn_handler;
+    const member = await createEmployeeBpjsFamilyMemberFn({
+      data: {
+        enrollmentId: created.id,
+        name: 'Jane Doe',
+        relationship: 'spouse',
+        isCore: true
+      }
+    });
+    expect(member.enrollment_id).toBe(created.id);
+
+    serverFnProvider.handler = listEmployeeBpjsEnrollmentsFn_createServerFn_handler;
+    const withFamily = await listEmployeeBpjsEnrollmentsFn({
+      data: { employeeId: 'payroll-boundary-a' }
+    });
+    expect(withFamily.enrollments[0].familyMembers).toEqual([
+      expect.objectContaining({ id: member.id, name: 'Jane Doe', relationship: 'spouse' })
+    ]);
+
+    serverFnProvider.handler = deleteEmployeeBpjsFamilyMemberFn_createServerFn_handler;
+    const deleted = await deleteEmployeeBpjsFamilyMemberFn({ data: { id: member.id } });
+    expect(deleted).toBe(true);
+
+    serverFnProvider.handler = listEmployeeBpjsEnrollmentsFn_createServerFn_handler;
+    const afterDelete = await listEmployeeBpjsEnrollmentsFn({
+      data: { employeeId: 'payroll-boundary-a' }
+    });
+    expect(afterDelete.enrollments[0].familyMembers).toEqual([]);
+  });
+});
+
+describe('attendance override', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    sessionUser.id = 'payroll-boundary-a';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  it('upserts an override and surfaces worked_hours and has_override on records', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [period] = await db
+      .insert(payrollPeriods)
+      .values({
+        name: 'Override Draft Period',
+        period_start: '2026-07-01',
+        period_end: '2026-07-31',
+        payment_date: '2026-08-05',
+        status: 'draft'
+      })
+      .returning({ id: payrollPeriods.id });
+    await db.insert(payrollRecords).values({
+      payroll_period_id: period.id,
+      employee_id: 'payroll-boundary-a',
+      gross_salary: '100',
+      net_salary: '90'
+    });
+
+    serverFnProvider.handler = upsertAttendanceOverrideFn_createServerFn_handler;
+    const override = await upsertAttendanceOverrideFn({
+      data: { payrollPeriodId: period.id, employeeId: 'payroll-boundary-a', workedHours: 40 }
+    });
+    expect(Number(override.worked_hours)).toBe(40);
+
+    serverFnProvider.handler = listPayrollRecordsFn_createServerFn_handler;
+    const result = await listPayrollRecordsFn({
+      data: { payrollPeriodId: period.id }
+    });
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].has_override).toBe(true);
+    expect(Number(result.rows[0].worked_hours)).toBe(40);
+  });
+
+  it('rejects upserting an override against a non-draft period', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [period] = await db
+      .insert(payrollPeriods)
+      .values({
+        name: 'Override Paid Period',
+        period_start: '2026-06-01',
+        period_end: '2026-06-30',
+        payment_date: '2026-07-05',
+        status: 'paid'
+      })
+      .returning({ id: payrollPeriods.id });
+
+    serverFnProvider.handler = upsertAttendanceOverrideFn_createServerFn_handler;
+    await expect(
+      upsertAttendanceOverrideFn({
+        data: { payrollPeriodId: period.id, employeeId: 'payroll-boundary-a', workedHours: 40 }
+      })
+    ).rejects.toThrow();
+  });
+});
+
+describe('tax record override', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    sessionUser.id = 'payroll-boundary-a';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  it('flips a calculated tax record to a manual override', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [record] = await db
+      .insert(employeeTaxRecords)
+      .values({
+        employee_id: 'payroll-boundary-a',
+        tax_period: '2026-07-01',
+        taxable_income: '10000000',
+        tax_amount: '1000000'
+      })
+      .returning();
+    expect(record.source).toBe('calculated');
+    expect(record.is_overridden).toBe(false);
+
+    serverFnProvider.handler = overrideEmployeeTaxRecordFn_createServerFn_handler;
+    const updated = await overrideEmployeeTaxRecordFn({
+      data: { id: record.id, amount: 500000 }
+    });
+    expect(updated.id).toBe(record.id);
+    expect(updated.source).toBe('manual');
+    expect(updated.is_overridden).toBe(true);
+    expect(Number(updated.tax_amount)).toBe(500000);
   });
 });
