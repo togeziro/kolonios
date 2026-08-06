@@ -1,26 +1,11 @@
 import * as React from 'react';
 import { Calendar } from '@/components/ui/calendar';
-import { useQuery } from '@tanstack/react-query';
-import { nationalHolidaysQueryOptions } from '@/features/holiday-calendar/api/queries';
+import { useNationalHolidays } from '@/features/holiday-calendar/api/queries';
 import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
-
-// Holiday indicator styles
-const holidayStyles = `
-  .holiday-date button::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: hsl(var(--destructive));
-  }
-`;
 
 interface HolidayCalendarViewProps {
   year?: number;
@@ -32,13 +17,13 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
 
   // Fetch holidays for the selected year
-  const { data, isLoading, error } = useQuery(nationalHolidaysQueryOptions(selectedYear));
+  const { data, isLoading, error } = useNationalHolidays(selectedYear);
 
   // Create a map of dates to holidays for quick lookup
   const holidayMap = React.useMemo(() => {
     const map = new Map<string, NationalHoliday[]>();
     const holidays = data?.holidays ?? [];
-    holidays.forEach((holiday) => {
+    holidays.forEach((holiday: NationalHoliday) => {
       const dateStr = holiday.date;
       const existing = map.get(dateStr) ?? [];
       map.set(dateStr, [...existing, holiday]);
@@ -93,27 +78,37 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
   // Get selected date's holidays
   const selectedDateHolidays = selectedDate ? getHolidaysForDate(selectedDate) : [];
 
+  // Calculate holiday count for current month
+  const currentMonthHolidayCount = React.useMemo(() => {
+    const holidays = data?.holidays ?? [];
+    return holidays.filter((h: NationalHoliday) => {
+      const date = new Date(h.date + 'T00:00:00');
+      return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+    }).length;
+  }, [data?.holidays, selectedMonth, selectedYear]);
+
   return (
     <div className='space-y-4'>
-      <style>{holidayStyles}</style>
       {/* Calendar Header with Navigation */}
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
-          <button
+          <Button
+            variant='outline'
+            size='icon'
             onClick={goToPreviousYear}
-            className='inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 w-8 p-0'
             aria-label='Previous year'
           >
             <Icons.chevronLeft className='h-4 w-4' />
             <Icons.chevronLeft className='h-4 w-4 -ml-2' />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant='outline'
+            size='icon'
             onClick={goToPreviousMonth}
-            className='inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 w-8 p-0'
             aria-label='Previous month'
           >
             <Icons.chevronLeft className='h-4 w-4' />
-          </button>
+          </Button>
         </div>
 
         <div className='text-center'>
@@ -122,27 +117,20 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
             {selectedYear}
           </h3>
           <p className='text-sm text-muted-foreground'>
-            {data?.holidays?.length ?? 0} holiday{(data?.holidays?.length ?? 0) !== 1 ? 's' : ''}{' '}
-            this year
+            {currentMonthHolidayCount} holiday{currentMonthHolidayCount !== 1 ? 's' : ''} this month
+            {' · '}
+            {data?.holidays?.length ?? 0} total this year
           </p>
         </div>
 
         <div className='flex items-center gap-2'>
-          <button
-            onClick={goToNextMonth}
-            className='inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 w-8 p-0'
-            aria-label='Next month'
-          >
+          <Button variant='outline' size='icon' onClick={goToNextMonth} aria-label='Next month'>
             <Icons.chevronRight className='h-4 w-4' />
-          </button>
-          <button
-            onClick={goToNextYear}
-            className='inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 w-8 p-0'
-            aria-label='Next year'
-          >
+          </Button>
+          <Button variant='outline' size='icon' onClick={goToNextYear} aria-label='Next year'>
             <Icons.chevronRight className='h-4 w-4' />
             <Icons.chevronRight className='h-4 w-4 -ml-2' />
-          </button>
+          </Button>
         </div>
       </div>
 

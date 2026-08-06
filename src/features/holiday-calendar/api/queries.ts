@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { getNationalHolidaysFn, getNationalHolidayFn } from './service';
 
@@ -20,3 +21,8 @@ export const nationalHolidayQueryOptions = (id: number) =>
     queryKey: holidayKeys.detail(id),
     queryFn: () => getNationalHolidayFn({ data: { id } })
   });
+
+// Hook for fetching national holidays
+export function useNationalHolidays(year?: number) {
+  return useQuery(nationalHolidaysQueryOptions(year));
+}
