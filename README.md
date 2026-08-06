@@ -57,7 +57,7 @@
 | [Role Groups](/dashboard/admin/role-groups)            | RBAC group management: per-module permission toggles for each role group.                           |
 | [Users (Table)](/dashboard/users)                      | Users table with React Query + URL state pattern.                                                   |
 | [Notifications](/dashboard/notifications)              | Notification center with bell badge, popover preview, and full page with tabs.                      |
-| [Payroll](/dashboard/admin/payroll/overview)           | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.          |
+| [Payroll](/dashboard/admin/payroll)                    | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.          |
 | [My Payslips](/dashboard/payroll/payslips)             | Employee self-service: payslip history with PDF download.                                           |
 | [Not Found](/notfound)                                 | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                   |
 

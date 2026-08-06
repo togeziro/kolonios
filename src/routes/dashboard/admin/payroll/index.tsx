@@ -29,21 +29,23 @@ function PayrollOverviewPage() {
       pageTitle={t('payroll.title')}
       pageDescription={t('payroll.overviewDescription')}
     >
-      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-        {payrollLinks.map(([to, key]) => (
-          <Card key={to}>
-            <CardHeader>
-              <CardTitle className='text-base'>{t(`payroll.${key}`)}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant='outline' size='sm'>
-                <Link to={to}>{t('common.open')}</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+      <div className='space-y-6'>
+        <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5'>
+          {payrollLinks.map(([to, key]) => (
+            <Card key={to} className='flex h-full flex-col'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='text-base'>{t(`payroll.${key}`)}</CardTitle>
+              </CardHeader>
+              <CardContent className='mt-auto pt-0'>
+                <Button asChild variant='outline' size='sm' className='w-full'>
+                  <Link to={to}>{t('common.open', { defaultValue: 'Open' })}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <SalaryComponentsPanel />
       </div>
-      <SalaryComponentsPanel />
     </PageContainer>
   );
 }
