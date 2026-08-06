@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Import the functions from service
 import {
@@ -13,17 +12,17 @@ import {
 } from './service';
 
 // Mock the DB functions
-const mockGetNationalHolidays = mock(() => Promise.resolve({ success: true, holidays: [] }));
-const mockGetNationalHoliday = mock(() => Promise.resolve({ success: true, holiday: null }));
-const mockCreateNationalHoliday = mock(() =>
+const mockGetNationalHolidays = vi.fn(() => Promise.resolve({ success: true, holidays: [] }));
+const mockGetNationalHoliday = vi.fn(() => Promise.resolve({ success: true, holiday: null }));
+const mockCreateNationalHoliday = vi.fn(() =>
   Promise.resolve({ success: true, holiday: { id: 1, date: '2026-01-01', name: 'Test Holiday' } })
 );
-const mockUpdateNationalHoliday = mock(() =>
+const mockUpdateNationalHoliday = vi.fn(() =>
   Promise.resolve({ success: true, holiday: { id: 1, name: 'Updated' } })
 );
-const mockDeleteNationalHoliday = mock(() => Promise.resolve({ success: true }));
+const mockDeleteNationalHoliday = vi.fn(() => Promise.resolve({ success: true }));
 
-mock.module('@/lib/db/attendance', () => ({
+vi.mock('@/lib/db/attendance', () => ({
   getNationalHolidays: mockGetNationalHolidays,
   getNationalHoliday: mockGetNationalHoliday,
   createNationalHoliday: mockCreateNationalHoliday,
@@ -32,22 +31,16 @@ mock.module('@/lib/db/attendance', () => ({
 }));
 
 // Mock auth session
-const mockRequirePermission = mock(() =>
+const mockRequirePermission = vi.fn(() =>
   Promise.resolve({ user: { id: 'user-1', role: 'admin' } })
 );
-mock.module('@/lib/auth/session', () => ({
+vi.mock('@/lib/auth/session', () => ({
   requirePermission: mockRequirePermission
 }));
 
 describe('Holiday Calendar Server Functions', () => {
   beforeEach(() => {
-    mock.restore();
-    mockGetNationalHolidays.mockClear();
-    mockGetNationalHoliday.mockClear();
-    mockCreateNationalHoliday.mockClear();
-    mockUpdateNationalHoliday.mockClear();
-    mockDeleteNationalHoliday.mockClear();
-    mockRequirePermission.mockClear();
+    vi.clearAllMocks();
   });
 
   describe('Function Exports', () => {

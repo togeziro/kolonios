@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   listEmployees,
   getEmployeeById,
@@ -9,6 +9,17 @@ import {
 import { resetAllTables, seedUser, seedDepartment, seedDesignation } from '@/test-utils/db';
 import { db } from '@/lib/db';
 import { employees } from './schema/employees';
+
+const MOCK_AUTH_USER_ID = 'mock-auth-user-id';
+
+vi.mock('@/lib/auth/auth.server', () => ({
+  auth: {
+    api: {
+      createUser: vi.fn().mockResolvedValue({ id: MOCK_AUTH_USER_ID }),
+      updateUser: vi.fn().mockResolvedValue(undefined)
+    }
+  }
+}));
 
 const TEST_EMP_USER_ID = 'test-emp-user-001';
 
@@ -209,11 +220,8 @@ describe('employees data access (integration)', () => {
   });
 
   describe('createEmployee', () => {
-    it.skip('creates an employee via auth API and generates employee code', async () => {
-      // Skipped: createEmployee calls better-auth auth.api.createUser which
-      // requires the full better-auth server runtime and returns user IDs
-      // that the test environment cannot reliably produce.
-      await seedUser(TEST_EMP_USER_ID);
+    it('creates an employee via auth API and generates employee code', async () => {
+      await seedUser(MOCK_AUTH_USER_ID);
 
       const res = await createEmployee({
         full_name: 'New Employee',
@@ -227,7 +235,10 @@ describe('employees data access (integration)', () => {
         created_by: TEST_EMP_USER_ID
       });
 
-      expect(res!.success).toBe(true);
+      expect(res.success).toBe(true);
+      expect(res.employee).toBeDefined();
+      expect(res.employee.full_name).toBe('New Employee');
+      expect(res.employee.employee_code).toMatch(/^EMP-\d{4}$/);
     });
   });
 
