@@ -57,9 +57,6 @@ export const importHolidaysSchema = z.object({
 // Holiday API provider enum
 export const holidayApiProviderSchema = z.enum(['nager_date', 'openholidays', 'custom']);
 
-// Get holiday API settings schema (no input required)
-export const getHolidayApiSettingsSchema = z.object({}).optional();
-
 // Update holiday API settings schema
 export const updateHolidayApiSettingsSchema = z.object({
   provider: holidayApiProviderSchema,
