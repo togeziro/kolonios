@@ -62,6 +62,9 @@ export const columns: ColumnDef<User>[] = [
   },
   {
     id: 'actions',
+    size: 48,
+    minSize: 48,
+    maxSize: 48,
     cell: ({ row }) => <CellAction data={row.original} />
   }
 ];

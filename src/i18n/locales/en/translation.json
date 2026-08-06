@@ -859,7 +859,10 @@
     "importConfirm": "Import",
     "importing": "Importing...",
     "importSuccess": "{{count}} holidays imported",
-    "importFailed": "Failed to import holidays"
+    "importFailed": "Failed to import holidays",
+    "emptyTitle": "No holidays yet",
+    "emptyDescription": "Import national holidays from your API or add company holidays manually.",
+    "emptyNoResults": "No holidays match your search."
   },
   "attendanceAdmin": {
     "locationsTitle": "Attendance Locations",

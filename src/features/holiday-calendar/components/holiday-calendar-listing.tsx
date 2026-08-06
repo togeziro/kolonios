@@ -7,8 +7,9 @@ import {
   getPaginationRowModel,
   useReactTable
 } from '@tanstack/react-table';
-import { Search } from 'lucide-react';
+import { CalendarX2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/table/data-table';
 import { useQuery } from '@tanstack/react-query';
@@ -75,17 +76,17 @@ export function HolidayCalendarListing() {
     }
   });
 
+  const hasSearchFilter = (table.getColumn('name')?.getFilterValue() as string) ?? '';
+
   if (isLoading)
     return <div className='py-8 text-center text-muted-foreground'>{t('common.loading')}</div>;
 
+  const showEmptyState = holidays.length === 0 && !hasSearchFilter;
+
   return (
     <div className='flex flex-col gap-4'>
-      <div className='flex flex-col items-start gap-4 sm:flex-row sm:justify-between'>
-        <div className='flex flex-col gap-1'>
-          <h1 className='text-3xl tracking-tight'>{t('holiday.title')}</h1>
-          <p className='text-muted-foreground text-sm'>{t('holiday.description')}</p>
-        </div>
-        <div className='flex flex-wrap items-center gap-2'>
+      {!showEmptyState && (
+        <div className='flex flex-wrap items-center justify-end gap-2'>
           <Button
             variant='outline'
             size='sm'
@@ -104,23 +105,54 @@ export function HolidayCalendarListing() {
             {t('holiday.addHoliday')}
           </Button>
         </div>
-      </div>
+      )}
 
-      <DataTable table={table}>
-        <div className='flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6'>
-          <div className='relative w-full rounded-md sm:w-80'>
-            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-            <Input
-              className='h-7 pl-9'
-              placeholder={t('holiday.searchPlaceholder')}
-              value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-              onChange={(e) => {
-                table.getColumn('name')?.setFilterValue(e.target.value || undefined);
-              }}
-            />
+      {showEmptyState ? (
+        <Card className='mx-auto w-full max-w-2xl'>
+          <CardContent className='flex flex-col items-center justify-center py-16 text-center'>
+            <CalendarX2 className='mb-4 h-12 w-12 text-muted-foreground/50' />
+            <h3 className='mb-1 text-lg font-semibold'>{t('holiday.emptyTitle')}</h3>
+            <p className='mb-4 max-w-sm text-sm text-muted-foreground'>
+              {t('holiday.emptyDescription')}
+            </p>
+            <div className='flex gap-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setImportOpen(true)}
+                disabled={importMutation.isPending}
+              >
+                {importMutation.isPending ? (
+                  <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+                ) : (
+                  <Icons.download className='mr-2 h-4 w-4' />
+                )}
+                {t('holiday.importHolidays')}
+              </Button>
+              <Button size='sm' onClick={() => setFormOpen(true)}>
+                <Icons.add className='mr-2 h-4 w-4' />
+                {t('holiday.addHoliday')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <DataTable table={table}>
+          <div className='flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6'>
+            <div className='relative w-full rounded-md sm:w-80'>
+              <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              <Input
+                className='h-7 pl-9'
+                placeholder={t('holiday.searchPlaceholder')}
+                value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
+                onChange={(e) => {
+                  table.getColumn('name')?.setFilterValue(e.target.value || undefined);
+                }}
+              />
+            </div>
           </div>
-        </div>
-      </DataTable>
+        </DataTable>
+      )}
 
       <HolidayFormDialog open={formOpen} onOpenChange={setFormOpen} />
 

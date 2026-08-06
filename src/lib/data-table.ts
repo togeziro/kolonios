@@ -9,6 +9,7 @@ export function getCommonPinningStyles<TData>({
   column: Column<TData>;
 }): React.CSSProperties {
   const isPinned = column.getIsPinned();
+  const isCompactActionColumn = column.id === 'actions' && column.getSize() <= 48;
   const isLastLeftPinnedColumn = isPinned === 'left' && column.getIsLastColumn('left');
   const isFirstRightPinnedColumn = isPinned === 'right' && column.getIsFirstColumn('right');
 
@@ -22,7 +23,8 @@ export function getCommonPinningStyles<TData>({
     right: isPinned === 'right' ? `${column.getAfter('right')}px` : undefined,
     position: isPinned ? 'sticky' : 'relative',
     background: isPinned ? 'var(--background)' : undefined,
-    width: column.getSize(),
+    width: isCompactActionColumn ? '1%' : column.getSize(),
+    maxWidth: isCompactActionColumn ? column.getSize() : undefined,
     zIndex: isPinned ? 1 : 0
   };
 }

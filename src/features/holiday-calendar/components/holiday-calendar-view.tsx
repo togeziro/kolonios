@@ -122,8 +122,7 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
             onClick={goToPreviousYear}
             aria-label='Previous year'
           >
-            <Icons.chevronLeft className='h-4 w-4' />
-            <Icons.chevronLeft className='h-4 w-4 -ml-2' />
+            <Icons.chevronsLeft className='h-4 w-4' />
           </Button>
           <Button
             variant='outline'
@@ -136,10 +135,6 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
         </div>
 
         <div className='text-center'>
-          <h3 className='text-lg font-semibold'>
-            {new Date(selectedYear, selectedMonth).toLocaleString('default', { month: 'long' })}{' '}
-            {selectedYear}
-          </h3>
           <p className='text-sm text-muted-foreground'>
             {currentMonthHolidayCount} holiday{currentMonthHolidayCount !== 1 ? 's' : ''} this month
             {' · '}
@@ -152,15 +147,14 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
             <Icons.chevronRight className='h-4 w-4' />
           </Button>
           <Button variant='outline' size='icon' onClick={goToNextYear} aria-label='Next year'>
-            <Icons.chevronRight className='h-4 w-4' />
-            <Icons.chevronRight className='h-4 w-4 -ml-2' />
+            <Icons.chevronsRight className='h-4 w-4' />
           </Button>
         </div>
       </div>
 
       {/* Calendar Grid */}
       <Card>
-        <CardContent className='p-3'>
+        <CardContent className='p-0'>
           {isLoading ? (
             <div className='flex h-64 items-center justify-center'>
               <Icons.spinner className='h-6 w-6 animate-spin' />
@@ -176,10 +170,21 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
               onSelect={setSelectedDate}
               month={new Date(selectedYear, selectedMonth)}
               onMonthChange={handleMonthChange}
-              className='w-full'
+              className='w-full p-3'
               modifiers={holidayModifiers}
               modifiersClassNames={{
                 holiday: 'holiday-date'
+              }}
+              classNames={{
+                root: 'w-full',
+                months: 'flex w-full',
+                month: 'w-full flex flex-col gap-4',
+                weekdays: 'flex w-full',
+                weekday: 'flex-1 text-center text-xs font-medium text-muted-foreground',
+                week: 'flex w-full',
+                day: 'flex-1 h-10',
+                day_button: 'w-full h-full',
+                nav: 'hidden'
               }}
             />
           )}

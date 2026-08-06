@@ -859,7 +859,10 @@
     "importConfirm": "Impor",
     "importing": "Mengimpor...",
     "importSuccess": "{{count}} libur berhasil diimpor",
-    "importFailed": "Gagal mengimpor libur"
+    "importFailed": "Gagal mengimpor libur",
+    "emptyTitle": "Belum ada libur",
+    "emptyDescription": "Impor libur nasional dari API atau tambahkan libur perusahaan secara manual.",
+    "emptyNoResults": "Tidak ada libur yang cocok dengan pencarian Anda."
   },
   "attendanceAdmin": {
     "locationsTitle": "Lokasi Absensi",

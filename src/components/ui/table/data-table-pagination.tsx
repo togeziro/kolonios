@@ -25,6 +25,9 @@ export function DataTablePagination<TData>({
   ...props
 }: DataTablePaginationProps<TData>) {
   const { t } = useTranslation();
+  const rowCount = table.getFilteredRowModel().rows.length;
+
+  if (rowCount === 0) return null;
 
   return (
     <div
