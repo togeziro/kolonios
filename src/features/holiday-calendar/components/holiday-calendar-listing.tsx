@@ -12,8 +12,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/table/data-table';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { nationalHolidaysQueryOptions } from '../api/queries';
+import { useImportHolidaysFromApi } from '../api/mutations';
 import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import { columns } from './holiday-columns';
 import { HolidayFormDialog } from './holiday-form-dialog';
@@ -24,6 +36,23 @@ export function HolidayCalendarListing() {
   const { data, isLoading } = useQuery(nationalHolidaysQueryOptions());
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const importMutation = useImportHolidaysFromApi();
+
+  const handleImport = () => {
+    importMutation.mutate(
+      { year: new Date().getFullYear() },
+      {
+        onSuccess: (result) => {
+          toast.success(t('holiday.importSuccess', { count: result.count }));
+          setImportOpen(false);
+        },
+        onError: () => {
+          toast.error(t('holiday.importFailed'));
+        }
+      }
+    );
+  };
 
   const holidays = (data as { holidays?: NationalHoliday[] } | undefined)?.holidays ?? [];
 
@@ -56,10 +85,25 @@ export function HolidayCalendarListing() {
           <h1 className='text-3xl tracking-tight'>{t('holiday.title')}</h1>
           <p className='text-muted-foreground text-sm'>{t('holiday.description')}</p>
         </div>
-        <Button size='sm' onClick={() => setFormOpen(true)}>
-          <Icons.add className='mr-2 h-4 w-4' />
-          {t('holiday.addHoliday')}
-        </Button>
+        <div className='flex flex-wrap items-center gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setImportOpen(true)}
+            disabled={importMutation.isPending}
+          >
+            {importMutation.isPending ? (
+              <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+            ) : (
+              <Icons.download className='mr-2 h-4 w-4' />
+            )}
+            {t('holiday.importHolidays')}
+          </Button>
+          <Button size='sm' onClick={() => setFormOpen(true)}>
+            <Icons.add className='mr-2 h-4 w-4' />
+            {t('holiday.addHoliday')}
+          </Button>
+        </div>
       </div>
 
       <DataTable table={table}>
@@ -79,6 +123,23 @@ export function HolidayCalendarListing() {
       </DataTable>
 
       <HolidayFormDialog open={formOpen} onOpenChange={setFormOpen} />
+
+      <AlertDialog open={importOpen} onOpenChange={setImportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('holiday.importConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('holiday.importConfirmDescription', { year: new Date().getFullYear() })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleImport} disabled={importMutation.isPending}>
+              {importMutation.isPending ? t('holiday.importing') : t('holiday.importConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

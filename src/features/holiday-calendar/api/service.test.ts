@@ -8,7 +8,8 @@ import {
   getNationalHolidayFn,
   updateNationalHolidayFn,
   deleteNationalHolidayFn,
-  importHolidaysFromApiFn
+  importHolidaysFromApiFn,
+  mapHolidayResponse
 } from './service';
 
 // Mock the DB functions
@@ -72,6 +73,96 @@ describe('Holiday Calendar Server Functions', () => {
 
     it('should export importHolidaysFromApiFn', () => {
       expect(importHolidaysFromApiFn).toBeDefined();
+    });
+  });
+
+  describe('mapHolidayResponse', () => {
+    it('should map Nager.Date records', () => {
+      const payload = [
+        { date: '2026-01-01', localName: 'New Year', name: 'New Year', countryCode: 'ID' },
+        {
+          date: '2026-08-17',
+          localName: 'Independence Day',
+          name: 'Independence Day',
+          countryCode: 'ID'
+        }
+      ];
+      const records = mapHolidayResponse(payload, 'nager_date');
+      expect(records).toHaveLength(2);
+      expect(records[0]).toEqual({
+        date: '2026-01-01',
+        name: 'New Year',
+        description: null
+      });
+    });
+
+    it('should use name string as fallback when localName is missing', () => {
+      const payload = [{ date: '2026-05-01', name: 'Labour Day', countryCode: 'ID' }];
+      const records = mapHolidayResponse(payload, 'nager_date');
+      expect(records[0].name).toBe('Labour Day');
+    });
+
+    it('should skip records without a valid date or name', () => {
+      const payload = [
+        { localName: 'No Date', name: 'Whatever' },
+        { date: '2026-01-01' },
+        { date: '2026-01-01', name: 'Valid' }
+      ];
+      const records = mapHolidayResponse(payload, 'nager_date');
+      expect(records).toHaveLength(1);
+      expect(records[0].name).toBe('Valid');
+    });
+
+    it('should map OpenHolidays records', () => {
+      const payload = [
+        {
+          startDate: '2026-01-01',
+          name: [
+            { language: 'ID', text: 'Tahun Baru' },
+            { language: 'EN', text: 'New Year' }
+          ]
+        }
+      ];
+      const records = mapHolidayResponse(payload, 'openholidays');
+      expect(records).toHaveLength(1);
+      expect(records[0]).toEqual({ date: '2026-01-01', name: 'New Year', description: null });
+    });
+
+    it('should map OpenHolidays records with a non-English first name', () => {
+      const payload = [
+        {
+          startDate: '2026-08-17',
+          name: [{ language: 'ID', text: 'Hari Kemerdekaan' }]
+        }
+      ];
+      const records = mapHolidayResponse(payload, 'openholidays');
+      expect(records[0].name).toBe('Hari Kemerdekaan');
+    });
+
+    it('should map custom records using response mapping', () => {
+      const payload = {
+        data: [
+          { when: '2026-02-10T00:00:00Z', title: 'Custom Day', note: 'A special day' },
+          { when: '2026-03-15', title: 'Another Day', note: 'Another note' }
+        ]
+      };
+      const records = mapHolidayResponse(payload, 'custom', {
+        date: 'when',
+        name: 'title',
+        description: 'note'
+      });
+      expect(records).toHaveLength(2);
+      expect(records[0]).toEqual({
+        date: '2026-02-10',
+        name: 'Custom Day',
+        description: 'A special day'
+      });
+    });
+
+    it('should fall back to default fields when no mapping is provided', () => {
+      const payload = [{ date: '2026-04-01', name: 'Plain', description: 'Desc' }];
+      const records = mapHolidayResponse(payload, 'custom');
+      expect(records[0]).toEqual({ date: '2026-04-01', name: 'Plain', description: 'Desc' });
     });
   });
 });

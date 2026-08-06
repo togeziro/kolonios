@@ -852,7 +852,14 @@
     "apiKeyHelp": "Diperlukan hanya untuk API yang membutuhkan autentikasi.",
     "settingsSaved": "Pengaturan API libur berhasil disimpan",
     "settingsSaveFailed": "Gagal menyimpan pengaturan API libur",
-    "settingsLoadFailed": "Gagal memuat pengaturan API libur"
+    "settingsLoadFailed": "Gagal memuat pengaturan API libur",
+    "importHolidays": "Impor Libur",
+    "importConfirmTitle": "Impor Libur",
+    "importConfirmDescription": "Ini akan mengambil libur nasional untuk tahun {{year}} dari API yang dikonfigurasi dan menambahkan yang baru. Lanjutkan?",
+    "importConfirm": "Impor",
+    "importing": "Mengimpor...",
+    "importSuccess": "{{count}} libur berhasil diimpor",
+    "importFailed": "Gagal mengimpor libur"
   },
   "attendanceAdmin": {
     "locationsTitle": "Lokasi Absensi",

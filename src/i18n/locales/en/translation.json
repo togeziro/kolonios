@@ -852,7 +852,14 @@
     "apiKeyHelp": "Required only for APIs that need authentication.",
     "settingsSaved": "Holiday API settings saved",
     "settingsSaveFailed": "Failed to save holiday API settings",
-    "settingsLoadFailed": "Failed to load holiday API settings"
+    "settingsLoadFailed": "Failed to load holiday API settings",
+    "importHolidays": "Import Holidays",
+    "importConfirmTitle": "Import Holidays",
+    "importConfirmDescription": "This will fetch national holidays for {{year}} from your configured API and add any new ones. Continue?",
+    "importConfirm": "Import",
+    "importing": "Importing...",
+    "importSuccess": "{{count}} holidays imported",
+    "importFailed": "Failed to import holidays"
   },
   "attendanceAdmin": {
     "locationsTitle": "Attendance Locations",
