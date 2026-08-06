@@ -12,27 +12,37 @@ import {
 } from '@/components/ui/table';
 import { getCommonPinningStyles } from '@/lib/data-table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface DataTableProps<TData> extends React.ComponentProps<'div'> {
   table: TanstackTable<TData>;
   actionBar?: React.ReactNode;
+  tableClassName?: string;
+  rowClassName?: string;
 }
 
-export function DataTable<TData>({ table, actionBar, children }: DataTableProps<TData>) {
+export function DataTable<TData>({
+  table,
+  actionBar,
+  tableClassName,
+  rowClassName,
+  children
+}: DataTableProps<TData>) {
   return (
-    <div className='flex flex-1 flex-col space-y-4'>
+    <div className='flex flex-1 flex-col'>
       {children}
       <div className='relative flex min-h-0 flex-1'>
-        <div className='absolute inset-0 flex overflow-hidden rounded-lg border'>
+        <div className='absolute inset-0 flex overflow-hidden'>
           <ScrollArea className='h-full w-full'>
-            <Table>
+            <Table className={tableClassName}>
               <TableHeader className='bg-muted sticky top-0 z-10'>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
+                  <TableRow key={headerGroup.id} className='border-border/60'>
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
                         colSpan={header.colSpan}
+                        className='px-4 py-3 font-normal'
                         style={{
                           ...getCommonPinningStyles({ column: header.column })
                         }}
@@ -48,10 +58,15 @@ export function DataTable<TData>({ table, actionBar, children }: DataTableProps<
               <TableBody>
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && 'selected'}
+                      className={cn('border-border/60 hover:bg-accent/50', rowClassName)}
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
+                          className='px-4 py-4'
                           style={{
                             ...getCommonPinningStyles({ column: cell.column })
                           }}
