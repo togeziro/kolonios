@@ -19,17 +19,22 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
   // Fetch holidays for the selected year
   const { data, isLoading, error } = useNationalHolidays(selectedYear);
 
-  // Create a map of dates to holidays for quick lookup
+  // Create a map of dates to holidays for quick lookup.
+  // Recurring holidays store an absolute date; project them onto the viewed year
+  // so e.g. a recurring Jan 1 holiday renders on Jan 1 of whatever year is shown.
   const holidayMap = React.useMemo(() => {
     const map = new Map<string, NationalHoliday[]>();
     const holidays = data?.holidays ?? [];
     holidays.forEach((holiday: NationalHoliday) => {
-      const dateStr = holiday.date;
+      const dateStr = holiday.is_recurring
+        ? projectDateOntoYear(holiday.date, selectedYear)
+        : holiday.date;
+      if (!dateStr) return;
       const existing = map.get(dateStr) ?? [];
       map.set(dateStr, [...existing, holiday]);
     });
     return map;
-  }, [data?.holidays]);
+  }, [data?.holidays, selectedYear]);
 
   // Get holidays for a specific date
   const getHolidaysForDate = (date: Date): NationalHoliday[] => {
@@ -219,4 +224,11 @@ function formatDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// Re-project a stored YYYY-MM-DD date onto a target year (for recurring holidays).
+function projectDateOntoYear(date: string, targetYear: number): string | null {
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return `${targetYear}-${match[2]}-${match[3]}`;
 }

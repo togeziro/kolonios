@@ -11,6 +11,7 @@ const MODULES = [
   { key: 'audit_log', label: 'Audit Log', actions: ['view'] },
   { key: 'role_groups', label: 'Role Groups', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'notifications', label: 'Notifications', actions: ['view'] },
+  { key: 'holiday', label: 'Holiday Calendar', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'profile', label: 'Profile', actions: ['view'] },
   { key: 'jobs', label: 'Jobs', actions: ['view'] },
   {

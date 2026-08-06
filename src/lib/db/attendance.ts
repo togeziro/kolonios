@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql, desc, asc } from 'drizzle-orm';
+import { and, eq, or, gte, lte, sql, desc, asc } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { businessDateInTimeZone } from '@/lib/dates';
@@ -1202,7 +1202,11 @@ export type NewNationalHoliday = {
 
 export async function getNationalHolidays(year?: number) {
   try {
-    const where = year !== undefined ? eq(nationalHolidays.year, year) : undefined;
+    // Recurring holidays (year = null) apply to every year; dated holidays belong to their year.
+    const where =
+      year !== undefined
+        ? or(eq(nationalHolidays.year, year), eq(nationalHolidays.is_recurring, true))
+        : undefined;
     const rows = await db
       .select()
       .from(nationalHolidays)

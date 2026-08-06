@@ -1109,6 +1109,31 @@ describe('national holidays CRUD functions', () => {
     expect(res.holidays[0].name).toBe('New Year 2026');
   });
 
+  it('getNationalHolidays includes recurring holidays when filtering by year', async () => {
+    await db.insert(nationalHolidays).values([
+      {
+        date: '2026-08-17',
+        name: 'Independence Day',
+        is_recurring: false,
+        year: 2026,
+        source: 'manual' as const
+      },
+      {
+        date: '2026-12-25',
+        name: 'Christmas',
+        is_recurring: true,
+        year: null,
+        source: 'manual' as const
+      }
+    ]);
+
+    const res = await getNationalHolidays(2026);
+    expect(res.success).toBe(true);
+    expect(res.holidays).toHaveLength(2);
+    expect(res.holidays.some((h) => h.name === 'Independence Day')).toBe(true);
+    expect(res.holidays.some((h) => h.name === 'Christmas')).toBe(true);
+  });
+
   it('getNationalHoliday returns a single holiday by id', async () => {
     const [holiday] = await db
       .insert(nationalHolidays)

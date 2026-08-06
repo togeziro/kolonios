@@ -404,7 +404,12 @@ export const updateHolidayApiSettingsFn = createServerFn({ method: 'POST' })
         entityType: 'company_settings',
         entityId: '1',
         before: null,
-        after: result
+        after: {
+          ...result,
+          settings: result.settings
+            ? { ...result.settings, holiday_api_key: undefined }
+            : result.settings
+        }
       },
       async () => undefined
     );
