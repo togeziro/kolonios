@@ -56,7 +56,8 @@ export const navTitleKeys: Record<string, string> = {
   Departments: 'navigation.departments',
   'Job Titles': 'navigation.jobTitles',
   'Audit Log': 'navigation.auditLog',
-  'Role Groups': 'navigation.roleGroups'
+  'Role Groups': 'navigation.roleGroups',
+  'Holiday Calendar': 'navigation.holidayCalendar'
 };
 
 function isPathActive(pathname: string, url: string): boolean {
