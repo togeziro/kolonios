@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HolidayCalendarListing } from './holiday-calendar-listing';
+import { HolidayCalendarView } from './holiday-calendar-view';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/components/icons';
 
@@ -22,9 +23,7 @@ export function HolidayCalendarPage() {
         </TabsContent>
 
         <TabsContent value='calendar' className='mt-0'>
-          <div className='flex h-64 items-center justify-center rounded-md border border-dashed text-muted-foreground text-sm'>
-            {t('holiday.calendarViewComingSoon')}
-          </div>
+          <HolidayCalendarView />
         </TabsContent>
       </Tabs>
     </div>
