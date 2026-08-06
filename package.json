@@ -25,6 +25,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:run": "bun run scripts/migrate.ts",
+    "db:check": "drizzle-kit check",
     "db:baseline": "bun run scripts/baseline-migrations.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "bun run scripts/seed.ts",
@@ -155,10 +156,4 @@
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged && tsc --noEmit"
   },
-  "lint-staged": {
-    "*.{js,ts,jsx,tsx}": [
-      "oxlint --fix",
-      "oxfmt"
-    ]
-  }
 }

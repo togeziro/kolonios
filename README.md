@@ -24,8 +24,9 @@
 
 ## Features
 
-- **Admin dashboard layout** — sidebar, header, content area; responsive `MobileShell` for staff on mobile
+- **Admin dashboard layout** — sidebar, header, content area; responsive `MobileShell` for staff on mobile. Sidebar menu grouped by HR domain (Kerjoo-aligned architecture), curated to shipped features.
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
+- **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
 - **Customer management** — full CRUD with search, filter & pagination; auto-generated customer codes
 - **Employee management** — full CRUD with department joins and filtering
@@ -37,7 +38,7 @@
 - **Multi-theme support** — 13 OKLCH themes (all input/border tokens ≥3:1 WCAG contrast) with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
 - **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
-- **Testing** — 653 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Testing** — 653+ Vitest unit/integration tests (holiday-calendar tests added) + Playwright E2E tests; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
@@ -57,6 +58,8 @@
 | [Role Groups](/dashboard/admin/role-groups)            | RBAC group management: per-module permission toggles for each role group.                           |
 | [Users (Table)](/dashboard/users)                      | Users table with React Query + URL state pattern.                                                   |
 | [Notifications](/dashboard/notifications)              | Notification center with bell badge, popover preview, and full page with tabs.                      |
+| [Holiday Calendar](/dashboard/admin/holiday-calendar)  | CRUD national/company holidays, API import, calendar view, admin settings.                           |
+| [Holiday Settings](/dashboard/admin/holiday-calendar/settings) | Holiday API provider configuration (Nager.Date / OpenHolidays / Custom REST).               |
 | [Payroll](/dashboard/admin/payroll)                    | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.          |
 | [My Payslips](/dashboard/payroll/payslips)             | Employee self-service: payslip history with PDF download.                                           |
 | [Not Found](/notfound)                                 | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                   |
@@ -139,12 +142,13 @@ cp env.example.txt .env
 Apply the schema and seed the database:
 
 ```bash
-bun run db:push    # apply the Drizzle schema to the database
-bun run db:seed    # seed masterdata (2 locations, 3 shifts, 6 departments, 13 designations),
-                   #   4 role groups (Administrator/HR/Employee/Technician),
-                   #   4 demo users, 4 employee records, customers,
-                   #   + 1 demo user with 8 notifications
+bun run db:migrate:run  # apply all Drizzle migrations (auto-seeds on a fresh DB)
 ```
+
+`db:migrate:run` applies every committed migration and auto-seeds on a fresh
+database (4 demo users, 4 employee records, role groups, customers, etc.), so
+no separate `db:seed` is needed on a new checkout. Run `bun run db:seed`
+manually only to force a re-seed.
 
 Run the development server:
 
@@ -165,25 +169,23 @@ Log in with a seeded demo account:
 
 ### Database Migrations
 
-For versioned, production-style schema changes (instead of `db:push`):
+Versioned migrations are the **single** schema-application workflow:
 
 ```bash
-bun run db:generate   # generate SQL migrations from schema changes
-bun run db:migrate    # drizzle-kit migration runner
+bun run db:generate    # generate SQL migrations from schema changes
 bun run db:migrate:run # apply pending migrations programmatically (scripts/migrate.ts)
+bun run db:check       # verify schema ↔ migrations are in sync (also runs in CI)
 ```
 
-> Schema changes: keep dev and test databases in sync — run `db:push` (dev) and
-> `db:migrate:run` (test) together, and commit migrations via `db:generate`.
+> **Always** change the schema via `db:generate` → `db:migrate:run`. CI applies
+> all migrations to a fresh test database and runs `db:check` on every PR, so a
+> schema change without a committed migration fails the build.
 
-> `db:migrate:run` auto-seeds the database when the `user` table is empty, so
-> demo accounts (`admin@example.com` / `Password123!`, etc.) always exist after
-> applying migrations to a fresh database. Run `bun run db:seed` manually only
-> to force a re-seed.
-
-> Switching an existing `db:push`-created database to versioned migrations:
-> run `bun run db:baseline` once (records current migrations as applied), then
-> use `db:generate` → `db:migrate:run` for all future changes.
+> `db:push` exists only as a throwaway-prototyping escape hatch — it applies the
+> schema without recording anything in the migration journal. Never mix it into
+> the versioned workflow: a DB touched by `db:push` will cause `db:migrate:run`
+> to fail with `relation "..." already exists`. Reconcile such a database once
+> with `bun run db:baseline`, then use migrations exclusively.
 
 ### API Documentation (OpenAPI + Redoc)
 
@@ -269,6 +271,9 @@ Detailed docs live in [`docs/`](./docs/):
 | [docs/PAYROLL.md](./docs/PAYROLL.md)                                                   | Payroll module deep-dive 🆕                                    |
 | [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                 | Kerjoo payroll requirement reference (finish-payroll scope) 🆕 |
 | [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕  |
+| [docs/KERJOO_FEATURES_COMPLETE.md](./docs/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (live sidebar, 18 groups) 🆕       |
+| [docs/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios feature comparison + sidebar structure 🆕    |
+| [docs/MISSING_FEATURES_PRIORITIZED.md](./docs/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan with effort estimates 🆕            |
 | [docs/audit/](./docs/audit/)                                                           | Repository audit + implementation summary                      |
 
 ## Code Quality & Architecture
@@ -276,7 +281,7 @@ Detailed docs live in [`docs/`](./docs/):
 - **Shared DB utilities**: Common patterns extracted to `src/lib/db/utils.ts` to reduce code duplication across DB modules (pagination, sorting, search conditions, filtering)
 - **Consistent error handling**: All DB functions use `mapDbError` with consistent response format (`{ success, time, message, data? }`)
 - **Type safety**: Server-only DB layer with Zod-validated inputs and proper error mapping
-- **Testing**: 653 Vitest tests + Playwright E2E tests; shared utilities have dedicated test suite
+- **Testing**: 653+ Vitest tests (holiday-calendar tests added) + Playwright E2E tests; shared utilities have dedicated test suite
 - **Code organization**: Feature-based structure with clear separation between routes, features, and shared libraries
 
 ## License

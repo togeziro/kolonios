@@ -58,6 +58,9 @@ jobs:
       - name: Set up test database
         run: bun run db:test:create
 
+      - name: Check schema/migrations drift
+        run: bun run db:check
+
       - name: Lint
         run: bun run lint
 

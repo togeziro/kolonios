@@ -22,8 +22,8 @@ async function main() {
 
   await sql.end();
 
-  console.log('Pushing schema to test database...');
-  execSync(`DATABASE_URL="${TEST_URL}" bun run db:push`, { stdio: 'inherit' });
+  console.log('Applying migrations to test database...');
+  execSync(`DATABASE_URL="${TEST_URL}" bun run db:migrate:run -- --no-seed`, { stdio: 'inherit' });
 
   console.log(`Test database ${TEST_DB} ready.`);
 }
