@@ -34,7 +34,7 @@
 - **Data tables** — TanStack Table with React Query route loaders, client-side cache, search, filter & pagination driven by URL search params
 - **Analytics overview** — Recharts cards with Suspense-based independent loading
 - **Notification center** — bell icon badge, popover preview, and full page view (PostgreSQL-backed)
-- **Multi-theme support** — 10+ OKLCH themes with easy switching
+- **Multi-theme support** — 13 OKLCH themes (all input/border tokens ≥3:1 WCAG contrast) with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
 - **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
 - **Testing** — 653 Vitest unit/integration tests + Playwright E2E tests; CI runs lint, typecheck, tests, and build
