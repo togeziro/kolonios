@@ -77,7 +77,7 @@
 }
 
 /* Holiday Calendar - Holiday date marker */
-.holiday-date button::after {
+.holiday-date::after {
   content: '';
   position: absolute;
   bottom: 2px;
