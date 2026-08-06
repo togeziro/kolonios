@@ -18,7 +18,7 @@ export function DataTableCard({
   children
 }: DataTableCardProps) {
   return (
-    <Card className={cn('flex min-h-0 flex-1 flex-col gap-0 overflow-hidden', className)}>
+    <Card className={cn('flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0', className)}>
       {(title || description || action) && (
         <CardHeader className='border-b px-4 py-4 md:px-6'>
           <div className='flex flex-wrap items-start justify-between gap-3'>
