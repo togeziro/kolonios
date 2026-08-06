@@ -5,7 +5,7 @@ import PageContainer from '@/components/layout/page-container';
 import UserListingPage from '@/features/users/components/user-listing';
 import { usersQueryOptions } from '@/features/users/api/queries';
 import { UserFormSheetTrigger } from '@/features/users/components/user-form-sheet';
-import { usersInfoContent } from '@/features/users/info-content';
+import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { useTranslation } from 'react-i18next';
 import { parseFilters } from '@/lib/filters';
 import type { SearchParams } from '@/types';
@@ -40,13 +40,14 @@ export const Route = createFileRoute('/dashboard/users')({
 function UsersPage() {
   const { t } = useTranslation();
   return (
-    <PageContainer
-      pageTitle={t('user.titlePlural')}
-      pageDescription={t('user.pageDescription')}
-      infoContent={usersInfoContent}
-      pageHeaderAction={<UserFormSheetTrigger />}
-    >
-      <UserListingPage />
+    <PageContainer>
+      <DataTableCard
+        title={t('user.titlePlural')}
+        description={t('user.pageDescription')}
+        action={<UserFormSheetTrigger />}
+      >
+        <UserListingPage />
+      </DataTableCard>
     </PageContainer>
   );
 }
