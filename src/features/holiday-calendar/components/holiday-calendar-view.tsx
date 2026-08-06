@@ -83,14 +83,33 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
   // Get selected date's holidays
   const selectedDateHolidays = selectedDate ? getHolidaysForDate(selectedDate) : [];
 
-  // Calculate holiday count for current month
+  // Count total holidays in the selected year (recurring projected onto selectedYear)
+  const yearHolidayCount = React.useMemo(() => {
+    let count = 0;
+    holidayMap.forEach((holidays, dateStr) => {
+      const date = new Date(dateStr + 'T00:00:00');
+      if (!isNaN(date.getTime()) && date.getFullYear() === selectedYear) {
+        count += holidays.length;
+      }
+    });
+    return count;
+  }, [holidayMap, selectedYear]);
+
+  // Calculate holiday count for current month (recurring dates projected onto selectedYear)
   const currentMonthHolidayCount = React.useMemo(() => {
-    const holidays = data?.holidays ?? [];
-    return holidays.filter((h: NationalHoliday) => {
-      const date = new Date(h.date + 'T00:00:00');
-      return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
-    }).length;
-  }, [data?.holidays, selectedMonth, selectedYear]);
+    let count = 0;
+    holidayMap.forEach((holidays, dateStr) => {
+      const date = new Date(dateStr + 'T00:00:00');
+      if (
+        !isNaN(date.getTime()) &&
+        date.getMonth() === selectedMonth &&
+        date.getFullYear() === selectedYear
+      ) {
+        count += holidays.length;
+      }
+    });
+    return count;
+  }, [holidayMap, selectedMonth, selectedYear]);
 
   return (
     <div className='space-y-4'>
@@ -124,7 +143,7 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
           <p className='text-sm text-muted-foreground'>
             {currentMonthHolidayCount} holiday{currentMonthHolidayCount !== 1 ? 's' : ''} this month
             {' · '}
-            {data?.holidays?.length ?? 0} total this year
+            {yearHolidayCount} total this year
           </p>
         </div>
 
