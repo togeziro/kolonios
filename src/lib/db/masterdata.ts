@@ -1,8 +1,9 @@
 import { eq, asc } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
-import { departments, designations } from './schema/masterdata';
+import { departments, designations, companySettings } from './schema/masterdata';
 import { buildConditions } from './utils';
+import type { CompanySetting } from './schema/masterdata';
 
 export async function getDepartments() {
   try {
@@ -202,5 +203,45 @@ export async function getDesignationsAsOptions() {
     };
   } catch (e) {
     mapDbError(e, 'masterdata.getDesignationsAsOptions');
+  }
+}
+
+// Company Settings functions
+export async function getCompanySettings() {
+  try {
+    const [settings] = await db.select().from(companySettings).limit(1);
+    return { success: true, time: new Date().toISOString(), settings: settings ?? null };
+  } catch (e) {
+    mapDbError(e, 'masterdata.getCompanySettings');
+  }
+}
+
+export async function updateCompanySettings(data: Partial<CompanySetting>) {
+  try {
+    const [existing] = await db.select().from(companySettings).limit(1);
+
+    if (existing) {
+      const [updated] = await db
+        .update(companySettings)
+        .set({ ...data, updated_at: new Date() })
+        .where(eq(companySettings.id, existing.id))
+        .returning();
+      return {
+        success: true,
+        time: new Date().toISOString(),
+        message: 'Company settings updated',
+        settings: updated
+      };
+    } else {
+      const [created] = await db.insert(companySettings).values(data).returning();
+      return {
+        success: true,
+        time: new Date().toISOString(),
+        message: 'Company settings created',
+        settings: created
+      };
+    }
+  } catch (e) {
+    mapDbError(e, 'masterdata.updateCompanySettings');
   }
 }

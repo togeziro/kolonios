@@ -1,6 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/session';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { withAudit } from '@/lib/audit';
 import { DomainError } from '@/lib/errors';
 import {
   getNationalHolidays,
@@ -14,7 +16,8 @@ import {
   updateNationalHolidaySchema,
   deleteNationalHolidaySchema,
   getNationalHolidaysSchema,
-  importHolidaysSchema
+  importHolidaysSchema,
+  updateHolidayApiSettingsSchema
 } from './validation';
 
 // Create National Holiday Server Function
@@ -141,4 +144,41 @@ export const importHolidaysFromApiFn = createServerFn({ method: 'POST' })
       if (error instanceof DomainError) throw error;
       throw new DomainError('Failed to import holidays', 'HOLIDAY_IMPORT_FAILED');
     }
+  });
+
+// Get Holiday API Settings Server Function
+export const getHolidayApiSettingsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  await requirePermission('holiday', 'view');
+  const { getCompanySettings } = await import('@/lib/db/masterdata');
+  return getCompanySettings();
+});
+
+// Update Holiday API Settings Server Function
+export const updateHolidayApiSettingsFn = createServerFn({ method: 'POST' })
+  .validator(updateHolidayApiSettingsSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('holiday', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { updateCompanySettings } = await import('@/lib/db/masterdata');
+
+    const result = await updateCompanySettings({
+      holiday_api_provider: data.provider,
+      holiday_api_url: data.url || null,
+      holiday_api_key: data.api_key || null,
+      holiday_api_country_code: data.country_code
+    });
+
+    await withAudit(
+      session.user.id,
+      {
+        action: 'holiday.settings.update',
+        entityType: 'company_settings',
+        entityId: '1',
+        before: null,
+        after: result
+      },
+      async () => undefined
+    );
+
+    return result;
   });

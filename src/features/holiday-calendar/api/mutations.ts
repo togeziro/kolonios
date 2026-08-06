@@ -3,7 +3,8 @@ import {
   createNationalHolidayFn,
   updateNationalHolidayFn,
   deleteNationalHolidayFn,
-  importHolidaysFromApiFn
+  importHolidaysFromApiFn,
+  updateHolidayApiSettingsFn
 } from './service';
 import { holidayKeys } from './queries';
 
@@ -54,6 +55,18 @@ export function useImportHolidaysFromApi() {
       importHolidaysFromApiFn({ data }),
     onSuccess: () => {
       return queryClient.invalidateQueries({ queryKey: holidayKeys.lists() });
+    }
+  });
+}
+
+export function useUpdateHolidayApiSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof updateHolidayApiSettingsFn>[0]['data']) =>
+      updateHolidayApiSettingsFn({ data }),
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: holidayKeys.settings() });
     }
   });
 }

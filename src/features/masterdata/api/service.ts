@@ -11,6 +11,7 @@ import {
   designationUpdateSchema,
   designationDeleteSchema
 } from './validation';
+import type { CompanySetting } from '@/lib/db/schema/masterdata';
 
 export const getDepartmentsFn = createServerFn({ method: 'GET' }).handler(async () => {
   await requirePermission('departments', 'view');
@@ -161,3 +162,31 @@ export const getDesignationOptionsFn = createServerFn({ method: 'GET' }).handler
   const { getDesignationsAsOptions } = await import('@/lib/db/masterdata');
   return getDesignationsAsOptions();
 });
+
+// Company Settings functions
+export const getCompanySettingsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  await requirePermission('masterdata', 'view');
+  const { getCompanySettings } = await import('@/lib/db/masterdata');
+  return getCompanySettings();
+});
+
+export const updateCompanySettingsFn = createServerFn({ method: 'POST' })
+  .validator((data: Partial<CompanySetting>) => data)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('masterdata', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { updateCompanySettings } = await import('@/lib/db/masterdata');
+    const result = await updateCompanySettings(data);
+    await withAudit(
+      session.user.id,
+      {
+        action: 'company_settings.update',
+        entityType: 'company_settings',
+        entityId: '1',
+        before: null,
+        after: result
+      },
+      async () => undefined
+    );
+    return result;
+  });

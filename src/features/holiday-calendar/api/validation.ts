@@ -54,9 +54,41 @@ export const importHolidaysSchema = z.object({
   year: z.number().int().min(1900).max(2100, 'Year must be between 1900 and 2100')
 });
 
+// Holiday API provider enum
+export const holidayApiProviderSchema = z.enum(['nager_date', 'openholidays', 'custom']);
+
+// Get holiday API settings schema (no input required)
+export const getHolidayApiSettingsSchema = z.object({}).optional();
+
+// Update holiday API settings schema
+export const updateHolidayApiSettingsSchema = z.object({
+  provider: holidayApiProviderSchema,
+  url: z
+    .string()
+    .trim()
+    .max(500, 'API URL must be less than 500 characters')
+    .nullable()
+    .optional()
+    .default(''),
+  api_key: z
+    .string()
+    .trim()
+    .max(500, 'API key must be less than 500 characters')
+    .nullable()
+    .optional()
+    .default(''),
+  country_code: z
+    .string()
+    .trim()
+    .min(2, 'Country code must be at least 2 characters')
+    .max(5, 'Country code must be at most 5 characters')
+});
+
 // Types derived from schemas
 export type CreateNationalHolidayInput = z.infer<typeof createNationalHolidaySchema>;
 export type UpdateNationalHolidayInput = z.infer<typeof updateNationalHolidaySchema>;
 export type DeleteNationalHolidayInput = z.infer<typeof deleteNationalHolidaySchema>;
 export type GetNationalHolidaysInput = z.infer<typeof getNationalHolidaysSchema>;
 export type ImportHolidaysInput = z.infer<typeof importHolidaysSchema>;
+export type HolidayApiProvider = z.infer<typeof holidayApiProviderSchema>;
+export type UpdateHolidayApiSettingsInput = z.infer<typeof updateHolidayApiSettingsSchema>;

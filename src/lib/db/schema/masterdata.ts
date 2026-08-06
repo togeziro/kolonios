@@ -47,8 +47,14 @@ export const companySettings = pgTable('company_settings', {
   holiday_api_url: text('holiday_api_url'),
   holiday_api_key: text('holiday_api_key'),
   holiday_api_country_code: text('holiday_api_country_code').notNull().default('ID'),
-  holiday_api_headers: json('holiday_api_headers').notNull().default({}),
-  holiday_api_response_mapping: json('holiday_api_response_mapping').notNull().default({}),
+  holiday_api_headers: json('holiday_api_headers')
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({}),
+  holiday_api_response_mapping: json('holiday_api_response_mapping')
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({}),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });

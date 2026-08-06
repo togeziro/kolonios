@@ -4,7 +4,9 @@ export {
   updateNationalHolidaySchema,
   deleteNationalHolidaySchema,
   getNationalHolidaysSchema,
-  importHolidaysSchema
+  importHolidaysSchema,
+  holidayApiProviderSchema,
+  updateHolidayApiSettingsSchema
 } from './validation';
 
 export type {
@@ -12,7 +14,9 @@ export type {
   UpdateNationalHolidayInput,
   DeleteNationalHolidayInput,
   GetNationalHolidaysInput,
-  ImportHolidaysInput
+  ImportHolidaysInput,
+  HolidayApiProvider,
+  UpdateHolidayApiSettingsInput
 } from './validation';
 
 // Export server functions
@@ -22,16 +26,26 @@ export {
   getNationalHolidayFn,
   updateNationalHolidayFn,
   deleteNationalHolidayFn,
-  importHolidaysFromApiFn
+  importHolidaysFromApiFn,
+  getHolidayApiSettingsFn,
+  updateHolidayApiSettingsFn
 } from './service';
 
 // Export query options
-export { holidayKeys, nationalHolidaysQueryOptions, nationalHolidayQueryOptions } from './queries';
+export {
+  holidayKeys,
+  nationalHolidaysQueryOptions,
+  nationalHolidayQueryOptions,
+  holidayApiSettingsQueryOptions,
+  useNationalHolidays,
+  useHolidayApiSettings
+} from './queries';
 
 // Export mutation hooks
 export {
   useCreateNationalHoliday,
   useUpdateNationalHoliday,
   useDeleteNationalHoliday,
-  useImportHolidaysFromApi
+  useImportHolidaysFromApi,
+  useUpdateHolidayApiSettings
 } from './mutations';
