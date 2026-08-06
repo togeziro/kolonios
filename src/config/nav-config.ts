@@ -199,6 +199,14 @@ export const navGroups: NavGroup[] = [
         isActive: false,
         module: 'role_groups',
         items: []
+      },
+      {
+        title: 'Holiday Calendar',
+        url: '/dashboard/admin/holiday-calendar',
+        icon: 'calendar',
+        isActive: false,
+        module: 'holiday_calendar',
+        items: []
       }
     ]
   }
