@@ -278,19 +278,17 @@ async function fetchHolidayPayload(
     )}`;
     response = await fetch(target);
   } else if (provider === 'openholidays') {
-    const target = trimTrailingSlash(url || OPENHOLIDAYS_DEFAULT_URL);
+    const target = new URL(trimTrailingSlash(url || OPENHOLIDAYS_DEFAULT_URL));
+    target.searchParams.set('countryIsoCode', countryCode);
+    target.searchParams.set('languageIsoCode', DEFAULT_RESPONSE_LANGUAGE);
+    target.searchParams.set('validFrom', `${year}-01-01`);
+    target.searchParams.set('validTo', `${year}-12-31`);
     response = await fetch(target, {
-      method: 'POST',
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
+        accept: 'application/json',
         ...(apiKey ? { 'X-API-Key': apiKey } : {})
-      },
-      body: JSON.stringify({
-        countryIsoCode: countryCode,
-        languageIsoCode: DEFAULT_RESPONSE_LANGUAGE,
-        validFrom: `${year}-01-01`,
-        validTo: `${year}-12-31`
-      })
+      }
     });
   } else {
     const target = buildCustomHolidayUrl(url, { year, countryCode });
