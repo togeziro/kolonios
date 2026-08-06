@@ -45,6 +45,8 @@ export interface PayrollReportRow {
   id: number;
   payroll_period_id: number;
   employee_id: string;
+  employee_code?: string | null;
+  employee_name?: string | null;
   gross_salary: string;
   total_allowances: string;
   total_deductions: string;

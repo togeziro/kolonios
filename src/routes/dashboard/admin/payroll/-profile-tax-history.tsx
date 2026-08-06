@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   Table,
   TableBody,
@@ -126,10 +127,10 @@ export function TaxProfileSelects({
   return (
     <>
       {TAX_SELECT_FIELDS.map(({ key, ariaLabelKey, options, render }) => (
-        <select
+        <NativeSelect
           key={key}
           disabled={disabled}
-          className='rounded-md border bg-background px-2 text-sm'
+          className='px-2'
           aria-label={t(ariaLabelKey)}
           value={value[key]}
           onChange={(e) => onChange({ ...value, [key]: e.target.value as TaxDraft[TaxSelectKey] })}
@@ -140,7 +141,7 @@ export function TaxProfileSelects({
               {render ? render(t, option) : option}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       ))}
     </>
   );
@@ -219,6 +220,7 @@ export function TaxHistoryCard({ taxRecords }: { taxRecords: TaxRecord[] }) {
                         <div className='flex items-center justify-end gap-2'>
                           <Input
                             className='w-32'
+                            aria-label={t('payroll.taxAmount')}
                             value={taxOverrideDrafts[record.id]}
                             onChange={(e) =>
                               setTaxOverrideDrafts({

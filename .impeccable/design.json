@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-06T00:46:00.000Z",
+  "title": "Design System: Kolonios",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Pure Black", "canonical": "#000000", "tonalRamp": ["#000000", "#1a1a1a", "#333333", "#4d4d4d", "#666666", "#808080", "#999999", "#b3b3b3"] },
+      "secondary": { "role": "secondary", "displayName": "Subtle Gray", "canonical": "#f0f0f0", "tonalRamp": ["#d9d9d9", "#e0e0e0", "#e6e6e6", "#ededed", "#f0f0f0", "#f5f5f5", "#fafafa", "#ffffff"] },
+      "accent": { "role": "accent", "displayName": "Neutral Accent", "canonical": "#f0f0f0", "tonalRamp": ["#d9d9d9", "#e0e0e0", "#e6e6e6", "#ededed", "#f0f0f0", "#f5f5f5", "#fafafa", "#ffffff"] },
+      "destructive": { "role": "destructive", "displayName": "Muted Red", "canonical": "#a13d3d", "tonalRamp": ["#571f1f", "#6b2626", "#7f2d2d", "#a13d3d", "#b85a5a", "#d47777", "#e6a0a0", "#f5cfcf"] },
+      "background": { "role": "neutral", "displayName": "Near White", "canonical": "#fcfcfc", "tonalRamp": ["#e6e6e6", "#ececec", "#f2f2f2", "#f7f7f7", "#fcfcfc", "#ffffff", "#ffffff", "#ffffff"] },
+      "foreground": { "role": "neutral", "displayName": "Black", "canonical": "#000000", "tonalRamp": ["#000000", "#1a1a1a", "#333333", "#4d4d4d", "#666666", "#808080", "#999999", "#b3b3b3"] },
+      "card": { "role": "neutral", "displayName": "White", "canonical": "#ffffff", "tonalRamp": ["#e6e6e6", "#ececec", "#f2f2f2", "#f7f7f7", "#fcfcfc", "#ffffff", "#ffffff", "#ffffff"] },
+      "muted": { "role": "neutral", "displayName": "Light Gray", "canonical": "#f7f7f7", "tonalRamp": ["#e6e6e6", "#ececec", "#f2f2f2", "#f7f7f7", "#fcfcfc", "#ffffff", "#ffffff", "#ffffff"] },
+      "border": { "role": "neutral", "displayName": "Mid Gray", "canonical": "#ebebeb", "tonalRamp": ["#d9d9d9", "#e0e0e0", "#e6e6e6", "#ededed", "#f0f0f0", "#f5f5f5", "#fafafa", "#ffffff"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles only. Used once per page at the top of the content area." },
+      "body": { "displayName": "Body", "purpose": "Default text, descriptions, table cell content. Max line length not constrained (data tables are wide)." },
+      "mono": { "displayName": "Mono", "purpose": "Employee IDs, payroll figures, timestamps, code." }
+    },
+    "shadows": [
+      { "name": "default", "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18)", "purpose": "Cards, popovers, dropdowns. Barely visible by design." },
+      { "name": "hover", "value": "0px 2px 4px -1px hsl(0 0% 0% / 0.18)", "purpose": "Interactive elements on hover." },
+      { "name": "destructive", "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.45)", "purpose": "Higher contrast for delete confirmations." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state transitions." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "768px" },
+      { "name": "desktop", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Black background, white text, primary actions.",
+      "html": "<button class=\"ds-btn-primary\">SAVE CHANGES</button>",
+      "css": ".ds-btn-primary { background: #000000; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; border: none; cursor: pointer; transition: opacity 0.2s; } .ds-btn-primary:hover { opacity: 0.9; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Muted red background, delete/remove actions only.",
+      "html": "<button class=\"ds-btn-destructive\">DELETE</button>",
+      "css": ".ds-btn-destructive { background: #a13d3d; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; border: none; cursor: pointer; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "White background, 1px border, 0.5rem radius.",
+      "html": "<input class=\"ds-input\" placeholder=\"Type here...\" />",
+      "css": ".ds-input { background: #ffffff; color: #000000; padding: 0.375rem 0.75rem; border: 1px solid #ebebeb; border-radius: 0.5rem; font-size: 0.875rem; height: 38px; } .ds-input:focus-visible { outline: 3px solid rgba(0, 0, 0, 0.5); outline-offset: 0; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White background, 1px border, 0.5rem radius.",
+      "html": "<div class=\"ds-card\"><h3>Card Title</h3><p>Card content</p></div>",
+      "css": ".ds-card { background: #ffffff; color: #000000; padding: 1.5rem; border: 1px solid #ebebeb; border-radius: 0.5rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Precision Workbench",
+    "overview": "Kolonios is a business tool first — a workspace where HR staff and employees get things done without friction. The visual system is restrained, high-contrast, and typography-led. Decoration is absent; clarity and scanability are the only ornaments. The default Vercel theme establishes the baseline: black primary, minimal shadows, generous whitespace, and a monochrome hierarchy that lets colored status badges and chart data carry the only vivid color.",
+    "keyCharacteristics": [
+      "Monochrome-first: primary actions use black/white; color is reserved for data, status, and feedback",
+      "High scanability: generous whitespace, clear section dividers, consistent 0.5rem radius",
+      "Theme-switchable: 10 themes share identical component APIs via CSS custom properties",
+      "Mobile-staff reality: bottom nav, horizontal-scrolling tables, collapsible sidebar"
+    ],
+    "rules": [
+      { "name": "The Monochrome Priority Rule", "body": "The primary palette is black, white, and grays. Color is reserved for semantic feedback (red = error, green = success in non-default themes) and chart data. Never add decorative color to empty states, illustrations, or background elements.", "section": "colors" },
+      { "name": "The Data Density Rule", "body": "Body text is 0.875rem (14px), not 1rem. HR and payroll data is dense; larger text wastes vertical space and forces unnecessary scrolling in tables.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadows appear only as a response to state (hover, popover open, dropdown visible). Cards have borders, not shadows, in their default state.", "section": "elevation" },
+      { "name": "The Consistent Radius Rule", "body": "Every interactive element uses the same 0.5rem radius. Buttons, inputs, cards, dialogs, and dropdowns must never mix radius values within the same surface.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do use the `columnPinning: { right: ['actions'] }` pattern for all TanStack Tables so action buttons stay visible while scrolling on mobile",
+      "Do wrap tables in `overflow-x-auto` containers to enable horizontal scroll on mobile",
+      "Do use `PageContainer` with `overflow-x-hidden` on every page to prevent desktop-feel horizontal overflow",
+      "Do use Geist Sans as the primary font (or DM Sans only in Neobrutualism theme)"
+    ],
+    "donts": [
+      "Don't add decorative illustrations, hero images, or background patterns — this is a business tool where every pixel must earn its place",
+      "Don't use rounded-full pills for buttons (except icon-only); stick to 0.5rem radius",
+      "Don't introduce colors outside the token system for decorative purposes; use only `primary`, `destructive`, `muted`, and chart tokens",
+      "Don't nest cards inside cards — use flat sections with border dividers instead"
+    ]
+  }
+}

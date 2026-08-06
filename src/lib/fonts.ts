@@ -25,7 +25,10 @@ const THEME_FONTS: Record<string, string[]> = {
   'light-green': ['inter', 'jetbrains-mono'],
   zen: ['inter', 'jetbrains-mono'],
   'astro-vista': ['outfit', 'fira-code'],
-  whatsapp: []
+  whatsapp: [],
+  tangerine: ['inter', 'jetbrains-mono'],
+  ocean: ['inter', 'jetbrains-mono'],
+  forest: ['inter', 'jetbrains-mono']
 };
 
 const importMap: Record<string, () => Promise<unknown>> = {

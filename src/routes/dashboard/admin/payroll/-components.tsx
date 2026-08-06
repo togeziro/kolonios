@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -31,6 +32,7 @@ import {
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
 import type { SalaryComponentDefinition } from '@/features/payroll/api/types';
+import { ConfirmDialog } from './-confirm-dialog';
 
 export function validDates(from: string, to: string) {
   return Boolean(from) && (!to || from <= to);
@@ -41,14 +43,15 @@ export function maskBankAccount(value: string) {
   return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
 }
 
+const payrollMoneyFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
+
 export function formatPayrollMoney(value: string | number | null | undefined) {
   const amount = Number(value ?? 0);
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
+  return `Rp ${payrollMoneyFormatter.format(amount)}`;
 }
-
 export function SalaryComponentsPanel() {
   const { t } = useTranslation();
   const { isAdmin, permissions } = useRoleGroupPermissions();
@@ -61,6 +64,7 @@ export function SalaryComponentsPanel() {
   const remove = useDeleteSalaryComponent();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SalaryComponentDefinition | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SalaryComponentDefinition | null>(null);
   const [form, setForm] = useState<{
     code: string;
     name: string;
@@ -91,8 +95,7 @@ export function SalaryComponentsPanel() {
       toast.error(t('payroll.failed'));
     }
   };
-  const onDelete = async (id: number) => {
-    if (!window.confirm(t('payroll.deleteConfirm'))) return;
+  const handleDelete = async (id: number) => {
     try {
       await remove.mutateAsync({ id });
       toast.success(t('payroll.deleted'));
@@ -102,127 +105,142 @@ export function SalaryComponentsPanel() {
   };
 
   return (
-    <Card>
-      <CardHeader className='flex flex-row items-center justify-between gap-2'>
-        <CardTitle>{t('payroll.components')}</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size='sm' disabled={!canAdd} onClick={() => startEdit()}>
-              {t('payroll.addComponent')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editing ? t('payroll.editComponent') : t('payroll.addComponent')}
-              </DialogTitle>
-            </DialogHeader>
-            <div className='grid gap-3 sm:grid-cols-2'>
-              <div className='space-y-1'>
-                <Label>{t('payroll.code')}</Label>
-                <Input
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value })}
-                />
+    <>
+      <Card>
+        <CardHeader className='flex flex-row items-center justify-between gap-2'>
+          <CardTitle>{t('payroll.components')}</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size='sm' disabled={!canAdd} onClick={() => startEdit()}>
+                {t('payroll.addComponent')}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editing ? t('payroll.editComponent') : t('payroll.addComponent')}
+                </DialogTitle>
+              </DialogHeader>
+              <div className='grid gap-3 sm:grid-cols-2'>
+                <div className='space-y-1'>
+                  <Label>{t('payroll.code')}</Label>
+                  <Input
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  />
+                </div>
+                <div className='space-y-1'>
+                  <Label>{t('payroll.name')}</Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+                <div className='space-y-1'>
+                  <Label>{t('payroll.type')}</Label>
+                  <NativeSelect
+                    value={form.type}
+                    onChange={(e) =>
+                      setForm({ ...form, type: e.target.value as 'allowance' | 'deduction' })
+                    }
+                  >
+                    <option value='allowance'>{t('payroll.allowance')}</option>
+                    <option value='deduction'>{t('payroll.deduction')}</option>
+                  </NativeSelect>
+                </div>
+                <div className='space-y-1 sm:col-span-2'>
+                  <Label>{t('payroll.description')}</Label>
+                  <Input
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className='space-y-1'>
-                <Label>{t('payroll.name')}</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div className='space-y-1'>
-                <Label>{t('payroll.type')}</Label>
-                <select
-                  className='w-full rounded-md border bg-background px-3 py-2 text-sm'
-                  value={form.type}
-                  onChange={(e) =>
-                    setForm({ ...form, type: e.target.value as 'allowance' | 'deduction' })
-                  }
-                >
-                  <option value='allowance'>{t('payroll.allowance')}</option>
-                  <option value='deduction'>{t('payroll.deduction')}</option>
-                </select>
-              </div>
-              <div className='space-y-1 sm:col-span-2'>
-                <Label>{t('payroll.description')}</Label>
-                <Input
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                />
-              </div>
-            </div>
-            <Button
-              onClick={save}
-              disabled={
-                (!editing && !canAdd) ||
-                (editing && !canEdit) ||
-                create.isPending ||
-                update.isPending
-              }
-            >
-              {t('common.save')}
-            </Button>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        {isLoading && <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>}
-        {isError && <p className='text-sm text-destructive'>{t('payroll.failed')}</p>}
-        {!isLoading && !isError && !(data ?? []).length && (
-          <p className='text-sm text-muted-foreground'>{t('payroll.noComponents')}</p>
-        )}
-        {!isLoading && !isError && (data ?? []).length > 0 && (
-          <div className='overflow-x-auto'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('payroll.code')}</TableHead>
-                  <TableHead>{t('payroll.name')}</TableHead>
-                  <TableHead>{t('payroll.type')}</TableHead>
-                  <TableHead>{t('payroll.status')}</TableHead>
-                  <TableHead className='text-right'>{t('payroll.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {((data as SalaryComponentDefinition[] | undefined) ?? []).map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.code}</TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>
-                      {item.type === 'allowance' ? t('payroll.allowance') : t('payroll.deduction')}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active ? t('common.active') : t('common.inactive')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className='text-right'>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        disabled={!canEdit}
-                        onClick={() => startEdit(item)}
-                      >
-                        {t('common.edit')}
-                      </Button>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        disabled={!canDelete}
-                        onClick={() => onDelete(item.id)}
-                      >
-                        {t('common.delete')}
-                      </Button>
-                    </TableCell>
+              <Button
+                onClick={save}
+                disabled={
+                  (!editing && !canAdd) ||
+                  (editing && !canEdit) ||
+                  create.isPending ||
+                  update.isPending
+                }
+              >
+                {t('common.save')}
+              </Button>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          {isLoading && <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>}
+          {isError && <p className='text-sm text-destructive'>{t('payroll.failed')}</p>}
+          {!isLoading && !isError && !(data ?? []).length && (
+            <p className='text-sm text-muted-foreground'>{t('payroll.noComponents')}</p>
+          )}
+          {!isLoading && !isError && (data ?? []).length > 0 && (
+            <div className='overflow-x-auto'>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('payroll.code')}</TableHead>
+                    <TableHead>{t('payroll.name')}</TableHead>
+                    <TableHead>{t('payroll.type')}</TableHead>
+                    <TableHead>{t('payroll.status')}</TableHead>
+                    <TableHead className='text-right'>{t('payroll.actions')}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                </TableHeader>
+                <TableBody>
+                  {((data as SalaryComponentDefinition[] | undefined) ?? []).map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.code}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>
+                        {item.type === 'allowance'
+                          ? t('payroll.allowance')
+                          : t('payroll.deduction')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.is_active ? 'default' : 'secondary'}>
+                          {item.is_active ? t('common.active') : t('common.inactive')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className='text-right'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          disabled={!canEdit}
+                          onClick={() => startEdit(item)}
+                        >
+                          {t('common.edit')}
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          disabled={!canDelete}
+                          onClick={() => setDeleteTarget(item)}
+                        >
+                          {t('common.delete')}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={t('confirm.deleteTitle')}
+        description={t('confirm.deleteDescription')}
+        confirmLabel={t('confirm.deleteConfirm')}
+        destructive
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
+    </>
   );
 }

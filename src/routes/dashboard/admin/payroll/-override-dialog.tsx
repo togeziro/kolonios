@@ -84,6 +84,10 @@ export function AttendanceOverrideDialog({
 }) {
   const [draft, setDraft] = useState<OverrideDraft>(EMPTY_OVERRIDE_DRAFT);
   const periodLocked = !PAYROLL_EDITABLE_STATUSES.includes(periodStatus);
+  const hasInvalidNumber = FIELDS.some(([field]) => {
+    const value = draft[field];
+    return value.trim() !== '' && Number.isNaN(Number(value));
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -118,11 +122,16 @@ export function AttendanceOverrideDialog({
                 </div>
               ))}
             </div>
+            {hasInvalidNumber && (
+              <p className='text-sm text-destructive' role='alert'>
+                {t('payroll.invalidNumber')}
+              </p>
+            )}
           </>
         )}
         <Button
           onClick={() => onSave(draft)}
-          disabled={isLoading || isError || isSaving || periodLocked}
+          disabled={isLoading || isError || isSaving || periodLocked || hasInvalidNumber}
         >
           {t('common.save')}
         </Button>

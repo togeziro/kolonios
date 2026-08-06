@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
@@ -131,11 +131,10 @@ export function ScheduleAssignmentForm() {
           </div>
           <div className='space-y-2'>
             <Label htmlFor='as-from'>{t('attendanceAdmin.effectiveFrom')}</Label>
-            <Input
+            <DatePicker
               id='as-from'
-              type='date'
               value={effectiveFrom}
-              onChange={(e) => setEffectiveFrom(e.target.value)}
+              onChange={(date) => setEffectiveFrom(date ?? '')}
             />
           </div>
         </div>
@@ -173,11 +172,10 @@ export function ScheduleAssignmentForm() {
             </div>
             <div className='space-y-2'>
               <Label htmlFor='do-date'>{t('attendanceAdmin.startDate')}</Label>
-              <Input
+              <DatePicker
                 id='do-date'
-                type='date'
                 value={dayOffDate}
-                onChange={(e) => setDayOffDate(e.target.value)}
+                onChange={(date) => setDayOffDate(date ?? '')}
               />
             </div>
           </div>

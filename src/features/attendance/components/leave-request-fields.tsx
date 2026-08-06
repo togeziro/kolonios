@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -99,20 +100,18 @@ export default function LeaveRequestFields() {
       <div className='grid grid-cols-2 gap-4'>
         <div className='space-y-2'>
           <Label>{t('attendance.startDate')}</Label>
-          <Input
-            type='date'
+          <DatePicker
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            min={today}
+            onChange={(date) => setStartDate(date ?? '')}
+            minDate={today}
           />
         </div>
         <div className='space-y-2'>
           <Label>{t('attendance.endDate')}</Label>
-          <Input
-            type='date'
+          <DatePicker
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            min={startDate || today}
+            onChange={(date) => setEndDate(date ?? '')}
+            minDate={startDate || today}
           />
         </div>
       </div>

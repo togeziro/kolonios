@@ -3,8 +3,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/date-picker';
 import { DataTable } from '@/components/ui/table/data-table';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -98,18 +98,16 @@ export function AdminAttendanceReport() {
         <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
           <div className='space-y-1'>
             <Label>{t('attendanceAdmin.startDate')}</Label>
-            <Input
-              type='date'
+            <DatePicker
               value={filters.startDate ?? ''}
-              onChange={(e) => setFilter({ startDate: e.target.value || undefined })}
+              onChange={(date) => setFilter({ startDate: date ?? undefined })}
             />
           </div>
           <div className='space-y-1'>
             <Label>{t('attendanceAdmin.endDate')}</Label>
-            <Input
-              type='date'
+            <DatePicker
               value={filters.endDate ?? ''}
-              onChange={(e) => setFilter({ endDate: e.target.value || undefined })}
+              onChange={(date) => setFilter({ endDate: date ?? undefined })}
             />
           </div>
           <div className='space-y-1'>

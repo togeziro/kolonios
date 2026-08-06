@@ -7,7 +7,6 @@ import { formatPayrollMoney } from './-components';
 
 type RecordRow = PayrollReportRow & {
   worked_hours?: number | null;
-  total_lembur?: number | null;
   has_override?: boolean;
 };
 
@@ -36,8 +35,17 @@ export function createPayrollRecordColumns(options: {
   const { t } = options;
   return [
     {
-      accessorKey: 'employee_id',
+      id: 'employee',
+      accessorKey: 'employee_name',
       header: t('payroll.employee'),
+      cell: ({ row }) => (
+        <span className='flex flex-col'>
+          <span className='font-medium'>{row.original.employee_name ?? '—'}</span>
+          {row.original.employee_code && (
+            <span className='text-muted-foreground text-xs'>{row.original.employee_code}</span>
+          )}
+        </span>
+      ),
       meta: { label: t('payroll.employee') }
     },
     {
@@ -86,15 +94,6 @@ export function createPayrollRecordColumns(options: {
         return t('payroll.hoursDisplay', { whole, minutes });
       },
       meta: { label: t('payroll.totalWork') }
-    },
-    {
-      accessorKey: 'total_lembur',
-      header: t('payroll.totalLembur'),
-      cell: () => {
-        const { whole, minutes } = toHoursMinutes(null);
-        return t('payroll.hoursDisplay', { whole, minutes });
-      },
-      meta: { label: t('payroll.totalLembur') }
     },
     {
       id: 'actions',

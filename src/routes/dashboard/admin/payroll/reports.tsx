@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import PageContainer from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -22,6 +23,7 @@ import { getPayrollReportFn } from '@/features/payroll/api/service';
 import type { PayrollReportResult } from '@/features/payroll/api/types';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
+import { formatPayrollMoney } from './-components';
 import { decodePayrollExport } from './-reports-download';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/reports')({
@@ -38,15 +40,17 @@ function ReportsPage() {
   const canReports = canPayrollAction(permissions, isAdmin, 'reports');
   const [periodId, setPeriodId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const hasScope = Boolean(periodId || departmentId);
   const periodsQuery = useQuery(payrollPeriodsQueryOptions({ limit: 100 }));
   const departmentsQuery = useQuery(departmentsQueryOptions());
-  const reportQuery = useQuery(
-    payrollReportQueryOptions({
+  const reportQuery = useQuery({
+    ...payrollReportQueryOptions({
       payrollPeriodId: periodId ? Number(periodId) : undefined,
       departmentId: departmentId ? Number(departmentId) : undefined,
       format: 'json'
-    })
-  );
+    }),
+    enabled: hasScope
+  });
   const exportMutation = useMutation({
     mutationFn: (format: 'csv' | 'xlsx') =>
       getPayrollReportFn({
@@ -92,9 +96,8 @@ function ReportsPage() {
               <label htmlFor='report-period' className='text-sm font-medium'>
                 {t('payroll.periods')}
               </label>
-              <select
+              <NativeSelect
                 id='report-period'
-                className='w-full rounded-md border bg-background px-3 py-2 text-sm'
                 value={periodId}
                 onChange={(e) => setPeriodId(e.target.value)}
               >
@@ -104,15 +107,14 @@ function ReportsPage() {
                     {period.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div>
               <label htmlFor='report-department' className='text-sm font-medium'>
                 {t('payroll.department')}
               </label>
-              <select
+              <NativeSelect
                 id='report-department'
-                className='w-full rounded-md border bg-background px-3 py-2 text-sm'
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
               >
@@ -122,26 +124,31 @@ function ReportsPage() {
                     {department.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           </div>
           <div className='flex flex-wrap gap-2'>
             <Button
               variant='outline'
-              disabled={!canReports || exportMutation.isPending}
+              disabled={!canReports || !hasScope || exportMutation.isPending}
               onClick={() => exportMutation.mutate('csv')}
             >
               {t('payroll.exportCsv')}
             </Button>
             <Button
               variant='outline'
-              disabled={!canReports || exportMutation.isPending}
+              disabled={!canReports || !hasScope || exportMutation.isPending}
               onClick={() => exportMutation.mutate('xlsx')}
             >
               {t('payroll.exportXlsx')}
             </Button>
           </div>
-          {reportQuery.isLoading ? (
+          {hasScope && (
+            <p className='text-xs text-muted-foreground'>{t('payroll.reportScopeHint')}</p>
+          )}
+          {!hasScope ? (
+            <p className='text-sm text-muted-foreground'>{t('payroll.selectReportScope')}</p>
+          ) : reportQuery.isLoading ? (
             <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>
           ) : reportQuery.isError ? (
             <p className='text-sm text-destructive'>{t('payroll.loadFailed')}</p>
@@ -159,9 +166,7 @@ function ReportsPage() {
                 ].map(([key, value]) => (
                   <div className='rounded-lg border p-4' key={key as string}>
                     <p className='text-sm text-muted-foreground'>{t(`payroll.${key}`)}</p>
-                    <p className='text-xl font-semibold'>
-                      {Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </p>
+                    <p className='text-xl font-semibold'>{formatPayrollMoney(Number(value))}</p>
                   </div>
                 ))}
               </div>
@@ -184,12 +189,8 @@ function ReportsPage() {
                           {report.departmentTotals.map((row) => (
                             <TableRow key={row.department}>
                               <TableCell>{row.department}</TableCell>
-                              <TableCell>
-                                {row.gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                              </TableCell>
-                              <TableCell>
-                                {row.net.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                              </TableCell>
+                              <TableCell>{formatPayrollMoney(row.gross)}</TableCell>
+                              <TableCell>{formatPayrollMoney(row.net)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -216,9 +217,7 @@ function ReportsPage() {
                             <TableRow key={`${row.type}-${row.name}`}>
                               <TableCell>{row.name}</TableCell>
                               <TableCell>{t(`payroll.${row.type}`)}</TableCell>
-                              <TableCell>
-                                {row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                              </TableCell>
+                              <TableCell>{formatPayrollMoney(row.amount)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

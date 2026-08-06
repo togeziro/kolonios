@@ -57,10 +57,10 @@ export default function UserAuthForm() {
           children={(field) => (
             <field.FieldSet>
               <field.Field>
-                <field.FieldLabel htmlFor={field.name}>{t('auth.emailAddress')}</field.FieldLabel>
+                <field.FieldLabel htmlFor='email'>{t('auth.emailAddress')}</field.FieldLabel>
                 <Input
-                  id={field.name}
-                  name={field.name}
+                  id='email'
+                  name='email'
                   type='email'
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -93,12 +93,13 @@ export default function UserAuthForm() {
           children={(field) => (
             <div className='flex items-center gap-2'>
               <Checkbox
-                id={field.name}
+                id='remember'
+                name='remember'
                 checked={!!field.state.value}
                 onCheckedChange={(checked) => field.handleChange(!!checked)}
               />
               <label
-                htmlFor={field.name}
+                htmlFor='remember'
                 className='text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
               >
                 {t('auth.rememberMe30')}

@@ -33,11 +33,11 @@ export function PasswordField({
   return (
     <field.FieldSet>
       <field.Field>
-        <field.FieldLabel htmlFor={field.name}>{label}</field.FieldLabel>
+        <field.FieldLabel htmlFor='password'>{label}</field.FieldLabel>
         <div className='relative'>
           <Input
-            id={field.name}
-            name={field.name}
+            id='password'
+            name='password'
             type={show ? 'text' : 'password'}
             value={field.state.value}
             onBlur={field.handleBlur}

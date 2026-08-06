@@ -1,0 +1,14 @@
+{
+  "version": "3.5.0",
+  "schemaVersion": 2,
+  "detector": {
+    "enabled": true,
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": []
+  },
+  "hook": {
+    "enabled": true,
+    "auditLog": null
+  }
+}

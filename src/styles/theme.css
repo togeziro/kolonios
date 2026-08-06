@@ -9,6 +9,9 @@
 @import './themes/zen.css';
 @import './themes/astro-vista.css';
 @import './themes/whatsapp.css';
+@import './themes/tangerine.css';
+@import './themes/ocean.css';
+@import './themes/forest.css';
 
 body {
   @apply overscroll-none;
@@ -30,4 +33,13 @@ body {
   --font-serif: initial;
   /* Apply font-family - will now resolve from html's [data-theme] variables */
   font-family: var(--font-sans);
+}
+
+/* Touch targets: compact button heights (32-36px) are too small to tap on
+   phones/tablets, so raise them to the 44px floor on coarse-pointer devices.
+   Desktop and mouse input keep the compact densities. */
+@media (pointer: coarse) {
+  [data-slot='button'] {
+    min-height: 44px;
+  }
 }

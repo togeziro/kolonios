@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { DataTable } from '@/components/ui/table/data-table';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import {
@@ -188,9 +189,8 @@ function RecordsPage() {
           <div className='grid gap-3 sm:grid-cols-3'>
             <div>
               <Label htmlFor='record-period'>{t('payroll.periods')}</Label>
-              <select
+              <NativeSelect
                 id='record-period'
-                className='w-full rounded-md border bg-background px-3 py-2 text-sm'
                 value={filters.payrollPeriodId ?? ''}
                 onChange={(e) =>
                   updateFilter({
@@ -204,13 +204,12 @@ function RecordsPage() {
                     {period.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div>
               <Label htmlFor='record-department'>{t('payroll.department')}</Label>
-              <select
+              <NativeSelect
                 id='record-department'
-                className='w-full rounded-md border bg-background px-3 py-2 text-sm'
                 value={filters.departmentId ?? ''}
                 onChange={(e) =>
                   updateFilter({
@@ -224,13 +223,12 @@ function RecordsPage() {
                     {department.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div>
               <Label htmlFor='record-status'>{t('payroll.status')}</Label>
-              <select
+              <NativeSelect
                 id='record-status'
-                className='w-full rounded-md border bg-background px-3 py-2 text-sm'
                 value={filters.status ?? ''}
                 onChange={(e) =>
                   updateFilter({
@@ -244,7 +242,7 @@ function RecordsPage() {
                     {t(`payroll.statuses.${status}`)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           </div>
           {recordsQuery.isLoading ? (
@@ -290,9 +288,9 @@ function RecordsPage() {
                         setDraftAdjustment({ ...draftAdjustment, name: e.target.value })
                       }
                     />
-                    <select
+                    <NativeSelect
                       aria-label={t('payroll.adjustmentType')}
-                      className='rounded-md border bg-background px-2 text-sm'
+                      className='px-2'
                       value={draftAdjustment.type}
                       onChange={(e) =>
                         setDraftAdjustment({
@@ -303,7 +301,7 @@ function RecordsPage() {
                     >
                       <option value='bonus'>{t('payroll.bonus')}</option>
                       <option value='deduction'>{t('payroll.deduction')}</option>
-                    </select>
+                    </NativeSelect>
                     <Input
                       aria-label={t('payroll.amount')}
                       value={draftAdjustment.amount}

@@ -5,11 +5,11 @@
 
 export const AUTH_RATE_LIMIT_DEFAULTS = {
   window: 60, // seconds
-  max: 100, // requests per window
-  maxSignin: 5 // requests per window for sign-in endpoint
+  max: 150, // requests per window
+  maxSignin: 8 // requests per window for sign-in endpoint
 } as const;
 
 export const RATE_LIMIT_DEFAULTS = {
-  max: 100, // requests per window
+  max: 150, // requests per window
   windowMs: 60000 // milliseconds
 } as const;

@@ -19,10 +19,10 @@ export const Route = createFileRoute('/dashboard')({
   },
   head: () => ({
     meta: [
-      { title: 'TanStack Dashboard Starter' },
+      { title: 'Kolonios' },
       {
         name: 'description',
-        content: 'Dashboard with TanStack Start and Shadcn'
+        content: 'HR, attendance, and payroll management'
       },
       { name: 'robots', content: 'noindex, nofollow' }
     ]

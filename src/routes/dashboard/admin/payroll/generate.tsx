@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import PageContainer from '@/components/layout/page-container';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { NativeSelect } from '@/components/ui/native-select';
 import { payrollPeriodsQueryOptions } from '@/features/payroll/api/queries';
 import { useGeneratePayroll } from '@/features/payroll/api/mutations';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
@@ -66,9 +67,8 @@ function GeneratePage() {
             <label htmlFor='payroll-period' className='text-sm font-medium'>
               {t('payroll.periods')}
             </label>
-            <select
+            <NativeSelect
               id='payroll-period'
-              className='w-full rounded-md border bg-background px-3 py-2 text-sm'
               value={periodId}
               onChange={(e) => setPeriodId(e.target.value)}
             >
@@ -84,7 +84,7 @@ function GeneratePage() {
                     })}
                   </option>
                 ))}
-            </select>
+            </NativeSelect>
           </div>
           {selectedPeriod && (
             <div className='grid gap-3 rounded-lg border p-4 sm:grid-cols-3'>
@@ -110,7 +110,7 @@ function GeneratePage() {
             <p className='text-sm text-destructive'>{t('payroll.employeeLoadFailed')}</p>
           )}
           {isEmployeeQueryTruncated(employeesQuery.data?.total_employees) && (
-            <p className='text-sm text-amber-600'>
+            <p className='text-sm text-amber-700'>
               {t('payroll.employeeLimitWarning', { count: EMPLOYEE_QUERY_LIMIT_MAX })}
             </p>
           )}

@@ -11,32 +11,15 @@ import {
   useInfobar
 } from '@/components/ui/infobar';
 
-// Default/fallback data when no content is set
-const defaultData = {
-  title: 'Documentation',
-  sections: [
-    {
-      title: 'Getting Started',
-      description: 'Learn how to get started with this application.',
-      links: [
-        {
-          title: 'Installation Guide',
-          url: '#'
-        }
-      ]
-    }
-  ]
-};
-
 export function InfoSidebar({ ...props }: React.ComponentProps<typeof Infobar>) {
   const { content } = useInfobar();
-  const data = content || defaultData;
+  const data = content || null;
 
   return (
     <Infobar {...props}>
       <InfobarHeader className='bg-sidebar sticky top-0 z-10 flex flex-row items-center justify-between gap-2 border-b px-4 py-3'>
         <div className='min-w-0 flex-1'>
-          <h2 className='text-lg font-semibold wrap-break-word'>{data.title}</h2>
+          <h2 className='text-lg font-semibold wrap-break-word'>{data?.title ?? ''}</h2>
         </div>
         <div className='shrink-0'>
           <InfobarTrigger />
@@ -46,7 +29,7 @@ export function InfoSidebar({ ...props }: React.ComponentProps<typeof Infobar>) 
         <InfobarGroup>
           <InfobarGroupContent>
             <div className='flex flex-col gap-6 px-4 py-4'>
-              {data.sections && data.sections.length > 0 ? (
+              {data && data.sections && data.sections.length > 0 ? (
                 data.sections.map((section) => (
                   <div key={section.title} className='flex flex-col gap-3'>
                     {section.title && (
@@ -83,7 +66,7 @@ export function InfoSidebar({ ...props }: React.ComponentProps<typeof Infobar>) 
                 ))
               ) : (
                 <div className='text-muted-foreground px-2 py-4 text-center text-sm'>
-                  No content available
+                  No additional information
                 </div>
               )}
             </div>

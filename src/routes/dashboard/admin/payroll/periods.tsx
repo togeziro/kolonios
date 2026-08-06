@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Table,
   TableBody,
@@ -122,29 +123,23 @@ function PeriodsPage() {
             </div>
             <div>
               <Label>{t('payroll.start')}</Label>
-              <Input
-                className='w-full'
-                type='date'
+              <DatePicker
                 value={form.periodStart}
-                onChange={(e) => setForm({ ...form, periodStart: e.target.value })}
+                onChange={(date) => setForm({ ...form, periodStart: date ?? '' })}
               />
             </div>
             <div>
               <Label>{t('payroll.end')}</Label>
-              <Input
-                className='w-full'
-                type='date'
+              <DatePicker
                 value={form.periodEnd}
-                onChange={(e) => setForm({ ...form, periodEnd: e.target.value })}
+                onChange={(date) => setForm({ ...form, periodEnd: date ?? '' })}
               />
             </div>
             <div>
               <Label>{t('payroll.paymentDate')}</Label>
-              <Input
-                className='w-full'
-                type='date'
+              <DatePicker
                 value={form.paymentDate}
-                onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
+                onChange={(date) => setForm({ ...form, paymentDate: date ?? '' })}
               />
             </div>
             <Button onClick={save} disabled={!canAdd || create.isPending}>

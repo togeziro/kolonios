@@ -126,8 +126,9 @@ function SettingsPage() {
     setForm((f) => ({ ...f, [key]: value }));
 
   const save = async () => {
-    if (!canEdit || form.cutOffDay < 1 || form.cutOffDay > 31)
-      return toast.error(t('payroll.failed'));
+    if (!canEdit) return;
+    if (form.cutOffDay < 1 || form.cutOffDay > 31)
+      return toast.error(t('payroll.cutOffDayInvalid'));
     try {
       await update.mutateAsync({
         companyNpwp: form.companyNpwp,
@@ -157,10 +158,10 @@ function SettingsPage() {
   };
 
   const toggleRow = (label: string, checked: boolean, onChange: (value: boolean) => void) => (
-    <div className='flex items-center justify-between rounded-md border p-3'>
-      <Label>{label}</Label>
+    <Label className='flex flex-1 items-center justify-between rounded-md border p-3'>
+      <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} disabled={!canEdit} />
-    </div>
+    </Label>
   );
 
   const numberField = (key: keyof SettingsForm, label: string, min = 0, step = '0.01') => (
