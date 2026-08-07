@@ -5,6 +5,7 @@ import PageContainer from '@/components/layout/page-container';
 import CustomerListingPage from '@/features/customers/components/customer-listing';
 import { customersQueryOptions } from '@/features/customers/api/queries';
 import { CustomerFormSheetTrigger } from '@/features/customers/components/customer-form-sheet';
+import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { useTranslation } from 'react-i18next';
 import { parseFilters } from '@/lib/filters';
 import type { SearchParams } from '@/types';
@@ -37,12 +38,14 @@ export const Route = createFileRoute('/dashboard/customers')({
 function CustomersPage() {
   const { t } = useTranslation();
   return (
-    <PageContainer
-      pageTitle={t('customer.titlePlural')}
-      pageDescription={t('customer.pageDescription')}
-      pageHeaderAction={<CustomerFormSheetTrigger />}
-    >
-      <CustomerListingPage />
+    <PageContainer>
+      <DataTableCard
+        title={t('customer.titlePlural')}
+        description={t('customer.pageDescription')}
+        action={<CustomerFormSheetTrigger />}
+      >
+        <CustomerListingPage />
+      </DataTableCard>
     </PageContainer>
   );
 }
