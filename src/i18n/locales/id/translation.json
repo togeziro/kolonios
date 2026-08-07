@@ -468,11 +468,7 @@
     "designationCreateFailed": "Gagal membuat jabatan",
     "designationUpdateFailed": "Gagal memperbarui jabatan",
     "designationDeleteFailed": "Gagal menghapus jabatan",
-    "deleteDesignationConfirm": "Hapus jabatan ini?",
-    "departmentsPageTitle": "Manajemen Departemen",
-    "departmentsPageDescription": "Tambah, edit, dan kelola departemen perusahaan",
-    "jobTitlesPageTitle": "Manajemen Jabatan",
-    "jobTitlesPageDescription": "Tambah, edit, dan kelola jabatan/posisi"
+    "deleteDesignationConfirm": "Hapus jabatan ini?"
   },
   "table": {
     "actions": "Aksi",
@@ -508,7 +504,6 @@
     "resetFilters": "Atur ulang filter"
   },
   "roleGroups": {
-    "title": "Grup Peran",
     "role": "Peran",
     "description": "Deskripsi",
     "type": "Tipe",
@@ -547,8 +542,7 @@
     "permissionsPageDescription": "Atur modul dan aksi apa saja yang dapat diakses peran ini",
     "approve": "Setujui",
     "pay": "Bayar",
-    "reports": "Laporan",
-    "pageDescription": "Kelola grup peran dan atur izin akses tingkat modul"
+    "reports": "Laporan"
   },
   "task": {
     "availableJobs": "Pekerjaan Tersedia",

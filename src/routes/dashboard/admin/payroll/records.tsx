@@ -177,10 +177,7 @@ function RecordsPage() {
     }
   };
   return (
-    <PageContainer
-      pageTitle={t('payroll.records')}
-      pageDescription={t('payroll.recordsDescription')}
-    >
+    <PageContainer>
       <Card>
         <CardHeader>
           <CardTitle>{t('payroll.records')}</CardTitle>

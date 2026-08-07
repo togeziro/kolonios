@@ -468,11 +468,7 @@
     "designationCreateFailed": "Failed to create designation",
     "designationUpdateFailed": "Failed to update designation",
     "designationDeleteFailed": "Failed to delete designation",
-    "deleteDesignationConfirm": "Delete this designation?",
-    "departmentsPageTitle": "Department Management",
-    "departmentsPageDescription": "Add, edit, and manage company departments",
-    "jobTitlesPageTitle": "Job Title Management",
-    "jobTitlesPageDescription": "Add, edit, and manage job titles/designations"
+    "deleteDesignationConfirm": "Delete this designation?"
   },
   "table": {
     "actions": "Actions",
@@ -508,7 +504,6 @@
     "resetFilters": "Reset filters"
   },
   "roleGroups": {
-    "title": "Role Groups",
     "role": "Role",
     "description": "Description",
     "type": "Type",
@@ -547,8 +542,7 @@
     "permissionsPageDescription": "Configure which modules and actions this role can access",
     "approve": "Approve",
     "pay": "Pay",
-    "reports": "Reports",
-    "pageDescription": "Manage role groups and configure module-level access permissions"
+    "reports": "Reports"
   },
   "task": {
     "availableJobs": "Available Jobs",
