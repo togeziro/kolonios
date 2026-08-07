@@ -8,12 +8,12 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { designationsQueryOptions, departmentsQueryOptions } from '../api/queries';
 import { createDesignationFn, updateDesignationFn, deleteDesignationFn } from '../api/service';
 import { DataTable } from '@/components/ui/table/data-table';
+import { DataTableCard } from '@/components/ui/table/data-table-card';
 import {
   Dialog,
   DialogContent,
@@ -203,30 +203,26 @@ export default function DesignationManagePage() {
 
   return (
     <div className='space-y-6'>
-      <Card>
-        <CardHeader className='flex flex-row items-center justify-between'>
-          <CardTitle className='flex items-center gap-2'>
-            <Icons.employee className='h-5 w-5' />
-            {t('masterdata.jobTitlesTitle')}
-          </CardTitle>
+      <DataTableCard
+        title={t('masterdata.jobTitlesTitle')}
+        action={
           <Button onClick={openCreate}>
             <Icons.add className='mr-2 h-4 w-4' /> {t('masterdata.addJobTitle')}
           </Button>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className='flex items-center justify-center py-8'>
-              <Icons.spinner className='h-6 w-6 animate-spin text-muted-foreground' />
-            </div>
-          ) : displayData.length === 0 ? (
-            <div className='py-8 text-center text-sm text-muted-foreground'>
-              {t('masterdata.noJobTitles')}
-            </div>
-          ) : (
-            <DataTable table={table} />
-          )}
-        </CardContent>
-      </Card>
+        }
+      >
+        {isLoading ? (
+          <div className='flex items-center justify-center py-8'>
+            <Icons.spinner className='h-6 w-6 animate-spin text-muted-foreground' />
+          </div>
+        ) : displayData.length === 0 ? (
+          <div className='py-8 text-center text-sm text-muted-foreground'>
+            {t('masterdata.noJobTitles')}
+          </div>
+        ) : (
+          <DataTable table={table} />
+        )}
+      </DataTableCard>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
