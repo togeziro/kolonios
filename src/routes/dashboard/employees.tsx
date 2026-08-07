@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import PageContainer from '@/components/layout/page-container';
+import { DataTableCard } from '@/components/ui/table/data-table-card';
 import EmployeeListingPage from '@/features/employees/components/employee-listing';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
 import { EmployeeFormSheetTrigger } from '@/features/employees/components/employee-form-sheet';
@@ -50,12 +51,14 @@ export const Route = createFileRoute('/dashboard/employees')({
 function EmployeesPage() {
   const { t } = useTranslation();
   return (
-    <PageContainer
-      pageTitle={t('employee.titlePlural')}
-      pageDescription={t('employee.pageDescription')}
-      pageHeaderAction={<EmployeeFormSheetTrigger />}
-    >
-      <EmployeeListingPage />
+    <PageContainer>
+      <DataTableCard
+        title={t('employee.titlePlural')}
+        description={t('employee.pageDescription')}
+        action={<EmployeeFormSheetTrigger />}
+      >
+        <EmployeeListingPage />
+      </DataTableCard>
     </PageContainer>
   );
 }
