@@ -3,7 +3,26 @@ import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-h
 import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
+import { Translation } from 'react-i18next';
 import { CellAction } from './holiday-cell-action';
+
+function RecurrenceBadge() {
+  return (
+    <Translation>{(t) => <Badge variant='secondary'>{t('holiday.recurring')}</Badge>}</Translation>
+  );
+}
+
+function SourceBadge({ source }: { source: NationalHoliday['source'] }) {
+  return (
+    <Translation>
+      {(t) => (
+        <Badge variant={source === 'imported' ? 'default' : 'outline'}>
+          {source === 'imported' ? t('holiday.imported') : t('holiday.manual')}
+        </Badge>
+      )}
+    </Translation>
+  );
+}
 
 export const columns: ColumnDef<NationalHoliday>[] = [
   {
@@ -59,7 +78,7 @@ export const columns: ColumnDef<NationalHoliday>[] = [
     cell: ({ cell }) => {
       const isRecurring = cell.getValue<NationalHoliday['is_recurring']>();
       return isRecurring ? (
-        <Badge variant='secondary'>Recurring</Badge>
+        <RecurrenceBadge />
       ) : (
         <span className='text-muted-foreground text-sm'>—</span>
       );
@@ -74,11 +93,7 @@ export const columns: ColumnDef<NationalHoliday>[] = [
     ),
     cell: ({ cell }) => {
       const source = cell.getValue<NationalHoliday['source']>();
-      return (
-        <Badge variant={source === 'imported' ? 'default' : 'outline'}>
-          {source === 'imported' ? 'Imported' : 'Manual'}
-        </Badge>
-      );
+      return <SourceBadge source={source} />;
     }
   },
   {

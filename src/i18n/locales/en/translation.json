@@ -66,7 +66,10 @@
     "noAccess": "You do not have access to this page.",
     "openMenu": "Open menu",
     "signOut": "Sign out",
-    "today": "Today"
+    "today": "Today",
+    "system": "System",
+    "custom": "Custom",
+    "importJson": "Import JSON"
   },
   "confirm": {
     "deleteTitle": "Are you sure?",
@@ -542,7 +545,19 @@
     "permissionsPageDescription": "Configure which modules and actions this role can access",
     "approve": "Approve",
     "pay": "Pay",
-    "reports": "Reports"
+    "reports": "Reports",
+    "rolesTab": "Roles",
+    "permissionSetsTab": "Permission sets",
+    "accessReviewsTab": "Access reviews",
+    "rolesTitle": "Roles & Permissions",
+    "rolesDescription": "Manage access roles and permissions across your organization.",
+    "reviewRequired": "Review required",
+    "reviewPending": "3 roles have unreviewed permission changes.",
+    "reviewChanges": "Review changes",
+    "searchPlaceholder": "Search roles...",
+    "typeFilter": "Type:",
+    "permissionSetsComingSoon": "Permission Sets Coming Soon",
+    "accessReviewsComingSoon": "Access Reviews Coming Soon"
   },
   "task": {
     "availableJobs": "Available Jobs",
@@ -809,6 +824,15 @@
     "name": "Holiday Name",
     "recurring": "Recurring",
     "source": "Source",
+    "imported": "Imported",
+    "manual": "Manual",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "loadFailed": "Failed to load holidays",
+    "monthSummary": "{{days}} days · {{count}} holiday this month · {{year}} this year",
+    "monthSummary_other": "{{days}} days · {{count}} holidays this month · {{year}} this year",
+    "legendHoliday": "Holiday",
+    "legendRecurringHoliday": "Recurring holiday",
     "listView": "List View",
     "calendarView": "Calendar View",
     "calendarViewComingSoon": "Calendar view coming soon",

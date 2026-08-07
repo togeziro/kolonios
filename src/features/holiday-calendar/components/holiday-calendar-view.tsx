@@ -129,8 +129,11 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
             })}
           </div>
           <p className='text-muted-foreground text-sm'>
-            {daysInMonth(selectedYear, selectedMonth)} days · {currentMonthHolidayCount} holiday
-            {currentMonthHolidayCount !== 1 ? 's' : ''} this month · {yearHolidayCount} this year
+            {t('holiday.monthSummary', {
+              days: daysInMonth(selectedYear, selectedMonth),
+              count: currentMonthHolidayCount,
+              year: yearHolidayCount
+            })}
           </p>
         </div>
 
@@ -139,14 +142,19 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
             variant='outline'
             size='icon'
             onClick={goToPreviousMonth}
-            aria-label='Previous month'
+            aria-label={t('holiday.previousMonth')}
           >
             <Icons.chevronLeft className='h-4 w-4' />
           </Button>
           <Button variant='outline' onClick={handleToday}>
             {t('common.today')}
           </Button>
-          <Button variant='outline' size='icon' onClick={goToNextMonth} aria-label='Next month'>
+          <Button
+            variant='outline'
+            size='icon'
+            onClick={goToNextMonth}
+            aria-label={t('holiday.nextMonth')}
+          >
             <Icons.chevronRight className='h-4 w-4' />
           </Button>
         </div>
@@ -160,7 +168,7 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
           </div>
         ) : error ? (
           <div className='flex h-64 items-center justify-center text-destructive'>
-            <p>Failed to load holidays</p>
+            <p>{t('holiday.loadFailed')}</p>
           </div>
         ) : (
           <Calendar
@@ -211,8 +219,12 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
                     )}
                   </div>
                   <div className='flex gap-1'>
-                    {holiday.is_recurring && <Badge variant='secondary'>Recurring</Badge>}
-                    {holiday.source === 'imported' && <Badge variant='outline'>Imported</Badge>}
+                    {holiday.is_recurring && (
+                      <Badge variant='secondary'>{t('holiday.recurring')}</Badge>
+                    )}
+                    {holiday.source === 'imported' && (
+                      <Badge variant='outline'>{t('holiday.imported')}</Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -225,13 +237,13 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
       <div className='flex items-center gap-4 border-t px-4 py-3 text-sm text-muted-foreground'>
         <div className='flex items-center gap-1'>
           <div className='h-2 w-2 rounded-full bg-destructive' />
-          <span>Holiday</span>
+          <span>{t('holiday.legendHoliday')}</span>
         </div>
         <div className='flex items-center gap-1'>
           <Badge variant='secondary' className='text-xs'>
-            Recurring
+            {t('holiday.recurring')}
           </Badge>
-          <span>Recurring holiday</span>
+          <span>{t('holiday.legendRecurringHoliday')}</span>
         </div>
       </div>
     </div>

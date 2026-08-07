@@ -64,20 +64,20 @@ export default function RoleGroupListingPage() {
     <div className='flex h-full flex-col gap-4'>
       <Tabs className='flex min-h-0 flex-1 flex-col gap-4' defaultValue='roles'>
         <TabsList className='w-full justify-start gap-2 border-b ps-0 *:data-[slot=tabs-trigger]:flex-none'>
-          <TabsTrigger value='roles'>Roles</TabsTrigger>
-          <TabsTrigger value='permission-sets'>Permission sets</TabsTrigger>
-          <TabsTrigger value='access-reviews'>Access reviews</TabsTrigger>
+          <TabsTrigger value='roles'>{t('roleGroups.rolesTab')}</TabsTrigger>
+          <TabsTrigger value='permission-sets'>{t('roleGroups.permissionSetsTab')}</TabsTrigger>
+          <TabsTrigger value='access-reviews'>{t('roleGroups.accessReviewsTab')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value='roles' className='flex min-h-0 flex-1 flex-col gap-4'>
           <DataTableCard
-            title='Roles & Permissions'
-            description='Manage access roles and permissions across your organization.'
+            title={t('roleGroups.rolesTitle')}
+            description={t('roleGroups.rolesDescription')}
             action={
               <>
                 <Button size='sm' variant='outline'>
                   <FileUp className='mr-2 h-4 w-4' />
-                  Import JSON
+                  {t('common.importJson')}
                 </Button>
                 <RoleGroupFormSheetTrigger />
               </>
@@ -85,11 +85,11 @@ export default function RoleGroupListingPage() {
           >
             <Alert className='border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50'>
               <AlertTriangle className='size-4' />
-              <AlertTitle>Review required</AlertTitle>
+              <AlertTitle>{t('roleGroups.reviewRequired')}</AlertTitle>
               <AlertDescription className='flex items-center justify-between'>
-                3 roles have unreviewed permission changes.
+                {t('roleGroups.reviewPending')}
                 <Button size='sm' variant='link' className='ml-2'>
-                  Review changes
+                  {t('roleGroups.reviewChanges')}
                   <ChevronRight className='ml-1 h-4 w-4' />
                 </Button>
               </AlertDescription>
@@ -101,7 +101,7 @@ export default function RoleGroupListingPage() {
                   <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                   <Input
                     className='h-7 pl-9'
-                    placeholder='Search roles...'
+                    placeholder={t('roleGroups.searchPlaceholder')}
                     value={(table.getColumn('search')?.getFilterValue() as string) ?? ''}
                     onChange={(e) => {
                       table.getColumn('search')?.setFilterValue(e.target.value || undefined);
@@ -117,14 +117,14 @@ export default function RoleGroupListingPage() {
                     }}
                   >
                     <SelectTrigger size='sm'>
-                      <span className='text-muted-foreground'>Type:</span>
-                      <SelectValue placeholder='All' />
+                      <span className='text-muted-foreground'>{t('roleGroups.typeFilter')}</span>
+                      <SelectValue placeholder={t('common.all')} />
                     </SelectTrigger>
                     <SelectContent position='popper' align='start'>
                       <SelectGroup>
-                        <SelectItem value='All'>All</SelectItem>
-                        <SelectItem value='System'>System</SelectItem>
-                        <SelectItem value='Custom'>Custom</SelectItem>
+                        <SelectItem value='All'>{t('common.all')}</SelectItem>
+                        <SelectItem value='System'>{t('common.system')}</SelectItem>
+                        <SelectItem value='Custom'>{t('common.custom')}</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -136,13 +136,13 @@ export default function RoleGroupListingPage() {
 
         <TabsContent value='permission-sets'>
           <div className='flex h-full items-center justify-center rounded-md border border-dashed text-muted-foreground text-sm'>
-            Permission Sets Coming Soon
+            {t('roleGroups.permissionSetsComingSoon')}
           </div>
         </TabsContent>
 
         <TabsContent value='access-reviews'>
           <div className='flex h-full items-center justify-center rounded-md border border-dashed text-muted-foreground text-sm'>
-            Access Reviews Coming Soon
+            {t('roleGroups.accessReviewsComingSoon')}
           </div>
         </TabsContent>
       </Tabs>

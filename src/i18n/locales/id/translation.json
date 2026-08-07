@@ -66,7 +66,10 @@
     "noAccess": "Anda tidak memiliki akses ke halaman ini.",
     "openMenu": "Buka menu",
     "signOut": "Keluar",
-    "today": "Hari ini"
+    "today": "Hari ini",
+    "system": "Sistem",
+    "custom": "Kustom",
+    "importJson": "Impor JSON"
   },
   "confirm": {
     "deleteTitle": "Apakah Anda yakin?",
@@ -542,7 +545,19 @@
     "permissionsPageDescription": "Atur modul dan aksi apa saja yang dapat diakses peran ini",
     "approve": "Setujui",
     "pay": "Bayar",
-    "reports": "Laporan"
+    "reports": "Laporan",
+    "rolesTab": "Peran",
+    "permissionSetsTab": "Set izin",
+    "accessReviewsTab": "Tinjauan akses",
+    "rolesTitle": "Peran & Izin",
+    "rolesDescription": "Kelola peran akses dan izin di seluruh organisasi Anda.",
+    "reviewRequired": "Tinjauan diperlukan",
+    "reviewPending": "3 peran memiliki perubahan izin yang belum ditinjau.",
+    "reviewChanges": "Tinjau perubahan",
+    "searchPlaceholder": "Cari peran...",
+    "typeFilter": "Tipe:",
+    "permissionSetsComingSoon": "Set Izin Segera Hadir",
+    "accessReviewsComingSoon": "Tinjauan Akses Segera Hadir"
   },
   "task": {
     "availableJobs": "Pekerjaan Tersedia",
@@ -809,6 +824,15 @@
     "name": "Nama Libur",
     "recurring": "Berulang",
     "source": "Sumber",
+    "imported": "Diimpor",
+    "manual": "Manual",
+    "previousMonth": "Bulan sebelumnya",
+    "nextMonth": "Bulan berikutnya",
+    "loadFailed": "Gagal memuat libur",
+    "monthSummary": "{{days}} hari · {{count}} libur bulan ini · {{year}} libur tahun ini",
+    "monthSummary_other": "{{days}} hari · {{count}} libur bulan ini · {{year}} libur tahun ini",
+    "legendHoliday": "Libur",
+    "legendRecurringHoliday": "Libur berulang",
     "listView": "Tampilan Daftar",
     "calendarView": "Tampilan Kalender",
     "calendarViewComingSoon": "Tampilan kalender segera hadir",
