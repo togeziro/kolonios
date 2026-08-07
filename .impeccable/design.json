@@ -4,28 +4,179 @@
   "title": "Design System: Kolonios",
   "extensions": {
     "colorMeta": {
-      "primary": { "role": "primary", "displayName": "Pure Black", "canonical": "#000000", "tonalRamp": ["#000000", "#1a1a1a", "#333333", "#4d4d4d", "#666666", "#808080", "#999999", "#b3b3b3"] },
-      "secondary": { "role": "secondary", "displayName": "Subtle Gray", "canonical": "#f0f0f0", "tonalRamp": ["#d9d9d9", "#e0e0e0", "#e6e6e6", "#ededed", "#f0f0f0", "#f5f5f5", "#fafafa", "#ffffff"] },
-      "accent": { "role": "accent", "displayName": "Neutral Accent", "canonical": "#f0f0f0", "tonalRamp": ["#d9d9d9", "#e0e0e0", "#e6e6e6", "#ededed", "#f0f0f0", "#f5f5f5", "#fafafa", "#ffffff"] },
-      "destructive": { "role": "destructive", "displayName": "Muted Red", "canonical": "#a13d3d", "tonalRamp": ["#571f1f", "#6b2626", "#7f2d2d", "#a13d3d", "#b85a5a", "#d47777", "#e6a0a0", "#f5cfcf"] },
-      "background": { "role": "neutral", "displayName": "Near White", "canonical": "#fcfcfc", "tonalRamp": ["#e6e6e6", "#ececec", "#f2f2f2", "#f7f7f7", "#fcfcfc", "#ffffff", "#ffffff", "#ffffff"] },
-      "foreground": { "role": "neutral", "displayName": "Black", "canonical": "#000000", "tonalRamp": ["#000000", "#1a1a1a", "#333333", "#4d4d4d", "#666666", "#808080", "#999999", "#b3b3b3"] },
-      "card": { "role": "neutral", "displayName": "White", "canonical": "#ffffff", "tonalRamp": ["#e6e6e6", "#ececec", "#f2f2f2", "#f7f7f7", "#fcfcfc", "#ffffff", "#ffffff", "#ffffff"] },
-      "muted": { "role": "neutral", "displayName": "Light Gray", "canonical": "#f7f7f7", "tonalRamp": ["#e6e6e6", "#ececec", "#f2f2f2", "#f7f7f7", "#fcfcfc", "#ffffff", "#ffffff", "#ffffff"] },
-      "border": { "role": "neutral", "displayName": "Mid Gray", "canonical": "#ebebeb", "tonalRamp": ["#d9d9d9", "#e0e0e0", "#e6e6e6", "#ededed", "#f0f0f0", "#f5f5f5", "#fafafa", "#ffffff"] }
+      "primary": {
+        "role": "primary",
+        "displayName": "Pure Black",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#000000",
+          "#1a1a1a",
+          "#333333",
+          "#4d4d4d",
+          "#666666",
+          "#808080",
+          "#999999",
+          "#b3b3b3"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Subtle Gray",
+        "canonical": "#f0f0f0",
+        "tonalRamp": [
+          "#d9d9d9",
+          "#e0e0e0",
+          "#e6e6e6",
+          "#ededed",
+          "#f0f0f0",
+          "#f5f5f5",
+          "#fafafa",
+          "#ffffff"
+        ]
+      },
+      "accent": {
+        "role": "accent",
+        "displayName": "Neutral Accent",
+        "canonical": "#f0f0f0",
+        "tonalRamp": [
+          "#d9d9d9",
+          "#e0e0e0",
+          "#e6e6e6",
+          "#ededed",
+          "#f0f0f0",
+          "#f5f5f5",
+          "#fafafa",
+          "#ffffff"
+        ]
+      },
+      "destructive": {
+        "role": "destructive",
+        "displayName": "Muted Red",
+        "canonical": "#a13d3d",
+        "tonalRamp": [
+          "#571f1f",
+          "#6b2626",
+          "#7f2d2d",
+          "#a13d3d",
+          "#b85a5a",
+          "#d47777",
+          "#e6a0a0",
+          "#f5cfcf"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Near White",
+        "canonical": "#fcfcfc",
+        "tonalRamp": [
+          "#e6e6e6",
+          "#ececec",
+          "#f2f2f2",
+          "#f7f7f7",
+          "#fcfcfc",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Black",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#000000",
+          "#1a1a1a",
+          "#333333",
+          "#4d4d4d",
+          "#666666",
+          "#808080",
+          "#999999",
+          "#b3b3b3"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#e6e6e6",
+          "#ececec",
+          "#f2f2f2",
+          "#f7f7f7",
+          "#fcfcfc",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Light Gray",
+        "canonical": "#f7f7f7",
+        "tonalRamp": [
+          "#e6e6e6",
+          "#ececec",
+          "#f2f2f2",
+          "#f7f7f7",
+          "#fcfcfc",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Mid Gray",
+        "canonical": "#ebebeb",
+        "tonalRamp": [
+          "#d9d9d9",
+          "#e0e0e0",
+          "#e6e6e6",
+          "#ededed",
+          "#f0f0f0",
+          "#f5f5f5",
+          "#fafafa",
+          "#ffffff"
+        ]
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Page titles only. Used once per page at the top of the content area." },
-      "body": { "displayName": "Body", "purpose": "Default text, descriptions, table cell content. Max line length not constrained (data tables are wide)." },
-      "mono": { "displayName": "Mono", "purpose": "Employee IDs, payroll figures, timestamps, code." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles only. Used once per page at the top of the content area."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text, descriptions, table cell content. Max line length not constrained (data tables are wide)."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Employee IDs, payroll figures, timestamps, code."
+      }
     },
     "shadows": [
-      { "name": "default", "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18)", "purpose": "Cards, popovers, dropdowns. Barely visible by design." },
-      { "name": "hover", "value": "0px 2px 4px -1px hsl(0 0% 0% / 0.18)", "purpose": "Interactive elements on hover." },
-      { "name": "destructive", "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.45)", "purpose": "Higher contrast for delete confirmations." }
+      {
+        "name": "default",
+        "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18)",
+        "purpose": "Cards, popovers, dropdowns. Barely visible by design."
+      },
+      {
+        "name": "hover",
+        "value": "0px 2px 4px -1px hsl(0 0% 0% / 0.18)",
+        "purpose": "Interactive elements on hover."
+      },
+      {
+        "name": "destructive",
+        "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.45)",
+        "purpose": "Higher contrast for delete confirmations."
+      }
     ],
     "motion": [
-      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state transitions." }
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Default easing for state transitions."
+      }
     ],
     "breakpoints": [
       { "name": "mobile", "value": "768px" },
@@ -76,10 +227,26 @@
       "Mobile-staff reality: bottom nav, horizontal-scrolling tables, collapsible sidebar"
     ],
     "rules": [
-      { "name": "The Monochrome Priority Rule", "body": "The primary palette is black, white, and grays. Color is reserved for semantic feedback (red = error, green = success in non-default themes) and chart data. Never add decorative color to empty states, illustrations, or background elements.", "section": "colors" },
-      { "name": "The Data Density Rule", "body": "Body text is 0.875rem (14px), not 1rem. HR and payroll data is dense; larger text wastes vertical space and forces unnecessary scrolling in tables.", "section": "typography" },
-      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadows appear only as a response to state (hover, popover open, dropdown visible). Cards have borders, not shadows, in their default state.", "section": "elevation" },
-      { "name": "The Consistent Radius Rule", "body": "Every interactive element uses the same 0.5rem radius. Buttons, inputs, cards, dialogs, and dropdowns must never mix radius values within the same surface.", "section": "shapes" }
+      {
+        "name": "The Monochrome Priority Rule",
+        "body": "The primary palette is black, white, and grays. Color is reserved for semantic feedback (red = error, green = success in non-default themes) and chart data. Never add decorative color to empty states, illustrations, or background elements.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data Density Rule",
+        "body": "Body text is 0.875rem (14px), not 1rem. HR and payroll data is dense; larger text wastes vertical space and forces unnecessary scrolling in tables.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. Shadows appear only as a response to state (hover, popover open, dropdown visible). Cards have borders, not shadows, in their default state.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Consistent Radius Rule",
+        "body": "Every interactive element uses the same 0.5rem radius. Buttons, inputs, cards, dialogs, and dropdowns must never mix radius values within the same surface.",
+        "section": "shapes"
+      }
     ],
     "dos": [
       "Do use the `columnPinning: { right: ['actions'] }` pattern for all TanStack Tables so action buttons stay visible while scrolling on mobile",
