@@ -185,7 +185,7 @@ function RecordsPage() {
         <CardHeader>
           <CardTitle>{t('payroll.records')}</CardTitle>
         </CardHeader>
-        <CardContent className='space-y-4'>
+        <CardContent className='space-y-4 px-0'>
           <div className='grid gap-3 sm:grid-cols-3'>
             <div>
               <Label htmlFor='record-period'>{t('payroll.periods')}</Label>
