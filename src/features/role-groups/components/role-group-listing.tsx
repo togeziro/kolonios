@@ -21,6 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DataTable } from '@/components/ui/table/data-table';
+import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { useQuery } from '@tanstack/react-query';
 import { RoleGroupFormSheetTrigger } from './role-group-form-sheet';
 import { useTranslation } from 'react-i18next';
@@ -61,32 +62,27 @@ export default function RoleGroupListingPage() {
 
   return (
     <div className='flex h-full flex-col gap-4'>
-      <div className='flex flex-col items-start gap-4 sm:flex-row sm:justify-between'>
-        <div className='flex flex-col gap-1'>
-          <h1 className='text-3xl tracking-tight'>Roles & Permissions</h1>
-          <p className='text-muted-foreground text-sm'>
-            Manage access roles and permissions across your organization.
-          </p>
-        </div>
-
-        <div className='flex items-center gap-2'>
-          <Button size='sm' variant='outline'>
-            <FileUp className='mr-2 h-4 w-4' />
-            Import JSON
-          </Button>
-          <RoleGroupFormSheetTrigger />
-        </div>
-      </div>
-
-      <Tabs className='h-full gap-4' defaultValue='roles'>
+      <Tabs className='flex min-h-0 flex-1 flex-col gap-4' defaultValue='roles'>
         <TabsList className='w-full justify-start gap-2 border-b ps-0 *:data-[slot=tabs-trigger]:flex-none'>
           <TabsTrigger value='roles'>Roles</TabsTrigger>
           <TabsTrigger value='permission-sets'>Permission sets</TabsTrigger>
           <TabsTrigger value='access-reviews'>Access reviews</TabsTrigger>
         </TabsList>
 
-        <TabsContent value='roles'>
-          <div className='flex flex-col gap-4'>
+        <TabsContent value='roles' className='flex min-h-0 flex-1 flex-col gap-4'>
+          <DataTableCard
+            title='Roles & Permissions'
+            description='Manage access roles and permissions across your organization.'
+            action={
+              <>
+                <Button size='sm' variant='outline'>
+                  <FileUp className='mr-2 h-4 w-4' />
+                  Import JSON
+                </Button>
+                <RoleGroupFormSheetTrigger />
+              </>
+            }
+          >
             <Alert className='border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50'>
               <AlertTriangle className='size-4' />
               <AlertTitle>Review required</AlertTitle>
@@ -135,7 +131,7 @@ export default function RoleGroupListingPage() {
                 </div>
               </div>
             </DataTable>
-          </div>
+          </DataTableCard>
         </TabsContent>
 
         <TabsContent value='permission-sets'>
