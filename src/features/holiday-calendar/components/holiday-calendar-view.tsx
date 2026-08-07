@@ -4,14 +4,15 @@ import { useNationalHolidays } from '@/features/holiday-calendar/api/queries';
 import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 
 interface HolidayCalendarViewProps {
   year?: number;
 }
 
 export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewProps) {
+  const { t } = useTranslation();
   const [selectedYear, setSelectedYear] = React.useState(initialYear ?? new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth());
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
@@ -61,8 +62,6 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
   };
 
   // Navigation handlers
-  const goToPreviousYear = () => setSelectedYear((prev) => prev - 1);
-  const goToNextYear = () => setSelectedYear((prev) => prev + 1);
   const goToPreviousMonth = () => {
     if (selectedMonth === 0) {
       setSelectedMonth(11);
@@ -78,6 +77,13 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
     } else {
       setSelectedMonth((prev) => prev + 1);
     }
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setSelectedMonth(now.getMonth());
+    setSelectedYear(now.getFullYear());
+    setSelectedDate(undefined);
   };
 
   // Get selected date's holidays
@@ -112,18 +118,23 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
   }, [holidayMap, selectedMonth, selectedYear]);
 
   return (
-    <div className='space-y-4'>
-      {/* Calendar Header with Navigation */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-2'>
-          <Button
-            variant='outline'
-            size='icon'
-            onClick={goToPreviousYear}
-            aria-label='Previous year'
-          >
-            <Icons.chevronsLeft className='h-4 w-4' />
-          </Button>
+    <div className='flex flex-col overflow-hidden rounded-md border'>
+      {/* Header bar */}
+      <div className='flex flex-col gap-4 border-b bg-sidebar p-4 text-sidebar-foreground lg:flex-row lg:items-center lg:justify-between'>
+        <div className='flex min-w-0 shrink-0 flex-col gap-1'>
+          <div className='text-lg leading-none font-medium'>
+            {new Date(selectedYear, selectedMonth).toLocaleDateString('default', {
+              month: 'long',
+              year: 'numeric'
+            })}
+          </div>
+          <p className='text-muted-foreground text-sm'>
+            {daysInMonth(selectedYear, selectedMonth)} days · {currentMonthHolidayCount} holiday
+            {currentMonthHolidayCount !== 1 ? 's' : ''} this month · {yearHolidayCount} this year
+          </p>
+        </div>
+
+        <div className='flex flex-wrap items-center gap-2'>
           <Button
             variant='outline'
             size='icon'
@@ -132,101 +143,86 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
           >
             <Icons.chevronLeft className='h-4 w-4' />
           </Button>
-        </div>
-
-        <div className='text-center'>
-          <p className='text-sm text-muted-foreground'>
-            {currentMonthHolidayCount} holiday{currentMonthHolidayCount !== 1 ? 's' : ''} this month
-            {' · '}
-            {yearHolidayCount} total this year
-          </p>
-        </div>
-
-        <div className='flex items-center gap-2'>
+          <Button variant='outline' onClick={handleToday}>
+            {t('common.today')}
+          </Button>
           <Button variant='outline' size='icon' onClick={goToNextMonth} aria-label='Next month'>
             <Icons.chevronRight className='h-4 w-4' />
-          </Button>
-          <Button variant='outline' size='icon' onClick={goToNextYear} aria-label='Next year'>
-            <Icons.chevronsRight className='h-4 w-4' />
           </Button>
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <Card>
-        <CardContent className='p-0'>
-          {isLoading ? (
-            <div className='flex h-64 items-center justify-center'>
-              <Icons.spinner className='h-6 w-6 animate-spin' />
-            </div>
-          ) : error ? (
-            <div className='flex h-64 items-center justify-center text-destructive'>
-              <p>Failed to load holidays</p>
-            </div>
-          ) : (
-            <Calendar
-              mode='single'
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              month={new Date(selectedYear, selectedMonth)}
-              onMonthChange={handleMonthChange}
-              className='w-full p-3'
-              modifiers={holidayModifiers}
-              modifiersClassNames={{
-                holiday: 'holiday-date'
-              }}
-              classNames={{
-                root: 'w-full',
-                months: 'flex w-full',
-                month: 'w-full flex flex-col gap-4',
-                weekdays: 'flex w-full',
-                weekday: 'flex-1 text-center text-xs font-medium text-muted-foreground',
-                week: 'flex w-full',
-                day: 'flex-1 h-10',
-                day_button: 'w-full h-full',
-                nav: 'hidden'
-              }}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {/* Calendar grid */}
+      <div className='p-3'>
+        {isLoading ? (
+          <div className='flex h-64 items-center justify-center'>
+            <Icons.spinner className='h-6 w-6 animate-spin' />
+          </div>
+        ) : error ? (
+          <div className='flex h-64 items-center justify-center text-destructive'>
+            <p>Failed to load holidays</p>
+          </div>
+        ) : (
+          <Calendar
+            mode='single'
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            month={new Date(selectedYear, selectedMonth)}
+            onMonthChange={handleMonthChange}
+            className='w-full'
+            modifiers={holidayModifiers}
+            modifiersClassNames={{
+              holiday: 'holiday-date'
+            }}
+            classNames={{
+              root: 'w-full',
+              months: 'flex w-full',
+              month: 'w-full flex flex-col gap-4',
+              weekdays: 'flex w-full',
+              weekday: 'flex-1 text-center text-xs font-medium text-muted-foreground',
+              week: 'flex w-full',
+              day: 'flex-1 h-10',
+              day_button: 'w-full h-full',
+              nav: 'hidden'
+            }}
+          />
+        )}
+      </div>
 
-      {/* Selected Date Details */}
+      {/* Selected date details */}
       {selectedDate && selectedDateHolidays.length > 0 && (
-        <Card>
-          <CardContent className='p-4'>
-            <h4 className='font-semibold mb-2'>
-              {selectedDate.toLocaleDateString('default', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </h4>
-            <div className='space-y-2'>
-              {selectedDateHolidays.map((holiday) => (
-                <div key={holiday.id} className='rounded-md border p-3'>
-                  <div className='flex items-start justify-between'>
-                    <div>
-                      <p className='font-medium'>{holiday.name}</p>
-                      {holiday.description && (
-                        <p className='text-sm text-muted-foreground mt-1'>{holiday.description}</p>
-                      )}
-                    </div>
-                    <div className='flex gap-1'>
-                      {holiday.is_recurring && <Badge variant='secondary'>Recurring</Badge>}
-                      {holiday.source === 'imported' && <Badge variant='outline'>Imported</Badge>}
-                    </div>
+        <div className='border-t p-4'>
+          <h4 className='mb-2 font-semibold'>
+            {selectedDate.toLocaleDateString('default', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </h4>
+          <div className='space-y-2'>
+            {selectedDateHolidays.map((holiday) => (
+              <div key={holiday.id} className='rounded-md border p-3'>
+                <div className='flex items-start justify-between'>
+                  <div>
+                    <p className='font-medium'>{holiday.name}</p>
+                    {holiday.description && (
+                      <p className='text-sm text-muted-foreground mt-1'>{holiday.description}</p>
+                    )}
+                  </div>
+                  <div className='flex gap-1'>
+                    {holiday.is_recurring && <Badge variant='secondary'>Recurring</Badge>}
+                    {holiday.source === 'imported' && <Badge variant='outline'>Imported</Badge>}
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* Holiday Legend */}
-      <div className='flex items-center gap-4 text-sm text-muted-foreground'>
+      {/* Legend */}
+      <div className='flex items-center gap-4 border-t px-4 py-3 text-sm text-muted-foreground'>
         <div className='flex items-center gap-1'>
           <div className='h-2 w-2 rounded-full bg-destructive' />
           <span>Holiday</span>
@@ -248,6 +244,10 @@ function formatDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
 }
 
 // Re-project a stored YYYY-MM-DD date onto a target year (for recurring holidays).

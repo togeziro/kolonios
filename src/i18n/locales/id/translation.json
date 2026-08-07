@@ -65,7 +65,8 @@
     "confirm": "Konfirmasi",
     "noAccess": "Anda tidak memiliki akses ke halaman ini.",
     "openMenu": "Buka menu",
-    "signOut": "Keluar"
+    "signOut": "Keluar",
+    "today": "Hari ini"
   },
   "confirm": {
     "deleteTitle": "Apakah Anda yakin?",

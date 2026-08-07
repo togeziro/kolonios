@@ -65,7 +65,8 @@
     "confirm": "Confirm",
     "noAccess": "You do not have access to this page.",
     "openMenu": "Open menu",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "today": "Today"
   },
   "confirm": {
     "deleteTitle": "Are you sure?",
