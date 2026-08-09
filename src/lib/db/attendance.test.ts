@@ -521,7 +521,7 @@ describe('check-in validation with schedules and policies', () => {
   async function seedActiveSchedule() {
     const shift = await seedShift({ name: 'Morning' });
     await seedShiftWeekdayRule(shift.id, {
-      day_of_week: new Date().getDay(),
+      day_of_week: new Date(businessDateInTimeZone(new Date())).getDay(),
       is_working_day: true,
       start_time: '00:00',
       end_time: '23:59',

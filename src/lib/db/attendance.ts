@@ -43,15 +43,6 @@ function toRad(deg: number) {
   return (deg * Math.PI) / 180;
 }
 
-// Local calendar date (YYYY-MM-DD) — never UTC, so "today" matches the
-// employee's local day rather than the server's UTC day.
-function localDateString(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-    d.getDate()
-  ).padStart(2, '0')}`;
-}
-
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = toRad(lat2 - lat1);
@@ -159,7 +150,7 @@ export async function getAttendanceHistory(
 
 export async function checkIn(userId: string, payload: AttendanceCheckInPayload) {
   try {
-    const today = localDateString();
+    const today = businessDateInTimeZone(new Date());
     const now = new Date().toLocaleTimeString('en-US', { hour12: false });
     const nowTime = new Date().toTimeString().slice(0, 5); // HH:MM
 
@@ -294,7 +285,7 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
 
 export async function checkOut(userId: string, payload: AttendanceCheckOutPayload) {
   try {
-    const today = localDateString();
+    const today = businessDateInTimeZone(new Date());
     const now = new Date().toLocaleTimeString('en-US', { hour12: false });
 
     const [existing] = await db
