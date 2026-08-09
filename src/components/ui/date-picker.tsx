@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { format } from 'date-fns';
+import { formatLongDate, dateFnsLocale } from '@/lib/format';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ export function DatePicker({
           disabled={disabled}
         >
           <CalendarIcon className='mr-2 h-4 w-4' />
-          {value ? format(new Date(value), 'PPP') : <span>{placeholder}</span>}
+          {value ? formatLongDate(new Date(value)) : <span>{placeholder}</span>}
           {value && (
             <XIcon
               className='ml-auto h-4 w-4 opacity-50 hover:opacity-100'
@@ -68,6 +69,7 @@ export function DatePicker({
       </PopoverTrigger>
       <PopoverContent className='w-auto p-0' align='start'>
         <Calendar
+          locale={dateFnsLocale()}
           mode='single'
           selected={selectedDate}
           onSelect={handleSelect}
@@ -123,8 +125,8 @@ export function DatePickerRange({
 
   const displayText = value?.from
     ? value.to
-      ? `${format(new Date(value.from), 'PPP')} - ${format(new Date(value.to), 'PPP')}`
-      : `From ${format(new Date(value.from), 'PPP')}`
+      ? `${formatLongDate(new Date(value.from))} - ${formatLongDate(new Date(value.to))}`
+      : `From ${formatLongDate(new Date(value.from))}`
     : placeholder;
 
   return (
@@ -153,7 +155,12 @@ export function DatePickerRange({
         </Button>
       </PopoverTrigger>
       <PopoverContent className='w-auto p-0' align='start'>
-        <Calendar mode='range' selected={dateRange} onSelect={handleSelect} />
+        <Calendar
+          locale={dateFnsLocale()}
+          mode='range'
+          selected={dateRange}
+          onSelect={handleSelect}
+        />
       </PopoverContent>
     </Popover>
   );

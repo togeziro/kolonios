@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { AuditLogListItem } from '../api/service';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/format';
 
 export const auditLogColumns: ColumnDef<AuditLogListItem>[] = [
   {
@@ -10,7 +10,13 @@ export const auditLogColumns: ColumnDef<AuditLogListItem>[] = [
     size: 160,
     cell: ({ row }) => (
       <span className='whitespace-nowrap text-sm tabular-nums'>
-        {format(new Date(row.original.createdAt), 'yyyy-MM-dd HH:mm')}
+        {formatDate(new Date(row.original.createdAt), {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}
       </span>
     )
   },
