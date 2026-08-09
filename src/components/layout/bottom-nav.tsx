@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Permissions } from '@/features/role-groups/api/types';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 
-const navItems = [
+export const navItems = [
   {
     icon: Icons.dashboard,
     labelKey: 'navigation.home',
@@ -18,7 +18,6 @@ const navItems = [
     to: '/dashboard/my-work',
     module: undefined
   },
-  { icon: Icons.calendar, labelKey: 'navigation.leave', to: '/dashboard/leave', module: undefined },
   {
     icon: Icons.billing,
     labelKey: 'navigation.payslips',

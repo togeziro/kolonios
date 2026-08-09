@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterBottomNavItems } from './bottom-nav';
+import { filterBottomNavItems, navItems } from './bottom-nav';
 
 describe('filterBottomNavItems', () => {
   it('hides payslips without payroll.view and keeps it for permitted staff', () => {
@@ -11,5 +11,20 @@ describe('filterBottomNavItems', () => {
     expect(filterBottomNavItems(items, { payroll: { view: false } })).toHaveLength(1);
     expect(filterBottomNavItems(items, { payroll: { view: true } })).toHaveLength(2);
     expect(filterBottomNavItems(items, undefined, true)).toHaveLength(2);
+  });
+});
+
+describe('navItems', () => {
+  it('exposes four core tabs', () => {
+    expect(navItems.map((item) => item.to)).toEqual([
+      '/dashboard/overview',
+      '/dashboard/my-work',
+      '/dashboard/payroll/payslips',
+      '/dashboard/profile'
+    ]);
+  });
+
+  it('no longer contains a leave tab (Leave lives in My Work)', () => {
+    expect(navItems.some((item) => (item.to as string) === '/dashboard/leave')).toBe(false);
   });
 });
