@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '@/lib/format';
 
 export interface PayslipData {
   company: { name: string; address?: string };
@@ -56,8 +57,7 @@ export type PayslipRecord = {
   bank_account_number?: string | null;
 };
 
-const money = (value: number | string) =>
-  Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (value: number | string) => formatCurrency(value);
 
 export function maskPayslipBankAccount(value: string) {
   return value.length > 4 ? `******${value.slice(-4)}` : '***';

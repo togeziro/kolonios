@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/icons';
+import { formatCurrency } from '@/lib/format';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 
 export interface DesignationRow {
@@ -59,7 +60,7 @@ export function getDesignationColumns(
       ),
       cell: ({ cell }) => {
         const val = cell.getValue<number | null>();
-        return val ? `Rp ${val.toLocaleString('id')}` : '-';
+        return val ? formatCurrency(val) : '-';
       }
     },
     {

@@ -7,7 +7,7 @@ describe('payroll admin display helpers', () => {
     expect(maskBankAccount('123')).toBe('***');
   });
 
-  it('formats stored decimal payroll amounts as currency', () => {
-    expect(formatPayrollMoney('1250000.50')).toContain('1,250,000.50');
+  it('formats stored decimal payroll amounts as currency in the app locale', () => {
+    expect(formatPayrollMoney('1250000.50')).toBe('Rp\u00A01.250.000,50');
   });
 });

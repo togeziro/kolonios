@@ -30,6 +30,7 @@ import {
   useUpdateSalaryComponent
 } from '@/features/payroll/api/mutations';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { formatCurrency } from '@/lib/format';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
 import type { SalaryComponentDefinition } from '@/features/payroll/api/types';
 import { ConfirmDialog } from './-confirm-dialog';
@@ -43,14 +44,8 @@ export function maskBankAccount(value: string) {
   return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
 }
 
-const payrollMoneyFormatter = new Intl.NumberFormat('en-US', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-});
-
 export function formatPayrollMoney(value: string | number | null | undefined) {
-  const amount = Number(value ?? 0);
-  return `Rp ${payrollMoneyFormatter.format(amount)}`;
+  return formatCurrency(value ?? 0);
 }
 export function SalaryComponentsPanel() {
   const { t } = useTranslation();
