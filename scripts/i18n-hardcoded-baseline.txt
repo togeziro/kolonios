@@ -79,8 +79,8 @@ src/features/users/components/users-table/cell-action.tsx:57
 src/features/users/components/users-table/columns.tsx:14
 src/features/users/components/users-table/columns.tsx:35
 src/features/users/components/users-table/columns.tsx:54
-src/routes/__root.tsx:112
 src/routes/__root.tsx:113
+src/routes/__root.tsx:114
 src/routes/about.tsx:15
 src/routes/about.tsx:16
 src/routes/about.tsx:20

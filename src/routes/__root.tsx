@@ -9,6 +9,7 @@ import { ActiveThemeProvider } from '@/components/themes/active-theme';
 import ThemeProvider from '@/components/themes/theme-provider';
 import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
 import { I18nProvider } from '@/i18n/provider';
+import { LocaleProvider } from '@/lib/locale';
 
 import '@/styles/globals.css';
 
@@ -117,8 +118,10 @@ function RootDocument() {
         >
           <ActiveThemeProvider initialTheme={activeTheme}>
             <I18nProvider initialLanguage={activeLanguage}>
-              <Toaster />
-              <Outlet />
+              <LocaleProvider>
+                <Toaster />
+                <Outlet />
+              </LocaleProvider>
             </I18nProvider>
           </ActiveThemeProvider>
         </ThemeProvider>
