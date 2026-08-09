@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/components/ui/tanstack-form';
 import { PasswordField } from '@/components/forms/fields/password-field';
 import { authClient } from '@/lib/auth/auth-client';
+import { resolveHomePath } from '@/lib/shells/resolve';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { useTransition, useState } from 'react';
@@ -46,7 +47,11 @@ export default function UserAuthForm() {
           toast.error(error.message || t('auth.signInFailed'));
         } else {
           await queryClient.invalidateQueries({ queryKey: ['settings', 'locale'] });
-          router.navigate({ to: '/dashboard/overview' });
+          const { data: sessionData } = await authClient.getSession();
+          const home = resolveHomePath(sessionData?.user?.role) as
+            | '/dashboard/overview'
+            | '/portal';
+          router.navigate({ to: home });
         }
       });
     }
