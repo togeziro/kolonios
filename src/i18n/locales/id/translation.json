@@ -38,6 +38,7 @@
   "common": {
     "cancel": "Batal",
     "save": "Simpan",
+    "saving": "Menyimpan…",
     "edit": "Edit",
     "delete": "Hapus",
     "approve": "Setujui",
@@ -882,6 +883,14 @@
     "emptyTitle": "Belum ada libur",
     "emptyDescription": "Impor libur nasional dari API atau tambahkan libur perusahaan secara manual.",
     "emptyNoResults": "Tidak ada libur yang cocok dengan pencarian Anda."
+  },
+  "settings": {
+    "locale": "Lokalitas",
+    "localeDescription": "Format regional untuk tanggal dan mata uang (tidak tergantung bahasa antarmuka).",
+    "localeIndonesia": "Indonesia (id-ID)",
+    "localeEnglish": "Inggris (en-US)",
+    "localeSaved": "Lokalitas tersimpan",
+    "localeSaveFailed": "Gagal menyimpan lokalitas"
   },
   "attendanceAdmin": {
     "locationsTitle": "Lokasi Absensi",

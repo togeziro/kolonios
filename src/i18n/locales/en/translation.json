@@ -38,6 +38,7 @@
   "common": {
     "cancel": "Cancel",
     "save": "Save",
+    "saving": "Saving…",
     "edit": "Edit",
     "delete": "Delete",
     "approve": "Approve",
@@ -882,6 +883,14 @@
     "emptyTitle": "No holidays yet",
     "emptyDescription": "Import national holidays from your API or add company holidays manually.",
     "emptyNoResults": "No holidays match your search."
+  },
+  "settings": {
+    "locale": "Locale",
+    "localeDescription": "Regional formatting for dates and currency (independent of UI language).",
+    "localeIndonesia": "Indonesia (id-ID)",
+    "localeEnglish": "English (en-US)",
+    "localeSaved": "Locale saved",
+    "localeSaveFailed": "Failed to save locale"
   },
   "attendanceAdmin": {
     "locationsTitle": "Attendance Locations",
