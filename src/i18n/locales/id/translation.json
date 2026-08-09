@@ -271,7 +271,6 @@
     "alreadyHaveAccount": "Sudah punya akun?",
     "brand": "TanStack Dashboard",
     "confirmPassword": "Konfirmasi Kata Sandi",
-    "continueWithGoogle": "Lanjutkan dengan Google",
     "copyright": "© {{year}}, TanStack Dashboard.",
     "createAccount": "Buat akun",
     "createAccountSubtitle": "Masukkan detail Anda untuk memulai.",
@@ -287,7 +286,6 @@
     "name": "Nama",
     "namePlaceholder": "John Doe",
     "needHelp": "Butuh bantuan?",
-    "orContinueWith": "Atau lanjutkan dengan",
     "password": "Kata Sandi",
     "readyDescription": "Clone repo, instal dependensi, dan dashboard Anda aktif dalam hitungan menit.",
     "readyToLaunch": "Siap diluncurkan?",
@@ -296,7 +294,6 @@
     "rememberMe30": "Ingat saya selama 30 hari",
     "signIn": "Masuk",
     "signInFailed": "Gagal masuk",
-    "signInWithGithub": "Masuk dengan GitHub",
     "signOut": "Keluar",
     "signUp": "Daftar",
     "tagline": "Rancang. Bangun. Luncurkan. Ulangi."

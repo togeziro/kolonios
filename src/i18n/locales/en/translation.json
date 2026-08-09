@@ -271,7 +271,6 @@
     "alreadyHaveAccount": "Already have an account?",
     "brand": "TanStack Dashboard",
     "confirmPassword": "Confirm Password",
-    "continueWithGoogle": "Continue with Google",
     "copyright": "© {{year}}, TanStack Dashboard.",
     "createAccount": "Create an account",
     "createAccountSubtitle": "Enter your details to get started.",
@@ -287,7 +286,6 @@
     "name": "Name",
     "namePlaceholder": "John Doe",
     "needHelp": "Need help?",
-    "orContinueWith": "Or continue with",
     "password": "Password",
     "readyDescription": "Clone the repo, install dependencies, and your dashboard is live in minutes.",
     "readyToLaunch": "Ready to launch?",
@@ -296,7 +294,6 @@
     "rememberMe30": "Remember me for 30 days",
     "signIn": "Sign In",
     "signInFailed": "Sign in failed",
-    "signInWithGithub": "Sign in with GitHub",
     "signOut": "Sign out",
     "signUp": "Sign Up",
     "tagline": "Design. Build. Launch. Repeat."

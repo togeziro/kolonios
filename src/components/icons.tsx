@@ -6,7 +6,6 @@ import {
   IconBell,
   IconBold,
   IconBox,
-  IconBrandGithub,
   IconBrandTwitter,
   IconBrightness,
   IconCalendar,
@@ -94,7 +93,7 @@ import { cn } from '@/lib/utils';
 
 export type Icon = React.ComponentType<IconProps>;
 
-export type IconStyle = 'currentColor' | 'github' | 'copilot' | 'muted';
+export type IconStyle = 'currentColor' | 'copilot' | 'muted';
 
 export function GitHubIcon({
   iconStyle = 'currentColor',
@@ -109,7 +108,6 @@ export function GitHubIcon({
       aria-hidden='true'
       className={cn(
         className,
-        iconStyle === 'github' && 'text-[#0FBF3E]',
         iconStyle === 'copilot' && 'text-[#8534F3]',
         iconStyle === 'muted' && 'opacity-50 grayscale'
       )}
@@ -169,7 +167,6 @@ export const Icons = {
   customer: IconUserCircle,
 
   // Brand
-  github: IconBrandGithub,
   twitter: IconBrandTwitter,
   logo: IconCommand,
 
