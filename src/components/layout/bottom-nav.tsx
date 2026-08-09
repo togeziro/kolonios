@@ -43,6 +43,8 @@ export function BottomNav() {
   const reduceMotion = useReducedMotion();
   const { isAdmin, permissions } = useRoleGroupPermissions();
   const visibleNavItems = filterBottomNavItems(navItems, permissions, isAdmin);
+  const isActive = (item: (typeof navItems)[number]) =>
+    pathname === item.to || pathname.startsWith(item.to + '/');
 
   return (
     <motion.nav
@@ -71,28 +73,29 @@ export function BottomNav() {
         )}
       </Link>
 
-      <div className='mx-auto flex max-w-lg items-center justify-around py-2'>
-        {visibleNavItems.map((item) => {
-          const isActive = pathname === item.to || pathname.startsWith(item.to + '/');
-          return (
+      <div className='mx-auto grid max-w-lg grid-cols-4 py-2'>
+        {navItems.map((item) =>
+          visibleNavItems.includes(item) ? (
             <Link
               key={item.to}
               to={item.to}
               className='flex touch-manipulation flex-col items-center gap-0.5 px-3 py-1'
             >
               <item.icon
-                className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+                className={`h-5 w-5 ${isActive(item) ? 'text-primary' : 'text-muted-foreground'}`}
               />
               <span
                 className={`text-[10px] ${
-                  isActive ? 'text-primary font-semibold' : 'text-muted-foreground'
+                  isActive(item) ? 'text-primary font-semibold' : 'text-muted-foreground'
                 }`}
               >
                 {t(item.labelKey)}
               </span>
             </Link>
-          );
-        })}
+          ) : (
+            <div key={item.to} aria-hidden className='flex items-center justify-center' />
+          )
+        )}
       </div>
     </motion.nav>
   );
