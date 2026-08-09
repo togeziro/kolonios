@@ -6,7 +6,6 @@ import {
   IconBell,
   IconBold,
   IconBox,
-  IconBrandTwitter,
   IconBrightness,
   IconCalendar,
   IconCheck,
@@ -143,7 +142,6 @@ export const Icons = {
   customer: IconUserCircle,
 
   // Brand
-  twitter: IconBrandTwitter,
   logo: IconCommand,
 
   // Communication
