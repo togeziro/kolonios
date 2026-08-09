@@ -129,6 +129,25 @@ export function Map({
 
         map.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
 
+        const geolocateControl = new ml.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true, timeout: 10_000 },
+          trackUserLocation: true,
+          showUserLocation: true,
+          showAccuracyCircle: true
+        });
+        map.addControl(geolocateControl, 'top-right');
+
+        // Keep the form in sync when the locate button resolves the user's
+        // position; read-only maps just center on it.
+        if (!readOnly && onChange) {
+          geolocateControl.on(
+            'geolocate',
+            (e: { coords: { latitude: number; longitude: number } }) => {
+              onChange({ lat: e.coords.latitude, lng: e.coords.longitude });
+            }
+          );
+        }
+
         if (coordinates) {
           markerRef.current = new ml.Marker({ draggable: !readOnly })
             .setLngLat([coordinates.lng, coordinates.lat])

@@ -164,6 +164,35 @@ export function LocationForm({ initial }: { initial?: Partial<LocationFormState>
           />
         </div>
 
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <div className='space-y-2'>
+            <Label htmlFor='loc-lat'>{t('attendanceAdmin.latitude')}</Label>
+            <Input
+              id='loc-lat'
+              type='number'
+              step='any'
+              value={form.latitude ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                set('latitude', value === '' ? undefined : Number(value));
+              }}
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='loc-lng'>{t('attendanceAdmin.longitude')}</Label>
+            <Input
+              id='loc-lng'
+              type='number'
+              step='any'
+              value={form.longitude ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                set('longitude', value === '' ? undefined : Number(value));
+              }}
+            />
+          </div>
+        </div>
+
         <LocationMap
           coordinates={
             form.latitude != null && form.longitude != null

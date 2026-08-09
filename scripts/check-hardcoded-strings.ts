@@ -23,6 +23,8 @@ const IGNORED_ATTRS = new Set([
   'src',
   'variant',
   'size',
+  'step',
+  'side',
   'to',
   'form',
   'asChild',

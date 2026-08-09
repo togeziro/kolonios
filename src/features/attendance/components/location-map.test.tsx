@@ -5,6 +5,7 @@ import { LocationMap } from './location-map';
 
 const clickHandlers: Record<string, ((e: unknown) => void) | undefined> = {};
 const markerHandlers: Record<string, (() => void) | undefined> = {};
+const geolocateHandlers: Record<string, ((e: unknown) => void) | undefined> = {};
 
 class FakeMarker {
   draggable: boolean;
@@ -40,17 +41,27 @@ class FakeNavigationControl {
   render = vi.fn();
 }
 
+class FakeGeolocateControl {
+  on = vi.fn((event: string, cb: (e: unknown) => void) => {
+    geolocateHandlers[event] = cb;
+    return this;
+  });
+  trigger = vi.fn();
+}
+
 const layerIds: string[] = [];
 
 vi.mock('maplibre-gl', () => ({
   Map: FakeMap,
   Marker: FakeMarker,
-  NavigationControl: FakeNavigationControl
+  NavigationControl: FakeNavigationControl,
+  GeolocateControl: FakeGeolocateControl
 }));
 
 beforeEach(() => {
   clickHandlers['click'] = undefined;
   markerHandlers['dragend'] = undefined;
+  geolocateHandlers['geolocate'] = undefined;
   layerIds.length = 0;
 });
 
@@ -120,5 +131,27 @@ describe('LocationMap', () => {
     );
     await act(async () => {});
     expect(FakeMarker).toBeTruthy();
+  });
+
+  it('emits coordinates when the geolocate control reports a user location', async () => {
+    let result: { lat: number; lng: number } | null = null;
+    render(
+      <LocationMap
+        coordinates={{ lat: -6.2, lng: 106.85 }}
+        radius={100}
+        onChange={(c) => (result = c)}
+      />
+    );
+    await act(async () => {});
+    await act(async () => {
+      geolocateHandlers['geolocate']?.({ coords: { latitude: -6.25, longitude: 106.9 } });
+    });
+    expect(result).toEqual({ lat: -6.25, lng: 106.9 });
+  });
+
+  it('does not register a geolocate listener in read-only mode', async () => {
+    render(<LocationMap coordinates={{ lat: -6.2, lng: 106.85 }} radius={100} readOnly />);
+    await act(async () => {});
+    expect(geolocateHandlers['geolocate']).toBeUndefined();
   });
 });
