@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LocaleProvider, useAppLocale } from './context';
+import { getAppLocale } from './state';
 
 vi.mock('@/features/settings/api', () => ({
   useAppLocale: (): string => 'en-US'
@@ -24,5 +25,6 @@ describe('LocaleProvider', () => {
       </QueryClientProvider>
     );
     await waitFor(() => expect(screen.getByTestId('locale').textContent).toBe('en-US'));
+    expect(getAppLocale()).toBe('en-US');
   });
 });

@@ -6,7 +6,8 @@ export const appLocaleQueryOptions = () =>
   queryOptions({
     queryKey: ['settings', 'locale'],
     queryFn: () => getAppLocaleFn(),
-    staleTime: Infinity
+    staleTime: Infinity,
+    retry: false
   });
 
 export function useAppLocale(): AppLocale {

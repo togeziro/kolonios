@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/components/ui/tanstack-form';
 import { PasswordField } from '@/components/forms/fields/password-field';
 import { authClient } from '@/lib/auth/auth-client';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { useTransition, useState } from 'react';
 import { toast } from 'sonner';
@@ -27,6 +28,7 @@ export default function RegisterForm() {
   const { t } = useTranslation();
   const [loading, startTransition] = useTransition();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -50,6 +52,7 @@ export default function RegisterForm() {
         if (error) {
           toast.error(error.message || 'Registration failed');
         } else {
+          await queryClient.invalidateQueries({ queryKey: ['settings', 'locale'] });
           router.navigate({ to: '/dashboard/overview' });
         }
       });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { setAppLocale } from '@/lib/locale';
-import { APP_LOCALES, DEFAULT_LOCALE, type AppLocale } from '@/lib/locale/types';
+import { APP_LOCALES, type AppLocale } from '@/lib/locale/types';
 import { useAppLocale, useUpdateAppLocale } from '@/features/settings/api';
 
 export function CompanyLocaleSettings() {
   const { t } = useTranslation();
   const currentLocale = useAppLocale();
   const [value, setValue] = useState<AppLocale>(currentLocale);
+  useEffect(() => {
+    setValue(currentLocale);
+  }, [currentLocale]);
   const update = useUpdateAppLocale();
   const isPending = update.isPending;
 
