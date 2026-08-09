@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      - uses: actions/checkout@v7
+
       - uses: ./.github/actions/setup
 
       - name: Lint (incl. i18n checks)
@@ -50,6 +52,8 @@ jobs:
       NODE_OPTIONS: '--max-old-space-size=4096'
 
     steps:
+      - uses: actions/checkout@v7
+
       - uses: ./.github/actions/setup
 
       - name: Build (generates route tree)
