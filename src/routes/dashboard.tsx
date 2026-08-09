@@ -6,15 +6,24 @@ import { InfobarProvider } from '@/components/ui/infobar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { MobileShell } from '@/components/layout/mobile-shell';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { useSession } from '@/lib/auth/auth-client';
+import { resolveShell } from '@/lib/shells/resolve';
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: async () => {
     const { ensureSession } = await import('@/lib/auth/session');
+    let session: Awaited<ReturnType<typeof ensureSession>> | null = null;
     try {
-      await ensureSession();
+      session = await ensureSession();
     } catch {
+      session = null;
+    }
+    if (!session) {
       throw redirect({ to: '/auth/v2/sign-in' });
+    }
+    if (session.user.role === 'customer') {
+      throw redirect({ to: '/portal' });
     }
   },
   head: () => ({
@@ -33,10 +42,10 @@ export const Route = createFileRoute('/dashboard')({
 function DashboardLayout() {
   const isMobile = useIsMobile();
   const { data: session } = useSession();
-  const role = session?.user?.role;
-  const isStaff = role === 'employee' || role === 'technician';
+  const { group } = useRoleGroupPermissions();
+  const shell = resolveShell({ role: session?.user?.role, roleGroup: group });
 
-  if (isMobile && isStaff) {
+  if (shell === 'fieldops' && isMobile) {
     return <MobileShell />;
   }
 

@@ -84,5 +84,5 @@ export function useRoleGroupPermissions() {
   const isAdmin = group?.is_admin ?? false;
   const permissions: Permissions = group?.permissions ?? {};
 
-  return { isAdmin, permissions };
+  return { isAdmin, permissions, group };
 }
