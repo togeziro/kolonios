@@ -154,6 +154,6 @@
     "vitest/vite": "^7.0.0"
   },
   "simple-git-hooks": {
-    "pre-commit": "npx lint-staged && tsc --noEmit"
+    "pre-commit": "npx lint-staged && tsc --noEmit && bun run format:check && bun run i18n:check && bun run i18n:hardcoded"
   }
 }

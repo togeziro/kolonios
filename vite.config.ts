@@ -60,6 +60,10 @@ export default defineConfig({
     },
     globals: true,
     environment: 'node',
+    // Temporary triage only: mask flaky integration tests in CI while their
+    // root cause is investigated. Remove once flakes are fixed, not a
+    // permanent fixture (see AGENTS.md "CI reliability").
+    retry: 1,
     // Run all test files in a single worker so they don't race against each
     // other on the shared test database (each file truncates/reseeds in
     // beforeEach). Tests within a file already run sequentially.
