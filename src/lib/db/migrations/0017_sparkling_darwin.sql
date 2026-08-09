@@ -1,0 +1,1 @@
+ALTER TABLE "company_settings" ADD COLUMN "locale" text DEFAULT 'id-ID' NOT NULL;

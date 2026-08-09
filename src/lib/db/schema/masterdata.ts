@@ -55,6 +55,7 @@ export const companySettings = pgTable('company_settings', {
     .$type<Record<string, string>>()
     .notNull()
     .default({}),
+  locale: text('locale').notNull().default('id-ID'),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });
