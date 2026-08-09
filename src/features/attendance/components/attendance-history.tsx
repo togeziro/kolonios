@@ -20,6 +20,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
+import { useAppLocale } from '@/lib/locale';
 
 function formatDuration(inTime?: string | null, outTime?: string | null): string | null {
   if (!inTime || !outTime) return null;
@@ -40,6 +41,7 @@ const historyStatusVariant: Record<string, 'default' | 'secondary' | 'destructiv
 
 export default function AttendanceHistory() {
   const { t } = useTranslation();
+  const locale = useAppLocale();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -67,7 +69,7 @@ export default function AttendanceHistory() {
             <SelectContent>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <SelectItem key={m} value={String(m)}>
-                  {new Date(2000, m - 1).toLocaleString('en', { month: 'long' })}
+                  {new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2000, m - 1))}
                 </SelectItem>
               ))}
             </SelectContent>

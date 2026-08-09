@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { formatLongDate } from '@/lib/format';
+import { useAppLocale } from '@/lib/locale';
 
 export const Route = createFileRoute('/terms-of-service')({
   head: () => ({
@@ -8,18 +10,14 @@ export const Route = createFileRoute('/terms-of-service')({
 });
 
 function TermsOfServicePage() {
+  const locale = useAppLocale();
   return (
     <div className='min-h-screen px-4 py-12 sm:px-6 lg:px-8'>
       <div className='mx-auto max-w-3xl space-y-8'>
         <div className='text-center'>
           <h1 className='text-foreground text-3xl font-bold'>Terms of Service</h1>
           <p className='text-muted-foreground mt-2 text-sm'>
-            Last updated:{' '}
-            {new Date().toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric'
-            })}
+            Last updated: {formatLongDate(new Date(), locale)}
           </p>
         </div>
         <section>

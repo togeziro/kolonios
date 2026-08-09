@@ -3,6 +3,7 @@ import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-h
 import type { Customer } from '../../api/types';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
+import { formatDate } from '@/lib/format';
 import { CellAction } from './cell-action';
 import { STATUS_OPTIONS } from './options';
 
@@ -84,7 +85,7 @@ export const columns: ColumnDef<Customer>[] = [
     ),
     cell: ({ cell }) => {
       const date = cell.getValue<Customer['created_at']>();
-      return <div>{new Date(date).toLocaleDateString()}</div>;
+      return <div>{formatDate(new Date(date))}</div>;
     }
   },
   {

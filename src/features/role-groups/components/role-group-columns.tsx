@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Link } from '@tanstack/react-router';
+import { formatDate } from '@/lib/format';
 import type { RoleGroup } from '../api/types';
 
 export const roleGroupColumns: ColumnDef<RoleGroup>[] = [
@@ -80,7 +81,7 @@ export const roleGroupColumns: ColumnDef<RoleGroup>[] = [
     size: 120,
     cell: ({ row }) => (
       <span className='text-sm text-muted-foreground'>
-        {new Date(row.original.created_at).toLocaleDateString()}
+        {formatDate(new Date(row.original.created_at))}
       </span>
     )
   },

@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { formatDate } from '@/lib/format';
+import { getAppLocale, useAppLocale } from '@/lib/locale';
 import type { Task, TaskPriority, TaskStatus } from '../api/types';
 
 const priorityBadge: Record<TaskPriority, 'outline' | 'secondary' | 'destructive'> = {
@@ -16,13 +18,13 @@ const statusBadge: Partial<Record<TaskStatus, 'outline' | 'secondary' | 'default
   available: 'secondary'
 };
 
-export function formatDue(dueAt: string | null): string {
+export function formatDue(dueAt: string | null, locale: string = getAppLocale()): string {
   if (!dueAt) return 'No deadline';
-  const date = new Date(dueAt);
-  return `Due ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+  return `Due ${formatDate(new Date(dueAt), undefined, locale)}`;
 }
 
 export default function TaskCard({ task, action }: { task: Task; action?: ReactNode }) {
+  const locale = useAppLocale();
   return (
     <Card className='rounded-xl p-3.5'>
       <div className='mb-1.5 flex items-center gap-1.5'>
@@ -51,7 +53,7 @@ export default function TaskCard({ task, action }: { task: Task; action?: ReactN
         )}
         <p className='flex items-center gap-1'>
           <Icons.clock className='h-3 w-3 shrink-0' />
-          {formatDue(task.dueAt)}
+          {formatDue(task.dueAt, locale)}
           {task.estimatedMinutes != null && ` · ${task.estimatedMinutes} min`}
         </p>
       </div>

@@ -5,6 +5,8 @@ import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
+import { formatLongDate } from '@/lib/format';
+import { useAppLocale } from '@/lib/locale';
 import { useTranslation } from 'react-i18next';
 
 interface HolidayCalendarViewProps {
@@ -13,6 +15,7 @@ interface HolidayCalendarViewProps {
 
 export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewProps) {
   const { t } = useTranslation();
+  const locale = useAppLocale();
   const [selectedYear, setSelectedYear] = React.useState(initialYear ?? new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth());
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
@@ -123,10 +126,9 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
       <div className='flex flex-col gap-4 border-b bg-sidebar p-4 text-sidebar-foreground lg:flex-row lg:items-center lg:justify-between'>
         <div className='flex min-w-0 shrink-0 flex-col gap-1'>
           <div className='text-lg leading-none font-medium'>
-            {new Date(selectedYear, selectedMonth).toLocaleDateString('default', {
-              month: 'long',
-              year: 'numeric'
-            })}
+            {new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(
+              new Date(selectedYear, selectedMonth)
+            )}
           </div>
           <p className='text-muted-foreground text-sm'>
             {t('holiday.monthSummary', {
@@ -200,14 +202,7 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
       {/* Selected date details */}
       {selectedDate && selectedDateHolidays.length > 0 && (
         <div className='border-t p-4'>
-          <h4 className='mb-2 font-semibold'>
-            {selectedDate.toLocaleDateString('default', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </h4>
+          <h4 className='mb-2 font-semibold'>{formatLongDate(selectedDate, locale)}</h4>
           <div className='space-y-2'>
             {selectedDateHolidays.map((holiday) => (
               <div key={holiday.id} className='rounded-md border p-3'>

@@ -1,6 +1,8 @@
 import type { FC } from 'react';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
+import { formatLongDate } from '@/lib/format';
+import { useAppLocale } from '@/lib/locale';
 
 export type NotificationStatus = 'unread' | 'read' | 'archived';
 export type ActionType = 'redirect' | 'api_call' | 'workflow' | 'modal';
@@ -27,7 +29,7 @@ export interface NotificationCardProps {
   className?: string;
 }
 
-const formatDate = (date: string | Date): string => {
+const formatDate = (date: string | Date, locale: string): string => {
   const d = new Date(date);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
@@ -40,10 +42,7 @@ const formatDate = (date: string | Date): string => {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric'
-  });
+  return formatLongDate(d, locale);
 };
 
 const getActionIcon = (actionType: ActionType) => {
@@ -74,6 +73,7 @@ export const NotificationCard: FC<NotificationCardProps> = ({
   loadingActionId,
   className
 }) => {
+  const locale = useAppLocale();
   const isUnread = status === 'unread';
 
   return (
@@ -175,7 +175,7 @@ export const NotificationCard: FC<NotificationCardProps> = ({
           {/* Timestamp */}
           {createdAt && (
             <span className='text-muted-foreground/60 inline-block text-[11px]'>
-              {formatDate(createdAt)}
+              {formatDate(createdAt, locale)}
             </span>
           )}
         </div>

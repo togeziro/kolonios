@@ -4,6 +4,7 @@ import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
 import { Translation } from 'react-i18next';
+import { formatDate } from '@/lib/format';
 import { CellAction } from './holiday-cell-action';
 
 function RecurrenceBadge() {
@@ -34,7 +35,7 @@ export const columns: ColumnDef<NationalHoliday>[] = [
     cell: ({ cell }) => {
       const dateStr = cell.getValue<NationalHoliday['date']>();
       const date = new Date(dateStr + 'T00:00:00');
-      return <div className='font-medium tabular-nums'>{date.toLocaleDateString()}</div>;
+      return <div className='font-medium tabular-nums'>{formatDate(date)}</div>;
     },
     meta: {
       label: 'Date',

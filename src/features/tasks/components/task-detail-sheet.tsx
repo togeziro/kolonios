@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { formatDue } from './task-card';
+import { useAppLocale } from '@/lib/locale';
 import { useTakeTask, useCompleteTask } from '../api/hooks';
 import type { Task } from '../api/types';
 
@@ -26,6 +27,7 @@ export default function TaskDetailSheet({
   const takeTask = useTakeTask();
   const completeTask = useCompleteTask();
   const { t } = useTranslation();
+  const locale = useAppLocale();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -35,7 +37,7 @@ export default function TaskDetailSheet({
             <SheetHeader>
               <SheetTitle>{task.title}</SheetTitle>
               <SheetDescription>
-                {task.task_type} · {formatDue(task.dueAt)}
+                {task.task_type} · {formatDue(task.dueAt, locale)}
               </SheetDescription>
             </SheetHeader>
             <div className='space-y-4 pt-4'>
@@ -49,7 +51,7 @@ export default function TaskDetailSheet({
                   </p>
                 )}
                 <p className='flex items-center gap-2'>
-                  <Icons.clock className='h-4 w-4' /> {formatDue(task.dueAt)}
+                  <Icons.clock className='h-4 w-4' /> {formatDue(task.dueAt, locale)}
                   {task.estimatedMinutes != null && ` · ${task.estimatedMinutes} min`}
                 </p>
               </div>

@@ -3,6 +3,8 @@ import { Link } from '@tanstack/react-router';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { formatDate } from '@/lib/format';
+import { useAppLocale } from '@/lib/locale';
 import { myAttendanceQueryOptions } from '../api/queries';
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -15,6 +17,7 @@ const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 
 export default function MobileAttendanceSummary() {
   const { data: todayData } = useQuery(myAttendanceQueryOptions());
+  const locale = useAppLocale();
 
   const attendance = todayData?.attendance;
   const record = attendance?.attendance;
@@ -22,11 +25,11 @@ export default function MobileAttendanceSummary() {
   const isCheckedOut = !!record?.check_out_time;
   const status = record?.attendance_status ?? 'pending';
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric'
-  });
+  const today = formatDate(
+    new Date(),
+    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+    locale
+  );
 
   return (
     <div className='px-4'>
