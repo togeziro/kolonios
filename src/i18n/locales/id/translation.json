@@ -985,5 +985,13 @@
     "dayThu": "Kam",
     "dayFri": "Jum",
     "daySat": "Sab"
+  },
+  "portal": {
+    "title": "Portal Pelanggan",
+    "subtitle": "Portal layanan mandiri Anda",
+    "comingSoon": "Fitur portal segera hadir.",
+    "blockedTitle": "Akun tidak tersedia",
+    "blockedMessage": "Akun Anda belum aktif. Silakan hubungi tim dukungan kami.",
+    "signOut": "Keluar"
   }
 }

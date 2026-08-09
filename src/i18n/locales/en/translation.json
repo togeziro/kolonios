@@ -985,5 +985,13 @@
     "dayThu": "Thu",
     "dayFri": "Fri",
     "daySat": "Sat"
+  },
+  "portal": {
+    "title": "Customer Portal",
+    "subtitle": "Your self-service portal",
+    "comingSoon": "Portal features are coming soon.",
+    "blockedTitle": "Account unavailable",
+    "blockedMessage": "Your account is not active yet. Please contact our support team.",
+    "signOut": "Sign out"
   }
 }
