@@ -9,4 +9,4 @@ if [ -f "$SIMPLE_GIT_HOOKS_RC" ]; then
     . "$SIMPLE_GIT_HOOKS_RC"
 fi
 
-npx lint-staged && tsc --noEmit
+npx lint-staged && tsc --noEmit && bun run format:check && bun run i18n:check && bun run i18n:hardcoded
