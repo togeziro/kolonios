@@ -24,7 +24,9 @@
 
 ## Features
 
-- **Admin dashboard layout** — sidebar, header, content area; responsive `MobileShell` for staff on mobile. Sidebar menu grouped by HR domain (Kerjoo-aligned architecture), curated to shipped features.
+- **Shell registry (backoffice / fieldops / portal)** — a pure `resolveShell(role, roleGroup)` in `src/lib/shells/` decides the UI layout per user: admin/HR get the sidebar, staff & technicians get the field/ops shell (`MobileShell` on phones, filtered sidebar on desktop), customers get the `/portal` route tree. Single shared sign-in page redirects each role to its shell. See [docs/UI_SHELLS.md](./docs/UI_SHELLS.md).
+- **Customer portal (placeholder)** — `/portal` route tree with its own shell, guarded server-side by `requirePortalSession` (active customers only; blocked/inactive customers see a blocked message). Portal features (billing, wifi config, tickets) come later; customer accounts are admin-created.
+- **Field/ops mobile shell** — bottom nav with 4 tabs (Home, My Work, Payslips, Profile) + a center attendance FAB on a fixed 4-slot grid (never overlaps a tab); Leave moved into My Work.
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
 - **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
@@ -51,6 +53,7 @@
 | [Assignments](/dashboard/admin/attendance/assignments)         | Assign schedules to employees (individual/bulk) and create day offs.                                                          |
 | [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                  |
 | [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                           |
+| [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                          |
 | [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                               |
 | [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                            |
 | [Departments](/dashboard/admin/departments)                    | CRUD management for company departments.                                                                                      |
@@ -72,7 +75,9 @@ src/
 │   ├── __root.tsx                 # Root layout (providers, theme, HTML shell)
 │   ├── index.tsx                  # Home (auth redirect)
 │   ├── auth/                      # Auth pages (sign-in, sign-up)
-│   ├── dashboard.tsx              # Dashboard layout (sidebar/header or MobileShell)
+│   ├── dashboard.tsx              # Dashboard layout — shell registry decides sidebar vs MobileShell
+│   ├── portal.tsx                 # Customer portal layout (guard + PortalShell)
+│   ├── portal/                    # Portal pages (placeholder today)
 │   ├── dashboard/                 # Dashboard pages (overview, attendance, customers,
 │   │                              #   employees, users, admin, my-work, jobs,
 │   │                              #   leave, notifications, profile)
@@ -95,6 +100,8 @@ src/
 │   └── auth/                      # Auth components
 │
 ├── lib/                           # Core utilities
+│   ├── shells/                    # Shell registry (config + resolveShell/resolveHomePath, pure)
+│   ├── portal/                    # Customer portal access classifier (pure)
 │   ├── api/                       # API helpers
 │   ├── auth/                      # Better Auth client + server config
 │   ├── db/                        # Drizzle ORM connection, schema, migrations, server-only data access
@@ -166,6 +173,7 @@ Log in with a seeded demo account:
 | `hr@example.com`         | `Password123!` | hr         |
 | `employee@example.com`   | `Password123!` | employee   |
 | `technician@example.com` | `Password123!` | technician |
+| `customer1@example.com`  | `Password123!` | customer   |
 
 ### Database Migrations
 
@@ -268,6 +276,7 @@ Detailed docs live in [`docs/`](./docs/):
 | [docs/TODO.md](./docs/TODO.md)                                                         | Task tracking                                                  |
 | [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                             | Attendance module deep-dive                                    |
 | [docs/MOBILE.md](./docs/MOBILE.md)                                                     | Mobile staff dashboard                                         |
+| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                               | Shell registry + customer portal architecture 🆕               |
 | [docs/PAYROLL.md](./docs/PAYROLL.md)                                                   | Payroll module deep-dive 🆕                                    |
 | [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                 | Kerjoo payroll requirement reference (finish-payroll scope) 🆕 |
 | [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕  |
