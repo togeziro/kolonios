@@ -19,7 +19,7 @@ import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
 import type { JkkRiskCategory } from '@/features/payroll/api/types';
 import { formatPayrollMoney, validDates } from './-components';
-import { ConfirmDialog } from './-confirm-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export type BpjsFamilyMember = {
   id: number;

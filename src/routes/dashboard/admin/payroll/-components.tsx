@@ -33,7 +33,7 @@ import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { formatCurrency } from '@/lib/format';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
 import type { SalaryComponentDefinition } from '@/features/payroll/api/types';
-import { ConfirmDialog } from './-confirm-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export function validDates(from: string, to: string) {
   return Boolean(from) && (!to || from <= to);

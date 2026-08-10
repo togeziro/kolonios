@@ -30,7 +30,7 @@ import { updateEmployeePayrollProfileFn } from '@/features/payroll/api/service';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { canPayrollAction } from '@/features/payroll/components/permissions';
 import { maskBankAccount, validDates, formatPayrollMoney } from './-components';
-import { ConfirmDialog } from './-confirm-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BpjsEnrollmentCard } from './-profile-bpjs';
 import {
   TaxDraft,

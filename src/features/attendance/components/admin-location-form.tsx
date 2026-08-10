@@ -37,7 +37,10 @@ const emptyForm: LocationFormState = {
 export function LocationForm({ initial }: { initial?: Partial<LocationFormState> }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<LocationFormState>({ ...emptyForm, ...initial });
+  const [form, setForm] = useState<LocationFormState>({
+    ...emptyForm,
+    ...initial
+  });
 
   // Update form when initial prop changes (for editing)
   useEffect(() => {
@@ -129,8 +132,8 @@ export function LocationForm({ initial }: { initial?: Partial<LocationFormState>
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('attendanceAdmin.locationsTitle')}</CardTitle>
-        <CardDescription>{t('attendanceAdmin.locationsDescription')}</CardDescription>
+        <CardTitle>{t('attendanceAdmin.locationsFormTitle')}</CardTitle>
+        <CardDescription>{t('attendanceAdmin.locationsFormDescription')}</CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <div className='grid gap-4 sm:grid-cols-2'>
