@@ -57,6 +57,14 @@ export function LocationForm({ initial }: { initial?: Partial<LocationFormState>
     set('longitude', coords.lng);
   };
 
+  const handleGeoError = (code: number, message: string) => {
+    if (code === 1) {
+      toast.error(t('attendanceAdmin.geoPermissionDenied'));
+    } else {
+      toast.error(t('attendanceAdmin.geoFixFailed'));
+    }
+  };
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['attendance', 'locations'] });
   };
@@ -204,6 +212,7 @@ export function LocationForm({ initial }: { initial?: Partial<LocationFormState>
           }
           radius={form.radius}
           onChange={handleCoords}
+          onGeoError={handleGeoError}
         />
 
         <div className='grid gap-4 sm:grid-cols-2'>

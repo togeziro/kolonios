@@ -42,11 +42,25 @@ class FakeNavigationControl {
 }
 
 class FakeGeolocateControl {
+  static instances = 0;
+  constructor() {
+    FakeGeolocateControl.instances += 1;
+  }
   on = vi.fn((event: string, cb: (e: unknown) => void) => {
     geolocateHandlers[event] = cb;
     return this;
   });
   trigger = vi.fn();
+}
+
+const geolocationMock = vi.fn();
+
+function setGeoSupported(supported: boolean) {
+  Object.defineProperty(navigator, 'geolocation', {
+    configurable: true,
+    writable: true,
+    value: supported ? { getCurrentPosition: geolocationMock } : undefined
+  });
 }
 
 const layerIds: string[] = [];
@@ -63,6 +77,9 @@ beforeEach(() => {
   markerHandlers['dragend'] = undefined;
   geolocateHandlers['geolocate'] = undefined;
   layerIds.length = 0;
+  FakeGeolocateControl.instances = 0;
+  geolocationMock.mockReset();
+  setGeoSupported(true);
 });
 
 describe('LocationMap', () => {
@@ -144,7 +161,9 @@ describe('LocationMap', () => {
     );
     await act(async () => {});
     await act(async () => {
-      geolocateHandlers['geolocate']?.({ coords: { latitude: -6.25, longitude: 106.9 } });
+      geolocateHandlers['geolocate']?.({
+        coords: { latitude: -6.25, longitude: 106.9 }
+      });
     });
     expect(result).toEqual({ lat: -6.25, lng: 106.9 });
   });
@@ -153,5 +172,49 @@ describe('LocationMap', () => {
     render(<LocationMap coordinates={{ lat: -6.2, lng: 106.85 }} radius={100} readOnly />);
     await act(async () => {});
     expect(geolocateHandlers['geolocate']).toBeUndefined();
+  });
+
+  it('shows a geolocation-unavailable banner and skips the locate control when geolocation is unsupported', async () => {
+    setGeoSupported(false);
+    render(<LocationMap coordinates={{ lat: -6.2, lng: 106.85 }} radius={100} />);
+    await act(async () => {});
+    expect(screen.getByTestId('geo-unavailable-banner')).toBeTruthy();
+    expect(FakeGeolocateControl.instances).toBe(0);
+  });
+
+  it('auto-requests the browser location on mount and fills the coordinates from the result', async () => {
+    let result: { lat: number; lng: number } | null = null;
+    render(
+      <LocationMap
+        coordinates={{ lat: -6.2, lng: 106.85 }}
+        radius={100}
+        onChange={(c) => (result = c)}
+      />
+    );
+    await act(async () => {});
+    expect(geolocationMock).toHaveBeenCalledTimes(1);
+    const success = geolocationMock.mock.calls[0][0] as (p: {
+      coords: { latitude: number; longitude: number };
+    }) => void;
+    await act(async () => {
+      success({ coords: { latitude: -6.3, longitude: 106.8 } });
+    });
+    expect(result).toEqual({ lat: -6.3, lng: 106.8 });
+  });
+
+  it('reports the auto location request failure via onGeoError', async () => {
+    const onGeoError = vi.fn();
+    render(
+      <LocationMap coordinates={{ lat: -6.2, lng: 106.85 }} radius={100} onGeoError={onGeoError} />
+    );
+    await act(async () => {});
+    const error = geolocationMock.mock.calls[0][1] as (e: {
+      code: number;
+      message: string;
+    }) => void;
+    await act(async () => {
+      error({ code: 1, message: 'Permission denied' });
+    });
+    expect(onGeoError).toHaveBeenCalledWith(1, 'Permission denied');
   });
 });

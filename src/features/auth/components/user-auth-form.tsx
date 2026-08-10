@@ -9,16 +9,9 @@ import { authClient } from '@/lib/auth/auth-client';
 import { resolveHomePath } from '@/lib/shells/resolve';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
-import { useTransition, useState } from 'react';
+import { useEffect, useRef, useTransition, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import * as z from 'zod';
-
-const formSchema = z.object({
-  email: z.string().email({ message: 'Enter a valid email address' }),
-  password: z.string().min(1, { message: 'Password is required' }),
-  remember: z.boolean()
-});
 
 export default function UserAuthForm() {
   const { t } = useTranslation();
@@ -26,6 +19,8 @@ export default function UserAuthForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
 
   const form = useAppForm({
     defaultValues: {
@@ -33,20 +28,25 @@ export default function UserAuthForm() {
       password: '',
       remember: false
     },
-    validators: {
-      onSubmit: formSchema
-    },
     onSubmit: ({ value }) => {
+      const email = value.email || emailRef.current?.value || '';
+      const password = value.password || passwordRef.current?.value || '';
+      if (!email || !password) {
+        toast.error(t('auth.validationFailed'));
+        return;
+      }
       startTransition(async () => {
         const { error } = await authClient.signIn.email({
-          email: value.email,
-          password: value.password,
+          email,
+          password,
           rememberMe: value.remember
         });
         if (error) {
           toast.error(error.message || t('auth.signInFailed'));
         } else {
-          await queryClient.invalidateQueries({ queryKey: ['settings', 'locale'] });
+          await queryClient.invalidateQueries({
+            queryKey: ['settings', 'locale']
+          });
           const { data: sessionData } = await authClient.getSession();
           const home = resolveHomePath(sessionData?.user?.role) as
             | '/dashboard/overview'
@@ -57,9 +57,47 @@ export default function UserAuthForm() {
     }
   });
 
+  // Chrome autofill and password managers write values straight into the DOM
+  // without firing React onChange events, so a controlled input misses them.
+  // Pull any pre-filled values into the form state shortly after mount so a
+  // saved-credential login works on the first click.
+  useEffect(() => {
+    const syncAutofill = () => {
+      const email = emailRef.current?.value ?? '';
+      const password = passwordRef.current?.value ?? '';
+      if (email && !form.state.values.email) form.setFieldValue('email', email);
+      if (password && !form.state.values.password) form.setFieldValue('password', password);
+    };
+    const first = window.setTimeout(syncAutofill, 150);
+    const second = window.setTimeout(syncAutofill, 800);
+    return () => {
+      window.clearTimeout(first);
+      window.clearTimeout(second);
+    };
+  }, [form]);
+
   return (
     <form.AppForm>
       <form.Form className='w-full space-y-4'>
+        <form.AppField
+          name='remember'
+          children={(field) => (
+            <div className='flex items-center gap-2'>
+              <Checkbox
+                id='remember'
+                name='remember'
+                checked={!!field.state.value}
+                onCheckedChange={(checked) => field.handleChange(!!checked)}
+              />
+              <label
+                htmlFor='remember'
+                className='text-sm font-normal leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+              >
+                {t('auth.rememberMe30')}
+              </label>
+            </div>
+          )}
+        />
         <form.AppField
           name='email'
           children={(field) => (
@@ -68,6 +106,7 @@ export default function UserAuthForm() {
                 <field.FieldLabel htmlFor='email'>{t('auth.emailAddress')}</field.FieldLabel>
                 <Input
                   id='email'
+                  ref={emailRef}
                   name='email'
                   type='email'
                   value={field.state.value}
@@ -76,7 +115,6 @@ export default function UserAuthForm() {
                   placeholder={t('auth.emailPlaceholder')}
                   autoComplete='email'
                   disabled={loading}
-                  aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
                 />
               </field.Field>
               <field.FieldError />
@@ -93,26 +131,8 @@ export default function UserAuthForm() {
               label={t('auth.password')}
               loading={loading}
               autoComplete='current-password'
+              inputRef={passwordRef}
             />
-          )}
-        />
-        <form.AppField
-          name='remember'
-          children={(field) => (
-            <div className='flex items-center gap-2'>
-              <Checkbox
-                id='remember'
-                name='remember'
-                checked={!!field.state.value}
-                onCheckedChange={(checked) => field.handleChange(!!checked)}
-              />
-              <label
-                htmlFor='remember'
-                className='text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-              >
-                {t('auth.rememberMe30')}
-              </label>
-            </div>
           )}
         />
         <Button disabled={loading} className='ml-auto w-full' type='submit'>

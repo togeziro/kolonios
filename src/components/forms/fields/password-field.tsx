@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
-import type { ComponentProps, ComponentType } from 'react';
+import type { ComponentProps, ComponentType, Ref } from 'react';
 
 interface PasswordFieldApi {
   name: string;
@@ -20,6 +20,7 @@ interface PasswordFieldProps {
   label: string;
   loading?: boolean;
   autoComplete?: string;
+  inputRef?: Ref<HTMLInputElement>;
 }
 
 export function PasswordField({
@@ -28,7 +29,8 @@ export function PasswordField({
   onToggle,
   label,
   loading,
-  autoComplete
+  autoComplete,
+  inputRef
 }: PasswordFieldProps) {
   return (
     <field.FieldSet>
@@ -47,6 +49,7 @@ export function PasswordField({
             disabled={loading}
             aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
             className='pr-10'
+            ref={inputRef}
           />
           <button
             type='button'

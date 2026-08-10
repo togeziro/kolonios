@@ -296,7 +296,8 @@
     "signInFailed": "Sign in failed",
     "signOut": "Sign out",
     "signUp": "Sign Up",
-    "tagline": "Design. Build. Launch. Repeat."
+    "tagline": "Design. Build. Launch. Repeat.",
+    "validationFailed": "Please enter your email and password."
   },
   "attendance": {
     "allStatus": "All Status",
@@ -902,6 +903,9 @@
     "longitude": "Longitude",
     "gpsValidation": "GPS Validation",
     "gpsValidationHint": "When enabled, employees must check in inside the geofence with a fresh, accurate location",
+    "geoUnavailable": "Location services are unavailable in this browser — the locate button is hidden. Set the coordinates manually.",
+    "geoPermissionDenied": "Location permission denied — allow location access to auto-fill the coordinates.",
+    "geoFixFailed": "Could not determine your location — set the coordinates manually.",
     "selfieRequired": "Selfie Required",
     "maxAccuracy": "Max Accuracy (m)",
     "maxStale": "Max Stale Location (ms)",

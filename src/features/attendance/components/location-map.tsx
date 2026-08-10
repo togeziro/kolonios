@@ -5,6 +5,7 @@ export interface LocationMapProps {
   radius: number;
   readOnly?: boolean;
   onChange?: (coords: MapCoordinates) => void;
+  onGeoError?: (code: number, message: string) => void;
   deviceLocation?: DeviceLocation | null;
   className?: string;
   height?: number;
@@ -15,6 +16,7 @@ export function LocationMap({
   radius,
   readOnly,
   onChange,
+  onGeoError,
   deviceLocation,
   className,
   height = 320
@@ -25,6 +27,7 @@ export function LocationMap({
       radius={radius}
       readOnly={readOnly}
       onChange={onChange}
+      onGeoError={onGeoError}
       deviceLocation={deviceLocation}
       className={`w-full rounded-md border border-input ${className ?? ''}`}
       style={{ height }}

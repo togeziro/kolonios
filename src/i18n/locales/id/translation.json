@@ -296,7 +296,8 @@
     "signInFailed": "Gagal masuk",
     "signOut": "Keluar",
     "signUp": "Daftar",
-    "tagline": "Rancang. Bangun. Luncurkan. Ulangi."
+    "tagline": "Rancang. Bangun. Luncurkan. Ulangi.",
+    "validationFailed": "Silakan masukkan email dan kata sandi Anda."
   },
   "attendance": {
     "allStatus": "Semua Status",
@@ -902,6 +903,9 @@
     "longitude": "Longitude",
     "gpsValidation": "Validasi GPS",
     "gpsValidationHint": "Jika aktif, karyawan harus check-in di dalam geofence dengan lokasi yang baru dan akurat",
+    "geoUnavailable": "Layanan lokasi tidak tersedia di browser ini — tombol lokasi disembunyikan. Atur koordinat secara manual.",
+    "geoPermissionDenied": "Izin lokasi ditolak — izinkan akses lokasi untuk mengisi koordinat otomatis.",
+    "geoFixFailed": "Tidak dapat menentukan lokasi Anda — atur koordinat secara manual.",
     "selfieRequired": "Selfie Wajib",
     "maxAccuracy": "Akurasi Maksimal (m)",
     "maxStale": "Lokasi Kedaluwarsa Maksimal (ms)",

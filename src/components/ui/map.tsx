@@ -4,6 +4,7 @@ import * as React from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { GeoJSONSource, Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl';
 import type { Polygon, Position } from 'geojson';
+import { useTranslation } from 'react-i18next';
 
 export type MapCoordinates = { lat: number; lng: number };
 
@@ -14,6 +15,7 @@ export interface MapProps {
   radius: number;
   readOnly?: boolean;
   onChange?: (coords: MapCoordinates) => void;
+  onGeoError?: (code: number, message: string) => void;
   deviceLocation?: DeviceLocation | null;
   className?: string;
   style?: React.CSSProperties;
@@ -55,17 +57,26 @@ export function Map({
   radius,
   readOnly = false,
   onChange,
+  onGeoError,
   deviceLocation,
   className,
   style
 }: MapProps) {
+  const { t } = useTranslation();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapRef = React.useRef<MapLibreMap | null>(null);
   const markerRef = React.useRef<MapLibreMarker | null>(null);
   const deviceMarkerRef = React.useRef<MapLibreMarker | null>(null);
   const geofenceRef = React.useRef({ center: coordinates, radius });
   const layerIdsRef = React.useRef<string[]>([]);
-  const initialConfigRef = React.useRef({ coordinates, deviceLocation, readOnly, onChange });
+  const initialConfigRef = React.useRef({
+    coordinates,
+    deviceLocation,
+    readOnly,
+    onChange,
+    onGeoError
+  });
+  const [geoUnavailable, setGeoUnavailable] = React.useState(false);
 
   const updateGeofence = React.useCallback((map: MapLibreMap) => {
     const polygonSource = map.getSource('geofence') as GeoJSONSource | undefined;
@@ -91,10 +102,38 @@ export function Map({
   // through the effect below via refs, so the init effect reads the mount-time
   // props from initialConfigRef instead of listing them as dependencies.
   React.useEffect(() => {
-    const { coordinates, deviceLocation, readOnly, onChange } = initialConfigRef.current;
+    const { coordinates, deviceLocation, readOnly, onChange, onGeoError } =
+      initialConfigRef.current;
     let cancelled = false;
     let map: MapLibreMap | null = null;
     let ml: typeof import('maplibre-gl') | null = null;
+
+    // One-time geolocation probe: pre-fill the geofence center from the
+    // browser location so the admin only has to confirm the radius. Fires
+    // regardless of map-provider availability, and is skipped when
+    // geolocation itself is unsupported (a banner explains the missing
+    // locate button). Failures are surfaced via onGeoError.
+    const geoSupported = typeof navigator !== 'undefined' && !!navigator.geolocation;
+    if (geoSupported) {
+      setGeoUnavailable(false);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (cancelled) return;
+          if (!readOnly && onChange) {
+            onChange({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          }
+        },
+        (error: GeolocationPositionError) => {
+          if (cancelled) return;
+          onGeoError?.(error.code, error.message);
+        }
+      );
+    } else {
+      setGeoUnavailable(true);
+    }
 
     async function init() {
       try {
@@ -129,23 +168,25 @@ export function Map({
 
         map.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
 
-        const geolocateControl = new ml.GeolocateControl({
-          positionOptions: { enableHighAccuracy: true, timeout: 10_000 },
-          trackUserLocation: true,
-          showUserLocation: true,
-          showAccuracyCircle: true
-        });
-        map.addControl(geolocateControl, 'top-right');
+        if (geoSupported) {
+          const geolocateControl = new ml.GeolocateControl({
+            positionOptions: { enableHighAccuracy: true, timeout: 10_000 },
+            trackUserLocation: true,
+            showUserLocation: true,
+            showAccuracyCircle: true
+          });
+          map.addControl(geolocateControl, 'top-right');
 
-        // Keep the form in sync when the locate button resolves the user's
-        // position; read-only maps just center on it.
-        if (!readOnly && onChange) {
-          geolocateControl.on(
-            'geolocate',
-            (e: { coords: { latitude: number; longitude: number } }) => {
-              onChange({ lat: e.coords.latitude, lng: e.coords.longitude });
-            }
-          );
+          // Keep the form in sync when the locate button resolves the user's
+          // position; read-only maps just center on it.
+          if (!readOnly && onChange) {
+            geolocateControl.on(
+              'geolocate',
+              (e: { coords: { latitude: number; longitude: number } }) => {
+                onChange({ lat: e.coords.latitude, lng: e.coords.longitude });
+              }
+            );
+          }
         }
 
         if (coordinates) {
@@ -262,6 +303,17 @@ export function Map({
   }, [coordinates, radius, updateGeofence]);
 
   return (
-    <div ref={containerRef} className={className} style={style} data-testid='attendance-map' />
+    <div className={className} style={style}>
+      {geoUnavailable ? (
+        <p
+          role='alert'
+          data-testid='geo-unavailable-banner'
+          className='mb-2 text-xs text-muted-foreground'
+        >
+          {t('attendanceAdmin.geoUnavailable')}
+        </p>
+      ) : null}
+      <div ref={containerRef} data-testid='attendance-map' className='h-full w-full' />
+    </div>
   );
 }
