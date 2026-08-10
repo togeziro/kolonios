@@ -91,8 +91,8 @@ src/routes/about.tsx:37
 src/routes/about.tsx:39
 src/routes/about.tsx:48
 src/routes/auth/v2.tsx:27
-src/routes/auth/v2/sign-in/index.tsx:22
-src/routes/auth/v2/sign-up/index.tsx:22
+src/routes/auth/v2/sign-in/index.tsx:20
+src/routes/auth/v2/sign-up/index.tsx:20
 src/routes/dashboard.tsx:50
 src/routes/dashboard/overview.tsx:47
 src/routes/privacy-policy.tsx:14
