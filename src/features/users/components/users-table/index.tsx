@@ -1,5 +1,4 @@
-import { useMemo, useState } from 'react';
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { useSearch } from '@tanstack/react-router';
 import { Cog, Download, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
@@ -25,7 +24,6 @@ import { usersToCsv, downloadCsv } from '@/lib/export-csv';
 import { UserFormSheetTrigger } from '../user-form-sheet';
 import { columns } from './columns';
 import type { SearchParams, NavigateWithSearch } from '@/types';
-import type { User } from '../../api/types';
 import { AUTH_ROLE_OPTIONS, STATUS_OPTIONS } from './options';
 
 const columnIds = columns.map((c) => c.id).filter(Boolean) as string[];

@@ -77,11 +77,11 @@ src/features/users/components/users-table/columns.tsx:19
 src/features/users/components/users-table/columns.tsx:45
 src/features/users/components/users-table/columns.tsx:69
 src/features/users/components/users-table/columns.tsx:92
-src/features/users/components/users-table/index.tsx:129
-src/features/users/components/users-table/index.tsx:132
-src/features/users/components/users-table/index.tsx:150
-src/features/users/components/users-table/index.tsx:153
-src/features/users/components/users-table/index.tsx:90
+src/features/users/components/users-table/index.tsx:127
+src/features/users/components/users-table/index.tsx:130
+src/features/users/components/users-table/index.tsx:148
+src/features/users/components/users-table/index.tsx:151
+src/features/users/components/users-table/index.tsx:88
 src/routes/__root.tsx:119
 src/routes/__root.tsx:120
 src/routes/about.tsx:15

@@ -97,7 +97,7 @@ export const columns: ColumnDef<User>[] = [
     }
   },
   {
-    id: 'joinedDate',
+    id: 'created_at',
     accessorFn: (row) => new Date(row.created_at).getTime(),
     header: ({ column }: { column: Column<User, unknown> }) => (
       <DataTableColumnHeader column={column} title='user.joinedDate' />
