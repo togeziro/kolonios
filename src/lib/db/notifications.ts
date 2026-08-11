@@ -1,6 +1,7 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from './index';
-import { DomainError, mapDbError } from '../errors';
+import { DomainError } from '../errors';
+import { mapDbError } from '../errors';
 import { notifications } from './schema/notifications';
 import type { NotificationAction } from '@/components/ui/notification-card';
 

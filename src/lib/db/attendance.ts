@@ -54,6 +54,73 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
   return R * c;
 }
 
+export type GpsValidationInput = {
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
+  capturedAt?: number;
+  locationId?: number | null;
+  policy: AttendancePolicy;
+};
+
+export type GpsValidationResult =
+  | { ok: true; distanceToOffice: number }
+  | { ok: false; code: string; message: string };
+
+export async function validateGpsLocation(input: GpsValidationInput): Promise<GpsValidationResult> {
+  const { latitude, longitude, accuracy, capturedAt, locationId, policy } = input;
+  // When GPS validation is enabled every coordinate field is required;
+  // omitting any of them must not bypass validation.
+  if (
+    latitude == null ||
+    longitude == null ||
+    accuracy == null ||
+    capturedAt == null ||
+    locationId == null
+  ) {
+    return { ok: false, code: 'GPS_REQUIRED', message: 'GPS location is required' };
+  }
+  // Reject stale coordinates (server-side, never trust the client)
+  if (isLocationStale(capturedAt, Date.now(), policy.maxStaleMs)) {
+    return {
+      ok: false,
+      code: 'GPS_STALE',
+      message: 'Location is stale. Refresh your location and try again.'
+    };
+  }
+  // Reject inaccurate coordinates
+  if (!isAccuracyAcceptable(accuracy, policy.maxAccuracyMeters)) {
+    return {
+      ok: false,
+      code: 'GPS_INACCURATE',
+      message: 'GPS accuracy is too low. Move to an open area and refresh.'
+    };
+  }
+  // Validate geofence against the submitted location
+  const [location] = await db.select().from(locations).where(eq(locations.id, locationId)).limit(1);
+
+  if (!location || location.latitude == null || location.longitude == null) {
+    return { ok: false, code: 'GPS_REQUIRED', message: 'Location not found' };
+  }
+
+  const distanceToOffice = calculateDistance(
+    latitude,
+    longitude,
+    location.latitude,
+    location.longitude
+  );
+
+  if (location.radius != null && distanceToOffice > location.radius) {
+    return {
+      ok: false,
+      code: 'OUTSIDE_RADIUS',
+      message: `You are ${Math.round(distanceToOffice)}m from the office. Must be within ${location.radius}m.`
+    };
+  }
+
+  return { ok: true, distanceToOffice };
+}
+
 export async function getLocations() {
   try {
     const rows = await db.select().from(locations).where(eq(locations.status, 'active'));
@@ -171,66 +238,15 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
 
     // Check GPS validation
     if (policy.gpsValidationEnabled) {
-      // When GPS validation is enabled every coordinate field is required;
-      // omitting any of them must not bypass validation.
-      if (
-        payload.latitude == null ||
-        payload.longitude == null ||
-        payload.accuracy == null ||
-        payload.capturedAt == null ||
-        payload.locationId == null
-      ) {
+      const gps = await validateGpsLocation({ ...payload, policy });
+      if (!gps.ok) {
         return {
           success: false,
-          code: 'GPS_REQUIRED',
-          message: 'GPS location is required'
+          code: gps.code,
+          message: gps.message
         };
       }
-      // Reject stale coordinates (server-side, never trust the client)
-      if (isLocationStale(payload.capturedAt, Date.now(), policy.maxStaleMs)) {
-        return {
-          success: false,
-          code: 'GPS_STALE',
-          message: 'Location is stale. Refresh your location and try again.'
-        };
-      }
-      // Reject inaccurate coordinates
-      if (!isAccuracyAcceptable(payload.accuracy, policy.maxAccuracyMeters)) {
-        return {
-          success: false,
-          code: 'GPS_INACCURATE',
-          message: 'GPS accuracy is too low. Move to an open area and refresh.'
-        };
-      }
-      // Validate geofence against the submitted location
-      const [location] = await db
-        .select()
-        .from(locations)
-        .where(eq(locations.id, payload.locationId))
-        .limit(1);
-
-      if (!location || location.latitude == null || location.longitude == null) {
-        return {
-          success: false,
-          code: 'GPS_REQUIRED',
-          message: 'Location not found'
-        };
-      }
-
-      distanceToOffice = calculateDistance(
-        payload.latitude,
-        payload.longitude,
-        location.latitude,
-        location.longitude
-      );
-
-      if (location.radius != null && distanceToOffice > location.radius) {
-        return {
-          success: false,
-          code: 'OUTSIDE_RADIUS',
-          message: `You are ${Math.round(distanceToOffice)}m from the office. Must be within ${location.radius}m.`
-        };
-      }
+      distanceToOffice = gps.distanceToOffice;
     }
 
     // Selfie requirement
@@ -320,62 +336,23 @@ export async function checkOut(userId: string, payload: AttendanceCheckOutPayloa
     if (existing.gps_validation_enabled) {
       // Check-out is validated against the policy the check-in was locked to;
       // omitting any coordinate field must not bypass validation.
-      if (
-        payload.latitude == null ||
-        payload.longitude == null ||
-        payload.accuracy == null ||
-        payload.capturedAt == null ||
-        existing.lock_location == null
-      ) {
-        return {
-          success: false,
-          code: 'GPS_REQUIRED',
-          message: 'GPS location is required'
-        };
-      }
       const policy = await getAttendancePolicy(existing.lock_location, existing.shift_id);
-      if (isLocationStale(payload.capturedAt, Date.now(), policy.maxStaleMs)) {
+      const gps = await validateGpsLocation({
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        accuracy: payload.accuracy,
+        capturedAt: payload.capturedAt,
+        locationId: existing.lock_location,
+        policy
+      });
+      if (!gps.ok) {
         return {
           success: false,
-          code: 'GPS_STALE',
-          message: 'Location is stale. Refresh your location and try again.'
+          code: gps.code,
+          message: gps.message
         };
       }
-      if (!isAccuracyAcceptable(payload.accuracy, policy.maxAccuracyMeters)) {
-        return {
-          success: false,
-          code: 'GPS_INACCURATE',
-          message: 'GPS accuracy is too low. Move to an open area and refresh.'
-        };
-      }
-      const [location] = await db
-        .select()
-        .from(locations)
-        .where(eq(locations.id, existing.lock_location))
-        .limit(1);
-
-      if (!location || location.latitude == null || location.longitude == null) {
-        return {
-          success: false,
-          code: 'GPS_REQUIRED',
-          message: 'Location not found'
-        };
-      }
-
-      distanceToOffice = calculateDistance(
-        payload.latitude,
-        payload.longitude,
-        location.latitude,
-        location.longitude
-      );
-
-      if (location.radius != null && distanceToOffice > location.radius) {
-        return {
-          success: false,
-          code: 'OUTSIDE_RADIUS',
-          message: `You are ${Math.round(distanceToOffice)}m from the office. Must be within ${location.radius}m.`
-        };
-      }
+      distanceToOffice = gps.distanceToOffice;
     }
 
     if (existing.selfie_required && !payload.photo) {

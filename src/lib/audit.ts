@@ -1,4 +1,4 @@
-import { getRequestId } from './request-id';
+import { getRequestId } from './request-id.server';
 import { insertAuditRow } from './db/audit';
 
 export type AuditEntry = {

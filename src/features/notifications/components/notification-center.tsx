@@ -9,7 +9,6 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { notificationListQueryOptions } from '../api/queries';
 import { markAsReadMutation, markAllAsReadMutation } from '../api/mutations';
-import type { NotificationItem } from '../api/types';
 import { useTranslation } from 'react-i18next';
 
 const MAX_VISIBLE = 5;
@@ -22,10 +21,8 @@ const actionRoutes: Record<string, string> = {
 
 export function NotificationCenter() {
   const { t } = useTranslation();
-  const { data } = useQuery(notificationListQueryOptions()) as {
-    data: { notifications: NotificationItem[] } | undefined;
-  };
-  const notifications = data?.notifications ?? [];
+  const { data } = useQuery(notificationListQueryOptions());
+  const notifications = data ?? [];
   const { mutate: markAsRead } = useMutation(markAsReadMutation);
   const { mutate: markAllAsRead } = useMutation(markAllAsReadMutation);
   const router = useRouter();

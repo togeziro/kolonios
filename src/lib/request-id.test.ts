@@ -10,7 +10,7 @@ vi.mock('@tanstack/react-start/server', () => ({
   }
 }));
 
-import { getRequestId, withRequestContext } from './request-id';
+import { getRequestId, withRequestContext } from './request-id.server';
 
 describe('withRequestContext', () => {
   afterEach(() => mockHeaders.clear());

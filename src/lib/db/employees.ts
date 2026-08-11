@@ -10,6 +10,7 @@ import type {
   EmployeeMutationPayload
 } from '@/features/employees/api/types';
 import { buildPagination, buildOrderBy, buildSearchCondition, buildStatusCondition } from './utils';
+import { generateTemporaryPassword } from '../auth/password';
 
 const sortColumnMap = {
   employee_code: employees.employee_code,
@@ -219,7 +220,7 @@ export async function createEmployee(data: EmployeeMutationPayload & { created_b
       body: {
         email: data.email,
         name: data.full_name,
-        password: 'ChangeMe123!',
+        password: generateTemporaryPassword(),
         role: 'employee'
       }
     });

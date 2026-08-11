@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth.server';
 import { mapDbError } from '../errors';
@@ -8,18 +7,61 @@ import { userRoleGroups } from './schema/user-role-groups';
 import { roleGroups } from './schema/role-groups';
 import { mapRoleGroupToLegacyRole, setUserRoleGroup } from './role-groups';
 import type { UserFilters, UsersResponse, UserMutationPayload } from '@/features/users/api/types';
+import { generateTemporaryPassword } from '../auth/password';
 
-function toUser(betterUser: any, roleGroup?: { id: string; name: string } | null) {
+type AdminUser = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+  banned: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type AdminUserList = {
+  users: AdminUser[];
+  total: number;
+};
+
+type AdminAuthApi = {
+  listUsers: (opts: {
+    headers: Headers;
+    query: { limit: number; offset: number; sortBy: string };
+  }) => Promise<AdminUserList>;
+  createUser: (opts: {
+    body: {
+      email: string;
+      password: string;
+      name: string;
+      role: string;
+    };
+  }) => Promise<AdminUser>;
+  updateUser: (opts: {
+    body: {
+      name?: string;
+      role: string;
+      banned?: boolean;
+      banReason?: string;
+    };
+    params: { userId: string };
+  }) => Promise<AdminUser>;
+  removeUser: (opts: { body: { userId: string } }) => Promise<{ success: boolean }>;
+};
+
+const adminApi = auth.api as unknown as AdminAuthApi;
+
+function toUser(betterUser: AdminUser, roleGroup?: { id: string; name: string } | null) {
   return {
-    id: betterUser.id as string,
+    id: betterUser.id,
     name: betterUser.name || '',
     email: betterUser.email || '',
     status: betterUser.banned ? 'Inactive' : 'Active',
     role: betterUser.role || 'user',
     role_group_id: roleGroup?.id ?? null,
     role_group_name: roleGroup?.name ?? null,
-    created_at: betterUser.createdAt || new Date().toISOString(),
-    updated_at: betterUser.updatedAt || new Date().toISOString()
+    created_at: betterUser.createdAt.toISOString(),
+    updated_at: betterUser.updatedAt.toISOString()
   };
 }
 
@@ -31,12 +73,12 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
     const limit = filters.limit ?? 10;
     const offset = (page - 1) * limit;
 
-    const result: any = await auth.api.listUsers({
+    const result: AdminUserList = await adminApi.listUsers({
       headers,
       query: { limit, offset, sortBy: filters.sort || 'createdAt' }
     });
 
-    const userIds = (result.users || []).map((u: any) => u.id as string);
+    const userIds = result.users.map((u) => u.id);
 
     const rgMap = new Map<string, { id: string; name: string }>();
     if (userIds.length > 0) {
@@ -63,7 +105,7 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
       total_users: result.total || 0,
       offset,
       limit,
-      users: (result.users || []).map((u: any) => toUser(u, rgMap.get(u.id) ?? null))
+      users: result.users.map((u) => toUser(u, rgMap.get(u.id) ?? null))
     };
   } catch (e) {
     mapDbError(e, 'users.getUsers');
@@ -73,16 +115,16 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
 export async function createUser(data: UserMutationPayload) {
   try {
     const legacyRole = data.role || (data.role_group_id ? 'employee' : 'user');
-    const created: any = await (auth.api as any).createUser({
+    const created = await adminApi.createUser({
       body: {
         email: data.email,
-        password: Math.random().toString(36).slice(-12),
+        password: generateTemporaryPassword(),
         name: data.name,
         role: legacyRole
       }
     });
 
-    const userId = created.id as string;
+    const userId = created.id;
 
     if (data.role_group_id) {
       const { getRoleGroupById } = await import('./role-groups');
@@ -91,10 +133,10 @@ export async function createUser(data: UserMutationPayload) {
         await setUserRoleGroup(userId, data.role_group_id);
         const syncedRole = mapRoleGroupToLegacyRole(rg.role_group!.name);
         if (syncedRole !== legacyRole) {
-          await (auth.api as any).updateUser({
+          await adminApi.updateUser({
             body: { role: syncedRole },
             params: { userId }
-          } as any);
+          });
         }
         created.role = syncedRole;
       }
@@ -122,7 +164,7 @@ export async function updateUser(id: string, data: UserMutationPayload) {
       }
     }
 
-    const updated: any = await (auth.api as any).updateUser({
+    const updated = await adminApi.updateUser({
       body: {
         name: data.name,
         role: finalRole,
@@ -142,7 +184,7 @@ export async function deleteUser(id: string) {
   try {
     const { getRequestHeaders } = await import('@tanstack/react-start/server');
     getRequestHeaders();
-    await auth.api.removeUser({ body: { userId: id } });
+    await adminApi.removeUser({ body: { userId: id } });
     return { success: true, message: 'User deleted successfully' };
   } catch (e) {
     mapDbError(e, 'users.deleteUser');
