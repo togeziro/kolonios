@@ -1,8 +1,14 @@
 import type { Table } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Icons } from '@/components/icons';
-
-import { Button } from '@/components/ui/button';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import {
   Select,
   SelectContent,
@@ -11,11 +17,17 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 
 interface DataTablePaginationProps<TData> extends React.ComponentProps<'div'> {
   table: Table<TData>;
   pageSizeOptions?: number[];
+}
+
+function getPageNumbers(currentPage: number, pageCount: number) {
+  if (pageCount <= 3) return Array.from({ length: pageCount }, (_, i) => i + 1);
+  if (currentPage <= 2) return [1, 2, 3];
+  if (currentPage >= pageCount - 1) return [pageCount - 2, pageCount - 1, pageCount];
+  return [currentPage - 1, currentPage, currentPage + 1];
 }
 
 export function DataTablePagination<TData>({
@@ -26,6 +38,8 @@ export function DataTablePagination<TData>({
 }: DataTablePaginationProps<TData>) {
   const { t } = useTranslation();
   const rowCount = table.getFilteredRowModel().rows.length;
+  const current = Math.min(table.getState().pagination.pageIndex + 1, table.getPageCount());
+  const pageCount = Math.max(table.getPageCount(), 1);
 
   if (rowCount === 0) return null;
 
@@ -76,48 +90,59 @@ export function DataTablePagination<TData>({
             total: table.getPageCount()
           })}
         </div>
-        <div className='flex items-center space-x-2'>
-          <Button
-            aria-label={t('table.goToFirstPage')}
-            variant='outline'
-            size='icon'
-            className='hidden size-8 lg:flex'
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <Icons.chevronsLeft />
-          </Button>
-          <Button
-            aria-label={t('table.goToPreviousPage')}
-            variant='outline'
-            size='icon'
-            className='size-8'
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeftIcon />
-          </Button>
-          <Button
-            aria-label={t('table.goToNextPage')}
-            variant='outline'
-            size='icon'
-            className='size-8'
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronRightIcon />
-          </Button>
-          <Button
-            aria-label={t('table.goToLastPage')}
-            variant='outline'
-            size='icon'
-            className='hidden size-8 lg:flex'
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-          >
-            <Icons.chevronsRight />
-          </Button>
-        </div>
+        <Pagination className='mx-0 w-auto justify-start md:justify-end'>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href='#'
+                aria-label={t('table.goToPreviousPage')}
+                className={
+                  !table.getCanPreviousPage() ? 'pointer-events-none opacity-50' : undefined
+                }
+                onClick={(event) => {
+                  event.preventDefault();
+                  table.previousPage();
+                }}
+              />
+            </PaginationItem>
+            {getPageNumbers(current, pageCount)[0] > 1 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+            {getPageNumbers(current, pageCount).map((pageNumber) => (
+              <PaginationItem key={`page-${pageNumber}`}>
+                <PaginationLink
+                  href='#'
+                  isActive={table.getState().pagination.pageIndex === pageNumber - 1}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    table.setPageIndex(pageNumber - 1);
+                  }}
+                >
+                  {pageNumber}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            {getPageNumbers(current, pageCount)[getPageNumbers(current, pageCount).length - 1] <
+              pageCount && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+            <PaginationItem>
+              <PaginationNext
+                href='#'
+                aria-label={t('table.goToNextPage')}
+                className={!table.getCanNextPage() ? 'pointer-events-none opacity-50' : undefined}
+                onClick={(event) => {
+                  event.preventDefault();
+                  table.nextPage();
+                }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );
