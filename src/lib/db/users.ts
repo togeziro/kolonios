@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth.server';
 import { mapDbError } from '../errors';
 import { db } from './index';
@@ -6,6 +6,7 @@ import { user } from './auth-schema';
 import { userRoleGroups } from './schema/user-role-groups';
 import { roleGroups } from './schema/role-groups';
 import { mapRoleGroupToLegacyRole, setUserRoleGroup } from './role-groups';
+import { buildConditions, buildOrderBy, buildPagination, buildSearchCondition } from './utils';
 import type { UserFilters, UsersResponse, UserMutationPayload } from '@/features/users/api/types';
 import { generateTemporaryPassword } from '../auth/password';
 
@@ -65,21 +66,36 @@ function toUser(betterUser: AdminUser, roleGroup?: { id: string; name: string } 
   };
 }
 
+const userSortColumnMap = {
+  name: user.name,
+  role: user.role,
+  created_at: user.createdAt
+} as const;
+
 export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
   try {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server');
-    const headers = getRequestHeaders();
-    const page = filters.page ?? 1;
-    const limit = filters.limit ?? 10;
-    const offset = (page - 1) * limit;
+    const { limit, offset } = buildPagination(filters);
 
-    const result: AdminUserList = await adminApi.listUsers({
-      headers,
-      query: { limit, offset, sortBy: filters.sort || 'createdAt' }
-    });
+    const searchCondition = buildSearchCondition([user.name, user.email], filters.search);
+    const rolesCondition = filters.roles?.trim() ? eq(user.role, filters.roles.trim()) : undefined;
+    const statusCondition =
+      filters.status === 'Active'
+        ? eq(user.banned, false)
+        : filters.status === 'Inactive'
+          ? eq(user.banned, true)
+          : undefined;
+    const where = buildConditions([searchCondition, rolesCondition, statusCondition]);
+    const orderBy = buildOrderBy(filters, userSortColumnMap) ?? asc(user.createdAt);
 
-    const userIds = result.users.map((u) => u.id);
+    const [rows, countRows] = await Promise.all([
+      db.select().from(user).where(where).orderBy(orderBy).limit(limit).offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(user)
+        .where(where)
+    ]);
 
+    const userIds = rows.map((u) => u.id);
     const rgMap = new Map<string, { id: string; name: string }>();
     if (userIds.length > 0) {
       const allRows = await db
@@ -90,7 +106,6 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
         })
         .from(userRoleGroups)
         .innerJoin(roleGroups, eq(userRoleGroups.role_group_id, roleGroups.id));
-
       for (const row of allRows) {
         if (userIds.includes(row.user_id)) {
           rgMap.set(row.user_id, { id: row.id, name: row.name });
@@ -101,11 +116,11 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
     return {
       success: true,
       time: new Date().toISOString(),
-      message: 'Users fetched from Better Auth',
-      total_users: result.total || 0,
+      message: 'Users fetched',
+      total_users: countRows[0]?.count ?? 0,
       offset,
       limit,
-      users: result.users.map((u) => toUser(u, rgMap.get(u.id) ?? null))
+      users: rows.map((u) => toUser(u as unknown as AdminUser, rgMap.get(u.id) ?? null))
     };
   } catch (e) {
     mapDbError(e, 'users.getUsers');

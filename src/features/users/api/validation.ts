@@ -6,7 +6,8 @@ export const userFiltersSchema: z.ZodType<UserFilters> = z.object({
   limit: z.coerce.number().int().positive().max(100).optional(),
   roles: z.string().optional(),
   search: z.string().optional(),
-  sort: z.string().optional()
+  sort: z.string().optional(),
+  status: z.string().optional()
 });
 
 export const userIdSchema = z.string();

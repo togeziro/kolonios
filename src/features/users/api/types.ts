@@ -16,6 +16,7 @@ export type UserFilters = {
   roles?: string;
   search?: string;
   sort?: string;
+  status?: string;
 };
 
 export type UsersResponse = {
