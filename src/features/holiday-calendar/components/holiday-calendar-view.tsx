@@ -191,8 +191,8 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
               weekdays: 'flex w-full',
               weekday: 'flex-1 text-center text-xs font-medium text-muted-foreground',
               week: 'flex w-full',
-              day: 'flex-1 h-10',
-              day_button: 'w-full h-full',
+              day: 'relative flex-1 h-10',
+              day_button: 'relative w-full h-full',
               nav: 'hidden'
             }}
           />

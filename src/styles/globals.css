@@ -77,6 +77,15 @@
 }
 
 /* Holiday Calendar - Holiday date marker */
+.holiday-date {
+  background-color: hsl(var(--destructive) / 0.12);
+  border-radius: var(--radius);
+}
+
+.holiday-date:not([aria-selected='true']) {
+  color: hsl(var(--destructive));
+}
+
 .holiday-date::after {
   content: '';
   position: absolute;
