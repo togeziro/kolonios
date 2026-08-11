@@ -202,7 +202,7 @@ export default function DesignationManagePage() {
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className='space-y-6'>
+    <div className='flex min-h-0 flex-1 flex-col gap-6'>
       <DataTableCard
         title={t('masterdata.jobTitlesTitle')}
         action={

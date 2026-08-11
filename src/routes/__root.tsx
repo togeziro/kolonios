@@ -7,7 +7,7 @@ import { createIsomorphicFn } from '@tanstack/react-start';
 import { Toaster } from '@/components/ui/sonner';
 import { ActiveThemeProvider } from '@/components/themes/active-theme';
 import ThemeProvider from '@/components/themes/theme-provider';
-import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
+import { DEFAULT_THEME_PRESET, THEME_PRESET_VALUES } from '@/lib/preferences/theme';
 import { I18nProvider } from '@/i18n/provider';
 import { LocaleProvider } from '@/lib/locale';
 
@@ -27,18 +27,24 @@ function readCookie(name: string): string | undefined {
 const getActiveTheme = createIsomorphicFn()
   .server(async () => {
     const { getCookie } = await import('@tanstack/react-start/server');
-    const cookieValue = getCookie('active_theme');
-    if (cookieValue && THEMES.some((t) => t.value === cookieValue)) {
+    const cookieValue = getCookie('theme_preset');
+    if (
+      cookieValue &&
+      THEME_PRESET_VALUES.includes(cookieValue as (typeof THEME_PRESET_VALUES)[number])
+    ) {
       return cookieValue;
     }
-    return DEFAULT_THEME;
+    return DEFAULT_THEME_PRESET;
   })
   .client(async () => {
-    const cookieValue = readCookie('active_theme');
-    if (cookieValue && THEMES.some((t) => t.value === cookieValue)) {
+    const cookieValue = readCookie('theme_preset');
+    if (
+      cookieValue &&
+      THEME_PRESET_VALUES.includes(cookieValue as (typeof THEME_PRESET_VALUES)[number])
+    ) {
       return cookieValue;
     }
-    return DEFAULT_THEME;
+    return DEFAULT_THEME_PRESET;
   });
 
 const getActiveLanguage = createIsomorphicFn()
@@ -93,7 +99,7 @@ function RootDocument() {
   const { activeTheme, activeLanguage } = Route.useLoaderData();
 
   return (
-    <html lang={activeLanguage} suppressHydrationWarning data-theme={activeTheme}>
+    <html lang={activeLanguage} suppressHydrationWarning data-theme-preset={activeTheme}>
       <head>
         <HeadContent />
         <script
@@ -116,7 +122,7 @@ function RootDocument() {
           disableTransitionOnChange
           enableColorScheme
         >
-          <ActiveThemeProvider initialTheme={activeTheme}>
+          <ActiveThemeProvider initialPreset={activeTheme}>
             <I18nProvider initialLanguage={activeLanguage}>
               <LocaleProvider>
                 <Toaster />

@@ -265,7 +265,7 @@
     "roleHr": "HR",
     "roleEmployee": "Karyawan",
     "roleTechnician": "Teknisi",
-    "pageDescription": "Kelola pengguna (pola tabel React Query + search params)",
+    "pageDescription": "Kelola anggota organisasi dan akses mereka.",
     "searchPlaceholder": "Cari pengguna..."
   },
   "auth": {

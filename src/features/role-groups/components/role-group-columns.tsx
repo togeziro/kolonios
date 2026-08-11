@@ -2,6 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { InitialChip } from '@/components/ui/initial-chip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,11 +29,12 @@ export const roleGroupColumns: ColumnDef<RoleGroup>[] = [
     size: 200,
     minSize: 180,
     cell: ({ row }) => (
-      <div className='font-medium text-sm'>
+      <div className='flex items-center gap-3 text-sm'>
+        <InitialChip name={row.original.name} size='sm' />
         <Link
           to='/dashboard/admin/role-groups/$id'
           params={{ id: row.original.id }}
-          className='hover:underline'
+          className='font-medium hover:underline'
         >
           {row.original.name}
         </Link>
@@ -60,7 +62,14 @@ export const roleGroupColumns: ColumnDef<RoleGroup>[] = [
       return false;
     },
     cell: ({ row }) => (
-      <Badge variant={row.original.is_admin ? 'default' : 'outline'}>
+      <Badge
+        variant={row.original.is_admin ? 'default' : 'outline'}
+        className={
+          row.original.is_admin
+            ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'
+            : 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300'
+        }
+      >
         {row.original.is_admin ? 'System' : 'Custom'}
       </Badge>
     )

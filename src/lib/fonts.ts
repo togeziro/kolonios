@@ -16,19 +16,9 @@ const FONTS: Record<string, FontDef> = {
 };
 
 const THEME_FONTS: Record<string, string[]> = {
-  vercel: ['geist-sans', 'geist-mono'],
-  claude: [],
-  neobrutualism: ['dm-sans', 'space-mono'],
-  supabase: ['outfit'],
-  mono: ['geist-mono'],
-  notebook: ['architects-daughter'],
-  'light-green': ['inter', 'jetbrains-mono'],
-  zen: ['inter', 'jetbrains-mono'],
-  'astro-vista': ['outfit', 'fira-code'],
-  whatsapp: [],
-  tangerine: ['inter', 'jetbrains-mono'],
-  ocean: ['inter', 'jetbrains-mono'],
-  forest: ['inter', 'jetbrains-mono']
+  brutalist: ['dm-sans', 'space-mono'],
+  'soft-pop': ['inter', 'jetbrains-mono'],
+  tangerine: ['inter', 'jetbrains-mono']
 };
 
 const importMap: Record<string, () => Promise<unknown>> = {

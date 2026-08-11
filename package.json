@@ -17,6 +17,7 @@
     "lint:i18n": "bun run i18n:check && bun run i18n:hardcoded",
     "i18n:hardcoded": "bun run scripts/check-hardcoded-strings.ts",
     "i18n:baseline": "bun run scripts/check-hardcoded-strings.ts --write-baseline",
+    "generate:presets": "bun run scripts/generate-theme-presets.ts",
     "api:generate": "bun run scripts/generate-openapi.ts",
     "api:docs": "bun run api:generate && redocly build-docs public/openapi.json -o public/api-docs.html",
     "format": "oxfmt --write .",
@@ -154,6 +155,6 @@
     "vitest/vite": "^7.0.0"
   },
   "simple-git-hooks": {
-    "pre-commit": "npx lint-staged && tsc --noEmit && bun run format:check && bun run i18n:check && bun run i18n:hardcoded"
+    "pre-commit": "bun run generate:presets && git add src/lib/preferences/theme.ts && npx lint-staged && tsc --noEmit && bun run format:check && bun run i18n:check && bun run i18n:hardcoded"
   }
 }

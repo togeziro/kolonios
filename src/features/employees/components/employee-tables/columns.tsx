@@ -1,5 +1,6 @@
-import { Badge } from '@/components/ui/badge';
 import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-header';
+import { InitialChip } from '@/components/ui/initial-chip';
+import { StatusBadge } from '@/components/ui/status-badge';
 import type { Employee } from '../../api/types';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
@@ -32,9 +33,12 @@ export const columns: ColumnDef<Employee>[] = [
       <DataTableColumnHeader column={column} title='common.name' />
     ),
     cell: ({ row }) => (
-      <div className='flex flex-col'>
-        <span className='font-medium'>{row.original.full_name}</span>
-        <span className='text-muted-foreground text-xs'>{row.original.email}</span>
+      <div className='flex items-center gap-3'>
+        <InitialChip name={row.original.full_name} />
+        <div className='flex flex-col'>
+          <span className='font-medium'>{row.original.full_name}</span>
+          <span className='text-muted-foreground text-xs'>{row.original.email}</span>
+        </div>
       </div>
     ),
     meta: {
@@ -77,8 +81,7 @@ export const columns: ColumnDef<Employee>[] = [
     ),
     cell: ({ cell }) => {
       const status = cell.getValue<Employee['status']>();
-      const variant = status === 'active' ? 'default' : 'secondary';
-      return <Badge variant={variant}>{status}</Badge>;
+      return <StatusBadge status={status} />;
     },
     enableColumnFilter: true,
     meta: {

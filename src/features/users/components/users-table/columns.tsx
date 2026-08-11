@@ -1,10 +1,12 @@
-import { Badge } from '@/components/ui/badge';
 import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-header';
+import { InitialChip } from '@/components/ui/initial-chip';
+import { StatusBadge } from '@/components/ui/status-badge';
 import type { User } from '../../api/types';
 import { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
 import { CellAction } from './cell-action';
 import { AUTH_ROLE_OPTIONS } from './options';
+import { getColorForName } from '@/lib/avatar-color';
 
 export const columns: ColumnDef<User>[] = [
   {
@@ -14,9 +16,12 @@ export const columns: ColumnDef<User>[] = [
       <DataTableColumnHeader column={column} title='common.name' />
     ),
     cell: ({ row }) => (
-      <div className='flex flex-col'>
-        <span className='font-medium'>{row.original.name}</span>
-        <span className='text-muted-foreground text-xs'>{row.original.email}</span>
+      <div className='flex items-center gap-3'>
+        <InitialChip name={row.original.name} />
+        <div className='flex flex-col'>
+          <span className='font-medium'>{row.original.name}</span>
+          <span className='text-muted-foreground text-xs'>{row.original.email}</span>
+        </div>
       </div>
     ),
     meta: {
@@ -35,10 +40,14 @@ export const columns: ColumnDef<User>[] = [
       <DataTableColumnHeader column={column} title='user.role' />
     ),
     cell: ({ row }) => {
+      const role = row.original.role_group_name || row.original.role;
+      const color = getColorForName(role);
       return (
-        <Badge variant='outline' className='capitalize'>
-          {row.original.role_group_name || row.original.role}
-        </Badge>
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${color.bg} ${color.fg} ${color.darkBg} ${color.darkFg}`}
+        >
+          {role}
+        </span>
       );
     },
     enableColumnFilter: true,
@@ -55,9 +64,7 @@ export const columns: ColumnDef<User>[] = [
     ),
     cell: ({ cell }) => {
       const status = cell.getValue<User['status']>();
-      const variant =
-        status === 'Active' ? 'default' : status === 'Inactive' ? 'secondary' : 'outline';
-      return <Badge variant={variant}>{status}</Badge>;
+      return <StatusBadge status={status} />;
     }
   },
   {

@@ -265,7 +265,7 @@
     "roleHr": "HR",
     "roleEmployee": "Employee",
     "roleTechnician": "Technician",
-    "pageDescription": "Manage users (React Query + search params table pattern.)",
+    "pageDescription": "Manage your organization members and their access.",
     "searchPlaceholder": "Search users..."
   },
   "auth": {

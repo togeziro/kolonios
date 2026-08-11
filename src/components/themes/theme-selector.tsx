@@ -12,17 +12,20 @@ import {
 
 import { Icons } from '../icons';
 import { Kbd } from '@/components/ui/kbd';
-import { THEMES } from './theme.config';
+import { THEME_PRESET_OPTIONS } from '@/lib/preferences/theme';
+import { useTheme } from 'next-themes';
 
 export function ThemeSelector() {
-  const { activeTheme, setActiveTheme } = useThemeConfig();
+  const { activePreset, setActivePreset } = useThemeConfig();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <div className='flex items-center gap-2'>
       <Label htmlFor='theme-selector' className='sr-only'>
         Theme
       </Label>
-      <Select value={activeTheme} onValueChange={setActiveTheme}>
+      <Select value={activePreset} onValueChange={(v) => setActivePreset(v as typeof activePreset)}>
         <SelectTrigger
           id='theme-selector'
           className='justify-start *:data-[slot=select-value]:w-24'
@@ -35,13 +38,21 @@ export function ThemeSelector() {
           <Kbd>T T</Kbd>
         </SelectTrigger>
         <SelectContent align='end'>
-          {THEMES.length > 0 && (
+          {THEME_PRESET_OPTIONS.length > 0 && (
             <>
               <SelectGroup>
                 <SelectLabel>themes</SelectLabel>
-                {THEMES.map((theme) => (
-                  <SelectItem key={theme.name} value={theme.value}>
-                    {theme.name}
+                {THEME_PRESET_OPTIONS.map((preset) => (
+                  <SelectItem key={preset.value} value={preset.value}>
+                    <span className='flex items-center gap-2'>
+                      <span
+                        className='size-2.5 rounded-full'
+                        style={{
+                          backgroundColor: isDark ? preset.primary.dark : preset.primary.light
+                        }}
+                      />
+                      {preset.label}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectGroup>

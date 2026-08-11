@@ -1,6 +1,6 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-header';
+import { InitialChip } from '@/components/ui/initial-chip';
+import { StatusBadge } from '@/components/ui/status-badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +38,12 @@ export function getDepartmentColumns(
       header: ({ column }: { column: Column<DepartmentRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('common.name')} />
       ),
-      cell: ({ cell }) => <div className='font-medium'>{cell.getValue<string>()}</div>
+      cell: ({ row }) => (
+        <div className='flex items-center gap-3'>
+          <InitialChip name={row.original.name} size='sm' />
+          <span className='font-medium'>{row.original.name}</span>
+        </div>
+      )
     },
     {
       id: 'description',
@@ -59,9 +64,10 @@ export function getDepartmentColumns(
       cell: ({ cell }) => {
         const active = cell.getValue<boolean | null>();
         return (
-          <Badge variant={active ? 'default' : 'secondary'}>
-            {active ? t('common.active') : t('common.inactive')}
-          </Badge>
+          <StatusBadge
+            status={active ? 'active' : 'inactive'}
+            label={active ? t('common.active') : t('common.inactive')}
+          />
         );
       }
     },
@@ -70,11 +76,9 @@ export function getDepartmentColumns(
       header: () => <div className='text-center'>{t('table.actions')}</div>,
       cell: ({ row }) => (
         <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <Icons.ellipsis className='h-4 w-4' />
-            </Button>
+          <DropdownMenuTrigger className='flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none'>
+            <span className='sr-only'>Open menu</span>
+            <Icons.ellipsis className='h-4 w-4' />
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
             <DropdownMenuItem onClick={() => onEdit(row.original)}>

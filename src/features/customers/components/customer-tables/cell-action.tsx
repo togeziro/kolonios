@@ -1,5 +1,4 @@
 import { AlertModal } from '@/components/modal/alert-modal';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,11 +47,9 @@ export function CellAction({ data }: CellActionProps) {
       />
       <CustomerFormSheet customer={data} open={editOpen} onOpenChange={setEditOpen} />
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button variant='ghost' className='h-8 w-8 p-0'>
-            <span className='sr-only'>{t('common.openMenu')}</span>
-            <Icons.ellipsis className='h-4 w-4' />
-          </Button>
+        <DropdownMenuTrigger className='flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none'>
+          <span className='sr-only'>{t('common.openMenu')}</span>
+          <Icons.ellipsis className='h-4 w-4' />
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
           <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>

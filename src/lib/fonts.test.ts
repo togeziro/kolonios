@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { getFontsForTheme, loadFont, loadFontsForTheme } from './fonts';
 
 describe('getFontsForTheme', () => {
-  it('returns the font keys for a known theme', () => {
-    expect(getFontsForTheme('vercel')).toEqual(['geist-sans', 'geist-mono']);
+  it('returns the font keys for a known preset', () => {
+    expect(getFontsForTheme('brutalist')).toEqual(['dm-sans', 'space-mono']);
   });
 
-  it('returns an empty array for themes without fonts', () => {
-    expect(getFontsForTheme('claude')).toEqual([]);
+  it('returns the font keys for tangerine', () => {
+    expect(getFontsForTheme('tangerine')).toEqual(['inter', 'jetbrains-mono']);
   });
 
   it('returns an empty array for unknown themes', () => {
@@ -17,7 +17,7 @@ describe('getFontsForTheme', () => {
 
 describe('loadFont', () => {
   it('no-ops outside the browser', async () => {
-    await expect(loadFont('geist-sans')).resolves.toBeUndefined();
+    await expect(loadFont('dm-sans')).resolves.toBeUndefined();
   });
 
   it('no-ops for unknown fonts', async () => {
@@ -26,10 +26,6 @@ describe('loadFont', () => {
 });
 
 describe('loadFontsForTheme', () => {
-  it('resolves for themes without fonts', async () => {
-    await expect(loadFontsForTheme('claude')).resolves.toBeUndefined();
-  });
-
   it('resolves for unknown themes', async () => {
     await expect(loadFontsForTheme('nope')).resolves.toBeUndefined();
   });
