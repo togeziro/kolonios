@@ -1,27 +1,57 @@
 import { describe, expect, it } from 'vitest';
-import en from '@/i18n/locales/en/translation.json';
-import id from '@/i18n/locales/id/translation.json';
-import { breadcrumbSegmentKeys } from './use-breadcrumbs';
+import { computeBreadcrumbs } from './use-breadcrumbs';
 
-function resolveKey(locale: Record<string, unknown>, key: string): unknown {
-  return key.split('.').reduce<unknown>((acc, part) => {
-    if (acc && typeof acc === 'object') return (acc as Record<string, unknown>)[part];
-    return undefined;
-  }, locale);
+const t = (key: string) => key;
+
+function titles(pathname: string) {
+  return computeBreadcrumbs(pathname, t).map((item) => item.title);
 }
 
-describe('breadcrumb segment keys', () => {
-  it('covers every payroll admin route segment', () => {
-    const payrollSegments = ['payroll', 'records', 'generate', 'periods', 'reports', 'settings'];
-    for (const segment of payrollSegments) {
-      expect(breadcrumbSegmentKeys[segment], `missing key for /${segment}`).toBeDefined();
-    }
+describe('computeBreadcrumbs', () => {
+  it('drops the admin URL segment and maps holiday-calendar', () => {
+    expect(computeBreadcrumbs('/dashboard/admin/holiday-calendar', t)).toEqual([
+      { title: 'navigation.dashboard', link: '/dashboard' },
+      { title: 'navigation.holidayCalendar', link: '/dashboard/admin/holiday-calendar' }
+    ]);
   });
 
-  it('resolves every mapped segment key in both locales', () => {
-    const missing = Object.entries(breadcrumbSegmentKeys).filter(
-      ([, key]) => !resolveKey(en, key) || !resolveKey(id, key)
-    );
-    expect(missing).toEqual([]);
+  it('produces unique titles on settings pages (no duplicate Settings)', () => {
+    const crumbs = computeBreadcrumbs('/dashboard/admin/holiday-calendar/settings', t);
+    expect(titles('/dashboard/admin/holiday-calendar/settings')).toEqual([
+      'navigation.dashboard',
+      'navigation.holidayCalendar',
+      'navigation.settings'
+    ]);
+    expect(new Set(crumbs.map((c) => c.title)).size).toBe(crumbs.length);
+  });
+
+  it('keeps payroll settings breadcrumbs unique', () => {
+    expect(titles('/dashboard/admin/payroll/settings')).toEqual([
+      'navigation.dashboard',
+      'navigation.payroll',
+      'navigation.settings'
+    ]);
+  });
+
+  it('drops admin from audit log breadcrumbs', () => {
+    expect(titles('/dashboard/admin/audit-log')).toEqual([
+      'navigation.dashboard',
+      'navigation.auditLog'
+    ]);
+  });
+
+  it('uses the custom route mapping when present', () => {
+    expect(titles('/dashboard/admin/payroll/profile')).toEqual([
+      'navigation.dashboard',
+      'navigation.payroll',
+      'payroll.profile'
+    ]);
+  });
+
+  it('dedupes consecutive identical titles', () => {
+    expect(titles('/dashboard/settings/settings')).toEqual([
+      'navigation.dashboard',
+      'navigation.settings'
+    ]);
   });
 });

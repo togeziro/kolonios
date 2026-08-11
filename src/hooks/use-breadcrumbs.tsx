@@ -21,6 +21,7 @@ export const breadcrumbSegmentKeys: Record<string, string> = {
   designations: 'navigation.jobTitles',
   'audit-log': 'navigation.auditLog',
   'role-groups': 'navigation.roleGroups',
+  'holiday-calendar': 'navigation.holidayCalendar',
   payroll: 'navigation.payroll',
   records: 'payroll.records',
   generate: 'payroll.generate',
@@ -44,27 +45,34 @@ const routeMapping: Record<string, BreadcrumbItem[]> = {
   // Add more custom mappings as needed
 };
 
+export function computeBreadcrumbs(pathname: string, t: (key: string) => string): BreadcrumbItem[] {
+  if (routeMapping[pathname]) {
+    const items = routeMapping[pathname].map((item) => ({ ...item, title: t(item.title) }));
+    return items.filter((item, index) => index === 0 || item.title !== items[index - 1].title);
+  }
+
+  const segments = pathname.split('/').filter(Boolean);
+  const items = segments.map((segment, index) => {
+    const path = `/${segments.slice(0, index + 1).join('/')}`;
+    const key = breadcrumbSegmentKeys[segment];
+    return {
+      segment,
+      title: key ? t(key) : segment.charAt(0).toUpperCase() + segment.slice(1),
+      link: path
+    };
+  });
+
+  return items
+    .filter((item) => item.segment !== 'admin')
+    .map(({ segment: _segment, ...rest }) => rest)
+    .filter((item, index, arr) => index === 0 || item.title !== arr[index - 1].title);
+}
+
 export function useBreadcrumbs() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
 
-  const breadcrumbs = useMemo(() => {
-    // Check if we have a custom mapping for this exact path
-    if (routeMapping[pathname]) {
-      return routeMapping[pathname].map((item) => ({ ...item, title: t(item.title) }));
-    }
-
-    // If no exact match, fall back to generating breadcrumbs from the path
-    const segments = pathname.split('/').filter(Boolean);
-    return segments.map((segment, index) => {
-      const path = `/${segments.slice(0, index + 1).join('/')}`;
-      const key = breadcrumbSegmentKeys[segment];
-      return {
-        title: key ? t(key) : segment.charAt(0).toUpperCase() + segment.slice(1),
-        link: path
-      };
-    });
-  }, [pathname, t]);
+  const breadcrumbs = useMemo(() => computeBreadcrumbs(pathname, t), [pathname, t]);
 
   return breadcrumbs;
 }
