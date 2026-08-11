@@ -13,6 +13,9 @@ import { getColorForName } from '@/lib/avatar-color';
 export const columns: ColumnDef<User>[] = [
   {
     id: 'select',
+    size: 40,
+    minSize: 40,
+    maxSize: 40,
     header: ({ table }) => (
       <div className='flex items-center justify-center'>
         <Checkbox

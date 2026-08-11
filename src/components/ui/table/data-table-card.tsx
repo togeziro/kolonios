@@ -41,7 +41,7 @@ export function DataTableCard({
           )}
         </CardHeader>
       )}
-      <CardContent className='flex min-h-0 flex-1 flex-col px-0 py-0'>{children}</CardContent>
+      <CardContent className='flex min-h-0 flex-1 flex-col gap-4 px-0 pt-4'>{children}</CardContent>
     </Card>
   );
 }
