@@ -29,7 +29,7 @@ vi.mock('@/lib/auth/auth-client', () => ({
 }));
 
 vi.mock('@/hooks/use-nav', () => ({
-  useFilteredNavGroups: () => [],
+  useFilteredNavItems: () => [],
   useRoleGroupPermissions: () => ({ isAdmin: false, permissions: {} })
 }));
 
