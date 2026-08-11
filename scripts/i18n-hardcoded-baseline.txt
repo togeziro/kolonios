@@ -1,8 +1,5 @@
 src/features/attendance/components/attendance-history.tsx:148
 src/features/attendance/components/leave-history.tsx:150
-src/features/attendance/components/mobile-leave-request-sheet.tsx:25
-src/features/customers/components/customer-form-sheet.tsx:137
-src/features/customers/components/customer-form-sheet.tsx:145
 src/features/customers/components/customer-tables/cell-action.tsx:57
 src/features/customers/components/customer-tables/columns.tsx:15
 src/features/customers/components/customer-tables/columns.tsx:32
@@ -30,8 +27,8 @@ src/features/masterdata/components/department-columns.tsx:75
 src/features/masterdata/components/department-columns.tsx:79
 src/features/masterdata/components/designation-columns.tsx:88
 src/features/masterdata/components/designation-columns.tsx:92
-src/features/notifications/components/notification-center.tsx:48
-src/features/notifications/components/notifications-page.tsx:80
+src/features/notifications/components/notification-center.tsx:45
+src/features/notifications/components/notifications-page.tsx:77
 src/features/overview/components/area-graph.tsx:110
 src/features/overview/components/area-graph.tsx:61
 src/features/overview/components/area-graph.tsx:72
@@ -73,7 +70,6 @@ src/features/role-groups/components/role-group-columns.tsx:74
 src/features/role-groups/components/role-group-listing.tsx:123
 src/features/role-groups/components/role-group-listing.tsx:65
 src/features/tasks/components/available-jobs-section.tsx:48
-src/features/tasks/components/task-detail-sheet.tsx:34
 src/features/tasks/components/task-detail-sheet.tsx:40
 src/features/users/components/users-table/cell-action.tsx:57
 src/features/users/components/users-table/columns.tsx:14
@@ -93,7 +89,6 @@ src/routes/about.tsx:48
 src/routes/auth/v2.tsx:27
 src/routes/auth/v2/sign-in/index.tsx:20
 src/routes/auth/v2/sign-up/index.tsx:20
-src/routes/dashboard.tsx:50
 src/routes/dashboard/overview.tsx:47
 src/routes/privacy-policy.tsx:14
 src/routes/privacy-policy.tsx:16

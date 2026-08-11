@@ -7,7 +7,6 @@ import { useRouter } from '@tanstack/react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { notificationListQueryOptions } from '../api/queries';
 import { markAsReadMutation, markAllAsReadMutation } from '../api/mutations';
-import type { NotificationItem } from '../api/types';
 import { useTranslation } from 'react-i18next';
 
 const actionRoutes: Record<string, string> = {
@@ -18,10 +17,8 @@ const actionRoutes: Record<string, string> = {
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
-  const { data } = useQuery(notificationListQueryOptions()) as {
-    data: { notifications: NotificationItem[] } | undefined;
-  };
-  const notifications = data?.notifications ?? [];
+  const { data } = useQuery(notificationListQueryOptions());
+  const notifications = data ?? [];
   const { mutate: markAsRead } = useMutation(markAsReadMutation);
   const { mutate: markAllAsRead } = useMutation(markAllAsReadMutation);
   const router = useRouter();

@@ -593,3 +593,203 @@ describe('tax profile versioning SET clause', () => {
     expect(versions).toHaveLength(2);
   });
 });
+
+describe('payroll profile versioned upserts', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    sessionUser.id = 'payroll-boundary-a';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  it('closes the current salary assignment and inserts a later version on update', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [existing] = await db
+      .insert(employeeSalaryAssignments)
+      .values({
+        employee_id: 'payroll-boundary-a',
+        salary_type: 'monthly',
+        amount: '5000000',
+        effective_from: '2026-01-01'
+      })
+      .returning();
+
+    serverFnProvider.handler = updateEmployeePayrollProfileFn_createServerFn_handler;
+    const created = await updateEmployeePayrollProfileFn({
+      data: {
+        employeeId: 'payroll-boundary-a',
+        kind: 'assignment',
+        values: {
+          id: existing.id,
+          salaryType: 'monthly',
+          amount: '6000000',
+          effectiveFrom: '2026-07-01'
+        }
+      }
+    });
+
+    expect(created.employee_id).toBe('payroll-boundary-a');
+    expect(created.effective_from).toBe('2026-07-01');
+
+    const [closed] = await db
+      .select()
+      .from(employeeSalaryAssignments)
+      .where(eq(employeeSalaryAssignments.id, existing.id));
+    expect(closed.effective_to).toBe('2026-06-30');
+
+    const versions = await db
+      .select()
+      .from(employeeSalaryAssignments)
+      .where(eq(employeeSalaryAssignments.employee_id, 'payroll-boundary-a'));
+    expect(versions).toHaveLength(2);
+  });
+
+  it('closes the current salary component and inserts a later version on update', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [component] = await db
+      .insert(salaryComponents)
+      .values({ code: 'TRANSPORT', name: 'Transport', type: 'allowance' })
+      .returning();
+    const [assignment] = await db
+      .insert(employeeSalaryAssignments)
+      .values({
+        employee_id: 'payroll-boundary-a',
+        salary_type: 'monthly',
+        amount: '5000000',
+        effective_from: '2026-01-01'
+      })
+      .returning();
+    const [existing] = await db
+      .insert(employeeSalaryComponents)
+      .values({
+        assignment_id: assignment.id,
+        salary_component_id: component.id,
+        amount: '200000',
+        effective_from: '2026-01-01'
+      })
+      .returning();
+
+    serverFnProvider.handler = updateEmployeePayrollProfileFn_createServerFn_handler;
+    const created = await updateEmployeePayrollProfileFn({
+      data: {
+        employeeId: 'payroll-boundary-a',
+        kind: 'component',
+        values: {
+          id: existing.id,
+          assignmentId: assignment.id,
+          salaryComponentId: component.id,
+          amount: '300000',
+          effectiveFrom: '2026-07-01'
+        }
+      }
+    });
+
+    expect(created.effective_from).toBe('2026-07-01');
+
+    const [closed] = await db
+      .select()
+      .from(employeeSalaryComponents)
+      .where(eq(employeeSalaryComponents.id, existing.id));
+    expect(closed.effective_to).toBe('2026-06-30');
+
+    const versions = await db
+      .select()
+      .from(employeeSalaryComponents)
+      .where(eq(employeeSalaryComponents.id, existing.id));
+    expect(versions).toHaveLength(1);
+  });
+
+  it('closes the current benefit enrollment and inserts a later version on update', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [existing] = await db
+      .insert(employeeBenefitEnrollments)
+      .values({
+        employee_id: 'payroll-boundary-a',
+        benefit_code: 'HEALTH',
+        benefit_name: 'Health',
+        amount: '100000',
+        status: 'active',
+        effective_from: '2026-01-01'
+      })
+      .returning();
+
+    serverFnProvider.handler = updateEmployeePayrollProfileFn_createServerFn_handler;
+    const created = await updateEmployeePayrollProfileFn({
+      data: {
+        employeeId: 'payroll-boundary-a',
+        kind: 'benefit',
+        values: {
+          id: existing.id,
+          benefitCode: 'HEALTH',
+          benefitName: 'Health',
+          amount: '150000',
+          status: 'active',
+          effectiveFrom: '2026-07-01'
+        }
+      }
+    });
+
+    expect(created.effective_from).toBe('2026-07-01');
+
+    const [closed] = await db
+      .select()
+      .from(employeeBenefitEnrollments)
+      .where(eq(employeeBenefitEnrollments.id, existing.id));
+    expect(closed.effective_to).toBe('2026-06-30');
+
+    const versions = await db
+      .select()
+      .from(employeeBenefitEnrollments)
+      .where(eq(employeeBenefitEnrollments.employee_id, 'payroll-boundary-a'));
+    expect(versions).toHaveLength(2);
+  });
+
+  it('closes the current bank account and inserts a later version on update', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [existing] = await db
+      .insert(employeeBankAccounts)
+      .values({
+        employee_id: 'payroll-boundary-a',
+        bank_name: 'BCA',
+        account_name: 'Budi',
+        account_number: '1234567890',
+        is_primary: true,
+        effective_from: '2026-01-01'
+      })
+      .returning();
+
+    serverFnProvider.handler = updateEmployeePayrollProfileFn_createServerFn_handler;
+    const created = await updateEmployeePayrollProfileFn({
+      data: {
+        employeeId: 'payroll-boundary-a',
+        kind: 'bank',
+        values: {
+          id: existing.id,
+          bankName: 'BCA',
+          accountName: 'Budi',
+          accountNumber: '0987654321',
+          isPrimary: true,
+          effectiveFrom: '2026-07-01'
+        }
+      }
+    });
+
+    expect(created.effective_from).toBe('2026-07-01');
+    expect(created.account_number).toBe('0987654321');
+
+    const [closed] = await db
+      .select()
+      .from(employeeBankAccounts)
+      .where(eq(employeeBankAccounts.id, existing.id));
+    expect(closed.effective_to).toBe('2026-06-30');
+
+    const versions = await db
+      .select()
+      .from(employeeBankAccounts)
+      .where(eq(employeeBankAccounts.employee_id, 'payroll-boundary-a'));
+    expect(versions).toHaveLength(2);
+  });
+});

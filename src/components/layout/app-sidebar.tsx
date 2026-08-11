@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { navGroups } from '@/config/nav-config';
 import { useFilteredNavGroups, useRoleGroupPermissions } from '@/hooks/use-nav';
-import { authClient } from '@/lib/auth/auth-client';
+import { authClient, useSession } from '@/lib/auth/auth-client';
 import { Link } from '@tanstack/react-router';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import * as React from 'react';
@@ -142,6 +142,10 @@ export default function AppSidebar() {
   const router = useRouter();
   const { isAdmin, permissions } = useRoleGroupPermissions();
   const filteredGroups = useFilteredNavGroups(navGroups, permissions, isAdmin);
+  const { data: session } = useSession();
+  const user = session?.user;
+  const name = user?.name ?? 'User';
+  const email = user?.email ?? '';
 
   return (
     <Sidebar variant='inset' collapsible='icon'>
@@ -191,8 +195,8 @@ export default function AppSidebar() {
                     <Icons.account className='size-4' />
                   </div>
                   <div className='grid flex-1 text-left text-sm leading-tight'>
-                    <span className='truncate font-medium'>User</span>
-                    <span className='text-muted-foreground truncate text-xs'>user@example.com</span>
+                    <span className='truncate font-medium'>{name}</span>
+                    <span className='text-muted-foreground truncate text-xs'>{email}</span>
                   </div>
                   <Icons.chevronsDown className='ml-auto size-4' />
                 </SidebarMenuButton>

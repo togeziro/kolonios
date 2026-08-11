@@ -1,5 +1,18 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, desc, eq, gte, lte, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  lte,
+  ne,
+  or,
+  sql,
+  type AnyColumn,
+  type AnyTable,
+  type SQL
+} from 'drizzle-orm';
+import type { AnyPgColumn, AnyPgTable } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/session';
 import { DomainError } from '@/lib/errors';
@@ -290,6 +303,119 @@ export function closeEffectiveRecordAt(existingFrom: string, nextFrom: string) {
       'HISTORICAL_RECORD_IMMUTABLE'
     );
   return previousDate(nextFrom);
+}
+
+type EffectiveVersionTable = AnyPgTable & {
+  id: AnyPgColumn;
+  effective_from: AnyPgColumn;
+  effective_to: AnyPgColumn;
+  updated_at: AnyPgColumn;
+};
+
+type VersionedUpsertOptions<TTable extends EffectiveVersionTable> = {
+  tx: PayrollTransaction;
+  table: TTable;
+  values: TTable['$inferInsert'];
+  effectiveFrom: string;
+  id?: number;
+  identityWhere: SQL<unknown> | undefined;
+  existingWhere: SQL<unknown> | undefined;
+  errors: {
+    notFound: [string, string];
+    versionFailed: [string, string];
+    createFailed: [string, string];
+  };
+  updateGuards?: (existing: TTable['$inferSelect']) => Promise<void> | void;
+  createGuards?: () => Promise<void> | void;
+};
+
+async function upsertVersionedRecord<TTable extends EffectiveVersionTable>(
+  options: VersionedUpsertOptions<TTable>
+): Promise<TTable['$inferSelect']> {
+  const { tx, table, values, effectiveFrom, identityWhere, existingWhere, errors } = options;
+  // Drizzle's generic table typing can't index columns on a type parameter,
+  // so narrow to the columns the versioned-record protocol needs.
+  const versioned = table as unknown as EffectiveVersionTable;
+  const pgTable = table as unknown as AnyPgTable;
+
+  if (options.id != null) {
+    const rows = (await tx
+      .select()
+      .from(pgTable)
+      .where(existingWhere)
+      .limit(1)) as TTable['$inferSelect'][];
+    const existing = rows[0];
+    if (!existing) throw new DomainError(errors.notFound[0], errors.notFound[1]);
+    const existingFrom = existing.effective_from as string;
+    if (existingFrom >= effectiveFrom)
+      throw new DomainError(
+        'Create a new payroll record version with a later effective date.',
+        'HISTORICAL_RECORD_IMMUTABLE'
+      );
+    await options.updateGuards?.(existing);
+
+    // Overlap check counts the record being replaced itself; a second
+    // overlapping version is a data-integrity violation.
+    const overlapping = (await tx
+      .select()
+      .from(pgTable)
+      .where(
+        and(
+          identityWhere,
+          lte(versioned.effective_from, effectiveFrom),
+          or(sql`${versioned.effective_to} is null`, gte(versioned.effective_to, effectiveFrom))
+        )
+      )
+      .limit(2)) as TTable['$inferSelect'][];
+    if (overlapping.length > 1)
+      throw new DomainError(
+        'Overlapping payroll record versions exist.',
+        'OVERLAPPING_EFFECTIVE_RECORDS'
+      );
+
+    await tx
+      .update(table)
+      .set({
+        effective_to: closeEffectiveRecordAt(existingFrom, effectiveFrom),
+        updated_at: new Date()
+      } as TTable['$inferInsert'])
+      .where(eq(versioned.id, existing.id));
+
+    const row = (
+      (await tx.insert(pgTable).values(values).returning()) as TTable['$inferSelect'][]
+    )[0];
+    if (!row) throw new DomainError(errors.versionFailed[0], errors.versionFailed[1]);
+    return row;
+  }
+
+  await options.createGuards?.();
+
+  const overlapping = (await tx
+    .select()
+    .from(pgTable)
+    .where(
+      and(
+        identityWhere,
+        lte(versioned.effective_from, effectiveFrom),
+        or(sql`${versioned.effective_to} is null`, gte(versioned.effective_to, effectiveFrom))
+      )
+    )
+    .limit(1)) as TTable['$inferSelect'][];
+  if (overlapping.length > 0) {
+    await tx
+      .update(table)
+      .set({
+        effective_to: previousDate(effectiveFrom),
+        updated_at: new Date()
+      } as TTable['$inferInsert'])
+      .where(eq(versioned.id, overlapping[0].id));
+  }
+
+  const row = (
+    (await tx.insert(pgTable).values(values).returning()) as TTable['$inferSelect'][]
+  )[0];
+  if (!row) throw new DomainError(errors.createFailed[0], errors.createFailed[1]);
+  return row;
 }
 
 export function resolvePayrollRecordScope(
@@ -759,95 +885,29 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             designation_id: data.values.designationId ?? null,
             created_by: session.user.id
           };
-          if (data.values.id) {
-            const [existing] = await tx
-              .select()
-              .from(employeeSalaryAssignments)
-              .where(
-                and(
-                  eq(employeeSalaryAssignments.id, data.values.id),
-                  eq(employeeSalaryAssignments.employee_id, data.employeeId)
-                )
-              )
-              .limit(1);
-            if (!existing)
-              throw new DomainError(
-                'Salary assignment was not found.',
-                'PAYROLL_ASSIGNMENT_NOT_FOUND'
-              );
-            if (existing.effective_from >= values.effective_from)
-              throw new DomainError(
-                'Create a new salary assignment version with a later effective date.',
-                'HISTORICAL_RECORD_IMMUTABLE'
-              );
-            const overlapping = await tx
-              .select()
-              .from(employeeSalaryAssignments)
-              .where(
-                and(
-                  eq(employeeSalaryAssignments.employee_id, data.employeeId),
-                  eq(employeeSalaryAssignments.id, data.values.id),
-                  lte(employeeSalaryAssignments.effective_from, values.effective_from),
-                  or(
-                    sql`${employeeSalaryAssignments.effective_to} is null`,
-                    gte(employeeSalaryAssignments.effective_to, values.effective_from)
-                  )
-                )
-              )
-              .limit(1);
-            if (overlapping.length > 1)
-              throw new DomainError(
-                'Overlapping salary assignment versions exist.',
-                'OVERLAPPING_EFFECTIVE_RECORDS'
-              );
-            await tx
-              .update(employeeSalaryAssignments)
-              .set({
-                effective_to: closeEffectiveRecordAt(
-                  existing.effective_from,
-                  values.effective_from
-                ),
-                updated_at: new Date()
-              })
-              .where(eq(employeeSalaryAssignments.id, data.values.id));
-            const [row] = await tx.insert(employeeSalaryAssignments).values(values).returning();
-            if (!row)
-              throw new DomainError(
+          return upsertVersionedRecord({
+            tx,
+            table: employeeSalaryAssignments,
+            values,
+            effectiveFrom: data.values.effectiveFrom,
+            id: data.values.id,
+            identityWhere: eq(employeeSalaryAssignments.employee_id, data.employeeId),
+            existingWhere: and(
+              eq(employeeSalaryAssignments.id, data.values.id ?? -1),
+              eq(employeeSalaryAssignments.employee_id, data.employeeId)
+            ),
+            errors: {
+              notFound: ['Salary assignment was not found.', 'PAYROLL_ASSIGNMENT_NOT_FOUND'],
+              versionFailed: [
                 'Failed to create salary assignment version.',
                 'PAYROLL_ASSIGNMENT_VERSION_FAILED'
-              );
-            return row;
-          }
-          const overlappingAssignment = await tx
-            .select()
-            .from(employeeSalaryAssignments)
-            .where(
-              and(
-                eq(employeeSalaryAssignments.employee_id, data.employeeId),
-                lte(employeeSalaryAssignments.effective_from, values.effective_from),
-                or(
-                  sql`${employeeSalaryAssignments.effective_to} is null`,
-                  gte(employeeSalaryAssignments.effective_to, values.effective_from)
-                )
-              )
-            )
-            .limit(1);
-          if (overlappingAssignment.length > 0) {
-            await tx
-              .update(employeeSalaryAssignments)
-              .set({
-                effective_to: previousDate(values.effective_from),
-                updated_at: new Date()
-              })
-              .where(eq(employeeSalaryAssignments.id, overlappingAssignment[0].id));
-          }
-          const [row] = await tx.insert(employeeSalaryAssignments).values(values).returning();
-          if (!row)
-            throw new DomainError(
-              'Failed to create salary assignment.',
-              'PAYROLL_ASSIGNMENT_CREATE_FAILED'
-            );
-          return row;
+              ],
+              createFailed: [
+                'Failed to create salary assignment.',
+                'PAYROLL_ASSIGNMENT_CREATE_FAILED'
+              ]
+            }
+          });
         }
         if (data.kind === 'component') {
           const [assignment] = await tx
@@ -879,101 +939,37 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             effective_from: data.values.effectiveFrom,
             effective_to: data.values.effectiveTo ?? null
           };
-          if (data.values.id) {
-            const [existing] = await tx
-              .select({
-                assignment_id: employeeSalaryComponents.assignment_id,
-                salary_component_id: employeeSalaryComponents.salary_component_id,
-                effective_from: employeeSalaryComponents.effective_from
-              })
-              .from(employeeSalaryComponents)
-              .where(eq(employeeSalaryComponents.id, data.values.id))
-              .limit(1);
-            if (!existing)
-              throw new DomainError(
-                'Employee salary component was not found.',
-                'PAYROLL_COMPONENT_NOT_FOUND'
-              );
-            if (
-              existing.assignment_id !== data.values.assignmentId ||
-              existing.salary_component_id !== data.values.salaryComponentId
-            ) {
-              throw new DomainError('Salary component identity is immutable.', 'IMMUTABLE_FIELD');
-            }
-            if (existing.effective_from >= values.effective_from)
-              throw new DomainError(
-                'Create a new salary component version with a later effective date.',
-                'HISTORICAL_RECORD_IMMUTABLE'
-              );
-            const overlapping = await tx
-              .select()
-              .from(employeeSalaryComponents)
-              .where(
-                and(
-                  eq(employeeSalaryComponents.assignment_id, data.values.assignmentId),
-                  eq(employeeSalaryComponents.salary_component_id, data.values.salaryComponentId),
-                  lte(employeeSalaryComponents.effective_from, values.effective_from),
-                  or(
-                    sql`${employeeSalaryComponents.effective_to} is null`,
-                    gte(employeeSalaryComponents.effective_to, values.effective_from)
-                  )
-                )
-              )
-              .limit(1);
-            if (overlapping.length > 1)
-              throw new DomainError(
-                'Overlapping salary component versions exist.',
-                'OVERLAPPING_EFFECTIVE_RECORDS'
-              );
-            await tx
-              .update(employeeSalaryComponents)
-              .set({
-                effective_to: closeEffectiveRecordAt(
-                  existing.effective_from,
-                  values.effective_from
-                ),
-                updated_at: new Date()
-              })
-              .where(eq(employeeSalaryComponents.id, data.values.id));
-            const [row] = await tx.insert(employeeSalaryComponents).values(values).returning();
-            if (!row)
-              throw new DomainError(
-                'Employee salary component was not found.',
+          return upsertVersionedRecord({
+            tx,
+            table: employeeSalaryComponents,
+            values,
+            effectiveFrom: data.values.effectiveFrom,
+            id: data.values.id,
+            identityWhere: and(
+              eq(employeeSalaryComponents.assignment_id, data.values.assignmentId),
+              eq(employeeSalaryComponents.salary_component_id, data.values.salaryComponentId)
+            ),
+            existingWhere: eq(employeeSalaryComponents.id, data.values.id ?? -1),
+            updateGuards: (existing) => {
+              if (
+                existing.assignment_id !== data.values.assignmentId ||
+                existing.salary_component_id !== data.values.salaryComponentId
+              ) {
+                throw new DomainError('Salary component identity is immutable.', 'IMMUTABLE_FIELD');
+              }
+            },
+            errors: {
+              notFound: ['Employee salary component was not found.', 'PAYROLL_COMPONENT_NOT_FOUND'],
+              versionFailed: [
+                'Failed to create employee salary component version.',
                 'PAYROLL_COMPONENT_VERSION_FAILED'
-              );
-            return row;
-          }
-          const overlappingComponent = await tx
-            .select()
-            .from(employeeSalaryComponents)
-            .where(
-              and(
-                eq(employeeSalaryComponents.assignment_id, data.values.assignmentId),
-                eq(employeeSalaryComponents.salary_component_id, data.values.salaryComponentId),
-                lte(employeeSalaryComponents.effective_from, values.effective_from),
-                or(
-                  sql`${employeeSalaryComponents.effective_to} is null`,
-                  gte(employeeSalaryComponents.effective_to, values.effective_from)
-                )
-              )
-            )
-            .limit(1);
-          if (overlappingComponent.length > 0) {
-            await tx
-              .update(employeeSalaryComponents)
-              .set({
-                effective_to: previousDate(values.effective_from),
-                updated_at: new Date()
-              })
-              .where(eq(employeeSalaryComponents.id, overlappingComponent[0].id));
-          }
-          const [row] = await tx.insert(employeeSalaryComponents).values(values).returning();
-          if (!row)
-            throw new DomainError(
-              'Failed to create employee salary component.',
-              'PAYROLL_COMPONENT_CREATE_FAILED'
-            );
-          return row;
+              ],
+              createFailed: [
+                'Failed to create employee salary component.',
+                'PAYROLL_COMPONENT_CREATE_FAILED'
+              ]
+            }
+          });
         }
         if (data.kind === 'tax') {
           const values = {
@@ -990,88 +986,26 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             effective_from: data.values.effectiveFrom,
             effective_to: data.values.effectiveTo ?? null
           };
-          if (data.values.id) {
-            const [existing] = await tx
-              .select()
-              .from(employeeTaxProfiles)
-              .where(
-                and(
-                  eq(employeeTaxProfiles.id, data.values.id),
-                  eq(employeeTaxProfiles.employee_id, data.employeeId)
-                )
-              )
-              .limit(1);
-            if (!existing)
-              throw new DomainError('Tax profile was not found.', 'TAX_PROFILE_NOT_FOUND');
-            if (existing.effective_from >= values.effective_from)
-              throw new DomainError(
-                'Create a new tax profile version with a later effective date.',
-                'HISTORICAL_RECORD_IMMUTABLE'
-              );
-            const overlapping = await tx
-              .select()
-              .from(employeeTaxProfiles)
-              .where(
-                and(
-                  eq(employeeTaxProfiles.employee_id, data.employeeId),
-                  lte(employeeTaxProfiles.effective_from, values.effective_from),
-                  or(
-                    sql`${employeeTaxProfiles.effective_to} is null`,
-                    gte(employeeTaxProfiles.effective_to, values.effective_from)
-                  )
-                )
-              )
-              .limit(1);
-            if (overlapping.length > 1)
-              throw new DomainError(
-                'Overlapping tax profile versions exist.',
-                'OVERLAPPING_EFFECTIVE_RECORDS'
-              );
-            await tx
-              .update(employeeTaxProfiles)
-              .set({
-                effective_to: closeEffectiveRecordAt(
-                  existing.effective_from,
-                  values.effective_from
-                ),
-                updated_at: new Date()
-              })
-              .where(eq(employeeTaxProfiles.id, data.values.id));
-            const [row] = await tx.insert(employeeTaxProfiles).values(values).returning();
-            if (!row)
-              throw new DomainError(
+          return upsertVersionedRecord({
+            tx,
+            table: employeeTaxProfiles,
+            values,
+            effectiveFrom: data.values.effectiveFrom,
+            id: data.values.id,
+            identityWhere: eq(employeeTaxProfiles.employee_id, data.employeeId),
+            existingWhere: and(
+              eq(employeeTaxProfiles.id, data.values.id ?? -1),
+              eq(employeeTaxProfiles.employee_id, data.employeeId)
+            ),
+            errors: {
+              notFound: ['Tax profile was not found.', 'TAX_PROFILE_NOT_FOUND'],
+              versionFailed: [
                 'Failed to create tax profile version.',
                 'TAX_PROFILE_VERSION_FAILED'
-              );
-            return row;
-          }
-          const overlappingTax = await tx
-            .select()
-            .from(employeeTaxProfiles)
-            .where(
-              and(
-                eq(employeeTaxProfiles.employee_id, data.employeeId),
-                lte(employeeTaxProfiles.effective_from, values.effective_from),
-                or(
-                  sql`${employeeTaxProfiles.effective_to} is null`,
-                  gte(employeeTaxProfiles.effective_to, values.effective_from)
-                )
-              )
-            )
-            .limit(1);
-          if (overlappingTax.length > 0) {
-            await tx
-              .update(employeeTaxProfiles)
-              .set({
-                effective_to: previousDate(values.effective_from),
-                updated_at: new Date()
-              })
-              .where(eq(employeeTaxProfiles.id, overlappingTax[0].id));
-          }
-          const [row] = await tx.insert(employeeTaxProfiles).values(values).returning();
-          if (!row)
-            throw new DomainError('Failed to create tax profile.', 'TAX_PROFILE_CREATE_FAILED');
-          return row;
+              ],
+              createFailed: ['Failed to create tax profile.', 'TAX_PROFILE_CREATE_FAILED']
+            }
+          });
         }
         if (data.kind === 'benefit') {
           const values = {
@@ -1083,82 +1017,26 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
             effective_to: data.values.effectiveTo ?? null,
             status: data.values.status
           };
-          if (data.values.id) {
-            const [existing] = await tx
-              .select()
-              .from(employeeBenefitEnrollments)
-              .where(
-                and(
-                  eq(employeeBenefitEnrollments.id, data.values.id),
-                  eq(employeeBenefitEnrollments.employee_id, data.employeeId)
-                )
-              )
-              .limit(1);
-            if (!existing)
-              throw new DomainError('Benefit enrollment was not found.', 'BENEFIT_NOT_FOUND');
-            if (existing.effective_from >= values.effective_from)
-              throw new DomainError(
-                'Create a new benefit enrollment version with a later effective date.',
-                'HISTORICAL_RECORD_IMMUTABLE'
-              );
-            const overlapping = await tx
-              .select()
-              .from(employeeBenefitEnrollments)
-              .where(
-                and(
-                  eq(employeeBenefitEnrollments.employee_id, data.employeeId),
-                  lte(employeeBenefitEnrollments.effective_from, values.effective_from),
-                  or(
-                    sql`${employeeBenefitEnrollments.effective_to} is null`,
-                    gte(employeeBenefitEnrollments.effective_to, values.effective_from)
-                  )
-                )
-              )
-              .limit(1);
-            if (overlapping.length > 1)
-              throw new DomainError(
-                'Overlapping benefit enrollment versions exist.',
-                'OVERLAPPING_EFFECTIVE_RECORDS'
-              );
-            await tx
-              .update(employeeBenefitEnrollments)
-              .set({ effective_to: previousDate(values.effective_from), updated_at: new Date() })
-              .where(eq(employeeBenefitEnrollments.id, data.values.id));
-            const [row] = await tx.insert(employeeBenefitEnrollments).values(values).returning();
-            if (!row)
-              throw new DomainError(
+          return upsertVersionedRecord({
+            tx,
+            table: employeeBenefitEnrollments,
+            values,
+            effectiveFrom: data.values.effectiveFrom,
+            id: data.values.id,
+            identityWhere: eq(employeeBenefitEnrollments.employee_id, data.employeeId),
+            existingWhere: and(
+              eq(employeeBenefitEnrollments.id, data.values.id ?? -1),
+              eq(employeeBenefitEnrollments.employee_id, data.employeeId)
+            ),
+            errors: {
+              notFound: ['Benefit enrollment was not found.', 'BENEFIT_NOT_FOUND'],
+              versionFailed: [
                 'Failed to create benefit enrollment version.',
                 'BENEFIT_VERSION_FAILED'
-              );
-            return row;
-          }
-          const overlappingBenefit = await tx
-            .select()
-            .from(employeeBenefitEnrollments)
-            .where(
-              and(
-                eq(employeeBenefitEnrollments.employee_id, data.employeeId),
-                lte(employeeBenefitEnrollments.effective_from, values.effective_from),
-                or(
-                  sql`${employeeBenefitEnrollments.effective_to} is null`,
-                  gte(employeeBenefitEnrollments.effective_to, values.effective_from)
-                )
-              )
-            )
-            .limit(1);
-          if (overlappingBenefit.length > 0) {
-            await tx
-              .update(employeeBenefitEnrollments)
-              .set({
-                effective_to: previousDate(values.effective_from),
-                updated_at: new Date()
-              })
-              .where(eq(employeeBenefitEnrollments.id, overlappingBenefit[0].id));
-          }
-          const [row] = await tx.insert(employeeBenefitEnrollments).values(values).returning();
-          if (!row)
-            throw new DomainError('Failed to create benefit enrollment.', 'BENEFIT_CREATE_FAILED');
-          return row;
+              ],
+              createFailed: ['Failed to create benefit enrollment.', 'BENEFIT_CREATE_FAILED']
+            }
+          });
         }
         const values = {
           employee_id: data.employeeId,
@@ -1169,85 +1047,8 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
           effective_from: data.values.effectiveFrom,
           effective_to: data.values.effectiveTo ?? null
         };
-        if (data.values.id) {
-          const [existing] = await tx
-            .select()
-            .from(employeeBankAccounts)
-            .where(
-              and(
-                eq(employeeBankAccounts.id, data.values.id),
-                eq(employeeBankAccounts.employee_id, data.employeeId)
-              )
-            )
-            .limit(1);
-          if (!existing)
-            throw new DomainError('Bank account was not found.', 'BANK_ACCOUNT_NOT_FOUND');
-          if (existing.effective_from >= values.effective_from)
-            throw new DomainError(
-              'Create a new bank account version with a later effective date.',
-              'HISTORICAL_RECORD_IMMUTABLE'
-            );
-          if (values.is_primary) {
-            const activePrimary = await tx
-              .select()
-              .from(employeeBankAccounts)
-              .where(
-                and(
-                  eq(employeeBankAccounts.employee_id, data.employeeId),
-                  eq(employeeBankAccounts.is_primary, true),
-                  ne(employeeBankAccounts.id, data.values.id),
-                  or(
-                    sql`${employeeBankAccounts.effective_to} is null`,
-                    gte(employeeBankAccounts.effective_to, values.effective_from)
-                  )
-                )
-              )
-              .limit(1);
-            if (activePrimary.length > 0)
-              throw new DomainError(
-                'A primary bank account already exists for this employee.',
-                'DUPLICATE_PRIMARY_BANK_ACCOUNT'
-              );
-          }
-          const overlapping = await tx
-            .select()
-            .from(employeeBankAccounts)
-            .where(
-              and(
-                eq(employeeBankAccounts.employee_id, data.employeeId),
-                lte(employeeBankAccounts.effective_from, values.effective_from),
-                or(
-                  sql`${employeeBankAccounts.effective_to} is null`,
-                  gte(employeeBankAccounts.effective_to, values.effective_from)
-                )
-              )
-            )
-            .limit(1);
-          if (overlapping.length > 0)
-            throw new DomainError(
-              'Overlapping bank account versions exist.',
-              'OVERLAPPING_EFFECTIVE_RECORDS'
-            );
-          const nextValues = {
-            ...values,
-            account_number: values.account_number || existing.account_number
-          };
-          await tx
-            .update(employeeBankAccounts)
-            .set({
-              effective_to: closeEffectiveRecordAt(existing.effective_from, values.effective_from),
-              updated_at: new Date()
-            })
-            .where(eq(employeeBankAccounts.id, data.values.id));
-          const [row] = await tx.insert(employeeBankAccounts).values(nextValues).returning();
-          if (!row)
-            throw new DomainError(
-              'Failed to create bank account version.',
-              'BANK_ACCOUNT_VERSION_FAILED'
-            );
-          return row;
-        }
-        if (values.is_primary) {
+        const primaryGuard = async () => {
+          if (!values.is_primary) return;
           const activePrimary = await tx
             .select()
             .from(employeeBankAccounts)
@@ -1255,6 +1056,7 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               and(
                 eq(employeeBankAccounts.employee_id, data.employeeId),
                 eq(employeeBankAccounts.is_primary, true),
+                ...(data.values.id ? [ne(employeeBankAccounts.id, data.values.id)] : []),
                 or(
                   sql`${employeeBankAccounts.effective_to} is null`,
                   gte(employeeBankAccounts.effective_to, values.effective_from)
@@ -1267,34 +1069,32 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               'A primary bank account already exists for this employee.',
               'DUPLICATE_PRIMARY_BANK_ACCOUNT'
             );
-        }
-        const overlappingBank = await tx
-          .select()
-          .from(employeeBankAccounts)
-          .where(
-            and(
-              eq(employeeBankAccounts.employee_id, data.employeeId),
-              lte(employeeBankAccounts.effective_from, values.effective_from),
-              or(
-                sql`${employeeBankAccounts.effective_to} is null`,
-                gte(employeeBankAccounts.effective_to, values.effective_from)
-              )
-            )
-          )
-          .limit(1);
-        if (overlappingBank.length > 0) {
-          await tx
-            .update(employeeBankAccounts)
-            .set({
-              effective_to: previousDate(values.effective_from),
-              updated_at: new Date()
-            })
-            .where(eq(employeeBankAccounts.id, overlappingBank[0].id));
-        }
-        const [row] = await tx.insert(employeeBankAccounts).values(values).returning();
-        if (!row)
-          throw new DomainError('Failed to create bank account.', 'BANK_ACCOUNT_CREATE_FAILED');
-        return row;
+        };
+        return upsertVersionedRecord({
+          tx,
+          table: employeeBankAccounts,
+          values,
+          effectiveFrom: data.values.effectiveFrom,
+          id: data.values.id,
+          identityWhere: eq(employeeBankAccounts.employee_id, data.employeeId),
+          existingWhere: and(
+            eq(employeeBankAccounts.id, data.values.id ?? -1),
+            eq(employeeBankAccounts.employee_id, data.employeeId)
+          ),
+          updateGuards: async (existing) => {
+            await primaryGuard();
+            values.account_number = values.account_number || existing.account_number;
+          },
+          createGuards: primaryGuard,
+          errors: {
+            notFound: ['Bank account was not found.', 'BANK_ACCOUNT_NOT_FOUND'],
+            versionFailed: [
+              'Failed to create bank account version.',
+              'BANK_ACCOUNT_VERSION_FAILED'
+            ],
+            createFailed: ['Failed to create bank account.', 'BANK_ACCOUNT_CREATE_FAILED']
+          }
+        });
       }
     );
     return JSON.parse(JSON.stringify(result));

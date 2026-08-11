@@ -1,5 +1,7 @@
+import { createServerOnlyFn } from '@tanstack/react-start';
 import { logger } from './logger';
 import { captureError } from './sentry';
+import { getRequestId } from './request-id.server';
 
 export class DomainError extends Error {
   constructor(
@@ -11,10 +13,10 @@ export class DomainError extends Error {
   }
 }
 
-export function mapDbError(error: unknown, context: string): never {
+export const mapDbError = createServerOnlyFn((error: unknown, context: string): never => {
   if (error instanceof DomainError) throw error;
-  const requestId = undefined;
+  const requestId = getRequestId();
   logger.error({ context, requestId, err: error }, `[db:${context}]`);
   captureError(error, { context, requestId: requestId ?? '' });
   throw new DomainError('An internal error occurred. Please try again.', 'INTERNAL_ERROR');
-}
+});

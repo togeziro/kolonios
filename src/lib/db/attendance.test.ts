@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import {
   calculateDistance,
+  validateGpsLocation,
   getLocations,
   getShifts,
   createLeaveRequest,
@@ -80,6 +81,84 @@ describe('attendance data access (integration)', () => {
 
   afterAll(async () => {
     await resetAllTables();
+  });
+
+  describe('validateGpsLocation', () => {
+    const policy = {
+      gpsValidationEnabled: true,
+      selfieRequired: false,
+      maxAccuracyMeters: 50,
+      maxStaleMs: 30_000
+    };
+
+    it('rejects when any coordinate field is missing', async () => {
+      const res = await validateGpsLocation({
+        latitude: -6.2,
+        longitude: 106.85,
+        accuracy: 10,
+        capturedAt: Date.now(),
+        locationId: 1,
+        policy
+      });
+      if (res.ok) throw new Error('expected failure');
+      expect(res.code).toBe('GPS_REQUIRED');
+    });
+
+    it('rejects stale coordinates', async () => {
+      const loc = await seedLocation({ gps_validation_enabled: true });
+      const res = await validateGpsLocation({
+        latitude: loc.latitude!,
+        longitude: loc.longitude!,
+        accuracy: 10,
+        capturedAt: Date.now() - 120_000,
+        locationId: loc.id,
+        policy
+      });
+      if (res.ok) throw new Error('expected failure');
+      expect(res.code).toBe('GPS_STALE');
+    });
+
+    it('rejects low-accuracy coordinates', async () => {
+      const loc = await seedLocation({ gps_validation_enabled: true });
+      const res = await validateGpsLocation({
+        latitude: loc.latitude!,
+        longitude: loc.longitude!,
+        accuracy: 500,
+        capturedAt: Date.now(),
+        locationId: loc.id,
+        policy
+      });
+      if (res.ok) throw new Error('expected failure');
+      expect(res.code).toBe('GPS_INACCURATE');
+    });
+
+    it('rejects positions outside the geofence radius', async () => {
+      const loc = await seedLocation({ latitude: -6.2, longitude: 106.85, radius: 50 });
+      const res = await validateGpsLocation({
+        latitude: -7.0,
+        longitude: 106.85,
+        accuracy: 10,
+        capturedAt: Date.now(),
+        locationId: loc.id,
+        policy
+      });
+      if (res.ok) throw new Error('expected failure');
+      expect(res.code).toBe('OUTSIDE_RADIUS');
+    });
+
+    it('returns the distance when the position is valid', async () => {
+      const loc = await seedLocation({ latitude: -6.2, longitude: 106.85, radius: 500 });
+      const res = await validateGpsLocation({
+        latitude: -6.2,
+        longitude: 106.85,
+        accuracy: 10,
+        capturedAt: Date.now(),
+        locationId: loc.id,
+        policy
+      });
+      expect(res.ok).toBe(true);
+      if (res.ok) expect(res.distanceToOffice).toBe(0);
+    });
   });
 
   describe('locations', () => {
