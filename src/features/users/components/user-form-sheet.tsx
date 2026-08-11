@@ -166,7 +166,7 @@ export function UserFormSheetTrigger() {
   return (
     <>
       <Button size='sm' onClick={() => setOpen(true)}>
-        <Icons.add className='mr-2 h-4 w-4' /> {t('user.addUser')}
+        <Icons.add /> {t('user.addUser')}
       </Button>
       <UserFormSheet open={open} onOpenChange={setOpen} />
     </>
