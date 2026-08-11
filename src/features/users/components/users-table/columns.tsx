@@ -1,6 +1,8 @@
 import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-header';
 import { InitialChip } from '@/components/ui/initial-chip';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { format } from 'date-fns';
 import type { User } from '../../api/types';
 import { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
@@ -9,6 +11,33 @@ import { AUTH_ROLE_OPTIONS } from './options';
 import { getColorForName } from '@/lib/avatar-color';
 
 export const columns: ColumnDef<User>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <div className='flex items-center justify-center'>
+        <Checkbox
+          aria-label='Select all users'
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className='flex items-center justify-center'>
+        <Checkbox
+          aria-label={`Select ${row.original.name}`}
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableColumnFilter: false,
+    meta: { label: 'Select' }
+  },
   {
     id: 'name',
     accessorKey: 'name',
@@ -66,6 +95,20 @@ export const columns: ColumnDef<User>[] = [
       const status = cell.getValue<User['status']>();
       return <StatusBadge status={status} />;
     }
+  },
+  {
+    id: 'joinedDate',
+    accessorFn: (row) => new Date(row.created_at).getTime(),
+    header: ({ column }: { column: Column<User, unknown> }) => (
+      <DataTableColumnHeader column={column} title='user.joinedDate' />
+    ),
+    cell: ({ row }) => (
+      <div className='text-foreground text-sm'>
+        {format(new Date(row.original.created_at), 'dd MMM yyyy')}
+      </div>
+    ),
+    enableColumnFilter: false,
+    meta: { label: 'Joined date' }
   },
   {
     id: 'actions',

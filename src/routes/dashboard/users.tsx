@@ -4,7 +4,6 @@ import { zodValidator } from '@tanstack/zod-adapter';
 import PageContainer from '@/components/layout/page-container';
 import UserListingPage from '@/features/users/components/user-listing';
 import { usersQueryOptions } from '@/features/users/api/queries';
-import { UserFormSheetTrigger } from '@/features/users/components/user-form-sheet';
 import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { useTranslation } from 'react-i18next';
 import { parseFilters } from '@/lib/filters';
@@ -15,6 +14,7 @@ const usersSearchSchema = z.object({
   perPage: z.number().optional().default(10),
   name: z.string().optional(),
   role: z.string().optional(),
+  status: z.string().optional(),
   sort: z.string().optional()
 });
 
@@ -41,11 +41,7 @@ function UsersPage() {
   const { t } = useTranslation();
   return (
     <PageContainer>
-      <DataTableCard
-        title={t('user.titlePlural')}
-        description={t('user.pageDescription')}
-        action={<UserFormSheetTrigger />}
-      >
+      <DataTableCard title={t('user.titlePlural')} description={t('user.pageDescription')}>
         <UserListingPage />
       </DataTableCard>
     </PageContainer>

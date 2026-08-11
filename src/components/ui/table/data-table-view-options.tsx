@@ -1,6 +1,5 @@
 import type { Table } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Icons } from '@/components/icons';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -14,13 +13,18 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
-import { CheckIcon, CaretSortIcon } from '@radix-ui/react-icons';
+import { CheckIcon } from '@radix-ui/react-icons';
 
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>;
 }
 
-export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps<TData>) {
+interface ColumnVisibilityMenuProps<TData> {
+  table: Table<TData>;
+  trigger?: React.ReactNode;
+}
+
+export function ColumnVisibilityMenu<TData>({ table, trigger }: ColumnVisibilityMenuProps<TData>) {
   const { t } = useTranslation();
 
   const columns = React.useMemo(
@@ -34,16 +38,11 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          aria-label={t('table.toggleColumns')}
-          variant='outline'
-          size='sm'
-          className='ml-auto hidden h-8 lg:flex'
-        >
-          <Icons.adjustments />
-          {t('table.view')}
-          <CaretSortIcon className='ml-auto opacity-50' />
-        </Button>
+        {trigger ?? (
+          <Button variant='outline' size='sm'>
+            {t('table.view')}
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent align='end' className='w-44 p-0'>
         <Command>
@@ -70,5 +69,14 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps<TData>) {
+  const { t } = useTranslation();
+  return (
+    <div className='ml-auto hidden lg:block'>
+      <ColumnVisibilityMenu table={table} />
+    </div>
   );
 }
