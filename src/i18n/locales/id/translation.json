@@ -266,6 +266,7 @@
     "roleEmployee": "Karyawan",
     "roleTechnician": "Teknisi",
     "pageDescription": "Kelola anggota organisasi dan akses mereka.",
+    "joinedDate": "Tanggal bergabung",
     "searchPlaceholder": "Cari pengguna..."
   },
   "auth": {
@@ -504,6 +505,8 @@
     "selectDateRange": "Pilih rentang tanggal",
     "selectDate": "Pilih tanggal",
     "reset": "Atur Ulang",
+    "customize": "Sesuaikan",
+    "export": "Ekspor",
     "resetFilters": "Atur ulang filter"
   },
   "roleGroups": {

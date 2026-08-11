@@ -266,6 +266,7 @@
     "roleEmployee": "Employee",
     "roleTechnician": "Technician",
     "pageDescription": "Manage your organization members and their access.",
+    "joinedDate": "Joined date",
     "searchPlaceholder": "Search users..."
   },
   "auth": {
@@ -504,6 +505,8 @@
     "selectDateRange": "Select date range",
     "selectDate": "Select date",
     "reset": "Reset",
+    "customize": "Customize",
+    "export": "Export",
     "resetFilters": "Reset filters"
   },
   "roleGroups": {
