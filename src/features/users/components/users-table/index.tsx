@@ -70,7 +70,11 @@ export function UsersTable() {
 
   function setColumnSelectFilter(columnId: string, value: string | null) {
     void navigate({
-      search: (prev: Record<string, unknown>) => ({ ...prev, [columnId]: value ?? undefined }),
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        page: 1,
+        [columnId]: value ?? undefined
+      }),
       replace: true
     });
   }
