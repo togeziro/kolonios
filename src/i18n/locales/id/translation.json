@@ -33,7 +33,8 @@
     "goodEvening": "Selamat malam",
     "openUserMenu": "Buka menu pengguna",
     "attendanceManagement": "Manajemen Absensi",
-    "payrollSettings": "Pengaturan Penggajian"
+    "payrollSettings": "Pengaturan Penggajian",
+    "broadcast": "Siaran"
   },
   "common": {
     "cancel": "Batal",
@@ -1000,5 +1001,10 @@
     "blockedTitle": "Akun tidak tersedia",
     "blockedMessage": "Akun Anda belum aktif. Silakan hubungi tim dukungan kami.",
     "signOut": "Keluar"
+  },
+  "broadcast": {
+    "pageTitle": "Siaran",
+    "pageDescription": "Kirim pengumuman ke tim Anda",
+    "comingSoon": "Siaran segera hadir."
   }
 }

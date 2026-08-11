@@ -1,63 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { navGroups } from './nav-config';
-import { filterNavGroupsByRole } from '@/hooks/use-nav';
+import { navItems } from './nav-config';
+import { filterNavItemsByRole } from '@/hooks/use-nav';
 import type { Permissions } from '@/features/role-groups/api/types';
+import type { NavItem } from '@/types';
 
-function allUrls(groups: typeof navGroups) {
-  return groups.flatMap((group) =>
-    group.items.flatMap((item) => [item.url, ...(item.items ?? []).map((sub) => sub.url)])
-  );
+function topLevelTitles(items: NavItem[]) {
+  return items.map((item) => item.title);
 }
 
-function allTitles(groups: typeof navGroups) {
-  return groups.flatMap((group) => group.items.map((item) => item.title));
+function allUrls(items: NavItem[]) {
+  return items.flatMap((item) => [item.url, ...(item.items ?? []).map((sub) => sub.url)]);
 }
 
 describe('nav-config', () => {
-  it('does not expose demo/showcase pages in production navigation', () => {
-    const urls = allUrls(navGroups);
-    for (const demoPrefix of [
-      '/dashboard/forms',
-      '/dashboard/react-query',
-      '/dashboard/elements'
-    ]) {
-      expect(urls.some((url) => url.startsWith(demoPrefix))).toBe(false);
-    }
+  it('is a flat Kerjoo-ordered list of top-level items', () => {
+    expect(topLevelTitles(navItems)).toEqual([
+      'Dashboard',
+      'Employees',
+      'Customers',
+      'My Work',
+      'Attendance',
+      'Leave',
+      'Payroll',
+      'Payslips',
+      'Broadcast',
+      'Attendance Management',
+      'Holiday Calendar',
+      'Settings',
+      'Profile'
+    ]);
   });
 
-  it('has Overview group with core items', () => {
-    const overview = navGroups.find((g) => g.label === 'Overview');
-    expect(overview).toBeDefined();
-    const titles = overview!.items.map((item) => item.title);
-    expect(titles).toContain('Dashboard');
-    expect(titles).toContain('My Work');
-    expect(titles).toContain('Attendance');
-    expect(titles).toContain('Leave');
-    expect(titles).toContain('Profile');
-  });
-
-  it('has Management group with data-management items', () => {
-    const management = navGroups.find((g) => g.label === 'Management');
-    expect(management).toBeDefined();
-    const titles = management!.items.map((item) => item.title);
-    expect(titles).toContain('Customers');
-    expect(titles).toContain('Employees');
+  it('flags employee self-service items hidden for admins', () => {
+    const hidden = navItems.filter((item) => item.hiddenForAdmin).map((item) => item.title);
+    expect(hidden).toEqual(['My Work', 'Attendance', 'Payslips', 'Profile']);
   });
 
   it('nests payroll admin pages under a Payroll dropdown', () => {
-    const management = navGroups.find((g) => g.label === 'Management');
-    const payroll = management!.items.find((item) => item.title === 'Payroll');
-    expect(payroll).toBeDefined();
-    const children = payroll!.items?.map((item) => item.title) ?? [];
-    expect(children).toContain('Payroll Profiles');
-    expect(children).toContain('Payroll Settings');
+    const payroll = navItems.find((item) => item.title === 'Payroll');
+    const children = payroll?.items?.map((item) => item.title) ?? [];
+    expect(children).toEqual(['Payroll', 'Payroll Profiles', 'Payroll Settings']);
   });
 
   it('nests attendance admin pages under an Attendance Management dropdown', () => {
-    const management = navGroups.find((g) => g.label === 'Management');
-    const attendance = management!.items.find((item) => item.title === 'Attendance Management');
-    expect(attendance).toBeDefined();
-    const children = attendance!.items?.map((item) => item.title) ?? [];
+    const attendance = navItems.find((item) => item.title === 'Attendance Management');
+    const children = attendance?.items?.map((item) => item.title) ?? [];
     expect(children).toEqual([
       'Attendance Locations',
       'Attendance Schedules',
@@ -66,10 +53,15 @@ describe('nav-config', () => {
     ]);
   });
 
+  it('nests holiday pages under a Holiday Calendar dropdown', () => {
+    const holiday = navItems.find((item) => item.title === 'Holiday Calendar');
+    const children = holiday?.items?.map((item) => item.title) ?? [];
+    expect(children).toEqual(['Holiday Calendar', 'Holiday Settings']);
+  });
+
   it('gates dropdown parents by their module so children inherit access', () => {
-    const management = navGroups.find((g) => g.label === 'Management');
-    const payroll = management!.items.find((item) => item.title === 'Payroll');
-    const attendance = management!.items.find((item) => item.title === 'Attendance Management');
+    const payroll = navItems.find((item) => item.title === 'Payroll');
+    const attendance = navItems.find((item) => item.title === 'Attendance Management');
     expect(payroll!.module).toBe('payroll');
     expect(attendance!.module).toBe('attendance_admin');
     for (const child of [...(payroll!.items ?? []), ...(attendance!.items ?? [])]) {
@@ -77,38 +69,31 @@ describe('nav-config', () => {
     }
   });
 
-  it('has Settings group with admin items', () => {
-    const settings = navGroups.find((g) => g.label === 'Settings');
-    expect(settings).toBeDefined();
-    const titles = settings!.items.map((item) => item.title);
-    expect(titles).toContain('Users');
-    expect(titles).toContain('Departments');
-    expect(titles).toContain('Job Titles');
-    expect(titles).toContain('Audit Log');
-    expect(titles).toContain('Role Groups');
-  });
-
   it('every nav item has a module key', () => {
-    for (const group of navGroups) {
-      for (const item of group.items) {
-        expect(item.module).toBeDefined();
-        expect(typeof item.module).toBe('string');
+    for (const item of navItems) {
+      expect(item.module).toBeDefined();
+      expect(typeof item.module).toBe('string');
+      for (const sub of item.items ?? []) {
+        expect(sub.module).toBeDefined();
+        expect(typeof sub.module).toBe('string');
       }
     }
   });
 
-  it('has exactly three groups', () => {
-    const labels = navGroups.map((g) => g.label);
-    expect(labels).toEqual(['Overview', 'Management', 'Settings']);
-  });
-
-  it('does not include removed product pages', () => {
-    const urls = allUrls(navGroups);
-    expect(urls).not.toContain('/dashboard/product');
+  it('does not expose demo/showcase pages or removed product pages', () => {
+    const urls = allUrls(navItems);
+    for (const forbiddenPrefix of [
+      '/dashboard/forms',
+      '/dashboard/react-query',
+      '/dashboard/elements',
+      '/dashboard/product'
+    ]) {
+      expect(urls.some((url) => url.startsWith(forbiddenPrefix))).toBe(false);
+    }
   });
 });
 
-describe('filterNavGroupsByRole', () => {
+describe('filterNavItemsByRole', () => {
   const technicianPerms: Permissions = {
     overview: { view: true },
     my_work: { view: true },
@@ -125,55 +110,58 @@ describe('filterNavGroupsByRole', () => {
     profile: { view: true },
     customers: { view: true, add: true, edit: true },
     employees: { view: true },
-    users: { view: true, add: true, edit: true, delete: true },
+    payroll: { view: true },
+    broadcast: { view: true },
+    attendance_admin: { view: true },
+    holiday: { view: true },
+    users: { view: true },
     departments: { view: true },
     designations: { view: true },
     audit_log: { view: true },
-    role_groups: { view: true, add: true, edit: true, delete: true }
+    role_groups: { view: true }
   };
 
-  it('is_admin sees all groups and all items', () => {
-    const filtered = filterNavGroupsByRole(navGroups, technicianPerms, true);
-    const labels = filtered.map((g) => g.label);
-    expect(labels).toContain('Overview');
-    expect(labels).toContain('Management');
-    expect(labels).toContain('Settings');
+  it('admin sees everything except employee self-service items', () => {
+    const filtered = filterNavItemsByRole(navItems, technicianPerms, true);
+    expect(topLevelTitles(filtered)).toEqual([
+      'Dashboard',
+      'Employees',
+      'Customers',
+      'Leave',
+      'Payroll',
+      'Broadcast',
+      'Attendance Management',
+      'Holiday Calendar',
+      'Settings'
+    ]);
   });
 
   it('non-admin with limited permissions sees only matching modules', () => {
-    const filtered = filterNavGroupsByRole(navGroups, technicianPerms, false);
-    const labels = filtered.map((g) => g.label);
-    // Technician has attendance view permission, but the attendance admin
-    // items in Management now require the attendance_admin module, so only
-    // the Overview group remains visible.
-    expect(labels).toEqual(['Overview']);
-    const titles = allTitles(filtered);
-    expect(titles).toContain('Dashboard');
-    expect(titles).toContain('My Work');
-    expect(titles).not.toContain('Attendance Locations');
-    expect(titles).not.toContain('Users');
+    const filtered = filterNavItemsByRole(navItems, technicianPerms, false);
+    expect(topLevelTitles(filtered)).toEqual([
+      'Dashboard',
+      'My Work',
+      'Attendance',
+      'Leave',
+      'Profile'
+    ]);
   });
 
   it('non-admin with full permissions sees everything', () => {
-    const filtered = filterNavGroupsByRole(navGroups, fullPerms, false);
-    const labels = filtered.map((g) => g.label);
-    expect(labels).toContain('Management');
-    expect(labels).toContain('Settings');
+    const filtered = filterNavItemsByRole(navItems, fullPerms, false);
+    expect(topLevelTitles(filtered)).toEqual(topLevelTitles(navItems));
   });
 
-  it('returns all groups when no permissions provided', () => {
-    const filtered = filterNavGroupsByRole(navGroups);
-    expect(filtered.map((g) => g.label)).toEqual(['Overview', 'Management', 'Settings']);
+  it('returns all items when no permissions provided', () => {
+    expect(topLevelTitles(filterNavItemsByRole(navItems))).toEqual(topLevelTitles(navItems));
   });
 
   it('hides modules not in permissions', () => {
-    const filtered = filterNavGroupsByRole(navGroups, { overview: { view: true } }, false);
-    const titles = allTitles(filtered);
-    expect(titles).toEqual(['Dashboard']);
+    const filtered = filterNavItemsByRole(navItems, { overview: { view: true } }, false);
+    expect(topLevelTitles(filtered)).toEqual(['Dashboard']);
   });
 
   it('empty permissions hides all module-gated items', () => {
-    const filtered = filterNavGroupsByRole(navGroups, {}, false);
-    expect(filtered).toEqual([]);
+    expect(filterNavItemsByRole(navItems, {}, false)).toEqual([]);
   });
 });

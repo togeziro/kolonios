@@ -1,161 +1,183 @@
-import { NavGroup } from '@/types';
+import { NavItem } from '@/types';
 
-export const navGroups: NavGroup[] = [
+export const navItems: NavItem[] = [
   {
-    label: 'Overview',
-    items: [
-      {
-        title: 'Dashboard',
-        url: '/dashboard/overview',
-        icon: 'dashboard',
-        isActive: false,
-        shortcut: ['d', 'd'],
-        module: 'overview',
-        items: []
-      },
-      {
-        title: 'My Work',
-        url: '/dashboard/my-work',
-        icon: 'workspace',
-        isActive: false,
-        module: 'my_work',
-        items: []
-      },
-      {
-        title: 'Attendance',
-        url: '/dashboard/attendance',
-        icon: 'clock',
-        shortcut: ['a', 'a'],
-        isActive: false,
-        module: 'attendance',
-        items: []
-      },
-      {
-        title: 'Leave',
-        url: '/dashboard/leave',
-        icon: 'calendar',
-        shortcut: ['l', 'l'],
-        isActive: false,
-        module: 'leave',
-        items: []
-      },
-      {
-        title: 'Profile',
-        url: '/dashboard/profile',
-        icon: 'profile',
-        isActive: false,
-        module: 'profile',
-        items: []
-      },
-      {
-        title: 'Payslips',
-        url: '/dashboard/payroll/payslips',
-        icon: 'wallet',
-        isActive: false,
-        module: 'payroll',
-        items: []
-      }
-    ]
+    title: 'Dashboard',
+    url: '/dashboard/overview',
+    icon: 'dashboard',
+    isActive: false,
+    shortcut: ['d', 'd'],
+    module: 'overview',
+    items: []
   },
   {
-    label: 'Management',
+    title: 'Employees',
+    url: '/dashboard/employees',
+    icon: 'employee',
+    isActive: false,
+    shortcut: ['e', 'e'],
+    module: 'employees',
+    items: []
+  },
+  {
+    title: 'Customers',
+    url: '/dashboard/customers',
+    icon: 'customer',
+    isActive: false,
+    shortcut: ['c', 'c'],
+    module: 'customers',
+    items: []
+  },
+  {
+    title: 'My Work',
+    url: '/dashboard/my-work',
+    icon: 'workspace',
+    isActive: false,
+    module: 'my_work',
+    hiddenForAdmin: true,
+    items: []
+  },
+  {
+    title: 'Attendance',
+    url: '/dashboard/attendance',
+    icon: 'clock',
+    isActive: false,
+    shortcut: ['a', 'a'],
+    module: 'attendance',
+    hiddenForAdmin: true,
+    items: []
+  },
+  {
+    title: 'Leave',
+    url: '/dashboard/leave',
+    icon: 'calendar',
+    isActive: false,
+    shortcut: ['l', 'l'],
+    module: 'leave',
+    items: []
+  },
+  {
+    title: 'Payroll',
+    url: '/dashboard/admin/payroll',
+    icon: 'wallet',
+    isActive: false,
+    module: 'payroll',
     items: [
-      {
-        title: 'Customers',
-        url: '/dashboard/customers',
-        icon: 'customer',
-        shortcut: ['c', 'c'],
-        isActive: false,
-        module: 'customers',
-        items: []
-      },
-      {
-        title: 'Employees',
-        url: '/dashboard/employees',
-        icon: 'employee',
-        shortcut: ['e', 'e'],
-        isActive: false,
-        module: 'employees',
-        items: []
-      },
       {
         title: 'Payroll',
         url: '/dashboard/admin/payroll',
         icon: 'wallet',
         isActive: false,
         module: 'payroll',
-        items: [
-          {
-            title: 'Payroll',
-            url: '/dashboard/admin/payroll',
-            icon: 'wallet',
-            isActive: false,
-            module: 'payroll',
-            items: []
-          },
-          {
-            title: 'Payroll Profiles',
-            url: '/dashboard/admin/payroll/profile',
-            icon: 'employee',
-            isActive: false,
-            module: 'payroll',
-            items: []
-          },
-          {
-            title: 'Payroll Settings',
-            url: '/dashboard/admin/payroll/settings',
-            icon: 'wallet',
-            isActive: false,
-            module: 'payroll',
-            items: []
-          }
-        ]
+        items: []
       },
       {
-        title: 'Attendance Management',
-        url: '/dashboard/admin/attendance/locations',
-        icon: 'clock',
+        title: 'Payroll Profiles',
+        url: '/dashboard/admin/payroll/profile',
+        icon: 'employee',
         isActive: false,
-        module: 'attendance_admin',
-        items: [
-          {
-            title: 'Attendance Locations',
-            url: '/dashboard/admin/attendance/locations',
-            icon: 'clock',
-            isActive: false,
-            module: 'attendance_admin',
-            items: []
-          },
-          {
-            title: 'Attendance Schedules',
-            url: '/dashboard/admin/attendance/schedules',
-            icon: 'clock',
-            isActive: false,
-            module: 'attendance_admin',
-            items: []
-          },
-          {
-            title: 'Attendance Assignments',
-            url: '/dashboard/admin/attendance/assignments',
-            icon: 'clock',
-            isActive: false,
-            module: 'attendance_admin',
-            items: []
-          },
-          {
-            title: 'Attendance Reports',
-            url: '/dashboard/admin/attendance/reports',
-            icon: 'clock',
-            isActive: false,
-            module: 'attendance_admin',
-            items: []
-          }
-        ]
+        module: 'payroll',
+        items: []
+      },
+      {
+        title: 'Payroll Settings',
+        url: '/dashboard/admin/payroll/settings',
+        icon: 'wallet',
+        isActive: false,
+        module: 'payroll',
+        items: []
       }
     ]
   },
   {
-    label: 'Settings',
+    title: 'Payslips',
+    url: '/dashboard/payroll/payslips',
+    icon: 'wallet',
+    isActive: false,
+    module: 'payroll',
+    hiddenForAdmin: true,
+    items: []
+  },
+  {
+    title: 'Broadcast',
+    url: '/dashboard/admin/broadcast',
+    icon: 'send',
+    isActive: false,
+    module: 'broadcast',
+    items: []
+  },
+  {
+    title: 'Attendance Management',
+    url: '/dashboard/admin/attendance/locations',
+    icon: 'clock',
+    isActive: false,
+    module: 'attendance_admin',
+    items: [
+      {
+        title: 'Attendance Locations',
+        url: '/dashboard/admin/attendance/locations',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance_admin',
+        items: []
+      },
+      {
+        title: 'Attendance Schedules',
+        url: '/dashboard/admin/attendance/schedules',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance_admin',
+        items: []
+      },
+      {
+        title: 'Attendance Assignments',
+        url: '/dashboard/admin/attendance/assignments',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance_admin',
+        items: []
+      },
+      {
+        title: 'Attendance Reports',
+        url: '/dashboard/admin/attendance/reports',
+        icon: 'clock',
+        isActive: false,
+        module: 'attendance_admin',
+        items: []
+      }
+    ]
+  },
+  {
+    title: 'Holiday Calendar',
+    url: '/dashboard/admin/holiday-calendar',
+    icon: 'calendar',
+    isActive: false,
+    module: 'holiday',
+    items: [
+      {
+        title: 'Holiday Calendar',
+        url: '/dashboard/admin/holiday-calendar',
+        icon: 'calendar',
+        isActive: false,
+        module: 'holiday',
+        items: []
+      },
+      {
+        title: 'Holiday Settings',
+        url: '/dashboard/admin/holiday-calendar/settings',
+        icon: 'settings',
+        isActive: false,
+        module: 'holiday',
+        items: []
+      }
+    ]
+  },
+  {
+    title: 'Settings',
+    url: '/dashboard/users',
+    icon: 'settings',
+    isActive: false,
+    module: 'users',
     items: [
       {
         title: 'Users',
@@ -199,32 +221,16 @@ export const navGroups: NavGroup[] = [
         isActive: false,
         module: 'role_groups',
         items: []
-      },
-      {
-        title: 'Holiday Calendar',
-        url: '/dashboard/admin/holiday-calendar',
-        icon: 'calendar',
-        isActive: false,
-        module: 'holiday',
-        items: [
-          {
-            title: 'Holiday Calendar',
-            url: '/dashboard/admin/holiday-calendar',
-            icon: 'calendar',
-            isActive: false,
-            module: 'holiday',
-            items: []
-          },
-          {
-            title: 'Holiday Settings',
-            url: '/dashboard/admin/holiday-calendar/settings',
-            icon: 'settings',
-            isActive: false,
-            module: 'holiday',
-            items: []
-          }
-        ]
       }
     ]
+  },
+  {
+    title: 'Profile',
+    url: '/dashboard/profile',
+    icon: 'profile',
+    isActive: false,
+    module: 'profile',
+    hiddenForAdmin: true,
+    items: []
   }
 ];

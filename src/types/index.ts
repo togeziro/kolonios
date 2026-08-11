@@ -27,13 +27,6 @@ export interface NavItem {
   isActive: boolean;
   shortcut?: string[];
   module: string;
+  hiddenForAdmin?: boolean;
   items?: NavItem[];
-}
-
-/**
- * Navigation group type for organizing navigation items.
- */
-export interface NavGroup {
-  label: string;
-  items: NavItem[];
 }

@@ -33,7 +33,8 @@
     "goodEvening": "Good evening",
     "openUserMenu": "Open user menu",
     "attendanceManagement": "Attendance Management",
-    "payrollSettings": "Payroll Settings"
+    "payrollSettings": "Payroll Settings",
+    "broadcast": "Broadcast"
   },
   "common": {
     "cancel": "Cancel",
@@ -1000,5 +1001,10 @@
     "blockedTitle": "Account unavailable",
     "blockedMessage": "Your account is not active yet. Please contact our support team.",
     "signOut": "Sign out"
+  },
+  "broadcast": {
+    "pageTitle": "Broadcast",
+    "pageDescription": "Send announcements to your team",
+    "comingSoon": "Broadcast is coming soon."
   }
 }

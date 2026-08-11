@@ -7,8 +7,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { navGroups } from '@/config/nav-config';
-import { useFilteredNavGroups, useRoleGroupPermissions } from '@/hooks/use-nav';
+import { navItems } from '@/config/nav-config';
+import { useFilteredNavItems, useRoleGroupPermissions } from '@/hooks/use-nav';
 import { authClient } from '@/lib/auth/auth-client';
 import { Link } from '@tanstack/react-router';
 import { useLocation, useRouter } from '@tanstack/react-router';
@@ -21,7 +21,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -33,19 +32,18 @@ import {
 } from '@/components/ui/sidebar';
 
 export const navTitleKeys: Record<string, string> = {
-  Overview: 'navigation.overview',
   Dashboard: 'navigation.dashboard',
   'My Work': 'navigation.myWork',
   Attendance: 'navigation.attendance',
   Leave: 'navigation.leave',
   Profile: 'navigation.profile',
-  Management: 'navigation.management',
   Customers: 'navigation.customers',
   Employees: 'navigation.employees',
   Payroll: 'navigation.payroll',
   Payslips: 'navigation.payslips',
   'Payroll Profiles': 'navigation.payrollProfiles',
   'Payroll Settings': 'navigation.payrollSettings',
+  Broadcast: 'navigation.broadcast',
   Settings: 'navigation.settings',
   'Attendance Locations': 'navigation.attendanceLocations',
   'Attendance Schedules': 'navigation.attendanceSchedules',
@@ -141,7 +139,7 @@ export default function AppSidebar() {
   const { pathname } = useLocation();
   const router = useRouter();
   const { isAdmin, permissions } = useRoleGroupPermissions();
-  const filteredGroups = useFilteredNavGroups(navGroups, permissions, isAdmin);
+  const filteredItems = useFilteredNavItems(navItems, permissions, isAdmin);
 
   return (
     <Sidebar variant='inset' collapsible='icon'>
@@ -165,18 +163,13 @@ export default function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className='overflow-x-hidden'>
-        {filteredGroups.map((group) => (
-          <SidebarGroup key={group.label || 'ungrouped'} className='py-0'>
-            {group.label && (
-              <SidebarGroupLabel>{t(navTitleKeys[group.label] ?? group.label)}</SidebarGroupLabel>
-            )}
-            <SidebarMenu>
-              {group.items.map((item) => (
-                <NavItemMenu key={item.title} item={item} pathname={pathname} t={t} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        <SidebarGroup className='py-0'>
+          <SidebarMenu>
+            {filteredItems.map((item) => (
+              <NavItemMenu key={item.title} item={item} pathname={pathname} t={t} />
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>

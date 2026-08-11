@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/lib/auth/auth-client';
-import type { NavItem, NavGroup } from '@/types';
+import type { NavItem } from '@/types';
 import type { Permissions, RoleGroup } from '@/features/role-groups/api/types';
 
 function canAccessItem(item: NavItem, permissions?: Permissions, isAdmin?: boolean): boolean {
+  if (item.hiddenForAdmin && isAdmin) return false;
   if (isAdmin) return true;
   if (!permissions) return true;
   if (!item.module) return true;
@@ -12,17 +13,19 @@ function canAccessItem(item: NavItem, permissions?: Permissions, isAdmin?: boole
   return mod?.view === true;
 }
 
-export function filterNavGroupsByRole(
-  groups: NavGroup[],
+export function filterNavItemsByRole(
+  items: NavItem[],
   permissions?: Permissions,
   isAdmin?: boolean
-): NavGroup[] {
-  return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => canAccessItem(item, permissions, isAdmin))
-    }))
-    .filter((group) => group.items.length > 0);
+): NavItem[] {
+  return items
+    .filter((item) => canAccessItem(item, permissions, isAdmin))
+    .map((item) => {
+      if (item.items && item.items.length > 0) {
+        return { ...item, items: [...item.items] };
+      }
+      return item;
+    });
 }
 
 export function useFilteredNavItems(
@@ -30,41 +33,10 @@ export function useFilteredNavItems(
   permissions?: Permissions,
   isAdmin?: boolean
 ) {
-  return useMemo(() => {
-    return items
-      .filter((item) => canAccessItem(item, permissions, isAdmin))
-      .map((item) => {
-        if (item.items && item.items.length > 0) {
-          return { ...item, items: [...item.items] };
-        }
-        return item;
-      });
-  }, [items, permissions, isAdmin]);
-}
-
-export function useFilteredNavGroups(
-  groups: NavGroup[],
-  permissions?: Permissions,
-  isAdmin?: boolean
-) {
-  const filteredGroups = useMemo(
-    () => filterNavGroupsByRole(groups, permissions, isAdmin),
-    [groups, permissions, isAdmin]
+  return useMemo(
+    () => filterNavItemsByRole(items, permissions, isAdmin),
+    [items, permissions, isAdmin]
   );
-  const allItems = useMemo(() => filteredGroups.flatMap((g) => g.items), [filteredGroups]);
-  const filteredItems = useFilteredNavItems(allItems, permissions, isAdmin);
-
-  return useMemo(() => {
-    const filteredSet = new Set(filteredItems.map((item) => item.title));
-    return filteredGroups
-      .map((group) => ({
-        ...group,
-        items: filteredItems.filter((item) =>
-          group.items.some((gi) => gi.title === item.title && filteredSet.has(gi.title))
-        )
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredItems]);
 }
 
 export function useRoleGroupPermissions() {
