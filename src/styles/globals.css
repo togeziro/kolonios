@@ -31,7 +31,7 @@
 
   ::-webkit-scrollbar-thumb {
     background-color: var(--border);
-    border-radius: 9999px;
+    border-radius: var(--radius);
     border: 2px solid transparent;
     background-clip: content-box;
   }
@@ -78,22 +78,20 @@
 
 /* Holiday Calendar - Holiday date marker */
 .holiday-date {
-  background-color: hsl(var(--destructive) / 0.12);
+  background-color: color-mix(in oklab, var(--destructive) 12%, transparent);
   border-radius: var(--radius);
 }
 
 .holiday-date:not([aria-selected='true']) {
-  color: hsl(var(--destructive));
+  color: var(--destructive);
 }
 
-.holiday-date::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background-color: hsl(var(--destructive));
+/* Weekly day off (Sunday) - subtle tint so the cell stays readable */
+.sunday-cell {
+  background-color: color-mix(in oklab, var(--destructive) 6%, transparent);
+  border-radius: var(--radius);
+}
+
+.sunday-cell.holiday-date {
+  background-color: color-mix(in oklab, var(--destructive) 12%, transparent);
 }

@@ -838,6 +838,7 @@
     "monthSummary_other": "{{days}} days · {{count}} holidays this month · {{year}} this year",
     "legendHoliday": "Holiday",
     "legendRecurringHoliday": "Recurring holiday",
+    "legendSunday": "Sunday (weekly day off)",
     "listView": "List View",
     "calendarView": "Calendar View",
     "calendarViewComingSoon": "Calendar view coming soon",

@@ -838,6 +838,7 @@
     "monthSummary_other": "{{days}} hari · {{count}} libur bulan ini · {{year}} libur tahun ini",
     "legendHoliday": "Libur",
     "legendRecurringHoliday": "Libur berulang",
+    "legendSunday": "Minggu (libur mingguan)",
     "listView": "Tampilan Daftar",
     "calendarView": "Tampilan Kalender",
     "calendarViewComingSoon": "Tampilan kalender segera hadir",

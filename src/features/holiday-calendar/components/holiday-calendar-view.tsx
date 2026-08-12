@@ -5,20 +5,42 @@ import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { formatLongDate } from '@/lib/format';
-import { useAppLocale } from '@/lib/locale';
+import { dateFnsLocale, formatLongDate } from '@/lib/format';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
+import type { DayButtonProps } from 'react-day-picker';
+import { HolidayFormDialog } from './holiday-form-dialog';
+import { useImportHolidaysFromApi } from '../api/mutations';
+import { toast } from 'sonner';
+import { CalendarX2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 
 interface HolidayCalendarViewProps {
   year?: number;
 }
 
 export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewProps) {
-  const { t } = useTranslation();
-  const locale = useAppLocale();
+  const { t, i18n } = useTranslation();
+  // Calendar follows the visible UI language, not the server locale setting,
+  // so day names, weekday headers, and month title match the language switcher.
+  const locale = i18n.language === 'id' ? 'id-ID' : 'en-US';
   const [selectedYear, setSelectedYear] = React.useState(initialYear ?? new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth());
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
+  // Auto-select today so users immediately see the current date highlighted
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(() => new Date());
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [importOpen, setImportOpen] = React.useState(false);
+  const importMutation = useImportHolidaysFromApi();
 
   // Fetch holidays for the selected year
   const { data, isLoading, error } = useNationalHolidays(selectedYear);
@@ -62,10 +84,12 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
   const handleMonthChange = (month: Date) => {
     setSelectedMonth(month.getMonth());
     setSelectedYear(month.getFullYear());
+    setSelectedDate(undefined);
   };
 
   // Navigation handlers
   const goToPreviousMonth = () => {
+    setSelectedDate(undefined);
     if (selectedMonth === 0) {
       setSelectedMonth(11);
       setSelectedYear((prev) => prev - 1);
@@ -74,6 +98,7 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
     }
   };
   const goToNextMonth = () => {
+    setSelectedDate(undefined);
     if (selectedMonth === 11) {
       setSelectedMonth(0);
       setSelectedYear((prev) => prev + 1);
@@ -88,6 +113,16 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
     setSelectedYear(now.getFullYear());
     setSelectedDate(undefined);
   };
+
+  // Dismiss the details panel with Escape
+  React.useEffect(() => {
+    if (!selectedDate) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedDate(undefined);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedDate]);
 
   // Get selected date's holidays
   const selectedDateHolidays = selectedDate ? getHolidaysForDate(selectedDate) : [];
@@ -120,6 +155,74 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
     return count;
   }, [holidayMap, selectedMonth, selectedYear]);
 
+  // Dense day cell: day number (with today ring) + holiday name pill, like the
+  // reference dashboard's event pills. Sundays render red like the traditional
+  // Indonesian kalender so the weekly day off is readable at a glance.
+  // Today gets a solid green circle + "Today" badge so the current date is
+  // unmissable. Stays stable unless holiday data changes.
+  const dayComponents = React.useMemo(() => {
+    function DayButton({ day, modifiers, ...buttonProps }: DayButtonProps) {
+      const holidays = holidayMap.get(day.isoDate) ?? [];
+      const isToday = Boolean(modifiers.today);
+      const isSunday = Boolean(modifiers.sunday);
+      const names = holidays.map((holiday) => holiday.name).join(', ');
+      const baseLabel = buttonProps['aria-label'];
+
+      return (
+        <button
+          {...buttonProps}
+          aria-current={isToday ? 'date' : undefined}
+          aria-label={names ? `${baseLabel} - ${names}` : baseLabel}
+          className={cn(
+            buttonProps.className,
+            'flex h-full w-full flex-col items-center justify-center gap-0.5 p-1'
+          )}
+        >
+          <span
+            className={cn(
+              'flex h-7 w-7 items-center justify-center rounded-full text-sm',
+              isToday
+                ? 'bg-emerald-500 font-semibold text-white ring-2 ring-emerald-500/40 dark:bg-emerald-400 dark:text-emerald-950 dark:ring-emerald-400/40'
+                : isSunday
+                  ? 'text-destructive'
+                  : undefined
+            )}
+          >
+            {day.date.getDate()}
+          </span>
+          {isToday && (
+            <span className='rounded-full bg-emerald-500/15 px-1.5 py-px text-xs leading-none font-medium text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300'>
+              {t('common.today')}
+            </span>
+          )}
+          {holidays.length > 0 && (
+            <span className='w-full max-w-full truncate rounded-sm bg-destructive/15 px-1 py-px text-start text-xs leading-tight font-medium text-destructive'>
+              {holidays.length === 1
+                ? holidays[0].name
+                : `${holidays[0].name} +${holidays.length - 1}`}
+            </span>
+          )}
+        </button>
+      );
+    }
+    return { DayButton };
+  }, [holidayMap, t]);
+
+  const handleImport = () => {
+    importMutation.mutate(
+      { year: new Date().getFullYear() },
+      {
+        onSuccess: (result) => {
+          toast.success(t('holiday.importSuccess', { count: result.count }));
+          setImportOpen(false);
+        },
+        onError: () => {
+          toast.error(t('holiday.importFailed'));
+        }
+      }
+    );
+  };
+
   return (
     <div className='flex flex-col overflow-hidden rounded-md border'>
       {/* Header bar */}
@@ -140,29 +243,37 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
         </div>
 
         <div className='flex flex-wrap items-center gap-2'>
-          <Button
-            variant='outline'
-            size='icon'
-            onClick={goToPreviousMonth}
-            aria-label={t('holiday.previousMonth')}
-          >
-            <Icons.chevronLeft className='h-4 w-4' />
+          <Button size='sm' onClick={() => setFormOpen(true)}>
+            <Icons.add />
+            {t('holiday.addHoliday')}
           </Button>
-          <Button variant='outline' onClick={handleToday}>
-            {t('common.today')}
-          </Button>
-          <Button
-            variant='outline'
-            size='icon'
-            onClick={goToNextMonth}
-            aria-label={t('holiday.nextMonth')}
-          >
-            <Icons.chevronRight className='h-4 w-4' />
-          </Button>
+          <div className='flex items-center overflow-hidden rounded-md border'>
+            <Button
+              variant='outline'
+              size='icon'
+              className='rounded-none border-0'
+              onClick={goToPreviousMonth}
+              aria-label={t('holiday.previousMonth')}
+            >
+              <Icons.chevronLeft className='h-4 w-4' />
+            </Button>
+            <Button variant='outline' className='rounded-none border-x-0' onClick={handleToday}>
+              {t('common.today')}
+            </Button>
+            <Button
+              variant='outline'
+              size='icon'
+              className='rounded-none border-0'
+              onClick={goToNextMonth}
+              aria-label={t('holiday.nextMonth')}
+            >
+              <Icons.chevronRight className='h-4 w-4' />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Calendar grid */}
+      {/* Calendar grid / empty state */}
       <div className='p-3'>
         {isLoading ? (
           <div className='flex h-64 items-center justify-center'>
@@ -172,6 +283,35 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
           <div className='flex h-64 items-center justify-center text-destructive'>
             <p>{t('holiday.loadFailed')}</p>
           </div>
+        ) : yearHolidayCount === 0 ? (
+          <Card className='mx-auto w-full max-w-2xl'>
+            <CardContent className='flex flex-col items-center justify-center py-16 text-center'>
+              <CalendarX2 className='mb-4 h-12 w-12 text-muted-foreground/50' />
+              <h3 className='mb-1 text-lg font-semibold'>{t('holiday.emptyTitle')}</h3>
+              <p className='mb-4 max-w-sm text-sm text-muted-foreground'>
+                {t('holiday.emptyDescription')}
+              </p>
+              <div className='flex gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setImportOpen(true)}
+                  disabled={importMutation.isPending}
+                >
+                  {importMutation.isPending ? (
+                    <Icons.spinner className='animate-spin' />
+                  ) : (
+                    <Icons.download />
+                  )}
+                  {t('holiday.importHolidays')}
+                </Button>
+                <Button size='sm' onClick={() => setFormOpen(true)}>
+                  <Icons.add />
+                  {t('holiday.addHoliday')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <Calendar
             mode='single'
@@ -179,11 +319,17 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
             onSelect={setSelectedDate}
             month={new Date(selectedYear, selectedMonth)}
             onMonthChange={handleMonthChange}
+            locale={dateFnsLocale(locale)}
             className='w-full'
-            modifiers={holidayModifiers}
-            modifiersClassNames={{
-              holiday: 'holiday-date'
+            modifiers={{
+              ...holidayModifiers,
+              sunday: (date: Date) => date.getDay() === 0
             }}
+            modifiersClassNames={{
+              holiday: 'holiday-date',
+              sunday: 'sunday-cell'
+            }}
+            components={dayComponents}
             classNames={{
               root: 'w-full',
               months: 'flex w-full',
@@ -191,8 +337,10 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
               weekdays: 'flex w-full',
               weekday: 'flex-1 text-center text-xs font-medium text-muted-foreground',
               week: 'flex w-full',
-              day: 'relative flex-1 h-10',
-              day_button: 'relative w-full h-full',
+              day: 'relative min-w-0 flex-1 h-16',
+              day_button: 'relative h-full w-full min-w-0 overflow-hidden',
+              selected: 'rounded-md ring-2 ring-primary/70',
+              today: '',
               nav: 'hidden'
             }}
           />
@@ -202,7 +350,18 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
       {/* Selected date details */}
       {selectedDate && selectedDateHolidays.length > 0 && (
         <div className='border-t p-4'>
-          <h4 className='mb-2 font-semibold'>{formatLongDate(selectedDate, locale)}</h4>
+          <div className='mb-2 flex items-center justify-between gap-2'>
+            <h3 className='font-semibold'>{formatLongDate(selectedDate, locale)}</h3>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-7 w-7'
+              onClick={() => setSelectedDate(undefined)}
+              aria-label={t('common.close')}
+            >
+              <Icons.close className='h-4 w-4' />
+            </Button>
+          </div>
           <div className='space-y-2'>
             {selectedDateHolidays.map((holiday) => (
               <div key={holiday.id} className='rounded-md border p-3'>
@@ -210,7 +369,7 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
                   <div>
                     <p className='font-medium'>{holiday.name}</p>
                     {holiday.description && (
-                      <p className='text-sm text-muted-foreground mt-1'>{holiday.description}</p>
+                      <p className='text-muted-foreground mt-1 text-sm'>{holiday.description}</p>
                     )}
                   </div>
                   <div className='flex gap-1'>
@@ -229,18 +388,43 @@ export function HolidayCalendarView({ year: initialYear }: HolidayCalendarViewPr
       )}
 
       {/* Legend */}
-      <div className='flex items-center gap-4 border-t px-4 py-3 text-sm text-muted-foreground'>
-        <div className='flex items-center gap-1'>
-          <div className='h-2 w-2 rounded-full bg-destructive' />
+      <div className='flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3 text-sm text-muted-foreground'>
+        <div className='flex items-center gap-1.5'>
+          <span className='size-2.5 rounded-[0.25rem] bg-destructive' />
           <span>{t('holiday.legendHoliday')}</span>
         </div>
-        <div className='flex items-center gap-1'>
-          <Badge variant='secondary' className='text-xs'>
-            {t('holiday.recurring')}
-          </Badge>
+        <div className='flex items-center gap-1.5'>
+          <span className='size-2.5 rounded-[0.25rem] border border-destructive' />
           <span>{t('holiday.legendRecurringHoliday')}</span>
         </div>
+        <div className='flex items-center gap-1.5'>
+          <span className='size-2.5 rounded-[0.25rem] bg-destructive/10' />
+          <span>{t('holiday.legendSunday')}</span>
+        </div>
+        <div className='flex items-center gap-1.5'>
+          <span className='size-2.5 rounded-full bg-emerald-500' />
+          <span>{t('common.today')}</span>
+        </div>
       </div>
+
+      <HolidayFormDialog open={formOpen} onOpenChange={setFormOpen} />
+
+      <AlertDialog open={importOpen} onOpenChange={setImportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('holiday.importConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('holiday.importConfirmDescription', { year: new Date().getFullYear() })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleImport} disabled={importMutation.isPending}>
+              {importMutation.isPending ? t('holiday.importing') : t('holiday.importConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
