@@ -206,8 +206,8 @@ export default function DesignationManagePage() {
       <DataTableCard
         title={t('masterdata.jobTitlesTitle')}
         action={
-          <Button onClick={openCreate}>
-            <Icons.add className='mr-2 h-4 w-4' /> {t('masterdata.addJobTitle')}
+          <Button size='sm' onClick={openCreate}>
+            <Icons.add /> {t('masterdata.addJobTitle')}
           </Button>
         }
       >

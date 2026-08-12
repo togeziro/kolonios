@@ -117,7 +117,8 @@
     "titlePlural": "Customers",
     "pageDescription": "Manage customers (React Query + search params table pattern.)",
     "newDescription": "Fill in the details to create a new customer.",
-    "editDescription": "Update the customer details below."
+    "editDescription": "Update the customer details below.",
+    "searchPlaceholder": "Search customers..."
   },
   "employee": {
     "title": "Employee",
@@ -174,7 +175,8 @@
     "addressPlaceholder": "Street, city, postal code",
     "idNumberPlaceholder": "National ID number",
     "newDescription": "Fill in the details to create a new employee.",
-    "editDescription": "Update the employee details below."
+    "editDescription": "Update the employee details below.",
+    "searchPlaceholder": "Search employees..."
   },
   "product": {
     "title": "Product",

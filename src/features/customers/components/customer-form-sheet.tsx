@@ -225,8 +225,8 @@ export function CustomerFormSheetTrigger() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Icons.add className='mr-2 h-4 w-4' /> {t('customer.add')}
+      <Button size='sm' onClick={() => setOpen(true)}>
+        <Icons.add /> {t('customer.add')}
       </Button>
       <CustomerFormSheet open={open} onOpenChange={setOpen} />
     </>

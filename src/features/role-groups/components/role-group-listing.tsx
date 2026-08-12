@@ -76,7 +76,7 @@ export default function RoleGroupListingPage() {
             action={
               <>
                 <Button size='sm' variant='outline'>
-                  <FileUp className='mr-2 h-4 w-4' />
+                  <FileUp />
                   {t('common.importJson')}
                 </Button>
                 <RoleGroupFormSheetTrigger />
@@ -98,7 +98,7 @@ export default function RoleGroupListingPage() {
             <DataTable table={table}>
               <div className='flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6'>
                 <div className='relative w-full rounded-md sm:w-80'>
-                  <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                  <Search className='absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground' />
                   <Input
                     className='h-7 pl-9'
                     placeholder={t('roleGroups.searchPlaceholder')}

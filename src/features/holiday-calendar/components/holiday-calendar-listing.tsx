@@ -85,7 +85,7 @@ export function HolidayCalendarListing() {
   const showEmptyState = holidays.length === 0 && !hasSearchFilter;
 
   return (
-    <div className='flex flex-col gap-4'>
+    <div className='flex min-h-0 flex-1 flex-col gap-4'>
       {showEmptyState ? (
         <Card className='mx-auto w-full max-w-2xl'>
           <CardContent className='flex flex-col items-center justify-center py-16 text-center'>
@@ -102,14 +102,14 @@ export function HolidayCalendarListing() {
                 disabled={importMutation.isPending}
               >
                 {importMutation.isPending ? (
-                  <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+                  <Icons.spinner className='animate-spin' />
                 ) : (
-                  <Icons.download className='mr-2 h-4 w-4' />
+                  <Icons.download />
                 )}
                 {t('holiday.importHolidays')}
               </Button>
               <Button size='sm' onClick={() => setFormOpen(true)}>
-                <Icons.add className='mr-2 h-4 w-4' />
+                <Icons.add />
                 {t('holiday.addHoliday')}
               </Button>
             </div>
@@ -128,34 +128,33 @@ export function HolidayCalendarListing() {
                 disabled={importMutation.isPending}
               >
                 {importMutation.isPending ? (
-                  <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+                  <Icons.spinner className='animate-spin' />
                 ) : (
-                  <Icons.download className='mr-2 h-4 w-4' />
+                  <Icons.download />
                 )}
                 {t('holiday.importHolidays')}
               </Button>
               <Button size='sm' onClick={() => setFormOpen(true)}>
-                <Icons.add className='mr-2 h-4 w-4' />
+                <Icons.add />
                 {t('holiday.addHoliday')}
               </Button>
             </>
           }
         >
-          <DataTable table={table}>
-            <div className='flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6'>
-              <div className='relative w-full rounded-md sm:w-80'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  className='h-7 pl-9'
-                  placeholder={t('holiday.searchPlaceholder')}
-                  value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-                  onChange={(e) => {
-                    table.getColumn('name')?.setFilterValue(e.target.value || undefined);
-                  }}
-                />
-              </div>
+          <div className='flex items-center gap-2 px-4'>
+            <div className='relative w-full sm:w-80'>
+              <Search className='absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground' />
+              <Input
+                className='h-7 pl-9'
+                placeholder={t('holiday.searchPlaceholder')}
+                value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
+                onChange={(e) => {
+                  table.getColumn('name')?.setFilterValue(e.target.value || undefined);
+                }}
+              />
             </div>
-          </DataTable>
+          </div>
+          <DataTable table={table} />
         </DataTableCard>
       )}
 

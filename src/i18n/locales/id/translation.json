@@ -117,7 +117,8 @@
     "titlePlural": "Pelanggan",
     "pageDescription": "Kelola pelanggan (pola tabel React Query + search params)",
     "newDescription": "Isi detail untuk membuat pelanggan baru.",
-    "editDescription": "Perbarui detail pelanggan di bawah ini."
+    "editDescription": "Perbarui detail pelanggan di bawah ini.",
+    "searchPlaceholder": "Cari pelanggan..."
   },
   "employee": {
     "title": "Karyawan",
@@ -174,7 +175,8 @@
     "addressPlaceholder": "Jalan, kota, kode pos",
     "idNumberPlaceholder": "Nomor KTP",
     "newDescription": "Isi detail untuk membuat karyawan baru.",
-    "editDescription": "Perbarui detail karyawan di bawah ini."
+    "editDescription": "Perbarui detail karyawan di bawah ini.",
+    "searchPlaceholder": "Cari karyawan..."
   },
   "product": {
     "title": "Produk",

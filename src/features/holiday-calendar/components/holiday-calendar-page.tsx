@@ -16,11 +16,11 @@ export function HolidayCalendarPage() {
             {t('holiday.listView')}
           </TabsTrigger>
           <TabsTrigger value='calendar' className='shrink-0'>
-            <Icons.calendar className='mr-2 h-4 w-4' />
+            <Icons.calendar />
             {t('holiday.calendarView')}
           </TabsTrigger>
           <TabsTrigger value='settings' className='shrink-0'>
-            <Icons.settings className='mr-2 h-4 w-4' />
+            <Icons.settings />
             {t('holiday.settings')}
           </TabsTrigger>
         </TabsList>

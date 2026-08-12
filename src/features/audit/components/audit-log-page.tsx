@@ -4,8 +4,16 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { DataTable } from '@/components/ui/table/data-table';
 import { auditLogQueryOptions } from '../api/queries';
 import { useTranslation } from 'react-i18next';
@@ -37,28 +45,37 @@ export function AuditLogPage() {
   return (
     <DataTable table={table}>
       <div className='flex flex-wrap items-center gap-2'>
-        <div className='relative max-w-sm'>
-          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-          <Input
+        <InputGroup className='h-7 w-full md:w-64'>
+          <InputGroupAddon align='inline-start'>
+            <Search className='size-3.5' />
+          </InputGroupAddon>
+          <InputGroupInput
+            className='h-7'
             value={action}
             onChange={(e) => setAction(e.target.value)}
             placeholder={t('audit.filterByAction')}
-            className='pl-9'
           />
-        </div>
-        <select
-          value={entityType}
-          onChange={(e) => setEntityType(e.target.value)}
-          className='rounded-md border border-input bg-background px-3 py-2 text-sm'
+        </InputGroup>
+        <Select
+          value={entityType || 'All'}
+          onValueChange={(v) => setEntityType(v === 'All' ? '' : v)}
         >
-          <option value=''>{t('audit.allEntities')}</option>
-          {ENTITY_TYPES.map((entity) => (
-            <option key={entity} value={entity}>
-              {entity}
-            </option>
-          ))}
-        </select>
-        <Button variant='outline' onClick={() => setSearch(action)} disabled={isFetching}>
+          <SelectTrigger size='sm' className='w-auto'>
+            <span className='text-muted-foreground'>{t('audit.entity')}:</span>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align='start'>
+            <SelectGroup>
+              <SelectItem value='All'>{t('audit.allEntities')}</SelectItem>
+              {ENTITY_TYPES.map((entity) => (
+                <SelectItem key={entity} value={entity}>
+                  {entity}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Button size='sm' variant='outline' onClick={() => setSearch(action)} disabled={isFetching}>
           {isFetching ? t('common.loading') : t('common.search')}
         </Button>
       </div>

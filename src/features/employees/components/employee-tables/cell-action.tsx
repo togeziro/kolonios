@@ -47,7 +47,7 @@ export function CellAction({ data }: CellActionProps) {
       />
       <EmployeeFormSheet employee={data} open={editOpen} onOpenChange={setEditOpen} />
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger className='flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none'>
+        <DropdownMenuTrigger className='flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 focus:outline-none'>
           <span className='sr-only'>{t('common.openMenu')}</span>
           <Icons.ellipsis className='h-4 w-4' />
         </DropdownMenuTrigger>

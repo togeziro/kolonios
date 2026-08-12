@@ -159,8 +159,8 @@ export default function DepartmentManagePage() {
       <DataTableCard
         title={t('masterdata.departmentsTitle')}
         action={
-          <Button onClick={openCreate}>
-            <Icons.add className='mr-2 h-4 w-4' /> {t('masterdata.addDepartment')}
+          <Button size='sm' onClick={openCreate}>
+            <Icons.add /> {t('masterdata.addDepartment')}
           </Button>
         }
       >

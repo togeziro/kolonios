@@ -1,6 +1,7 @@
 import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-header';
 import { InitialChip } from '@/components/ui/initial-chip';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { Employee } from '../../api/types';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Icons } from '@/components/icons';
@@ -9,6 +10,36 @@ import { CellAction } from './cell-action';
 import { STATUS_OPTIONS } from './options';
 
 export const columns: ColumnDef<Employee>[] = [
+  {
+    id: 'select',
+    size: 40,
+    minSize: 40,
+    maxSize: 40,
+    header: ({ table }) => (
+      <div className='flex items-center justify-center'>
+        <Checkbox
+          aria-label='Select all employees'
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className='flex items-center justify-center'>
+        <Checkbox
+          aria-label={`Select ${row.original.full_name}`}
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableColumnFilter: false,
+    meta: { label: 'Select' }
+  },
   {
     id: 'employee_code',
     accessorKey: 'employee_code',

@@ -301,8 +301,8 @@ export function EmployeeFormSheetTrigger() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Icons.add className='mr-2 h-4 w-4' /> {t('employee.add')}
+      <Button size='sm' onClick={() => setOpen(true)}>
+        <Icons.add /> {t('employee.add')}
       </Button>
       <EmployeeFormSheet open={open} onOpenChange={setOpen} />
     </>
