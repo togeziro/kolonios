@@ -1,4 +1,10 @@
-import { BACKOFFICE_ROLE_GROUP_NAMES, CUSTOMER_ROLE, LEGACY_BACKOFFICE_ROLES } from './config';
+import {
+  BACKOFFICE_ROLE_GROUP_NAMES,
+  CUSTOMER_ROLE,
+  FIELD_OPS_LEGACY_ROLES,
+  FIELD_OPS_ROLE_GROUP_NAMES,
+  LEGACY_BACKOFFICE_ROLES
+} from './config';
 
 export type ShellKey = 'backoffice' | 'fieldops' | 'portal';
 
@@ -13,10 +19,16 @@ export function resolveShell({ role, roleGroup }: ResolveShellInput = {}): Shell
     if (roleGroup.is_admin || BACKOFFICE_ROLE_GROUP_NAMES.includes(roleGroup.name)) {
       return 'backoffice';
     }
-    return 'fieldops';
+    if (FIELD_OPS_ROLE_GROUP_NAMES.includes(roleGroup.name)) {
+      return 'fieldops';
+    }
+    return 'backoffice';
   }
-  if (role && LEGACY_BACKOFFICE_ROLES.includes(role)) return 'backoffice';
-  return 'fieldops';
+  if (role) {
+    if (LEGACY_BACKOFFICE_ROLES.includes(role)) return 'backoffice';
+    if (FIELD_OPS_LEGACY_ROLES.includes(role)) return 'fieldops';
+  }
+  return 'backoffice';
 }
 
 export function resolveHomePath(role?: string | null): string {

@@ -39,6 +39,7 @@ export default function MyWorkPage() {
               <TaskCard
                 key={task.id}
                 task={task}
+                actionPlacement={'bottom' as const}
                 action={
                   <Button
                     size='sm'
@@ -66,6 +67,7 @@ export default function MyWorkPage() {
               <TaskCard
                 key={task.id}
                 task={task}
+                actionPlacement={'bottom' as const}
                 action={
                   <Button
                     size='sm'

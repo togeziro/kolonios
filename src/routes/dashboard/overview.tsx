@@ -27,9 +27,9 @@ function OverviewPage() {
   const { data: session } = useSession();
   const { t } = useTranslation();
   const role = session?.user?.role;
-  const isStaff = role === 'employee' || role === 'technician';
+  const isTechnician = role === 'technician';
 
-  if (isStaff) {
+  if (isTechnician) {
     return <StaffDashboard />;
   }
 

@@ -17,24 +17,30 @@ export default function AvailableJobsSection() {
   return (
     <div className='px-4'>
       <div className='mb-3 flex items-center justify-between'>
-        <h2 className='text-sm font-semibold'>{t('task.availableJobs')}</h2>
-        <Link to='/dashboard/jobs' className='text-primary text-xs font-medium'>
+        <h2 className='dark:text-white text-sm font-semibold'>{t('task.availableJobs')}</h2>
+        <Link
+          to='/dashboard/jobs'
+          className='text-xs font-semibold text-zinc-500 hover:text-white transition-colors dark:text-zinc-500'
+        >
           {t('task.seeAll')}
         </Link>
       </div>
       {tasks.length === 0 ? (
-        <p className='text-muted-foreground py-2 text-sm'>{t('task.noJobsAvailable')}</p>
+        <p className='dark:text-zinc-400 py-2 text-sm text-muted-foreground'>
+          {t('task.noJobsAvailable')}
+        </p>
       ) : (
         <ScrollArea className='w-full pb-2'>
           <div className='flex gap-3'>
             {tasks.map((task) => (
-              <div key={task.id} className='w-64 shrink-0'>
+              <div key={task.id} className='w-[250px] shrink-0 snap-start'>
                 <TaskCard
                   task={task}
+                  actionPlacement={'bottom' as const}
                   action={
                     <Button
                       size='sm'
-                      className='w-full'
+                      className='dark:bg-zinc-100 h-9 w-full rounded-lg bg-zinc-900 text-xs font-bold text-white active:scale-95 transition-transform dark:text-black'
                       onClick={() => takeTask.mutate(task.id)}
                       disabled={takeTask.isPending}
                     >
@@ -45,7 +51,7 @@ export default function AvailableJobsSection() {
               </div>
             ))}
           </div>
-          <ScrollBar orientation='horizontal' className='invisible' />
+          <ScrollBar orientation={'horizontal' as const} className='invisible' />
         </ScrollArea>
       )}
       <NotAvailableSection />

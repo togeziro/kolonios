@@ -6,7 +6,12 @@ import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useTranslation } from 'react-i18next';
 
-export function MobileHeader() {
+interface MobileHeaderProps {
+  dark: boolean;
+  onToggleDark: () => void;
+}
+
+export function MobileHeader({ dark, onToggleDark }: MobileHeaderProps) {
   const { t } = useTranslation();
   const { data: session } = useSession();
   const router = useRouter();
@@ -47,7 +52,7 @@ export function MobileHeader() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className='relative flex items-center justify-between px-4 pt-4 pb-2'
+      className='sticky top-0 z-20 flex items-center justify-between px-4 pt-4 pb-2'
     >
       <div ref={ref} className='relative'>
         <button
@@ -55,8 +60,8 @@ export function MobileHeader() {
           onClick={() => setOpen((o) => !o)}
           className='flex items-center gap-3'
         >
-          <Avatar className='h-10 w-10 border'>
-            <AvatarFallback className='bg-primary/10 text-primary text-xs font-medium'>
+          <Avatar className='h-10 w-10 border dark:border-zinc-700/50 dark:bg-zinc-800'>
+            <AvatarFallback className='bg-zinc-800 text-xs font-bold text-zinc-400 dark:bg-zinc-800'>
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -92,9 +97,23 @@ export function MobileHeader() {
         </AnimatePresence>
       </div>
 
-      <div className='relative'>
-        <Icons.notification className='h-5 w-5 text-muted-foreground' />
-        <span className='bg-destructive absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full text-[8px] text-white' />
+      <div className='flex items-center justify-end'>
+        <button
+          aria-label={t('navigation.toggleTheme')}
+          onClick={onToggleDark}
+          className='bg-muted mr-2 flex h-10 w-10 items-center justify-center rounded-xl text-foreground dark:bg-zinc-800/50 dark:text-white'
+        >
+          {dark ? <Icons.sun className='h-5 w-5' /> : <Icons.moon className='h-5 w-5' />}
+        </button>
+        <div className='relative'>
+          <button
+            aria-label={t('navigation.notifications')}
+            className='bg-muted flex h-10 w-10 items-center justify-center rounded-xl text-foreground dark:bg-zinc-800/50 dark:text-white'
+          >
+            <Icons.notification className='h-5 w-5' />
+          </button>
+          <span className='bg-destructive absolute top-2.5 right-2.5 flex h-2 w-2 rounded-full border border-background' />
+        </div>
       </div>
     </motion.div>
   );

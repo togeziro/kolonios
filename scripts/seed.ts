@@ -21,6 +21,7 @@ import {
   attendanceCorrections,
   employeeShifts,
   leaveTypeConfigs,
+  performanceReports,
   auditLog,
   employeeSalaryAssignments,
   employeeSalaryComponents,
@@ -914,6 +915,38 @@ async function seedAttendanceSchedules() {
   console.log('Seeded policy override for Head Office');
 }
 
+export async function seedPerformance() {
+  await db.delete(performanceReports);
+
+  const users = await db.select({ id: user.id, email: user.email }).from(user);
+  const byEmail = new Map(users.map((row) => [row.email, row.id]));
+  const staffEmails = ['employee@example.com', 'technician@example.com'];
+  const now = new Date();
+  const dates = [
+    new Date(now.getFullYear(), now.getMonth() - 2, 11),
+    new Date(now.getFullYear(), now.getMonth() - 1, 11),
+    new Date(now.getFullYear(), now.getMonth(), 11)
+  ];
+
+  const rows: Array<{ user_id: string; date: string; score: string }> = [];
+  for (const email of staffEmails) {
+    const id = byEmail.get(email);
+    if (!id) continue;
+    const scores = email.includes('technician') ? ['91.6', '94'] : ['88', '90'];
+    dates.slice(-scores.length).forEach((d, i) => {
+      rows.push({
+        user_id: id,
+        date: d.toISOString().slice(0, 10),
+        score: scores[i]
+      });
+    });
+  }
+  if (rows.length > 0) {
+    await db.insert(performanceReports).values(rows);
+    console.log(`Seeded ${rows.length} performance reports`);
+  }
+}
+
 export async function seedDatabase() {
   faker.seed(42);
   await seedMasterdata();
@@ -924,6 +957,7 @@ export async function seedDatabase() {
   await seedTasks();
   await seedRoleGroups();
   await seedAttendanceSchedules();
+  await seedPerformance();
   const userId = await seedUsers();
   await seedNotifications(userId);
   console.log('Seed complete');

@@ -24,9 +24,9 @@
 
 ## Features
 
-- **Shell registry (backoffice / fieldops / portal)** — a pure `resolveShell(role, roleGroup)` in `src/lib/shells/` decides the UI layout per user: admin/HR get the sidebar, staff & technicians get the field/ops shell (`MobileShell` on phones, filtered sidebar on desktop), customers get the `/portal` route tree. Single shared sign-in page redirects each role to its shell. See [docs/UI_SHELLS.md](./docs/UI_SHELLS.md).
+- **Shell registry (backoffice / fieldops / portal)** — a pure `resolveShell(role, roleGroup)` in `src/lib/shells/` decides the UI layout per user: admin/HR get the sidebar, **technicians** get the field/ops shell (`MobileShell` on phones, sidebar on desktop), and all other staff (Employee, custom groups) keep the sidebar on mobile too. Customers get the `/portal` route tree. Single shared sign-in page redirects each role to its shell. See [docs/UI_SHELLS.md](./docs/UI_SHELLS.md).
 - **Customer portal (placeholder)** — `/portal` route tree with its own shell, guarded server-side by `requirePortalSession` (active customers only; blocked/inactive customers see a blocked message). Portal features (billing, wifi config, tickets) come later; customer accounts are admin-created.
-- **Field/ops mobile shell** — bottom nav with 4 tabs (Home, My Work, Payslips, Profile) + a center attendance FAB on a fixed 4-slot grid (never overlaps a tab); Leave moved into My Work.
+- **Field/ops mobile shell (dark, technician-only)** — bottom nav with 4 tabs (Home, My Work, Office, Profile) + a center QR **Check-In** FAB on a fixed 4-slot grid (never overlaps a tab); dark-first `.dark` scoped shell with a light/dark toggle synced to `next-themes`. Leave moved into My Work.
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
 - **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
@@ -44,28 +44,28 @@
 
 ## Pages
 
-| Page                                                           | Description                                                                                                                   |
-| :------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
-| [Dashboard Overview](/dashboard/overview)                      | Cards with Recharts graphs, Suspense-bound loading. Mobile staff dashboard for employee/technician.                           |
-| [Attendance](/dashboard/attendance)                            | Check-in/out with geo-fencing validation, today's status, attendance history table.                                           |
-| [Locations](/dashboard/admin/attendance/locations)             | Manage work locations with geofence radius, GPS/selfie policy, and a locate button (MapLibre map + manual coordinate inputs). |
-| [Schedules](/dashboard/admin/attendance/schedules)             | Create shifts with per-weekday rules.                                                                                         |
-| [Assignments](/dashboard/admin/attendance/assignments)         | Assign schedules to employees (individual/bulk) and create day offs.                                                          |
-| [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                  |
-| [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                           |
-| [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                          |
-| [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                               |
-| [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                            |
-| [Departments](/dashboard/admin/departments)                    | CRUD management for company departments.                                                                                      |
-| [Job Titles](/dashboard/admin/designations)                    | CRUD for designations with department assignment and base salary.                                                             |
-| [Role Groups](/dashboard/admin/role-groups)                    | RBAC group management: per-module permission toggles for each role group.                                                     |
-| [Users (Table)](/dashboard/users)                              | Users table with React Query + URL state pattern.                                                                             |
-| [Notifications](/dashboard/notifications)                      | Notification center with bell badge, popover preview, and full page with tabs.                                                |
-| [Holiday Calendar](/dashboard/admin/holiday-calendar)          | CRUD national/company holidays, API import, calendar view, admin settings.                                                    |
-| [Holiday Settings](/dashboard/admin/holiday-calendar/settings) | Holiday API provider configuration (Nager.Date / OpenHolidays / Custom REST).                                                 |
-| [Payroll](/dashboard/admin/payroll)                            | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.                                    |
-| [My Payslips](/dashboard/payroll/payslips)                     | Employee self-service: payslip history with PDF download.                                                                     |
-| [Not Found](/notfound)                                         | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                                             |
+| Page                                                           | Description                                                                                                                                                   |
+| :------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Dashboard Overview](/dashboard/overview)                      | Cards with Recharts graphs, Suspense-bound loading. Dark technician dashboard (attendance, My Work, Available Jobs, performance) for `role === 'technician'`. |
+| [Attendance](/dashboard/attendance)                            | Check-in/out with geo-fencing validation, today's status, attendance history table.                                                                           |
+| [Locations](/dashboard/admin/attendance/locations)             | Manage work locations with geofence radius, GPS/selfie policy, and a locate button (MapLibre map + manual coordinate inputs).                                 |
+| [Schedules](/dashboard/admin/attendance/schedules)             | Create shifts with per-weekday rules.                                                                                                                         |
+| [Assignments](/dashboard/admin/attendance/assignments)         | Assign schedules to employees (individual/bulk) and create day offs.                                                                                          |
+| [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                                                  |
+| [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                                                           |
+| [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                                                          |
+| [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                                                               |
+| [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                                                            |
+| [Departments](/dashboard/admin/departments)                    | CRUD management for company departments.                                                                                                                      |
+| [Job Titles](/dashboard/admin/designations)                    | CRUD for designations with department assignment and base salary.                                                                                             |
+| [Role Groups](/dashboard/admin/role-groups)                    | RBAC group management: per-module permission toggles for each role group.                                                                                     |
+| [Users (Table)](/dashboard/users)                              | Users table with React Query + URL state pattern.                                                                                                             |
+| [Notifications](/dashboard/notifications)                      | Notification center with bell badge, popover preview, and full page with tabs.                                                                                |
+| [Holiday Calendar](/dashboard/admin/holiday-calendar)          | CRUD national/company holidays, API import, calendar view, admin settings.                                                                                    |
+| [Holiday Settings](/dashboard/admin/holiday-calendar/settings) | Holiday API provider configuration (Nager.Date / OpenHolidays / Custom REST).                                                                                 |
+| [Payroll](/dashboard/admin/payroll)                            | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.                                                                    |
+| [My Payslips](/dashboard/payroll/payslips)                     | Employee self-service: payslip history with PDF download.                                                                                                     |
+| [Not Found](/notfound)                                         | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                                                                             |
 
 ## Feature-based Organization
 

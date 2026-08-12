@@ -100,6 +100,7 @@ export default function JobsPage() {
             <TaskCard
               key={task.id}
               task={task}
+              actionPlacement={'bottom' as const}
               action={
                 <Button
                   size='sm'

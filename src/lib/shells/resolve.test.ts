@@ -22,9 +22,9 @@ describe('resolveShell', () => {
     expect(resolveShell({ role: 'hr', roleGroup: group({ name: 'HR' }) })).toBe('backoffice');
   });
 
-  it('maps Employee and Technician role groups to fieldops', () => {
+  it('maps Technician role group to fieldops and Employee to backoffice', () => {
     expect(resolveShell({ role: 'employee', roleGroup: group({ name: 'Employee' }) })).toBe(
-      'fieldops'
+      'backoffice'
     );
     expect(resolveShell({ role: 'technician', roleGroup: group({ name: 'Technician' }) })).toBe(
       'fieldops'
@@ -34,13 +34,14 @@ describe('resolveShell', () => {
   it('falls back to legacy role when no role group is assigned', () => {
     expect(resolveShell({ role: 'admin', roleGroup: null })).toBe('backoffice');
     expect(resolveShell({ role: 'hr', roleGroup: null })).toBe('backoffice');
-    expect(resolveShell({ role: 'employee', roleGroup: null })).toBe('fieldops');
-    expect(resolveShell({ role: undefined, roleGroup: null })).toBe('fieldops');
+    expect(resolveShell({ role: 'employee', roleGroup: null })).toBe('backoffice');
+    expect(resolveShell({ role: 'technician', roleGroup: null })).toBe('fieldops');
+    expect(resolveShell({ role: undefined, roleGroup: null })).toBe('backoffice');
   });
 
-  it('treats unknown custom role groups as fieldops', () => {
+  it('treats unknown custom role groups as backoffice', () => {
     expect(resolveShell({ role: 'employee', roleGroup: group({ name: 'Finance' }) })).toBe(
-      'fieldops'
+      'backoffice'
     );
   });
 });
