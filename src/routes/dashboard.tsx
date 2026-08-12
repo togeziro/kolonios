@@ -1,8 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
 import AppSidebar from '@/components/layout/app-sidebar';
 import Header from '@/components/layout/header';
-import { InfoSidebar } from '@/components/layout/info-sidebar';
-import { InfobarProvider } from '@/components/ui/infobar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { MobileShell } from '@/components/layout/mobile-shell';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -54,10 +52,7 @@ function DashboardLayout() {
       <AppSidebar />
       <SidebarInset>
         <Header />
-        <InfobarProvider defaultOpen={false}>
-          <Outlet />
-          <InfoSidebar side='right' />
-        </InfobarProvider>
+        <Outlet />
       </SidebarInset>
     </SidebarProvider>
   );
