@@ -74,6 +74,7 @@ export function PieGraph() {
               radius={10}
               cornerRadius={8}
               paddingAngle={4}
+              isAnimationActive={false}
             >
               <LabelList
                 dataKey='visitors'

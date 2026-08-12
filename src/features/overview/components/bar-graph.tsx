@@ -76,12 +76,14 @@ export function BarGraph() {
               fill='var(--color-desktop)'
               shape={<CustomHatchedBar isHatched={false} />}
               radius={4}
+              isAnimationActive={false}
             />
             <Bar
               dataKey='mobile'
               fill='var(--color-mobile)'
               shape={<CustomHatchedBar />}
               radius={4}
+              isAnimationActive={false}
             />
           </BarChart>
         </ChartContainer>

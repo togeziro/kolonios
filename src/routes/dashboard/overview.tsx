@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useSession } from '@/lib/auth/auth-client';
 import PageContainer from '@/components/layout/page-container';
@@ -11,12 +12,25 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
-import { BarGraph } from '@/features/overview/components/bar-graph';
-import { RecentSales } from '@/features/overview/components/recent-sales';
-import { AreaGraph } from '@/features/overview/components/area-graph';
-import { PieGraph } from '@/features/overview/components/pie-graph';
+import { BarGraphSkeleton } from '@/features/overview/components/bar-graph-skeleton';
+import { RecentSalesSkeleton } from '@/features/overview/components/recent-sales-skeleton';
+import { AreaGraphSkeleton } from '@/features/overview/components/area-graph-skeleton';
+import { PieGraphSkeleton } from '@/features/overview/components/pie-graph-skeleton';
 import StaffDashboard from '@/features/attendance/components/staff-dashboard';
 import { useTranslation } from 'react-i18next';
+
+const BarGraph = lazy(() =>
+  import('@/features/overview/components/bar-graph').then((m) => ({ default: m.BarGraph }))
+);
+const RecentSales = lazy(() =>
+  import('@/features/overview/components/recent-sales').then((m) => ({ default: m.RecentSales }))
+);
+const AreaGraph = lazy(() =>
+  import('@/features/overview/components/area-graph').then((m) => ({ default: m.AreaGraph }))
+);
+const PieGraph = lazy(() =>
+  import('@/features/overview/components/pie-graph').then((m) => ({ default: m.PieGraph }))
+);
 
 export const Route = createFileRoute('/dashboard/overview')({
   ssr: 'data-only',
@@ -123,16 +137,24 @@ function OverviewPage() {
         </div>
         <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7'>
           <div className='col-span-4'>
-            <BarGraph />
+            <Suspense fallback={<BarGraphSkeleton />}>
+              <BarGraph />
+            </Suspense>
           </div>
           <div className='col-span-4 md:col-span-3'>
-            <RecentSales />
+            <Suspense fallback={<RecentSalesSkeleton />}>
+              <RecentSales />
+            </Suspense>
           </div>
           <div className='col-span-4'>
-            <AreaGraph />
+            <Suspense fallback={<AreaGraphSkeleton />}>
+              <AreaGraph />
+            </Suspense>
           </div>
           <div className='col-span-4 min-h-0 md:col-span-3'>
-            <PieGraph />
+            <Suspense fallback={<PieGraphSkeleton />}>
+              <PieGraph />
+            </Suspense>
           </div>
         </div>
       </div>

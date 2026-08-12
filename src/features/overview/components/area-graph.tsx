@@ -76,6 +76,7 @@ export function AreaGraph() {
               stroke='var(--color-mobile)'
               stackId='a'
               strokeWidth={0.8}
+              isAnimationActive={false}
             />
             <Area
               dataKey='desktop'
@@ -85,6 +86,7 @@ export function AreaGraph() {
               stroke='var(--color-desktop)'
               stackId='a'
               strokeWidth={0.8}
+              isAnimationActive={false}
             />
           </AreaChart>
         </ChartContainer>
