@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useSearch, useNavigate } from '@tanstack/react-router';
+import { Link, useSearch, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Route as JobsRoute } from '@/routes/dashboard/jobs/index';
 import {
@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { useTakeTicket } from '../api/hooks';
 import { openTicketsQueryOptions } from '../api/queries';
 import TicketCard from './ticket-card';
 import type { TicketPriority } from '../api/types';
@@ -26,7 +25,6 @@ export default function JobsPage() {
   };
   const { data, isLoading } = useQuery(openTicketsQueryOptions(filters));
   const tasks = data?.tickets ?? [];
-  const takeTicket = useTakeTicket();
 
   function setFilters(next: { domain?: 'field' | 'backoffice'; priority?: TicketPriority }) {
     navigate({ to: '/dashboard/jobs', search: next });
@@ -97,14 +95,15 @@ export default function JobsPage() {
               task={task}
               actionPlacement={'bottom' as const}
               action={
-                <Button
-                  size='sm'
-                  className='w-full'
-                  onClick={() => takeTicket.mutate(task.id)}
-                  disabled={takeTicket.isPending}
+                <Link
+                  to='/dashboard/tickets/$ticketId'
+                  params={{ ticketId: String(task.id) }}
+                  className='block'
                 >
-                  {takeTicket.isPending ? t('ticket.taking') : t('ticket.takeTicket')}
-                </Button>
+                  <Button size='sm' className='w-full'>
+                    {t('ticket.open')}
+                  </Button>
+                </Link>
               }
             />
           ))}

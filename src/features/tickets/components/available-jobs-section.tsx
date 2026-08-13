@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { useTakeTicket } from '../api/hooks';
 import { openTicketsQueryOptions } from '../api/queries';
 import TicketCard from './ticket-card';
 import NotAvailableSection from './not-available-section';
@@ -12,7 +11,6 @@ export default function AvailableJobsSection() {
   const { t } = useTranslation();
   const { data } = useQuery(openTicketsQueryOptions());
   const tickets = data?.tickets ?? [];
-  const takeTicket = useTakeTicket();
 
   return (
     <div className='px-4'>
@@ -38,14 +36,18 @@ export default function AvailableJobsSection() {
                   task={task}
                   actionPlacement={'bottom' as const}
                   action={
-                    <Button
-                      size='sm'
-                      className='dark:bg-zinc-100 h-9 w-full rounded-lg bg-zinc-900 text-xs font-bold text-white active:scale-95 transition-transform dark:text-black'
-                      onClick={() => takeTicket.mutate(task.id)}
-                      disabled={takeTicket.isPending}
+                    <Link
+                      to='/dashboard/tickets/$ticketId'
+                      params={{ ticketId: String(task.id) }}
+                      className='block'
                     >
-                      {takeTicket.isPending ? t('ticket.taking') : t('ticket.takeTicket')}
-                    </Button>
+                      <Button
+                        size='sm'
+                        className='dark:bg-zinc-100 h-9 w-full rounded-lg bg-zinc-900 text-xs font-bold text-white active:scale-95 transition-transform dark:text-black'
+                      >
+                        {t('ticket.open')}
+                      </Button>
+                    </Link>
                   }
                 />
               </div>

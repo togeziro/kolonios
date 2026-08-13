@@ -1033,6 +1033,8 @@
     "newTicket": "Tiket Baru",
     "createTitle": "Buat Tiket",
     "legs": "Leg",
+    "noLegs": "Belum ada leg",
+    "legDoneAt": "Selesai {when}",
     "addLeg": "Tambah leg",
     "removeLeg": "Hapus leg",
     "submit": "Buat",

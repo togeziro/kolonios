@@ -1033,6 +1033,8 @@
     "newTicket": "New Ticket",
     "createTitle": "Create Ticket",
     "legs": "Legs",
+    "noLegs": "No legs",
+    "legDoneAt": "Done {when}",
     "addLeg": "Add leg",
     "removeLeg": "Remove leg",
     "submit": "Create",

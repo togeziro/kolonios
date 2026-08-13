@@ -1,18 +1,14 @@
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { myTicketsQueryOptions } from '../api/queries';
 import TicketCard from './ticket-card';
-import TicketDetailSheet from './ticket-detail-sheet';
 
 export default function MyWorkSection() {
   const { t } = useTranslation();
   const { data } = useQuery(myTicketsQueryOptions());
   const tickets = data?.tickets ?? [];
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const selected = tickets.find((t) => t.id === selectedId) ?? null;
 
   return (
     <div className='px-4'>
@@ -36,27 +32,25 @@ export default function MyWorkSection() {
               <TicketCard
                 task={task}
                 action={
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    className='dark:border-zinc-700/30 dark:bg-zinc-800 h-8 rounded-lg px-4 text-xs font-bold dark:text-white'
-                    onClick={() => setSelectedId(task.id)}
+                  <Link
+                    to='/dashboard/tickets/$ticketId'
+                    params={{ ticketId: String(task.id) }}
+                    className='block'
                   >
-                    {t('ticket.open')}
-                  </Button>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      className='dark:border-zinc-700/30 dark:bg-zinc-800 h-8 rounded-lg px-4 text-xs font-bold dark:text-white'
+                    >
+                      {t('ticket.open')}
+                    </Button>
+                  </Link>
                 }
               />
             </div>
           ))}
         </div>
       )}
-      <TicketDetailSheet
-        task={selected}
-        open={selected != null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedId(null);
-        }}
-      />
     </div>
   );
 }
