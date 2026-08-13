@@ -283,6 +283,7 @@ Detailed docs live in [`docs/`](./docs/):
 | [docs/KERJOO_FEATURES_COMPLETE.md](./docs/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (live sidebar, 18 groups) 🆕      |
 | [docs/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios feature comparison + sidebar structure 🆕   |
 | [docs/MISSING_FEATURES_PRIORITIZED.md](./docs/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan with effort estimates 🆕           |
+| [docs/TICKETS.md](./docs/TICKETS.md)                                                   | Ticket system + field ops (Stitch-driven design spec) 🆕       |
 | [docs/audit/](./docs/audit/)                                                           | Repository audit + implementation summary                      |
 
 ## Code Quality & Architecture
