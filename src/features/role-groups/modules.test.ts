@@ -13,4 +13,8 @@ describe('role permission modules', () => {
       'reports'
     ]);
   });
+
+  it('exposes the tickets module with crew workflow actions', () => {
+    expect(MODULES.find((m) => m.key === 'tickets')?.actions).toEqual(['view', 'add', 'edit']);
+  });
 });

@@ -18,6 +18,11 @@ const MODULES = [
     key: 'payroll',
     label: 'Payroll',
     actions: ['view', 'add', 'edit', 'delete', 'approve', 'pay', 'reports']
+  },
+  {
+    key: 'tickets',
+    label: 'Tickets',
+    actions: ['view', 'add', 'edit']
   }
 ] as const;
 

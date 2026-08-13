@@ -27,3 +27,7 @@ export const createTicketSchema = z.object({
   estimatedMinutes: z.number().int().positive().optional(),
   legs: z.array(ticketLegInputSchema).max(10).optional()
 });
+
+export const legIdSchema = z.object({
+  legId: z.number().int().positive()
+});
