@@ -11,6 +11,12 @@ function resolveKey(locale: Record<string, unknown>, key: string): unknown {
 }
 
 describe('sidebar navigation translations', () => {
+  it('maps every tickets page title to a translation key', () => {
+    for (const title of ['Tickets', 'Available Jobs', 'New Ticket']) {
+      expect(navTitleKeys[title]).toBeDefined();
+    }
+  });
+
   it('maps every attendance admin page title to a translation key', () => {
     for (const title of [
       'Attendance Locations',

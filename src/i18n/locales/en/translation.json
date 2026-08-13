@@ -36,7 +36,10 @@
     "openUserMenu": "Open user menu",
     "attendanceManagement": "Attendance Management",
     "payrollSettings": "Payroll Settings",
-    "broadcast": "Broadcast"
+    "broadcast": "Broadcast",
+    "tickets": "Tickets",
+    "availableJobs": "Available Jobs",
+    "newTicket": "New Ticket"
   },
   "common": {
     "cancel": "Cancel",

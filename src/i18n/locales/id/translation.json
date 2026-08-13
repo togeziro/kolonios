@@ -36,7 +36,10 @@
     "openUserMenu": "Buka menu pengguna",
     "attendanceManagement": "Manajemen Absensi",
     "payrollSettings": "Pengaturan Penggajian",
-    "broadcast": "Siaran"
+    "broadcast": "Siaran",
+    "tickets": "Tiket",
+    "availableJobs": "Pekerjaan Tersedia",
+    "newTicket": "Tiket Baru"
   },
   "common": {
     "cancel": "Batal",

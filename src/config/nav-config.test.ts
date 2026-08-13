@@ -18,6 +18,7 @@ describe('nav-config', () => {
       'Dashboard',
       'Employees',
       'Customers',
+      'Tickets',
       'My Work',
       'Attendance',
       'Leave',
@@ -34,6 +35,15 @@ describe('nav-config', () => {
   it('flags employee self-service items hidden for admins', () => {
     const hidden = navItems.filter((item) => item.hiddenForAdmin).map((item) => item.title);
     expect(hidden).toEqual(['My Work', 'Attendance', 'Payslips', 'Profile']);
+  });
+
+  it('nests tickets pages under a Tickets dropdown', () => {
+    const tickets = navItems.find((item) => item.title === 'Tickets');
+    const children = tickets?.items?.map((item) => item.title) ?? [];
+    expect(children).toEqual(['Available Jobs', 'New Ticket']);
+    expect(tickets!.module).toBe('tickets');
+    const urls = tickets?.items?.map((item) => item.url) ?? [];
+    expect(urls).toEqual(['/dashboard/jobs', '/dashboard/tickets/new']);
   });
 
   it('nests payroll admin pages under a Payroll dropdown', () => {
@@ -118,7 +128,9 @@ describe('filterNavItemsByRole', () => {
     departments: { view: true },
     designations: { view: true },
     audit_log: { view: true },
-    role_groups: { view: true }
+    role_groups: { view: true },
+    tickets: { view: true, add: true },
+    jobs: { view: true }
   };
 
   it('admin sees everything except employee self-service items', () => {
@@ -127,6 +139,7 @@ describe('filterNavItemsByRole', () => {
       'Dashboard',
       'Employees',
       'Customers',
+      'Tickets',
       'Leave',
       'Payroll',
       'Broadcast',
