@@ -36,9 +36,16 @@ export default function JobsPage() {
         <h2 className='text-sm font-semibold'>
           {t('ticket.availableJobsCount', { count: tasks.length })}
         </h2>
-        <button onClick={() => setFilters({})} className='text-muted-foreground text-xs'>
-          {t('ticket.clearFilters')}
-        </button>
+        <div className='flex items-center gap-2'>
+          <button onClick={() => setFilters({})} className='text-muted-foreground text-xs'>
+            {t('ticket.clearFilters')}
+          </button>
+          <Link to='/dashboard/tickets/new'>
+            <Button size='sm' className='gap-1'>
+              <Icons.plusCircle className='h-3.5 w-3.5' /> {t('ticket.newTicket')}
+            </Button>
+          </Link>
+        </div>
       </div>
       <div className='flex gap-2'>
         <Select
