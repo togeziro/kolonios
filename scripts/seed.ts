@@ -9,7 +9,8 @@ import {
   locations,
   shifts,
   customers,
-  tasks,
+  tickets,
+  ticketLegs,
   taskRequirements,
   employeeSkills,
   roleGroups,
@@ -151,7 +152,8 @@ async function seedMasterdata() {
   await db.delete(shiftWeekdayRules);
   await db.delete(taskRequirements);
   await db.delete(employeeSkills);
-  await db.delete(tasks);
+  await db.delete(ticketLegs);
+  await db.delete(tickets);
   await db.delete(employees);
   await db.delete(locations);
   await db.delete(shifts);
@@ -651,17 +653,18 @@ async function seedCustomers() {
   console.log(`Seeded ${customerRecords.length} customer records`);
 }
 
-async function seedTasks() {
+async function seedTickets() {
   await db.delete(taskRequirements);
   await db.delete(employeeSkills);
-  await db.delete(tasks);
+  await db.delete(ticketLegs);
+  await db.delete(tickets);
 
   const users = await db.select({ id: user.id, email: user.email }).from(user);
   const byEmail = new Map(users.map((u) => [u.email, u.id]));
   const adminId = byEmail.get('admin@example.com');
   const techId = byEmail.get('technician@example.com');
   const empId = byEmail.get('employee@example.com');
-  if (!adminId || !techId || !empId) throw new Error('Demo users not found for tasks seed');
+  if (!adminId || !techId || !empId) throw new Error('Demo users not found for tickets seed');
 
   const depts = await db.select({ id: departments.id, code: departments.code }).from(departments);
   const deptMap = new Map(depts.map((d) => [d.code, d.id]));
@@ -671,6 +674,10 @@ async function seedTasks() {
   const desigMap = new Map(desigs.map((d) => [d.code, d.id]));
   const locs = await db.select({ id: locations.id, name: locations.name }).from(locations);
   const locMap = new Map(locs.map((l) => [l.name, l.id]));
+  const custs = await db
+    .select({ id: customers.id, full_name: customers.full_name })
+    .from(customers);
+  const cust = custs[0]?.id;
 
   await db.insert(employeeSkills).values([
     { user_id: techId, skill: 'Fiber Optic' },
@@ -681,7 +688,7 @@ async function seedTasks() {
   const due = (days: number) => new Date(Date.now() + days * 86400000);
 
   const [, t2, t3, t4, t5] = await db
-    .insert(tasks)
+    .insert(tickets)
     .values([
       {
         title: 'Fix network room 201',
@@ -699,9 +706,11 @@ async function seedTasks() {
         title: 'Install Fiber Router — Jakarta',
         description: 'New customer install at Head Office. Two-hour window.',
         task_type: 'installation',
-        status: 'available',
+        status: 'open',
         priority: 'high',
         location_id: locMap.get('Head Office') ?? null,
+        customer_id: cust,
+        asset_name: 'Fiber Router',
         due_at: due(2),
         estimated_minutes: 120,
         created_by: adminId
@@ -709,8 +718,8 @@ async function seedTasks() {
       {
         title: 'Network audit — Head Office',
         description: 'Monthly switch and cabling audit across the main floor.',
-        task_type: 'audit',
-        status: 'available',
+        task_type: 'inspection',
+        status: 'open',
         priority: 'medium',
         location_id: locMap.get('Head Office') ?? null,
         due_at: due(3),
@@ -721,7 +730,7 @@ async function seedTasks() {
         title: 'Fiber cable repair — corridor 3',
         description: 'Customer complaint: weak signal. Trace and repair the drop cable.',
         task_type: 'maintenance',
-        status: 'available',
+        status: 'open',
         priority: 'medium',
         location_id: locMap.get('Head Office') ?? null,
         due_at: due(1),
@@ -730,9 +739,9 @@ async function seedTasks() {
       },
       {
         title: 'Customer visit follow-up',
-        description: 'Follow up on the renewal quote sent to customer 7.',
+        description: 'Follow up on the renewal quote sent to customer.',
         task_type: 'sales',
-        status: 'available',
+        status: 'open',
         priority: 'low',
         location_id: locMap.get('Head Office') ?? null,
         due_at: due(4),
@@ -742,6 +751,14 @@ async function seedTasks() {
     ])
     .returning();
 
+  await db
+    .insert(ticketLegs)
+    .values(
+      [t2, t3, t4, t5].flatMap((t) => [
+        { ticket_id: t.id, leg_number: 1, name: t.title, status: 'open' as const }
+      ])
+    );
+
   await db.insert(taskRequirements).values([
     { task_id: t2.id, designation_id: desigMap.get('FLD_TECH'), skill: 'Fiber Optic' },
     { task_id: t3.id, department_id: deptMap.get('ENG'), skill: 'Networking' },
@@ -749,7 +766,7 @@ async function seedTasks() {
     { task_id: t5.id, department_id: deptMap.get('SALES'), skill: 'Customer Care' }
   ]);
 
-  console.log('Seeded 5 tasks, 4 task requirements, 3 employee skills');
+  console.log('Seeded 5 tickets, 4 ticket requirements, 3 employee skills');
 }
 
 async function seedRoleGroups() {
@@ -954,7 +971,7 @@ export async function seedDatabase() {
   await seedEmployees();
   await seedPayroll();
   await seedCustomers();
-  await seedTasks();
+  await seedTickets();
   await seedRoleGroups();
   await seedAttendanceSchedules();
   await seedPerformance();

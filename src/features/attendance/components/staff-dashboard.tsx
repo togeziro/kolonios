@@ -1,6 +1,6 @@
 import MobileAttendanceSummary from './mobile-attendance-summary';
-import MyWorkSection from '@/features/tasks/components/my-work-section';
-import AvailableJobsSection from '@/features/tasks/components/available-jobs-section';
+import MyWorkSection from '@/features/tickets/components/my-work-section';
+import AvailableJobsSection from '@/features/tickets/components/available-jobs-section';
 import PerformanceSnapshot from './performance-snapshot';
 
 export default function StaffDashboard() {

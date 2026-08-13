@@ -2,7 +2,7 @@ export * from './notifications';
 export * from './attendance';
 export * from './employees';
 export * from './masterdata';
-export * from './tasks';
+export * from './tickets';
 export * from './customers';
 export * from './audit-log';
 export * from './role-groups';

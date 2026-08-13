@@ -5,6 +5,7 @@
 // test start from a clean, known state by truncating every table and seeding
 // only what the test needs.
 import { db } from '@/lib/db';
+import { eq, max } from 'drizzle-orm';
 import {
   nationalHolidays,
   attendanceCorrections,
@@ -23,7 +24,14 @@ import { customers } from '@/lib/db/schema/customers';
 import { departments, designations } from '@/lib/db/schema/masterdata';
 import { employees } from '@/lib/db/schema/employees';
 import { notifications } from '@/lib/db/schema/notifications';
-import { tasks, taskRequirements, employeeSkills } from '@/lib/db/schema/tasks';
+import {
+  tickets,
+  ticketLegs,
+  ticketMaterials,
+  ticketPhotos,
+  taskRequirements,
+  employeeSkills
+} from '@/lib/db/schema/tickets';
 import { user, session, account, verification } from '@/lib/db/auth-schema';
 import { auditLog } from '@/lib/db/schema/audit-log';
 import { roleGroups } from '@/lib/db/schema/role-groups';
@@ -83,9 +91,12 @@ export async function resetAllTables() {
   await db.delete(employeeShifts);
   await db.delete(leaves);
   await db.delete(performanceReports);
+  await db.delete(ticketMaterials);
+  await db.delete(ticketPhotos);
+  await db.delete(ticketLegs);
   await db.delete(employeeSkills);
   await db.delete(taskRequirements);
-  await db.delete(tasks);
+  await db.delete(tickets);
   await db.delete(customers);
   await db.delete(employees);
   await db.delete(designations);
@@ -195,34 +206,74 @@ export async function seedEmployee(
   return { employee, department: dept, designation: desig, location: loc };
 }
 
-export async function seedTask(overrides: Partial<typeof tasks.$inferInsert> = {}) {
+export async function seedCustomer(overrides: Partial<typeof customers.$inferInsert> = {}) {
+  const id = overrides.id ?? `cust-${++taskCreatorSeq}`;
+  await seedUser(id);
+  const [customer] = await db
+    .insert(customers)
+    .values({
+      id,
+      customer_code: `CUST-${taskCreatorSeq}`,
+      full_name: 'Test Customer',
+      email: `${id}@test.com`,
+      phone: '08120000000',
+      created_by: id,
+      ...overrides
+    })
+    .returning();
+  return customer;
+}
+
+export async function seedTicket(overrides: Partial<typeof tickets.$inferInsert> = {}) {
   const { created_by, ...rest } = overrides;
   let createdBy = created_by;
   if (!createdBy || createdBy === 'seed') {
-    createdBy = `task-creator-${++taskCreatorSeq}`;
+    createdBy = `ticket-creator-${++taskCreatorSeq}`;
     await seedUser(createdBy, { role: 'admin' });
   }
-  const [task] = await db
-    .insert(tasks)
+  const [ticket] = await db
+    .insert(tickets)
     .values({
-      title: 'Test Task',
+      title: 'Test Ticket',
       description: '',
-      status: 'available',
+      status: 'open',
       priority: 'medium',
       created_by: createdBy,
       ...rest
     })
     .returning();
-  return task;
+  return ticket;
 }
 
-export async function seedTaskRequirement(
-  taskId: number,
+export async function seedTicketLeg(
+  ticketId: number,
+  overrides: Partial<typeof ticketLegs.$inferInsert> = {}
+) {
+  const { ...rest } = overrides;
+  const [maxLeg] = await db
+    .select({ max: max(ticketLegs.leg_number) })
+    .from(ticketLegs)
+    .where(eq(ticketLegs.ticket_id, ticketId))
+    .limit(1);
+  const [leg] = await db
+    .insert(ticketLegs)
+    .values({
+      ticket_id: ticketId,
+      leg_number: (maxLeg?.max ?? 0) + 1,
+      name: 'Test Leg',
+      ...rest
+    })
+    .returning();
+  return leg;
+}
+
+export async function seedTicketRequirement(
+  ticketId: number,
   overrides: Partial<typeof taskRequirements.$inferInsert> = {}
 ) {
   const [req] = await db
     .insert(taskRequirements)
-    .values({ task_id: taskId, ...overrides })
+    .values({ task_id: ticketId, ...overrides })
     .returning();
   return req;
 }

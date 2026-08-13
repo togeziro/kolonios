@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { attendanceSummaryQueryOptions } from '@/features/attendance/api/queries';
-import { myTasksQueryOptions } from '@/features/tasks/api/queries';
+import { myTicketsQueryOptions } from '@/features/tickets/api/queries';
 import { useTranslation } from 'react-i18next';
 
 export default function ProfilePage() {
@@ -15,7 +15,7 @@ export default function ProfilePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const { data: summaryData } = useQuery(attendanceSummaryQueryOptions());
-  const { data: tasksData } = useQuery(myTasksQueryOptions());
+  const { data: tasksData } = useQuery(myTicketsQueryOptions());
 
   const user = session?.user;
   const name = user?.name ?? 'User';
@@ -29,7 +29,7 @@ export default function ProfilePage() {
     .slice(0, 2);
 
   const summary = summaryData?.summary;
-  const tasks = tasksData?.tasks ?? [];
+  const tasks = tasksData?.tickets ?? [];
   const inProgress = tasks.filter((t) => t.status === 'in_progress').length;
 
   async function handleLogout() {

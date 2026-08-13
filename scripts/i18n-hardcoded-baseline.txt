@@ -73,7 +73,6 @@ src/features/role-groups/components/role-group-columns.tsx:129
 src/features/role-groups/components/role-group-columns.tsx:83
 src/features/role-groups/components/role-group-listing.tsx:123
 src/features/role-groups/components/role-group-listing.tsx:65
-src/features/tasks/components/task-detail-sheet.tsx:40
 src/features/users/components/users-table/cell-action.tsx:54
 src/features/users/components/users-table/columns.tsx:106
 src/features/users/components/users-table/columns.tsx:22

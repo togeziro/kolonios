@@ -11,26 +11,24 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { useTakeTask } from '../api/hooks';
-import { availableTasksQueryOptions } from '../api/queries';
-import { locationsQueryOptions } from '@/features/attendance/api/queries';
-import TaskCard from './task-card';
-import type { TaskPriority } from '../api/types';
+import { useTakeTicket } from '../api/hooks';
+import { openTicketsQueryOptions } from '../api/queries';
+import TicketCard from './ticket-card';
+import type { TicketPriority } from '../api/types';
 
 export default function JobsPage() {
   const { t } = useTranslation();
-  const { locationId, priority } = useSearch({ from: JobsRoute.id });
+  const { domain, priority } = useSearch({ from: JobsRoute.id });
   const navigate = useNavigate();
   const filters = {
-    ...(locationId ? { locationId } : {}),
-    ...(priority ? { priority: priority as TaskPriority } : {})
+    ...(domain ? { domain: domain as 'field' | 'backoffice' } : {}),
+    ...(priority ? { priority: priority as TicketPriority } : {})
   };
-  const { data, isLoading } = useQuery(availableTasksQueryOptions(filters));
-  const { data: locationsData } = useQuery(locationsQueryOptions());
-  const tasks = data?.tasks ?? [];
-  const takeTask = useTakeTask();
+  const { data, isLoading } = useQuery(openTicketsQueryOptions(filters));
+  const tasks = data?.tickets ?? [];
+  const takeTicket = useTakeTicket();
 
-  function setFilters(next: { locationId?: number; priority?: TaskPriority }) {
+  function setFilters(next: { domain?: 'field' | 'backoffice'; priority?: TicketPriority }) {
     navigate({ to: '/dashboard/jobs', search: next });
   }
 
@@ -38,51 +36,48 @@ export default function JobsPage() {
     <div className='space-y-4 p-4'>
       <div className='flex items-center justify-between'>
         <h2 className='text-sm font-semibold'>
-          {t('task.availableJobsCount', { count: tasks.length })}
+          {t('ticket.availableJobsCount', { count: tasks.length })}
         </h2>
         <button onClick={() => setFilters({})} className='text-muted-foreground text-xs'>
-          {t('task.clearFilters')}
+          {t('ticket.clearFilters')}
         </button>
       </div>
       <div className='flex gap-2'>
         <Select
-          value={locationId ? String(locationId) : 'all'}
+          value={domain ?? 'all'}
           onValueChange={(v) =>
             setFilters({
-              ...(v === 'all' ? {} : { locationId: Number(v) }),
+              ...(v === 'all' ? {} : { domain: v as 'field' | 'backoffice' }),
               ...(priority ? { priority } : {})
             })
           }
         >
           <SelectTrigger className='w-32'>
-            <SelectValue placeholder={t('task.location')} />
+            <SelectValue placeholder={t('ticket.domain')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value='all'>{t('task.allLocations')}</SelectItem>
-            {locationsData?.locations.map((loc) => (
-              <SelectItem key={loc.id} value={String(loc.id)}>
-                {loc.name}
-              </SelectItem>
-            ))}
+            <SelectItem value='all'>{t('ticket.allDomains')}</SelectItem>
+            <SelectItem value='field'>{t('ticket.field')}</SelectItem>
+            <SelectItem value='backoffice'>{t('ticket.backoffice')}</SelectItem>
           </SelectContent>
         </Select>
         <Select
           value={priority ?? 'all'}
           onValueChange={(v) =>
             setFilters({
-              ...(locationId ? { locationId } : {}),
-              ...(v === 'all' ? {} : { priority: v as TaskPriority })
+              ...(domain ? { domain } : {}),
+              ...(v === 'all' ? {} : { priority: v as TicketPriority })
             })
           }
         >
           <SelectTrigger className='w-28'>
-            <SelectValue placeholder={t('task.priority')} />
+            <SelectValue placeholder={t('ticket.priority')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value='all'>{t('task.allPriorities')}</SelectItem>
-            <SelectItem value='low'>{t('task.low')}</SelectItem>
-            <SelectItem value='medium'>{t('task.medium')}</SelectItem>
-            <SelectItem value='high'>{t('task.high')}</SelectItem>
+            <SelectItem value='all'>{t('ticket.allPriorities')}</SelectItem>
+            <SelectItem value='low'>{t('ticket.low')}</SelectItem>
+            <SelectItem value='medium'>{t('ticket.medium')}</SelectItem>
+            <SelectItem value='high'>{t('ticket.high')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -92,12 +87,12 @@ export default function JobsPage() {
         </div>
       ) : tasks.length === 0 ? (
         <p className='text-muted-foreground py-8 text-center text-sm'>
-          {t('task.noJobsAvailable')}
+          {t('ticket.noJobsAvailable')}
         </p>
       ) : (
         <div className='space-y-2.5'>
           {tasks.map((task) => (
-            <TaskCard
+            <TicketCard
               key={task.id}
               task={task}
               actionPlacement={'bottom' as const}
@@ -105,10 +100,10 @@ export default function JobsPage() {
                 <Button
                   size='sm'
                   className='w-full'
-                  onClick={() => takeTask.mutate(task.id)}
-                  disabled={takeTask.isPending}
+                  onClick={() => takeTicket.mutate(task.id)}
+                  disabled={takeTicket.isPending}
                 >
-                  {takeTask.isPending ? t('task.taking') : t('task.takeTask')}
+                  {takeTicket.isPending ? t('ticket.taking') : t('ticket.takeTicket')}
                 </Button>
               }
             />

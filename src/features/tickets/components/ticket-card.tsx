@@ -5,18 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { formatDate } from '@/lib/format';
 import { getAppLocale, useAppLocale } from '@/lib/locale';
-import type { Task, TaskPriority, TaskStatus } from '../api/types';
-
-const priorityLabel: Record<TaskPriority, string> = {
+import type { Ticket, TicketPriority, TicketStatus } from '../api/types';
+const priorityLabel: Record<TicketPriority, string> = {
   low: 'dark:text-zinc-500 text-muted-foreground',
   medium: 'dark:text-amber-400 text-amber-600',
   high: 'dark:text-red-400 text-red-600'
 };
 
-const statusBadge: Partial<Record<TaskStatus, 'outline' | 'secondary' | 'default'>> = {
+const statusBadge: Partial<Record<TicketStatus, 'outline' | 'secondary' | 'default'>> = {
   assigned: 'outline',
   in_progress: 'default',
-  available: 'secondary'
+  open: 'secondary'
 };
 
 export function formatDue(dueAt: string | null, locale: string = getAppLocale()): string {
@@ -24,12 +23,12 @@ export function formatDue(dueAt: string | null, locale: string = getAppLocale())
   return `Due ${formatDate(new Date(dueAt), undefined, locale)}`;
 }
 
-export default function TaskCard({
+export default function TicketCard({
   task,
   action,
   actionPlacement = 'row'
 }: {
-  task: Task;
+  task: Ticket;
   action?: ReactNode;
   actionPlacement?: 'row' | 'bottom';
 }) {
@@ -42,14 +41,14 @@ export default function TaskCard({
           <span
             className={`mb-1 text-[10px] font-bold tracking-widest uppercase ${priorityLabel[task.priority]}`}
           >
-            {t(`task.${task.priority}`)} {t('task.priority')}
+            {t(`ticket.${task.priority}`)} {t('ticket.priority')}
           </span>
           <h4 className='text-[15px] font-semibold leading-tight dark:text-white'>{task.title}</h4>
           {task.location && (
             <p className='dark:text-zinc-500 text-xs text-muted-foreground'>{task.location.name}</p>
           )}
         </div>
-        {task.status !== 'available' && (
+        {task.status !== 'open' && (
           <Badge
             variant={statusBadge[task.status]}
             className='dark:bg-zinc-800 h-5 rounded px-2 text-[10px] font-bold dark:text-zinc-400'

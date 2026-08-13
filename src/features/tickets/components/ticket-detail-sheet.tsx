@@ -10,22 +10,22 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { formatDue } from './task-card';
+import { formatDue } from './ticket-card';
 import { useAppLocale } from '@/lib/locale';
-import { useTakeTask, useCompleteTask } from '../api/hooks';
-import type { Task } from '../api/types';
+import { useTakeTicket, useCompleteTicket } from '../api/hooks';
+import type { Ticket } from '../api/types';
 
-export default function TaskDetailSheet({
+export default function TicketDetailSheet({
   task,
   open,
   onOpenChange
 }: {
-  task: Task | null;
+  task: Ticket | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const takeTask = useTakeTask();
-  const completeTask = useCompleteTask();
+  const takeTicket = useTakeTicket();
+  const completeTicket = useCompleteTicket();
   const { t } = useTranslation();
   const locale = useAppLocale();
 
@@ -37,7 +37,7 @@ export default function TaskDetailSheet({
             <SheetHeader>
               <SheetTitle>{task.title}</SheetTitle>
               <SheetDescription>
-                {task.task_type} · {formatDue(task.dueAt, locale)}
+                {task.taskType} {' · '} {formatDue(task.dueAt, locale)}
               </SheetDescription>
             </SheetHeader>
             <div className='space-y-4 pt-4'>
@@ -64,39 +64,39 @@ export default function TaskDetailSheet({
                   ))}
                 </div>
               )}
-              {task.status === 'available' && (
+              {task.status === 'open' && (
                 <Button
                   className='w-full'
-                  onClick={() => takeTask.mutate(task.id)}
-                  disabled={takeTask.isPending}
+                  onClick={() => takeTicket.mutate(task.id)}
+                  disabled={takeTicket.isPending}
                 >
-                  {takeTask.isPending ? (
+                  {takeTicket.isPending ? (
                     <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
                   ) : (
                     <Icons.check className='mr-2 h-4 w-4' />
                   )}
-                  {t('task.takeTask')}
+                  {t('ticket.takeTicket')}
                 </Button>
               )}
               {task.status === 'in_progress' && (
                 <Button
                   className='w-full'
                   variant='secondary'
-                  onClick={() => completeTask.mutate(task.id)}
-                  disabled={completeTask.isPending}
+                  onClick={() => completeTicket.mutate(task.id)}
+                  disabled={completeTicket.isPending}
                 >
-                  {completeTask.isPending ? (
+                  {completeTicket.isPending ? (
                     <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
                   ) : (
                     <Icons.check className='mr-2 h-4 w-4' />
                   )}
-                  {t('task.markComplete')}
+                  {t('ticket.markComplete')}
                 </Button>
               )}
               {task.status === 'assigned' && (
                 <Link to='/dashboard/my-work' className='block'>
                   <Button variant='outline' className='w-full'>
-                    {t('task.openMyWork')}
+                    {t('ticket.openMyWork')}
                   </Button>
                 </Link>
               )}

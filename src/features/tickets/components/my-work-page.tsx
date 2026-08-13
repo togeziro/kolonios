@@ -4,19 +4,19 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { myTasksQueryOptions } from '../api/queries';
-import TaskCard from './task-card';
-import TaskDetailSheet from './task-detail-sheet';
+import { myTicketsQueryOptions } from '../api/queries';
+import TicketCard from './ticket-card';
+import TicketDetailSheet from './ticket-detail-sheet';
 
 export default function MyWorkPage() {
   const { t } = useTranslation();
-  const { data } = useQuery(myTasksQueryOptions());
-  const tasks = data?.tasks ?? [];
+  const { data } = useQuery(myTicketsQueryOptions());
+  const tickets = data?.tickets ?? [];
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const selected = tasks.find((t) => t.id === selectedId) ?? null;
+  const selected = tickets.find((t) => t.id === selectedId) ?? null;
 
-  const assigned = tasks.filter((t) => t.status === 'assigned');
-  const inProgress = tasks.filter((t) => t.status === 'in_progress');
+  const assigned = tickets.filter((t) => t.status === 'assigned');
+  const inProgress = tickets.filter((t) => t.status === 'in_progress');
 
   return (
     <div className='space-y-6 p-4'>
@@ -29,14 +29,14 @@ export default function MyWorkPage() {
       </Link>
       <div>
         <h2 className='mb-3 text-sm font-semibold'>
-          {t('task.inProgressCount', { count: inProgress.length })}
+          {t('ticket.inProgressCount', { count: inProgress.length })}
         </h2>
         {inProgress.length === 0 ? (
-          <p className='text-muted-foreground text-sm'>{t('task.nothingInProgress')}</p>
+          <p className='text-muted-foreground text-sm'>{t('ticket.nothingInProgress')}</p>
         ) : (
           <div className='space-y-2.5'>
             {inProgress.map((task) => (
-              <TaskCard
+              <TicketCard
                 key={task.id}
                 task={task}
                 actionPlacement={'bottom' as const}
@@ -47,7 +47,7 @@ export default function MyWorkPage() {
                     className='w-full'
                     onClick={() => setSelectedId(task.id)}
                   >
-                    {t('task.open')}
+                    {t('ticket.open')}
                   </Button>
                 }
               />
@@ -57,14 +57,14 @@ export default function MyWorkPage() {
       </div>
       <div>
         <h2 className='mb-3 text-sm font-semibold'>
-          {t('task.assignedCount', { count: assigned.length })}
+          {t('ticket.assignedCount', { count: assigned.length })}
         </h2>
         {assigned.length === 0 ? (
-          <p className='text-muted-foreground text-sm'>{t('task.noAssignedTasks')}</p>
+          <p className='text-muted-foreground text-sm'>{t('ticket.noAssignedTasks')}</p>
         ) : (
           <div className='space-y-2.5'>
             {assigned.map((task) => (
-              <TaskCard
+              <TicketCard
                 key={task.id}
                 task={task}
                 actionPlacement={'bottom' as const}
@@ -75,7 +75,7 @@ export default function MyWorkPage() {
                     className='w-full'
                     onClick={() => setSelectedId(task.id)}
                   >
-                    {t('task.open')}
+                    {t('ticket.open')}
                   </Button>
                 }
               />
@@ -83,7 +83,7 @@ export default function MyWorkPage() {
           </div>
         )}
       </div>
-      <TaskDetailSheet
+      <TicketDetailSheet
         task={selected}
         open={selected != null}
         onOpenChange={(open) => {

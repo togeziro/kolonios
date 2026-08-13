@@ -36,7 +36,7 @@ import {
   userIdSchema,
   userMutationSchema
 } from '@/features/users/api/validation';
-import { taskIdSchema, availableTasksSchema } from '@/features/tasks/api/validation';
+import { ticketIdSchema, listOpenTicketsSchema } from '@/features/tickets/api/validation';
 
 export type Operation = {
   operationId: string;
@@ -371,50 +371,50 @@ export const operations: Operation[] = [
     responseDescription: 'Success flag'
   },
 
-  // Tasks
+  // Tickets
   {
-    operationId: 'getMyTasks',
+    operationId: 'getMyTickets',
     method: 'get',
-    path: '/tasks/my-work',
-    summary: "Get the caller's assigned tasks",
+    path: '/tickets/my-work',
+    summary: "Get the caller's assigned tickets",
     permission: 'my_work.view',
-    responseDescription: 'Assigned task list'
+    responseDescription: 'Assigned ticket list'
   },
   {
-    operationId: 'getAvailableTasks',
+    operationId: 'listOpenTickets',
     method: 'get',
-    path: '/tasks/available',
-    summary: 'List available jobs (eligibility-gated)',
+    path: '/tickets/open',
+    summary: 'List open tickets (eligibility-gated)',
     permission: 'jobs.view',
-    queryParams: asQuery(availableTasksSchema),
-    responseDescription: 'Available task pool'
+    queryParams: asQuery(listOpenTicketsSchema),
+    responseDescription: 'Open ticket pool'
   },
   {
-    operationId: 'getTaskDetail',
+    operationId: 'getTicketDetail',
     method: 'get',
-    path: '/tasks/{taskId}',
-    summary: 'Get task detail',
+    path: '/tickets/{ticketId}',
+    summary: 'Get ticket detail',
     permission: 'my_work.view',
-    pathParams: { taskId: taskIdSchema.shape.taskId },
-    responseDescription: 'Task detail'
+    pathParams: { ticketId: ticketIdSchema.shape.ticketId },
+    responseDescription: 'Ticket detail'
   },
   {
-    operationId: 'takeTask',
+    operationId: 'takeTicket',
     method: 'post',
-    path: '/tasks/{taskId}/take',
-    summary: 'Claim an available task',
+    path: '/tickets/{ticketId}/take',
+    summary: 'Claim an open ticket',
     permission: 'jobs.view',
-    pathParams: { taskId: taskIdSchema.shape.taskId },
-    responseDescription: 'Claimed task'
+    pathParams: { ticketId: ticketIdSchema.shape.ticketId },
+    responseDescription: 'Claimed ticket'
   },
   {
-    operationId: 'completeTask',
+    operationId: 'completeTicket',
     method: 'post',
-    path: '/tasks/{taskId}/complete',
-    summary: 'Complete an assigned task',
+    path: '/tickets/{ticketId}/complete',
+    summary: 'Complete an assigned ticket',
     permission: 'my_work.view',
-    pathParams: { taskId: taskIdSchema.shape.taskId },
-    responseDescription: 'Completed task'
+    pathParams: { ticketId: ticketIdSchema.shape.ticketId },
+    responseDescription: 'Completed ticket'
   }
 ];
 

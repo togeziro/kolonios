@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import MyWorkPage from '@/features/tasks/components/my-work-page';
+import MyWorkPage from '@/features/tickets/components/my-work-page';
 
 export const Route = createFileRoute('/dashboard/my-work/')({
   head: () => ({ meta: [{ title: 'Dashboard: My Work' }] }),
