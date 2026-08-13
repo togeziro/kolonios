@@ -841,6 +841,7 @@ async function seedRoleGroups() {
           ...coreModules,
           jobs: { view: true },
           tickets: { view: true, add: true, edit: true },
+          customers: { view: true },
           notifications: { view: true },
           payroll: { view: true }
         },
