@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { takeTicketFn, completeTicketFn, createTicketFn } from './service';
+import { takeTicketFn, completeTicketFn, createTicketFn, startLegFn } from './service';
 import { ticketsKeys } from './queries';
 import type { NewTicketInput } from './types';
 
@@ -59,5 +59,22 @@ export function useCreateTicket() {
     onError: () => {
       toast.error(t('ticket.createFailed'));
     }
+  });
+}
+
+export function useStartLeg() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    mutationFn: (legId: number) => startLegFn({ data: { legId } }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('ticket.started'));
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+      } else {
+        toast.error(res?.message ?? t('ticket.startFailed'));
+      }
+    },
+    onError: () => toast.error(t('ticket.startFailed'))
   });
 }

@@ -36,7 +36,12 @@ import {
   userIdSchema,
   userMutationSchema
 } from '@/features/users/api/validation';
-import { ticketIdSchema, listOpenTicketsSchema } from '@/features/tickets/api/validation';
+import {
+  ticketIdSchema,
+  listOpenTicketsSchema,
+  createTicketSchema,
+  legIdSchema
+} from '@/features/tickets/api/validation';
 
 export type Operation = {
   operationId: string;
@@ -394,7 +399,7 @@ export const operations: Operation[] = [
     method: 'get',
     path: '/tickets/{ticketId}',
     summary: 'Get ticket detail',
-    permission: 'my_work.view',
+    permission: 'tickets.view',
     pathParams: { ticketId: ticketIdSchema.shape.ticketId },
     responseDescription: 'Ticket detail'
   },
@@ -403,7 +408,7 @@ export const operations: Operation[] = [
     method: 'post',
     path: '/tickets/{ticketId}/take',
     summary: 'Claim an open ticket',
-    permission: 'jobs.view',
+    permission: 'tickets.edit',
     pathParams: { ticketId: ticketIdSchema.shape.ticketId },
     responseDescription: 'Claimed ticket'
   },
@@ -412,9 +417,27 @@ export const operations: Operation[] = [
     method: 'post',
     path: '/tickets/{ticketId}/complete',
     summary: 'Complete an assigned ticket',
-    permission: 'my_work.view',
+    permission: 'tickets.edit',
     pathParams: { ticketId: ticketIdSchema.shape.ticketId },
     responseDescription: 'Completed ticket'
+  },
+  {
+    operationId: 'startLeg',
+    method: 'post',
+    path: '/tickets/legs/{legId}/start',
+    summary: 'Start an assigned leg (ticket taken by caller)',
+    permission: 'tickets.edit',
+    pathParams: { legId: legIdSchema.shape.legId },
+    responseDescription: 'Started leg'
+  },
+  {
+    operationId: 'createTicket',
+    method: 'post',
+    path: '/tickets',
+    summary: 'Create a ticket with optional estafet legs',
+    permission: 'tickets.add',
+    queryParams: asQuery(createTicketSchema),
+    responseDescription: 'Created ticket detail'
   }
 ];
 
