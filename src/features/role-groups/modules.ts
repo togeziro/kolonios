@@ -12,6 +12,7 @@ const MODULES = [
   { key: 'role_groups', label: 'Role Groups', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'notifications', label: 'Notifications', actions: ['view'] },
   { key: 'holiday', label: 'Holiday Calendar', actions: ['view', 'add', 'edit', 'delete'] },
+  { key: 'storage', label: 'Storage', actions: ['view', 'edit'] },
   { key: 'profile', label: 'Profile', actions: ['view'] },
   { key: 'jobs', label: 'Jobs', actions: ['view'] },
   {

@@ -246,6 +246,14 @@ export const navItems: NavItem[] = [
         isActive: false,
         module: 'role_groups',
         items: []
+      },
+      {
+        title: 'Storage Settings',
+        url: '/dashboard/admin/storage-settings',
+        icon: 'settings',
+        isActive: false,
+        module: 'storage',
+        items: []
       }
     ]
   },
