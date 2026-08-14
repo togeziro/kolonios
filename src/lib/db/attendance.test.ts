@@ -13,6 +13,7 @@ import {
   getAttendanceHistory,
   getEffectiveEmployeeSchedule,
   getAttendancePolicy,
+  getMonthlyScheduleData,
   getShiftWeekdayRules,
   createScheduleAssignment,
   createDayOff,
@@ -505,6 +506,79 @@ describe('attendance data access (integration)', () => {
 
       const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
       expect(res).toBeNull();
+    });
+  });
+
+  describe('monthly schedule data', () => {
+    it('returns null assignment plus empty collections when no assignment exists', async () => {
+      const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
+      expect(res.assignment).toBeNull();
+      expect(res.weekdayRules).toEqual([]);
+      expect(res.overrides).toEqual([]);
+      expect(res.dayOffs).toEqual([]);
+      expect(res.holidays).toEqual([]);
+    });
+
+    it('returns assignment, rules, overrides and day offs within the month', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, {
+        day_of_week: 1,
+        start_time: '08:00',
+        end_time: '17:00',
+        late_tolerance_minutes: 10,
+        absence_cutoff_minutes: 120
+      });
+      await seedShiftWeekdayRule(shift.id, {
+        day_of_week: 6,
+        is_working_day: false
+      });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-08-04', shift_id: shift.id });
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-08-05' });
+
+      const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
+
+      expect(res.assignment).not.toBeNull();
+      expect(res.assignment!.shiftId).toBe(shift.id);
+      expect(res.assignment!.shiftName).toBe('Morning');
+      expect(res.weekdayRules).toHaveLength(2);
+      expect(res.weekdayRules.find((r) => r.dayOfWeek === 1)?.startTime).toBe('08:00');
+      expect(res.weekdayRules.find((r) => r.dayOfWeek === 6)?.isWorkingDay).toBe(false);
+      expect(res.overrides).toEqual([{ date: '2026-08-04', shiftId: shift.id }]);
+      expect(res.dayOffs).toEqual(['2026-08-05']);
+    });
+
+    it('excludes records outside the requested month', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, { day_of_week: 1 });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-07-31' });
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-09-01' });
+
+      const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
+      expect(res.dayOffs).toEqual([]);
+    });
+
+    it('includes national holidays inside the month and recurring holidays by month-day', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, { day_of_week: 1 });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
+      await db.insert(nationalHolidays).values([
+        { date: '2026-08-17', name: 'Independence Day', is_recurring: false, year: 2026 },
+        { date: '1999-08-21', name: 'Recurring Aug 21', is_recurring: true, year: null },
+        { date: '2026-09-01', name: 'September day', is_recurring: false, year: 2026 }
+      ]);
+
+      const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
+      expect(res.holidays).toEqual(
+        expect.arrayContaining([
+          { date: '2026-08-17', name: 'Independence Day' },
+          { date: '1999-08-21', name: 'Recurring Aug 21' }
+        ])
+      );
+      expect(res.holidays).not.toEqual(
+        expect.arrayContaining([{ date: '2026-09-01', name: 'September day' }])
+      );
     });
   });
 

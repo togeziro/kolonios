@@ -598,6 +598,116 @@ export async function getEffectiveEmployeeSchedule(
   }
 }
 
+export type ScheduleWeekdayRuleRow = {
+  dayOfWeek: number;
+  isWorkingDay: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  lateToleranceMinutes: number;
+  absenceCutoffMinutes: number;
+};
+
+export type ScheduleMonthData = {
+  assignment: {
+    shiftId: number;
+    effectiveFrom: string;
+    effectiveTo: string | null;
+    shiftName: string | null;
+  } | null;
+  weekdayRules: ScheduleWeekdayRuleRow[];
+  overrides: { date: string; shiftId: number }[];
+  dayOffs: string[];
+  holidays: { date: string; name: string }[];
+};
+
+export async function getMonthlyScheduleData(
+  userId: string,
+  month: string
+): Promise<ScheduleMonthData> {
+  const monthStart = `${month}-01`;
+  const [y, m] = month.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const monthEnd = `${month}-${String(lastDay).padStart(2, '0')}`;
+
+  const [assignment] = await db
+    .select({
+      shiftId: scheduleAssignments.shift_id,
+      effectiveFrom: scheduleAssignments.effective_from,
+      effectiveTo: scheduleAssignments.effective_to,
+      shiftName: shifts.name
+    })
+    .from(scheduleAssignments)
+    .leftJoin(shifts, eq(scheduleAssignments.shift_id, shifts.id))
+    .where(
+      and(
+        eq(scheduleAssignments.user_id, userId),
+        sql`${scheduleAssignments.effective_from} <= ${monthEnd}`,
+        sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${monthStart})`
+      )
+    )
+    .orderBy(desc(scheduleAssignments.effective_from))
+    .limit(1);
+
+  let weekdayRules: ScheduleWeekdayRuleRow[] = [];
+  if (assignment) {
+    const result = await getShiftWeekdayRules(assignment.shiftId);
+    weekdayRules = (result.success ? result.rules : []).map((r) => ({
+      dayOfWeek: r.day_of_week,
+      isWorkingDay: r.is_working_day ?? true,
+      startTime: r.start_time,
+      endTime: r.end_time,
+      lateToleranceMinutes: r.late_tolerance_minutes ?? 0,
+      absenceCutoffMinutes: r.absence_cutoff_minutes ?? 120
+    }));
+  }
+
+  const overrides = await db
+    .select({ date: dateOverrides.date, shiftId: dateOverrides.shift_id })
+    .from(dateOverrides)
+    .where(
+      and(
+        eq(dateOverrides.user_id, userId),
+        gte(dateOverrides.date, monthStart),
+        lte(dateOverrides.date, monthEnd)
+      )
+    );
+
+  const dayOffRows = await db
+    .select({ date: dayOffs.date })
+    .from(dayOffs)
+    .where(
+      and(eq(dayOffs.user_id, userId), gte(dayOffs.date, monthStart), lte(dayOffs.date, monthEnd))
+    );
+
+  const holidayRows = await db
+    .select({ date: nationalHolidays.date, name: nationalHolidays.name })
+    .from(nationalHolidays)
+    .where(
+      or(
+        and(gte(nationalHolidays.date, monthStart), lte(nationalHolidays.date, monthEnd)),
+        and(
+          eq(nationalHolidays.is_recurring, true),
+          sql`substr(${nationalHolidays.date}, 6, 2) = substr(${monthStart}, 6, 2)`
+        )
+      )
+    );
+
+  return {
+    assignment: assignment
+      ? {
+          shiftId: assignment.shiftId,
+          effectiveFrom: assignment.effectiveFrom,
+          effectiveTo: assignment.effectiveTo,
+          shiftName: assignment.shiftName
+        }
+      : null,
+    weekdayRules,
+    overrides,
+    dayOffs: dayOffRows.map((r) => r.date),
+    holidays: holidayRows
+  };
+}
+
 export async function getAttendancePolicy(
   locationId: number | null,
   _shiftId: number | null
