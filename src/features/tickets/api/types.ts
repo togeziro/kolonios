@@ -28,6 +28,8 @@ export type Ticket = {
   requiredSkills: string[];
   assignedTo: string | null;
   takenBy: string | null;
+  reviewNote: string | null;
+  reviewedBy: string | null;
   completedAt: string | null;
 };
 

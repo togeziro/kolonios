@@ -78,6 +78,8 @@ async function toTicket(row: TicketRow, reqs: RequirementRow[]): Promise<Ticket>
     requiredSkills: reqs.map((r) => r.skill).filter((s): s is string => s != null),
     assignedTo: row.assigned_to,
     takenBy: row.taken_by,
+    reviewNote: row.review_note || null,
+    reviewedBy: row.reviewed_by,
     completedAt: row.completed_at ? row.completed_at.toISOString() : null
   };
 }

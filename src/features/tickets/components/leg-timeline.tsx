@@ -10,10 +10,15 @@ export function progressFromLegs(legs: TicketLeg[]): string {
   return `${completedLegCount(legs)}/${legs.length}`;
 }
 
-const legStatusBadge: Partial<Record<TicketLegStatus, 'outline' | 'secondary' | 'default'>> = {
+const legStatusBadge: Partial<
+  Record<TicketLegStatus, 'outline' | 'secondary' | 'default' | 'destructive'>
+> = {
   assigned: 'outline',
   in_progress: 'default',
-  approved: 'secondary'
+  approved: 'secondary',
+  submitted: 'secondary',
+  rejected: 'destructive',
+  rework: 'destructive'
 };
 
 export default function LegTimeline({ legs }: { legs: TicketLeg[] }) {

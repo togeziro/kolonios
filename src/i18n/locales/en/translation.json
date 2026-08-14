@@ -1059,6 +1059,7 @@
     "channelOthers": "Others",
     "selectCustomer": "Select customer…",
     "searchCustomer": "Search customer…",
-    "noCustomers": "No customers found"
+    "noCustomers": "No customers found",
+    "reworkBanner": "Returned for rework"
   }
 }

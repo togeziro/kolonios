@@ -134,6 +134,22 @@ describe('tickets data access (integration)', () => {
       expect(leg1.id).not.toBe(leg2.id);
     });
 
+    it('exposes review note and reviewer on rejected/rework tickets', async () => {
+      await seedUser(USER_A);
+      await seedUser('reviewer-1');
+      const ticket = await seedTicket({
+        title: 'Reworked install',
+        status: 'rework',
+        review_note: 'Missing photo evidence',
+        reviewed_by: 'reviewer-1'
+      });
+      await seedTicketLeg(ticket.id, { status: 'rework' });
+      const res = await getTicketDetail(USER_A, ticket.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.reviewNote).toBe('Missing photo evidence');
+      expect(res.ticket?.reviewedBy).toBe('reviewer-1');
+    });
+
     it('returns a failure message when the ticket does not exist', async () => {
       const res = await getTicketDetail(USER_A, 999_999);
       expect(res.success).toBe(false);

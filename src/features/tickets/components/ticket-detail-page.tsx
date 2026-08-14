@@ -10,12 +10,19 @@ import { formatDue } from './ticket-card';
 import { ticketDetailQueryOptions } from '../api/queries';
 import LegTimeline, { completedLegCount, progressFromLegs } from './leg-timeline';
 import TicketActions from './ticket-actions';
+import ReworkBanner, { getReworkNote } from './rework-banner';
 import type { TicketStatus } from '../api/types';
 
-const statusBadge: Partial<Record<TicketStatus, 'outline' | 'secondary' | 'default'>> = {
+const statusBadge: Partial<
+  Record<TicketStatus, 'outline' | 'secondary' | 'default' | 'destructive'>
+> = {
   open: 'secondary',
   assigned: 'outline',
   in_progress: 'default',
+  rejected: 'destructive',
+  rework: 'destructive',
+  approved: 'secondary',
+  submitted: 'secondary',
   completed: 'default'
 };
 
@@ -54,6 +61,11 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
       >
         <Icons.chevronLeft className='h-3.5 w-3.5' /> {t('ticket.back')}
       </button>
+
+      {(() => {
+        const note = getReworkNote(ticket);
+        return note ? <ReworkBanner note={note} /> : null;
+      })()}
 
       <Card className='dark:border-zinc-800/50 space-y-3 rounded-2xl p-4 dark:bg-zinc-900'>
         <div className='flex items-start justify-between gap-2'>
