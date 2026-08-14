@@ -545,5 +545,35 @@ describe('tickets data access (integration)', () => {
         .where(eq(ticketLegs.id, firstLeg.id));
       expect(legRow?.status).toBe('completed');
     });
+
+    it('prefers the in-progress leg when an earlier leg is still open', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Later leg in progress',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const firstLeg = await seedTicketLeg(ticket.id, { status: 'open' });
+      const secondLeg = await seedTicketLeg(ticket.id, { status: 'in_progress' });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/3.jpg' }],
+        notes: ''
+      });
+      expect(res.success).toBe(true);
+
+      const [firstRow] = await db
+        .select({ status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, firstLeg.id));
+      const [secondRow] = await db
+        .select({ status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, secondLeg.id));
+      expect(firstRow?.status).toBe('open');
+      expect(secondRow?.status).toBe('completed');
+    });
   });
 });

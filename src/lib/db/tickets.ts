@@ -517,7 +517,10 @@ export async function submitWorkSession(
         .select()
         .from(ticketLegs)
         .where(eq(ticketLegs.ticket_id, ticketId))
-        .orderBy(asc(ticketLegs.leg_number))
+        .orderBy(
+          sql`case when ${ticketLegs.status} = 'in_progress' then 0 else 1 end`,
+          asc(ticketLegs.leg_number)
+        )
         .limit(1);
       const leg = legs[0];
       if (!leg) return { success: false, message: 'Ticket has no legs' };

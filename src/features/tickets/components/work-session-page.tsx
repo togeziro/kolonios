@@ -108,7 +108,7 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
           </p>
           <p className='text-muted-foreground'>
             <span className='block text-[10px] uppercase dark:text-zinc-400'>
-              {t('ticket.formPriority')}
+              {t('ticket.priority')}
             </span>
             {ticket.priority}
           </p>
@@ -151,7 +151,11 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
       </Card>
 
       <div className='fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 p-3 backdrop-blur dark:border-zinc-800/50 dark:bg-zinc-950/95'>
-        <Button className='w-full' onClick={finish} disabled={submit.isPending}>
+        <Button
+          className='w-full'
+          onClick={finish}
+          disabled={submit.isPending || photos.length === 0}
+        >
           {submit.isPending ? (
             <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
           ) : (

@@ -32,7 +32,11 @@ vi.mock('./materials-used', () => ({
 }));
 
 vi.mock('./completion-photos', () => ({
-  default: () => <div>photos</div>
+  default: ({ onChange }: { onChange: (photos: string[]) => void }) => (
+    <button type='button' onClick={() => onChange(['photo-key'])}>
+      add-photo
+    </button>
+  )
 }));
 
 import WorkSessionPage from './work-session-page';
@@ -60,6 +64,7 @@ describe('WorkSessionPage', () => {
     );
 
     fireEvent.change(screen.getByPlaceholderText(/notes/i), { target: { value: 'done' } });
+    fireEvent.click(screen.getByRole('button', { name: /add-photo/i }));
     fireEvent.click(screen.getByRole('button', { name: /finish/i }));
     await waitFor(() =>
       expect(submitMock).toHaveBeenCalledWith(
