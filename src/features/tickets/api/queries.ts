@@ -1,18 +1,30 @@
 import { queryOptions } from '@tanstack/react-query';
-import { getMyTicketsFn, listOpenTicketsFn, getTicketDetailFn } from './service';
+import {
+  getMyTicketsFn,
+  listOpenTicketsFn,
+  getTicketDetailFn,
+  getCompletedTicketsFn
+} from './service';
 import type { TicketListFilters } from './types';
 
 export const ticketsKeys = {
   all: ['tickets'] as const,
   mine: () => [...ticketsKeys.all, 'mine'] as const,
   open: (filters: TicketListFilters) => [...ticketsKeys.all, 'open', filters] as const,
-  detail: (ticketId: number) => [...ticketsKeys.all, 'detail', ticketId] as const
+  detail: (ticketId: number) => [...ticketsKeys.all, 'detail', ticketId] as const,
+  completed: () => [...ticketsKeys.all, 'completed'] as const
 };
 
 export const myTicketsQueryOptions = () =>
   queryOptions({
     queryKey: ticketsKeys.mine(),
     queryFn: () => getMyTicketsFn()
+  });
+
+export const completedTicketsQueryOptions = () =>
+  queryOptions({
+    queryKey: ticketsKeys.completed(),
+    queryFn: () => getCompletedTicketsFn()
   });
 
 export const openTicketsQueryOptions = (filters: TicketListFilters = {}) =>

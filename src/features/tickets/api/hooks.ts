@@ -14,6 +14,7 @@ export function useTakeTicket() {
       if (res?.success) {
         toast.success(t('ticket.taken'));
         queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
       } else {
         toast.error(res?.message ?? t('ticket.takeFailed'));
       }
@@ -33,6 +34,7 @@ export function useCompleteTicket() {
       if (res?.success) {
         toast.success(t('ticket.completed'));
         queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
       } else {
         toast.error(res?.message ?? t('ticket.completeFailed'));
       }
@@ -52,6 +54,7 @@ export function useCreateTicket() {
       if (res?.success) {
         toast.success(t('ticket.created'));
         queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
       } else {
         toast.error(res?.message ?? t('ticket.createFailed'));
       }
@@ -71,6 +74,7 @@ export function useStartLeg() {
       if (res?.success) {
         toast.success(t('ticket.started'));
         queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
       } else {
         toast.error(res?.message ?? t('ticket.startFailed'));
       }

@@ -7,6 +7,7 @@ import {
   takeTicket,
   startLeg,
   getMyTickets,
+  getCompletedTickets,
   completeTicket,
   MAX_ACTIVE_TICKETS
 } from './tickets';
@@ -390,6 +391,37 @@ describe('tickets data access (integration)', () => {
 
       const res = await getMyTickets(USER_A);
       expect(res.tickets.map((t) => t.title).sort()).toEqual(['Mine assigned', 'Mine in progress']);
+    });
+
+    it('includes submitted tickets as pending approval', async () => {
+      await seedUser(USER_A);
+      const ticket = await seedTicket({
+        title: 'Submitted job',
+        status: 'submitted',
+        taken_by: USER_A
+      });
+      const res = await getMyTickets(USER_A);
+      expect(res.tickets.map((t) => t.id)).toContain(ticket.id);
+    });
+  });
+
+  describe('getCompletedTickets', () => {
+    it('returns only completed tickets the user took', async () => {
+      await seedUser(USER_A);
+      await seedUser('someone-else');
+      const mine = await seedTicket({ title: 'Done by me', status: 'completed', taken_by: USER_A });
+      await seedTicket({ title: 'Done by others', status: 'completed', taken_by: 'someone-else' });
+      await seedTicket({ title: 'Still open', status: 'open' });
+      const res = await getCompletedTickets(USER_A);
+      expect(res.success).toBe(true);
+      expect(res.tickets.map((t) => t.id)).toEqual([mine.id]);
+    });
+
+    it('returns an empty list when the user completed nothing', async () => {
+      await seedUser(USER_A);
+      const res = await getCompletedTickets(USER_A);
+      expect(res.success).toBe(true);
+      expect(res.tickets).toHaveLength(0);
     });
   });
 

@@ -12,10 +12,17 @@ const priorityLabel: Record<TicketPriority, string> = {
   high: 'dark:text-red-400 text-red-600'
 };
 
-const statusBadge: Partial<Record<TicketStatus, 'outline' | 'secondary' | 'default'>> = {
+const statusBadge: Partial<
+  Record<TicketStatus, 'outline' | 'secondary' | 'default' | 'destructive'>
+> = {
   assigned: 'outline',
   in_progress: 'default',
-  open: 'secondary'
+  open: 'secondary',
+  submitted: 'secondary',
+  rejected: 'destructive',
+  rework: 'destructive',
+  approved: 'secondary',
+  completed: 'default'
 };
 
 export function formatDue(dueAt: string | null, locale: string = getAppLocale()): string {

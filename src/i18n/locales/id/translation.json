@@ -1067,6 +1067,15 @@
     "materials": "Material",
     "unitTotal": "unit",
     "completedAt": "Selesai {{when}}",
-    "materialsLegTag": "({{name}})"
+    "materialsLegTag": "({{name}})",
+    "tabInProgress": "Berjalan",
+    "tabAvailable": "Tersedia",
+    "tabCompleted": "Selesai",
+    "activeAssignment": "Penugasan Aktif",
+    "upNext": "Berikutnya",
+    "pendingApproval": "Menunggu Persetujuan",
+    "noPendingApproval": "Tidak ada yang menunggu persetujuan",
+    "noCompletedTickets": "Belum ada tiket selesai",
+    "selfService": "Layanan Mandiri"
   }
 }

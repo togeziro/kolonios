@@ -1067,6 +1067,15 @@
     "materials": "Materials",
     "unitTotal": "units",
     "completedAt": "Completed {{when}}",
-    "materialsLegTag": "({{name}})"
+    "materialsLegTag": "({{name}})",
+    "tabInProgress": "In Progress",
+    "tabAvailable": "Available",
+    "tabCompleted": "Completed",
+    "activeAssignment": "Active Assignment",
+    "upNext": "Up Next",
+    "pendingApproval": "Pending Approval",
+    "noPendingApproval": "Nothing pending approval",
+    "noCompletedTickets": "No completed tickets yet",
+    "selfService": "Self Service"
   }
 }

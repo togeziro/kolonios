@@ -404,7 +404,7 @@ export async function getMyTickets(userId: string): Promise<TicketListResponse> 
     const rows = await db
       .select()
       .from(tickets)
-      .where(and(inArray(tickets.status, ['assigned', 'in_progress']), isMine(userId)))
+      .where(and(inArray(tickets.status, ['assigned', 'in_progress', 'submitted']), isMine(userId)))
       .orderBy(desc(tickets.created_at));
 
     const result: Ticket[] = [];
@@ -414,6 +414,24 @@ export async function getMyTickets(userId: string): Promise<TicketListResponse> 
     return { success: true, tickets: result, unavailable: [] };
   } catch (e) {
     mapDbError(e, 'tickets.getMyTickets');
+  }
+}
+
+export async function getCompletedTickets(userId: string): Promise<TicketListResponse> {
+  try {
+    const rows = await db
+      .select()
+      .from(tickets)
+      .where(and(eq(tickets.status, 'completed'), isMine(userId)))
+      .orderBy(desc(tickets.completed_at), desc(tickets.created_at));
+
+    const result: Ticket[] = [];
+    for (const row of rows) {
+      result.push(await toTicket(row, await loadRequirements(row.id)));
+    }
+    return { success: true, tickets: result, unavailable: [] };
+  } catch (e) {
+    mapDbError(e, 'tickets.getCompletedTickets');
   }
 }
 

@@ -15,6 +15,13 @@ export const getMyTicketsFn = createServerFn({ method: 'GET' }).handler(async ()
   return getMyTickets(session.user.id);
 });
 
+export const getCompletedTicketsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  const session = await requirePermission('my_work', 'view');
+  await checkRateLimit(`tickets:${session.user.id}`);
+  const { getCompletedTickets } = await import('@/lib/db/tickets');
+  return getCompletedTickets(session.user.id);
+});
+
 export const listOpenTicketsFn = createServerFn({ method: 'GET' })
   .validator(listOpenTicketsSchema)
   .handler(async ({ data: filters }) => {

@@ -3,7 +3,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const mocks = vi.hoisted(() => ({
   requirePermission: vi.fn(),
   checkRateLimit: vi.fn(),
-  startLeg: vi.fn()
+  startLeg: vi.fn(),
+  getCompletedTickets: vi.fn()
 }));
 
 // The split query supplies the production provider handler behind each exported
@@ -16,7 +17,10 @@ const serverFnProvider = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth/session', () => ({ requirePermission: mocks.requirePermission }));
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: mocks.checkRateLimit }));
-vi.mock('@/lib/db/tickets', () => ({ startLeg: mocks.startLeg }));
+vi.mock('@/lib/db/tickets', () => ({
+  startLeg: mocks.startLeg,
+  getCompletedTickets: mocks.getCompletedTickets
+}));
 vi.mock('@tanstack/react-start', () => ({
   createServerFn: () => {
     let validator: { parse(input: unknown): unknown } | undefined;
@@ -44,10 +48,12 @@ vi.mock('@tanstack/react-start/ssr-rpc', () => ({
 
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { startLegFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { getCompletedTicketsFn_createServerFn_handler } from './service?tss-serverfn-split';
 
 serverFnProvider.handler = startLegFn_createServerFn_handler;
 
-import { startLegFn } from './service';
+import { startLegFn, getCompletedTicketsFn } from './service';
 
 describe('startLegFn', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -60,5 +66,20 @@ describe('startLegFn', () => {
     expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
     expect(mocks.startLeg).toHaveBeenCalledWith('u1', 3);
     expect(res).toEqual({ success: true });
+  });
+});
+
+describe('getCompletedTicketsFn', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('guards with my_work.view permission and fetches the user completed tickets', async () => {
+    serverFnProvider.handler = getCompletedTicketsFn_createServerFn_handler;
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.getCompletedTickets.mockResolvedValue({ success: true, tickets: [] });
+    const res = await getCompletedTicketsFn({} as never);
+    expect(mocks.requirePermission).toHaveBeenCalledWith('my_work', 'view');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('tickets:u1');
+    expect(mocks.getCompletedTickets).toHaveBeenCalledWith('u1');
+    expect(res).toEqual({ success: true, tickets: [] });
   });
 });
