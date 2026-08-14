@@ -1066,7 +1066,7 @@
     "rating": "Rating",
     "materials": "Materials",
     "unitTotal": "units",
-    "completedAt": "Completed {when}",
-    "materialsLegTag": "({name})"
+    "completedAt": "Completed {{when}}",
+    "materialsLegTag": "({{name}})"
   }
 }
