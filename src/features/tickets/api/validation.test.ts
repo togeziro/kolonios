@@ -24,4 +24,13 @@ describe('tickets validation', () => {
     const bad = createTicketSchema.safeParse({ title: 'X', channel: 'fax' });
     expect(bad.success).toBe(false);
   });
+
+  it('accepts the others catch-all for task type and channel', () => {
+    const withOthers = createTicketSchema.safeParse({
+      title: 'X',
+      taskType: 'others',
+      channel: 'others'
+    });
+    expect(withOthers.success).toBe(true);
+  });
 });

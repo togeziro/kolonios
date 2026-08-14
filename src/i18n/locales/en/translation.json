@@ -1054,6 +1054,11 @@
     "back": "Back",
     "leg": "Leg",
     "startLeg": "Start Leg",
-    "invalidTicket": "Ticket not found"
+    "invalidTicket": "Ticket not found",
+    "taskTypeOthers": "Others",
+    "channelOthers": "Others",
+    "selectCustomer": "Select customer…",
+    "searchCustomer": "Search customer…",
+    "noCustomers": "No customers found"
   }
 }

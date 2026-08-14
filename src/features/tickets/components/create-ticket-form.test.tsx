@@ -17,7 +17,8 @@ describe('toCreateTicketInput', () => {
         assetName: '',
         locationId: 2,
         estimatedMinutes: 90,
-        dueDate: '2026-08-20'
+        dueDate: '2026-08-20',
+        legs: []
       },
       [
         { name: 'Survey', description: '' },
@@ -51,7 +52,8 @@ describe('toCreateTicketInput', () => {
         assetName: '',
         locationId: undefined,
         dueDate: undefined,
-        estimatedMinutes: undefined
+        estimatedMinutes: undefined,
+        legs: []
       },
       [{ name: 'X' }]
     );

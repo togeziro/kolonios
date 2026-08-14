@@ -17,10 +17,12 @@ export const ticketLegInputSchema = z.object({
 export const createTicketSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
-  channel: z.enum(['whatsapp', 'phone', 'email', 'walk_in', 'field']).optional(),
+  channel: z.enum(['whatsapp', 'phone', 'email', 'walk_in', 'field', 'others']).optional(),
   customerId: z.string().max(100).optional(),
   assetName: z.string().max(200).optional(),
-  taskType: z.enum(['installation', 'maintenance', 'inspection', 'data', 'sales']).optional(),
+  taskType: z
+    .enum(['installation', 'maintenance', 'inspection', 'data', 'sales', 'others'])
+    .optional(),
   priority: z.enum(['low', 'medium', 'high']).optional(),
   locationId: z.coerce.number().int().positive().optional(),
   dueAt: z.string().optional(),

@@ -1054,6 +1054,11 @@
     "back": "Kembali",
     "leg": "Leg",
     "startLeg": "Mulai Leg",
-    "invalidTicket": "Tiket tidak ditemukan"
+    "invalidTicket": "Tiket tidak ditemukan",
+    "taskTypeOthers": "Lainnya",
+    "channelOthers": "Lainnya",
+    "selectCustomer": "Pilih pelanggan…",
+    "searchCustomer": "Cari pelanggan…",
+    "noCustomers": "Tidak ada pelanggan ditemukan"
   }
 }

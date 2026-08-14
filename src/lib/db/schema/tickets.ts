@@ -43,7 +43,8 @@ export const ticketChannelEnum = pgEnum('ticket_channel', [
   'phone',
   'email',
   'walk_in',
-  'field'
+  'field',
+  'others'
 ]);
 
 export const ticketTaskTypeEnum = pgEnum('ticket_task_type', [
@@ -51,7 +52,8 @@ export const ticketTaskTypeEnum = pgEnum('ticket_task_type', [
   'maintenance',
   'inspection',
   'data',
-  'sales'
+  'sales',
+  'others'
 ]);
 
 export const ticketMaterialSourceEnum = pgEnum('ticket_material_source', ['warehouse', 'van']);

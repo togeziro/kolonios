@@ -134,6 +134,13 @@
       "when": 1786658123727,
       "tag": "0018_new_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786675090193,
+      "tag": "0019_lush_human_fly",
+      "breakpoints": true
     }
   ]
 }
