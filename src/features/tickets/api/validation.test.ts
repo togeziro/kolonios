@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { legIdSchema, createTicketSchema } from './validation';
+import { legIdSchema, createTicketSchema, submitWorkSessionSchema } from './validation';
 
 describe('tickets validation', () => {
   it('accepts positive integer leg ids and rejects everything else', () => {
@@ -32,5 +32,47 @@ describe('tickets validation', () => {
       channel: 'others'
     });
     expect(withOthers.success).toBe(true);
+  });
+});
+
+describe('submitWorkSessionSchema', () => {
+  it('accepts a valid submit payload', () => {
+    const result = submitWorkSessionSchema.safeParse({
+      ticketId: 42,
+      materials: [{ name: 'Drop cable', qty: 15, unit: 'm', source: 'van' }],
+      photos: [{ fileUrl: 'tickets/0/123.jpg' }],
+      notes: 'Replaced drop cable'
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty photos (at least one completion photo required)', () => {
+    const result = submitWorkSessionSchema.safeParse({
+      ticketId: 42,
+      materials: [],
+      photos: [],
+      notes: ''
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a material with qty 0', () => {
+    const result = submitWorkSessionSchema.safeParse({
+      ticketId: 42,
+      materials: [{ name: 'ONT', qty: 0, unit: '', source: 'van' }],
+      photos: [{ fileUrl: 'tickets/0/1.jpg' }],
+      notes: ''
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an invalid material source', () => {
+    const result = submitWorkSessionSchema.safeParse({
+      ticketId: 42,
+      materials: [{ name: 'ONT', qty: 1, unit: '', source: 'garage' }],
+      photos: [{ fileUrl: 'tickets/0/1.jpg' }],
+      notes: ''
+    });
+    expect(result.success).toBe(false);
   });
 });

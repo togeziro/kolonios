@@ -9,6 +9,7 @@ import {
   getMyTickets,
   getCompletedTickets,
   completeTicket,
+  submitWorkSession,
   MAX_ACTIVE_TICKETS
 } from './tickets';
 import { db } from '@/lib/db';
@@ -460,6 +461,119 @@ describe('tickets data access (integration)', () => {
       });
       const res = await completeTicket(USER_A, ticket.id);
       expect(res.success).toBe(false);
+    });
+  });
+
+  describe('submitWorkSession', () => {
+    it('completes an in-progress ticket taken by the user, persisting materials, photos and notes', async () => {
+      await seedEmployee(USER_A);
+      await seedUser(USER_B);
+      const ticket = await seedTicket({
+        title: 'Field install',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const leg = await seedTicketLeg(ticket.id, { status: 'in_progress' });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [{ name: 'Drop cable', qty: 15, unit: 'm', source: 'van' }],
+        photos: [{ fileUrl: 'tickets/0/1.jpg' }],
+        notes: 'Spliced and tested'
+      });
+
+      expect(res.success).toBe(true);
+
+      const detail = await getTicketDetail(USER_A, ticket.id);
+      expect(detail.success).toBe(true);
+      expect(detail.ticket?.status).toBe('completed');
+      expect(detail.ticket?.materials).toHaveLength(1);
+      expect(detail.ticket?.materials[0]).toMatchObject({
+        materialName: 'Drop cable',
+        qty: 15,
+        unit: 'm',
+        source: 'van'
+      });
+      expect(detail.ticket?.photos).toHaveLength(1);
+      expect(detail.ticket?.photos[0].fileUrl).toBe('tickets/0/1.jpg');
+
+      const [legRow] = await db
+        .select({ status: ticketLegs.status, notes: ticketLegs.notes })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, leg.id));
+      expect(legRow?.status).toBe('completed');
+      expect(legRow?.notes).toBe('Spliced and tested');
+    });
+
+    it('rejects when the ticket is not in_progress by the user', async () => {
+      await seedEmployee(USER_A);
+      await seedUser(USER_B);
+      const ticket = await seedTicket({
+        title: 'Open one',
+        status: 'open',
+        taken_by: USER_B
+      });
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/1.jpg' }],
+        notes: ''
+      });
+      expect(res.success).toBe(false);
+    });
+
+    it('attaches everything to the first leg when no leg is in progress', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Multi-leg',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const firstLeg = await seedTicketLeg(ticket.id, { status: 'open' });
+      await seedTicketLeg(ticket.id, { status: 'open' });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [{ name: 'ONT', qty: 1, unit: '', source: 'van' }],
+        photos: [{ fileUrl: 'tickets/0/2.jpg' }],
+        notes: ''
+      });
+      expect(res.success).toBe(true);
+
+      const [legRow] = await db
+        .select({ id: ticketLegs.id, status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, firstLeg.id));
+      expect(legRow?.status).toBe('completed');
+    });
+
+    it('prefers the in-progress leg when an earlier leg is still open', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Later leg in progress',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const firstLeg = await seedTicketLeg(ticket.id, { status: 'open' });
+      const secondLeg = await seedTicketLeg(ticket.id, { status: 'in_progress' });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/3.jpg' }],
+        notes: ''
+      });
+      expect(res.success).toBe(true);
+
+      const [firstRow] = await db
+        .select({ status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, firstLeg.id));
+      const [secondRow] = await db
+        .select({ status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, secondLeg.id));
+      expect(firstRow?.status).toBe('open');
+      expect(secondRow?.status).toBe('completed');
     });
   });
 });

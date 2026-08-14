@@ -5,7 +5,8 @@ import {
   ticketIdSchema,
   listOpenTicketsSchema,
   createTicketSchema,
-  legIdSchema
+  legIdSchema,
+  submitWorkSessionSchema
 } from './validation';
 
 export const getMyTicketsFn = createServerFn({ method: 'GET' }).handler(async () => {
@@ -73,4 +74,17 @@ export const startLegFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     const { startLeg } = await import('@/lib/db/tickets');
     return startLeg(session.user.id, data.legId);
+  });
+
+export const submitWorkSessionFn = createServerFn({ method: 'POST' })
+  .validator(submitWorkSessionSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('tickets', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { submitWorkSession } = await import('@/lib/db/tickets');
+    return submitWorkSession(session.user.id, data.ticketId, {
+      materials: data.materials,
+      photos: data.photos,
+      notes: data.notes
+    });
   });

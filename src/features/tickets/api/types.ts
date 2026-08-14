@@ -60,6 +60,7 @@ export type TicketMaterial = {
 export type TicketDetail = Ticket & {
   legs: TicketLeg[];
   materials: TicketMaterial[];
+  photos: TicketPhoto[];
   requesterId: string | null;
   createdAt: string;
 };
@@ -105,4 +106,28 @@ export type NewTicketInput = {
 export type TicketListFilters = {
   domain?: TicketDomain;
   priority?: TicketPriority;
+};
+
+export type WorkSessionMaterialInput = {
+  name: string;
+  qty: number;
+  unit: string;
+  source: 'warehouse' | 'van';
+};
+
+export type WorkSessionPhotoInput = {
+  fileUrl: string;
+};
+
+export type WorkSessionSubmitInput = {
+  materials: WorkSessionMaterialInput[];
+  photos: WorkSessionPhotoInput[];
+  notes: string;
+};
+
+export type TicketPhoto = {
+  id: number;
+  legId: number;
+  fileUrl: string;
+  caption: string;
 };
