@@ -53,8 +53,7 @@ describe('getAchievementData', () => {
   });
 
   it('counts early check-ins (before 07:00) this month', async () => {
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const month = businessDateInTimeZone(new Date()).slice(0, 7);
     await db.insert(employeeShifts).values([
       {
         user_id: TEST_USER_ID,
@@ -80,8 +79,7 @@ describe('getAchievementData', () => {
   });
 
   it('counts late check-outs (after 20:00) this month for Night Owl', async () => {
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const month = businessDateInTimeZone(new Date()).slice(0, 7);
     await db.insert(employeeShifts).values([
       {
         user_id: TEST_USER_ID,

@@ -25,42 +25,36 @@ function dateStr(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function businessDateNow(): string {
-  return businessDateInTimeZone(new Date());
-}
-
-function getMonthStart(): string {
-  const bd = businessDateInTimeZone(new Date());
+function getMonthStart(bd: string): string {
   return `${bd.slice(0, 7)}-01`;
 }
 
-function getMonthEnd(): string {
-  const bd = businessDateInTimeZone(new Date());
+function getMonthEnd(bd: string): string {
   const [y, m] = bd.split('-').map(Number);
   const lastDay = new Date(y, m, 0).getDate();
   return `${bd.slice(0, 7)}-${pad2(lastDay)}`;
 }
 
-function getWeekStart(): Date {
-  const bd = businessDateInTimeZone(new Date());
+function getWeekStart(bd: string): string {
   const [y, m, d] = bd.split('-').map(Number);
   const day = new Date(y, m - 1, d).getDay();
   const diff = d - day + (day === 0 ? -6 : 1);
   const monday = new Date(y, m - 1, diff);
   monday.setHours(0, 0, 0, 0);
-  return monday;
+  return dateStr(monday);
 }
 
 export async function getAchievementData(userId: string): Promise<AchievementData> {
-  const today = businessDateNow();
-  const monthStart = getMonthStart();
-  const monthEnd = getMonthEnd();
-  const weekStart = getWeekStart();
+  const businessDate = businessDateInTimeZone(new Date());
+  const today = businessDate;
+  const monthStart = getMonthStart(businessDate);
+  const monthEnd = getMonthEnd(businessDate);
+  const weekStart = getWeekStart(businessDate);
 
   // Attendance records for last 90 days (streak + monthly stats + week dots)
-  const bd = businessDateInTimeZone(new Date());
-  const [y, m, day] = bd.split('-').map(Number);
-  const ninetyDaysAgo = new Date(y, m - 1, day);
+  const [by, bm, bd] = businessDate.split('-').map(Number);
+  const todayDate = new Date(by, bm - 1, bd);
+  const ninetyDaysAgo = new Date(by, bm - 1, bd);
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   const ninetyDaysAgoStr = dateStr(ninetyDaysAgo);
 
@@ -85,7 +79,6 @@ export async function getAchievementData(userId: string): Promise<AchievementDat
   let currentStreak = 0;
   let bestStreak = 0;
   let tempStreak = 0;
-  const todayDate = new Date(today);
 
   for (let i = 89; i >= 0; i--) {
     const checkDate = new Date(todayDate);
@@ -146,9 +139,9 @@ export async function getAchievementData(userId: string): Promise<AchievementDat
     return elapsed < 30;
   }).length;
 
-  // Weekly tasks completed
+  // Weekly tasks completed (business-date comparison against the business Monday)
   const weekTasksCompleted = completedTickets.filter(
-    (t) => t.completedAt && t.completedAt >= weekStart
+    (t) => t.completedAt && businessDateInTimeZone(t.completedAt) >= weekStart
   ).length;
 
   return {
