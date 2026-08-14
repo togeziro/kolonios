@@ -559,6 +559,54 @@ describe('attendance data access (integration)', () => {
       expect(res.dayOffs).toEqual([]);
     });
 
+    it('returns an assignment that starts mid-month', async () => {
+      const shift = await seedShift({ name: 'Morning' });
+      await seedShiftWeekdayRule(shift.id, { day_of_week: 1 });
+      await seedScheduleAssignment({
+        user_id: TEST_USER_ID,
+        shift_id: shift.id,
+        effective_from: '2026-08-10',
+        effective_to: null
+      });
+
+      const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
+      expect(res.assignment).not.toBeNull();
+      expect(res.assignment!.shiftId).toBe(shift.id);
+      expect(res.assignment!.shiftName).toBe('Morning');
+    });
+
+    it('excludes an assignment that ended before the month and picks the latest overlapping one', async () => {
+      const staleShift = await seedShift({ name: 'Stale' });
+      const olderShift = await seedShift({ name: 'Older' });
+      const latestShift = await seedShift({ name: 'Latest' });
+      await seedShiftWeekdayRule(staleShift.id, { day_of_week: 1 });
+      await seedShiftWeekdayRule(olderShift.id, { day_of_week: 1 });
+      await seedShiftWeekdayRule(latestShift.id, { day_of_week: 1 });
+      await seedScheduleAssignment({
+        user_id: TEST_USER_ID,
+        shift_id: staleShift.id,
+        effective_from: '2026-01-01',
+        effective_to: '2026-07-31'
+      });
+      await seedScheduleAssignment({
+        user_id: TEST_USER_ID,
+        shift_id: olderShift.id,
+        effective_from: '2026-07-01',
+        effective_to: '2026-09-30'
+      });
+      await seedScheduleAssignment({
+        user_id: TEST_USER_ID,
+        shift_id: latestShift.id,
+        effective_from: '2026-08-10',
+        effective_to: null
+      });
+
+      const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
+      expect(res.assignment).not.toBeNull();
+      expect(res.assignment!.shiftId).toBe(latestShift.id);
+      expect(res.assignment!.shiftName).toBe('Latest');
+    });
+
     it('includes national holidays inside the month and recurring holidays by month-day', async () => {
       const shift = await seedShift({ name: 'Morning' });
       await seedShiftWeekdayRule(shift.id, { day_of_week: 1 });

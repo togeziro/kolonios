@@ -2,15 +2,22 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { MonthGridCell } from '../utils/build-month-grid';
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 // null cells are blank padding for days outside the month — keeps the
 // Sun..Sat column alignment stable for partial weeks at month edges.
 export function WeekGrid({ cells }: { cells: (MonthGridCell | null)[] }) {
   const { t } = useTranslation();
+  const weekdayLabels = [
+    t('attendance.daySun'),
+    t('attendance.dayMon'),
+    t('attendance.dayTue'),
+    t('attendance.dayWed'),
+    t('attendance.dayThu'),
+    t('attendance.dayFri'),
+    t('attendance.daySat')
+  ];
   return (
     <div className='grid grid-cols-7 gap-1.5'>
-      {WEEKDAY_LABELS.map((label) => (
+      {weekdayLabels.map((label) => (
         <div key={label} className='text-center text-[10px] font-semibold text-muted-foreground'>
           {label}
         </div>

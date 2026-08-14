@@ -991,15 +991,15 @@
   "schedule": {
     "pageTitle": "Jadwal Saya",
     "pageDescription": "Jadwal shift, hari libur, dan cuti Anda",
+    "loadError": "Gagal memuat jadwal Anda",
     "todayShift": "Shift Hari Ini",
     "noSchedule": "Tidak ada jadwal",
-    "workingDay": "Hari kerja",
     "dayOff": "Hari libur",
     "holiday": "Libur nasional",
     "week": "Minggu Ini",
     "month": "Bulan",
     "shiftHours": "Jam shift",
-    "lateTolerance": "Toleransi keterlambatan"
+    "lateTolerance": "Toleransi keterlambatan: {{minutes}} menit"
   },
   "portal": {
     "title": "Portal Pelanggan",

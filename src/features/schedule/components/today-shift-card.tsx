@@ -28,8 +28,8 @@ export function TodayShiftCard({
             {today.startTime} – {today.endTime}
           </p>
           <p className='text-xs text-muted-foreground'>
-            {t('schedule.shiftHours')} · {t('schedule.lateTolerance')}: {today.lateToleranceMinutes}{' '}
-            min
+            {t('schedule.shiftHours')} ·{' '}
+            {t('schedule.lateTolerance', { minutes: today.lateToleranceMinutes })}
           </p>
         </div>
       )}

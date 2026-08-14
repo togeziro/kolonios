@@ -2,10 +2,17 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { MonthGridCell } from '../utils/build-month-grid';
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 export function MonthCalendar({ month, cells }: { month: string; cells: MonthGridCell[] }) {
   const { t } = useTranslation();
+  const weekdayLabels = [
+    t('attendance.daySun'),
+    t('attendance.dayMon'),
+    t('attendance.dayTue'),
+    t('attendance.dayWed'),
+    t('attendance.dayThu'),
+    t('attendance.dayFri'),
+    t('attendance.daySat')
+  ];
   const firstDay = cells[0]?.dayOfWeek ?? 0;
   const blanks = Array.from({ length: firstDay }, (_, i) => i);
 
@@ -15,7 +22,7 @@ export function MonthCalendar({ month, cells }: { month: string; cells: MonthGri
         {month} <span className='text-muted-foreground'>{t('schedule.month')}</span>
       </p>
       <div className='grid grid-cols-7 gap-1'>
-        {WEEKDAY_LABELS.map((label) => (
+        {weekdayLabels.map((label) => (
           <div key={label} className='text-center text-[10px] font-semibold text-muted-foreground'>
             {label}
           </div>

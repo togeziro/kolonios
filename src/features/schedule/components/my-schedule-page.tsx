@@ -14,7 +14,7 @@ function currentMonth(): string {
 export default function MySchedulePage() {
   const { t } = useTranslation();
   const month = currentMonth();
-  const { data } = useQuery(myScheduleQueryOptions(month));
+  const { data, isPending, isError } = useQuery(myScheduleQueryOptions(month));
 
   const cells = data ? buildMonthGrid(month, data) : [];
   const todayStr = businessDateInTimeZone(new Date());
@@ -37,12 +37,20 @@ export default function MySchedulePage() {
   return (
     <div className='space-y-6'>
       <h1 className='text-xl font-bold'>{t('schedule.pageTitle')}</h1>
-      <TodayShiftCard today={today} todayDate={todayStr} />
-      <div className='space-y-2'>
-        <p className='text-sm font-semibold'>{t('schedule.week')}</p>
-        <WeekGrid cells={weekCells} />
-      </div>
-      <MonthCalendar month={month} cells={cells} />
+      {isPending ? (
+        <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>
+      ) : isError ? (
+        <p className='text-sm text-muted-foreground'>{t('schedule.loadError')}</p>
+      ) : (
+        <>
+          <TodayShiftCard today={today} todayDate={todayStr} />
+          <div className='space-y-2'>
+            <p className='text-sm font-semibold'>{t('schedule.week')}</p>
+            <WeekGrid cells={weekCells} />
+          </div>
+          <MonthCalendar month={month} cells={cells} />
+        </>
+      )}
     </div>
   );
 }
