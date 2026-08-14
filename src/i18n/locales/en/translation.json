@@ -1077,5 +1077,33 @@
     "noPendingApproval": "Nothing pending approval",
     "noCompletedTickets": "No completed tickets yet",
     "selfService": "Self Service"
+  },
+  "storage": {
+    "title": "Storage Settings",
+    "description": "Configure the S3-compatible object storage used for photos.",
+    "provider": "Provider",
+    "provider_idrive_e2": "IDrive e2",
+    "provider_aws_s3": "AWS S3",
+    "provider_minio": "MinIO",
+    "provider_cloudflare_r2": "Cloudflare R2",
+    "provider_custom": "Custom S3",
+    "bucket": "Bucket",
+    "bucketPlaceholder": "koloni-dev",
+    "endpoint": "Endpoint",
+    "endpointPlaceholder": "https://us-east-1.idrivee2.com",
+    "region": "Region",
+    "regionPlaceholder": "us-east-1",
+    "forcePathStyle": "Force path-style addressing",
+    "accessKey": "Access Key",
+    "secretKey": "Secret Key",
+    "secretKeyMaskedPlaceholder": "Leave blank to keep the stored secret",
+    "secretKeyStoredHint": "Stored secret: {{masked}}",
+    "testConnection": "Test Connection",
+    "testing": "Testing…",
+    "testOk": "Connection successful",
+    "testFailed": "Connection failed: {{error}}",
+    "settingsSaved": "Storage settings saved",
+    "settingsSaveFailed": "Failed to save storage settings",
+    "settingsLoadFailed": "Failed to load storage settings"
   }
 }

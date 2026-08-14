@@ -1077,5 +1077,33 @@
     "noPendingApproval": "Tidak ada yang menunggu persetujuan",
     "noCompletedTickets": "Belum ada tiket selesai",
     "selfService": "Layanan Mandiri"
+  },
+  "storage": {
+    "title": "Pengaturan Penyimpanan",
+    "description": "Konfigurasi penyimpanan objek kompatibel S3 untuk foto.",
+    "provider": "Penyedia",
+    "provider_idrive_e2": "IDrive e2",
+    "provider_aws_s3": "AWS S3",
+    "provider_minio": "MinIO",
+    "provider_cloudflare_r2": "Cloudflare R2",
+    "provider_custom": "Custom S3",
+    "bucket": "Bucket",
+    "bucketPlaceholder": "koloni-dev",
+    "endpoint": "Endpoint",
+    "endpointPlaceholder": "https://us-east-1.idrivee2.com",
+    "region": "Region",
+    "regionPlaceholder": "us-east-1",
+    "forcePathStyle": "Paksa penanganan path-style",
+    "accessKey": "Access Key",
+    "secretKey": "Secret Key",
+    "secretKeyMaskedPlaceholder": "Kosongkan untuk menyimpan secret yang ada",
+    "secretKeyStoredHint": "Secret tersimpan: {{masked}}",
+    "testConnection": "Tes Koneksi",
+    "testing": "Menguji…",
+    "testOk": "Koneksi berhasil",
+    "testFailed": "Koneksi gagal: {{error}}",
+    "settingsSaved": "Pengaturan penyimpanan tersimpan",
+    "settingsSaveFailed": "Gagal menyimpan pengaturan penyimpanan",
+    "settingsLoadFailed": "Gagal memuat pengaturan penyimpanan"
   }
 }
