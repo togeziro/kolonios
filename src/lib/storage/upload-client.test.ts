@@ -18,7 +18,10 @@ describe('uploadSelfie', () => {
     expect(key).toMatch(/^attendance\/u\/\d+\.jpg$/);
     expect(fetch).toHaveBeenCalledWith(
       'https://presigned/put',
-      expect.objectContaining({ method: 'PUT' })
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({ 'Content-Type': 'image/jpeg' })
+      })
     );
   });
 

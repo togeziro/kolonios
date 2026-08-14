@@ -1,5 +1,7 @@
 import { getUploadUrlFn } from '@/features/storage/api/service';
 
+export const PHOTO_UPLOAD_FAILED = 'PHOTO_UPLOAD_FAILED';
+
 export async function uploadSelfie(dataUrl: string, folder: 'attendance'): Promise<string> {
   const { url, key } = await getUploadUrlFn({
     data: { folder, contentType: 'image/jpeg' }
@@ -10,6 +12,6 @@ export async function uploadSelfie(dataUrl: string, folder: 'attendance'): Promi
     headers: { 'Content-Type': 'image/jpeg' },
     body: blob
   });
-  if (!res.ok) throw new Error('Photo upload failed');
+  if (!res.ok) throw new Error(PHOTO_UPLOAD_FAILED);
   return key;
 }

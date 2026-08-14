@@ -10,7 +10,7 @@ import {
   shiftsQueryOptions
 } from '../api/queries';
 import { checkInFn, checkOutFn } from '../api/service';
-import { uploadSelfie } from '@/lib/storage/upload-client';
+import { PHOTO_UPLOAD_FAILED, uploadSelfie } from '@/lib/storage/upload-client';
 import { getCurrentLocation, type DeviceLocation, type LocationResult } from '../utils/geolocation';
 import { LocationMap } from './location-map';
 import { SelfieCapture } from './selfie-capture';
@@ -98,7 +98,7 @@ export default function AttendanceCheckCard() {
           photoKey = await uploadSelfie(selfie, 'attendance');
         } catch {
           toast.error(t('attendanceAdmin.photoUploadFailed'));
-          throw new Error('PHOTO_UPLOAD_FAILED');
+          throw new Error(PHOTO_UPLOAD_FAILED);
         }
       }
       return checkInFn({
@@ -120,7 +120,11 @@ export default function AttendanceCheckCard() {
         toast.error(errorMessage(res));
       }
     },
-    onError: () => toast.error(t('attendanceAdmin.gpsUnavailable'))
+    onError: (err) => {
+      if (err instanceof Error && err.message !== PHOTO_UPLOAD_FAILED) {
+        toast.error(t('attendanceAdmin.gpsUnavailable'));
+      }
+    }
   });
 
   const checkOutMutation = useMutation({
@@ -131,7 +135,7 @@ export default function AttendanceCheckCard() {
           photoKey = await uploadSelfie(checkOutSelfie, 'attendance');
         } catch {
           toast.error(t('attendanceAdmin.photoUploadFailed'));
-          throw new Error('PHOTO_UPLOAD_FAILED');
+          throw new Error(PHOTO_UPLOAD_FAILED);
         }
       }
       return checkOutFn({
@@ -150,7 +154,11 @@ export default function AttendanceCheckCard() {
         toast.error(errorMessage(res));
       }
     },
-    onError: () => toast.error(t('attendanceAdmin.gpsUnavailable'))
+    onError: (err) => {
+      if (err instanceof Error && err.message !== PHOTO_UPLOAD_FAILED) {
+        toast.error(t('attendanceAdmin.gpsUnavailable'));
+      }
+    }
   });
 
   const locations = locationsData?.locations ?? [];
