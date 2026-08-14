@@ -30,6 +30,7 @@
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
 - **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
+- **Ticket system** — `tasks` migrated to a full ticket system (`tickets` + estafet `ticket_legs`/`ticket_materials`/`ticket_photos`, code `T-{id}`): eligibility-gated Open Tickets pool (Take), Create Ticket with searchable customer picker, Ticket Detail (Estafet + Rework rejection banner) with leg timeline and Take/Start/Complete actions, Ticket Completed summary (rating + materials), My Work tabs (In Progress / Available / Completed + pending approval), desktop Tickets nav group
 - **Customer management** — full CRUD with search, filter & pagination; auto-generated customer codes
 - **Employee management** — full CRUD with department joins and filtering
 - **Masterdata CRUD** — department and designation management from the UI (create/edit/delete)
@@ -53,6 +54,11 @@
 | [Assignments](/dashboard/admin/attendance/assignments)         | Assign schedules to employees (individual/bulk) and create day offs.                                                                                          |
 | [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                                                  |
 | [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                                                           |
+| [My Work](/dashboard/my-work)                                  | Technician/SPV tabs: In Progress / Available / Completed + pending approval (dark mobile shell).                                                              |
+| [Available Jobs](/dashboard/jobs)                              | Eligibility-gated open-ticket pool with Take action (bottom-nav "Office").                                                                                    |
+| [New Ticket](/dashboard/tickets/new)                           | Create a ticket: type/channel, customer, asset, location, priority, estafet legs.                                                                             |
+| [Ticket Detail](/dashboard/tickets/$ticketId)                  | Ticket header, leg progress + timeline, Take/Start/Complete actions; rework rejection banner.                                                                 |
+| [Ticket Completed](/dashboard/tickets/$ticketId/completed)     | Success summary: rating, materials, full leg timeline.                                                                                                        |
 | [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                                                          |
 | [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                                                               |
 | [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                                                            |
@@ -79,7 +85,7 @@ src/
 │   ├── portal.tsx                 # Customer portal layout (guard + PortalShell)
 │   ├── portal/                    # Portal pages (placeholder today)
 │   ├── dashboard/                 # Dashboard pages (overview, attendance, customers,
-│   │                              #   employees, users, admin, my-work, jobs,
+│   │                              #   employees, users, admin, my-work, jobs, tickets,
 │   │                              #   leave, notifications, profile)
 │   └── api/v1/                    # Versioned API routes (/api/v1/auth/$ for Better Auth)
 │
@@ -90,6 +96,7 @@ src/
 │
 ├── features/                      # Feature-sliced modules
 │   ├── attendance/                # Check-in/out, leave, performance (Haversine geo-fencing)
+│   ├── tickets/                   # Ticket system: create/detail, leg timeline, jobs pool (replaces tasks)
 │   ├── customers/                 # Customer CRUD, code generation
 │   ├── employees/                 # Employee CRUD with department joins
 │   ├── masterdata/                # Departments & designations CRUD
@@ -113,7 +120,7 @@ src/
 │   │   ├── attendance.ts          # Attendance CRUD with Haversine (uses utils)
 │   │   ├── payroll.ts             # Payroll data access with effective-date resolution (uses utils)
 │   │   ├── audit.ts               # Audit log (uses utils)
-│   │   └── tasks.ts               # Task management (uses utils)
+│   │   └── tickets.ts               # Ticket/leg system (replaces tasks.ts, uses utils)
 │   ├── errors.ts                  # DomainError + mapDbError
 │   ├── logger.ts                  # structured pino logger
 │   ├── parsers.ts                 # sort/filter parsers
