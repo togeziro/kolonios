@@ -106,3 +106,27 @@ export type TicketListFilters = {
   domain?: TicketDomain;
   priority?: TicketPriority;
 };
+
+export type WorkSessionMaterialInput = {
+  name: string;
+  qty: number;
+  unit: string;
+  source: 'warehouse' | 'van';
+};
+
+export type WorkSessionPhotoInput = {
+  fileUrl: string;
+};
+
+export type WorkSessionSubmitInput = {
+  materials: WorkSessionMaterialInput[];
+  photos: WorkSessionPhotoInput[];
+  notes: string;
+};
+
+export type TicketPhoto = {
+  id: number;
+  legId: number;
+  fileUrl: string;
+  caption: string;
+};
