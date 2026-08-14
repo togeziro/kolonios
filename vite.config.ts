@@ -85,7 +85,11 @@ export default defineConfig({
         lines: 69,
         branches: 55,
         functions: 57,
-        statements: 68
+        statements: 68,
+        'src/lib/db/*.ts': {
+          functions: 60,
+          statements: 50
+        }
       }
     }
   }

@@ -1,6 +1,39 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { getUsers } from './users';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
+import { getUsers, createUser, updateUser, deleteUser } from './users';
 import { resetAllTables, seedUser } from '@/test-utils/db';
+import { db } from '@/lib/db';
+import { user, session, account, verification } from './auth-schema';
+
+vi.mock('@tanstack/react-start/server', () => ({
+  getRequestHeaders: () => new Headers()
+}));
+
+vi.mock('@/lib/auth/auth.server', () => ({
+  auth: {
+    api: {
+      createUser: vi.fn().mockResolvedValue({
+        id: 'created-usr-1',
+        name: 'New User',
+        email: 'new@test.com',
+        role: 'employee',
+        banned: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }),
+      updateUser: vi.fn().mockResolvedValue({
+        id: 'usr-a',
+        name: 'Alice Updated',
+        email: 'alice@test.com',
+        role: 'admin',
+        banned: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }),
+      removeUser: vi.fn().mockResolvedValue({ success: true })
+    }
+  }
+}));
 
 async function seedUsers() {
   await seedUser('usr-a', { name: 'Alice Admin', email: 'alice@test.com', role: 'admin' });
@@ -73,5 +106,109 @@ describe('users data access (integration)', () => {
     const res = await getUsers({ search: 'alice' });
     expect(res.users[0].id).toBe('usr-a');
     expect(res.users[0].email).toBe('alice@test.com');
+  });
+
+  it('creates a user through the auth admin api', async () => {
+    const res = await createUser({
+      email: 'new@test.com',
+      name: 'New User',
+      role: 'employee',
+      status: 'Active'
+    });
+    expect(res.success).toBe(true);
+    expect(res.user?.id).toBe('created-usr-1');
+    expect(res.user?.role).toBe('employee');
+  });
+
+  it('updates a user name and status through the auth admin api', async () => {
+    const res = await updateUser('usr-a', {
+      name: 'Alice Updated',
+      email: 'alice@test.com',
+      role: 'admin',
+      status: 'Active'
+    });
+    expect(res.success).toBe(true);
+    expect(res.user?.name).toBe('Alice Updated');
+  });
+
+  it('deletes a user through the auth admin api', async () => {
+    const res = await deleteUser('usr-a');
+    expect(res.success).toBe(true);
+  });
+
+  it('resolves related records through the auth schema relations', async () => {
+    await db.insert(session).values({
+      id: 'sess-1',
+      userId: 'usr-a',
+      token: 'token-1',
+      expiresAt: new Date(Date.now() + 3_600_000)
+    });
+    const withSessions = await db.query.user.findFirst({
+      where: eq(user.id, 'usr-a'),
+      with: { sessions: true, accounts: true, employee: true, customer: true }
+    });
+    expect(withSessions?.id).toBe('usr-a');
+    expect(withSessions?.sessions).toHaveLength(1);
+    expect(withSessions?.sessions[0]?.id).toBe('sess-1');
+
+    const withUser = await db.query.session.findFirst({
+      where: eq(session.id, 'sess-1'),
+      with: { user: true }
+    });
+    expect(withUser?.user?.id).toBe('usr-a');
+
+    const withAccount = await db.query.account.findFirst({
+      where: eq(account.id, 'acct-1'),
+      with: { user: true }
+    });
+    expect(withAccount).toBeUndefined();
+  });
+
+  it('triggers the updated_at hooks on auth tables', async () => {
+    const [u] = await db
+      .update(user)
+      .set({ name: 'Alice Renamed' })
+      .where(eq(user.id, 'usr-a'))
+      .returning();
+    expect(u?.name).toBe('Alice Renamed');
+
+    await db.insert(session).values({
+      id: 'sess-2',
+      userId: 'usr-a',
+      token: 'token-2',
+      expiresAt: new Date(Date.now() + 3_600_000)
+    });
+    const [s] = await db
+      .update(session)
+      .set({ ipAddress: '10.0.0.1' })
+      .where(eq(session.id, 'sess-2'))
+      .returning();
+    expect(s?.ipAddress).toBe('10.0.0.1');
+
+    await db.insert(account).values({
+      id: 'acct-2',
+      accountId: 'acct-2',
+      providerId: 'credential',
+      userId: 'usr-a'
+    });
+    const [a] = await db
+      .update(account)
+      .set({ scope: 'profile' })
+      .where(eq(account.id, 'acct-2'))
+      .returning();
+    expect(a?.scope).toBe('profile');
+
+    await db.insert(verification).values({
+      id: 'verif-1',
+      identifier: 'usr-a',
+      value: 'code-1',
+      expiresAt: new Date(Date.now() + 3_600_000)
+    });
+    const [v] = await db
+      .update(verification)
+      .set({ value: 'code-2' })
+      .where(eq(verification.id, 'verif-1'))
+      .returning();
+    expect(v?.value).toBe('code-2');
   });
 });

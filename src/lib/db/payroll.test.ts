@@ -40,12 +40,22 @@ import {
   createPayrollRecord,
   createPayrollPeriod,
   createSalaryAssignment,
+  createSalaryComponent,
+  deletePayrollPeriod,
+  deleteSalaryComponent,
   generatePayrollRecords,
   getEffectiveTaxProfile,
+  getEmploymentContext,
+  getPayrollPeriod,
   getPrimaryBankAccount,
+  getSalaryComponent,
   listMyPayslips,
+  listPayrollPeriods,
   listPayrollRecords,
-  transitionPayrollPeriod
+  listSalaryComponents,
+  transitionPayrollPeriod,
+  updatePayrollPeriod,
+  updateSalaryComponent
 } from './payroll';
 import { withPayrollAuditTransaction } from './payroll';
 
@@ -518,5 +528,93 @@ describe('payroll data access (integration)', () => {
       )
     ).rejects.toThrow();
     expect(await db.select().from(salaryComponents)).toHaveLength(0);
+  });
+
+  it('creates, reads, updates, lists, and deletes salary components', async () => {
+    const created = await createSalaryComponent({
+      code: 'OVERTIME',
+      name: 'Overtime Pay',
+      type: 'allowance',
+      description: 'Hourly overtime'
+    });
+    expect(created.id).toBeGreaterThan(0);
+
+    const fetched = await getSalaryComponent(created.id);
+    expect(fetched?.code).toBe('OVERTIME');
+    expect(await getSalaryComponent(999_999)).toBeNull();
+
+    const listed = await listSalaryComponents();
+    expect(listed.some((c) => c.id === created.id)).toBe(true);
+    const inactive = await createSalaryComponent({
+      code: 'OLD_BONUS',
+      name: 'Old Bonus',
+      type: 'allowance',
+      is_active: false
+    });
+    expect(
+      listSalaryComponents().then((rows) => rows.some((c) => c.id === inactive.id))
+    ).resolves.toBe(false);
+    expect(
+      listSalaryComponents(true).then((rows) => rows.some((c) => c.id === inactive.id))
+    ).resolves.toBe(true);
+
+    const updated = await updateSalaryComponent(created.id, { name: 'Overtime Allowance' });
+    expect(updated.name).toBe('Overtime Allowance');
+
+    expect(await deleteSalaryComponent(created.id)).toBe(true);
+    expect(await deleteSalaryComponent(created.id)).toBe(false);
+    expect(await getSalaryComponent(created.id)).toBeNull();
+  });
+
+  it('creates, reads, updates, lists, and deletes payroll periods', async () => {
+    const created = await createPayrollPeriod({
+      name: 'Period CRUD',
+      period_start: '2026-07-01',
+      period_end: '2026-07-31',
+      payment_date: '2026-08-05'
+    });
+    expect(created.id).toBeGreaterThan(0);
+
+    const fetched = await getPayrollPeriod(created.id);
+    expect(fetched?.name).toBe('Period CRUD');
+    expect(await getPayrollPeriod(999_999)).toBeNull();
+
+    const listed = await listPayrollPeriods();
+    expect(listed.total).toBeGreaterThanOrEqual(1);
+    expect(listed.rows.some((p) => p.id === created.id)).toBe(true);
+    const byStatus = await listPayrollPeriods({ status: 'draft', page: 1, limit: 10 });
+    expect(byStatus.rows.every((p) => p.status === 'draft')).toBe(true);
+
+    const updated = await updatePayrollPeriod(created.id, { name: 'Period CRUD Updated' });
+    expect(updated.name).toBe('Period CRUD Updated');
+
+    expect(await deletePayrollPeriod(created.id)).toBe(true);
+    expect(await getPayrollPeriod(created.id)).toBeNull();
+  });
+
+  it('returns employment context with events for an employee', async () => {
+    const department = await seedDepartment({ code: 'PAY-CTX-DEPT' });
+    const designation = await seedDesignation(department.id, { code: 'PAY-CTX-DESIG' });
+    await seedUser('payroll-context-employee');
+    await db.insert(employees).values({
+      id: 'payroll-context-employee',
+      employee_code: 'PAY-CTX-1',
+      full_name: 'Context Employee',
+      email: 'payroll-context-employee@test.com',
+      birth_date: '1990-01-01',
+      department_id: department.id,
+      designation_id: designation.id,
+      join_date: '2024-01-01'
+    });
+    await db.insert(employeeEmploymentEvents).values({
+      employee_id: 'payroll-context-employee',
+      event_type: 'hiring',
+      effective_date: '2024-01-01'
+    });
+
+    const ctx = await getEmploymentContext('payroll-context-employee', '2026-08-01');
+    expect(ctx.employee.employee_code).toBe('PAY-CTX-1');
+    expect(ctx.department?.code).toBe('PAY-CTX-DEPT');
+    expect(ctx.events).toHaveLength(1);
   });
 });
