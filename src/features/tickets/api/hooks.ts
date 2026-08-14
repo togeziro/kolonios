@@ -1,9 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { takeTicketFn, completeTicketFn, createTicketFn, startLegFn } from './service';
+import {
+  takeTicketFn,
+  completeTicketFn,
+  createTicketFn,
+  startLegFn,
+  submitWorkSessionFn
+} from './service';
 import { ticketsKeys } from './queries';
 import type { NewTicketInput } from './types';
+import type { WorkSessionSubmit } from './validation';
 
 export function useTakeTicket() {
   const queryClient = useQueryClient();
@@ -80,5 +87,23 @@ export function useStartLeg() {
       }
     },
     onError: () => toast.error(t('ticket.startFailed'))
+  });
+}
+
+export function useSubmitWorkSession() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    mutationFn: (input: WorkSessionSubmit) => submitWorkSessionFn({ data: input }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('workSession.submitSuccess'));
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
+      } else {
+        toast.error(res?.message ?? t('workSession.submitFailed'));
+      }
+    },
+    onError: () => toast.error(t('workSession.submitFailed'))
   });
 }
