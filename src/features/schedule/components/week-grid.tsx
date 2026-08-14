@@ -4,7 +4,9 @@ import type { MonthGridCell } from '../utils/build-month-grid';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export function WeekGrid({ cells }: { cells: MonthGridCell[] }) {
+// null cells are blank padding for days outside the month — keeps the
+// Sun..Sat column alignment stable for partial weeks at month edges.
+export function WeekGrid({ cells }: { cells: (MonthGridCell | null)[] }) {
   const { t } = useTranslation();
   return (
     <div className='grid grid-cols-7 gap-1.5'>
@@ -13,31 +15,35 @@ export function WeekGrid({ cells }: { cells: MonthGridCell[] }) {
           {label}
         </div>
       ))}
-      {cells.map((cell) => (
-        <div
-          key={cell.date}
-          title={cell.isHoliday ? (cell.holidayName ?? undefined) : undefined}
-          aria-label={
-            cell.isHoliday
-              ? (cell.holidayName ?? undefined)
-              : cell.isDayOff
-                ? t('schedule.dayOff')
-                : undefined
-          }
-          className={cn(
-            'flex aspect-square items-center justify-center rounded-lg text-xs font-medium',
-            cell.isHoliday && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-            cell.isDayOff && 'bg-muted text-muted-foreground',
-            cell.isWorkingDay &&
-              !cell.isHoliday &&
-              !cell.isDayOff &&
-              'bg-primary/10 text-foreground',
-            !cell.isWorkingDay && !cell.isHoliday && !cell.isDayOff && 'text-muted-foreground/60'
-          )}
-        >
-          {Number(cell.date.slice(8, 10))}
-        </div>
-      ))}
+      {cells.map((cell, i) =>
+        !cell ? (
+          <div key={`blank-${i}`} />
+        ) : (
+          <div
+            key={cell.date}
+            title={cell.isHoliday ? (cell.holidayName ?? undefined) : undefined}
+            aria-label={
+              cell.isHoliday
+                ? (cell.holidayName ?? undefined)
+                : cell.isDayOff
+                  ? t('schedule.dayOff')
+                  : undefined
+            }
+            className={cn(
+              'flex aspect-square items-center justify-center rounded-lg text-xs font-medium',
+              cell.isHoliday && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+              cell.isDayOff && 'bg-muted text-muted-foreground',
+              cell.isWorkingDay &&
+                !cell.isHoliday &&
+                !cell.isDayOff &&
+                'bg-primary/10 text-foreground',
+              !cell.isWorkingDay && !cell.isHoliday && !cell.isDayOff && 'text-muted-foreground/60'
+            )}
+          >
+            {Number(cell.date.slice(8, 10))}
+          </div>
+        )
+      )}
     </div>
   );
 }
