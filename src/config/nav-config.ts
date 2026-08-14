@@ -73,6 +73,15 @@ export const navItems: NavItem[] = [
     items: []
   },
   {
+    title: 'Schedule',
+    url: '/dashboard/schedule',
+    icon: 'calendar',
+    isActive: false,
+    module: 'schedule',
+    hiddenForAdmin: true,
+    items: []
+  },
+  {
     title: 'Leave',
     url: '/dashboard/leave',
     icon: 'calendar',
