@@ -9,7 +9,12 @@ import '@/i18n/config';
 
 const h = vi.hoisted(() => {
   const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), 15);
+  // Seed the holiday on the 15th — unless today IS the 15th, in which case the
+  // day cell also renders the "Today" badge and `.holiday-date button span + span`
+  // picks the badge instead of the pill. Falling back to the 16th keeps the
+  // holiday off today so the pill selector stays deterministic.
+  const day = now.getDate() === 15 ? 16 : 15;
+  const d = new Date(now.getFullYear(), now.getMonth(), day);
   return {
     year: now.getFullYear(),
     dateStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
