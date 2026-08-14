@@ -10,6 +10,7 @@ import {
   shiftsQueryOptions
 } from '../api/queries';
 import { checkInFn, checkOutFn } from '../api/service';
+import { uploadSelfie } from '@/lib/storage/upload-client';
 import { getCurrentLocation, type DeviceLocation, type LocationResult } from '../utils/geolocation';
 import { LocationMap } from './location-map';
 import { SelfieCapture } from './selfie-capture';
@@ -90,8 +91,17 @@ export default function AttendanceCheckCard() {
   };
 
   const checkInMutation = useMutation({
-    mutationFn: () =>
-      checkInFn({
+    mutationFn: async () => {
+      let photoKey: string | undefined;
+      if (selfie) {
+        try {
+          photoKey = await uploadSelfie(selfie, 'attendance');
+        } catch {
+          toast.error(t('attendanceAdmin.photoUploadFailed'));
+          throw new Error('PHOTO_UPLOAD_FAILED');
+        }
+      }
+      return checkInFn({
         data: {
           locationId: selectedLocation ?? undefined,
           shiftId: selectedShift ?? undefined,
@@ -99,9 +109,10 @@ export default function AttendanceCheckCard() {
           longitude: deviceLocation?.longitude,
           accuracy: deviceLocation?.accuracy,
           capturedAt: deviceLocation?.capturedAt,
-          photo: selfie ?? undefined
+          photo: photoKey
         }
-      }),
+      });
+    },
     onSuccess: (res) => {
       if (res?.success) {
         invalidateAttendance();
@@ -113,17 +124,27 @@ export default function AttendanceCheckCard() {
   });
 
   const checkOutMutation = useMutation({
-    mutationFn: () =>
-      checkOutFn({
+    mutationFn: async () => {
+      let photoKey: string | undefined;
+      if (checkOutSelfie) {
+        try {
+          photoKey = await uploadSelfie(checkOutSelfie, 'attendance');
+        } catch {
+          toast.error(t('attendanceAdmin.photoUploadFailed'));
+          throw new Error('PHOTO_UPLOAD_FAILED');
+        }
+      }
+      return checkOutFn({
         data: {
           attendanceId: attendance!.attendance!.id,
           latitude: deviceLocation?.latitude,
           longitude: deviceLocation?.longitude,
           accuracy: deviceLocation?.accuracy,
           capturedAt: deviceLocation?.capturedAt,
-          photo: checkOutSelfie ?? undefined
+          photo: photoKey
         }
-      }),
+      });
+    },
     onSuccess: (res) => {
       if (!clearSelfieAfterSuccess(res, setCheckOutSelfie, invalidateAttendance)) {
         toast.error(errorMessage(res));

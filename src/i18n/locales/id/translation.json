@@ -953,6 +953,7 @@
     "meters": " m",
     "gpsRefreshNeeded": "Lokasi kedaluwarsa atau kurang akurat. Perbarui lokasi Anda.",
     "gpsUnavailable": "Tidak dapat mengambil lokasi. Periksa izin GPS.",
+    "photoUploadFailed": "Gagal mengunggah foto",
     "cameraUnavailable": "Kamera tidak tersedia. Periksa izin kamera.",
     "captureSelfie": "Ambil Selfie",
     "captureNow": "Ambil",

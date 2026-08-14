@@ -953,6 +953,7 @@
     "meters": " m",
     "gpsRefreshNeeded": "Location is stale or inaccurate. Refresh your location.",
     "gpsUnavailable": "Could not get your location. Check GPS permissions.",
+    "photoUploadFailed": "Photo upload failed",
     "cameraUnavailable": "Camera is not available. Check camera permissions.",
     "captureSelfie": "Capture Selfie",
     "captureNow": "Capture",
