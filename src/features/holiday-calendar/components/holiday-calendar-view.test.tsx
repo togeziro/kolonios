@@ -9,7 +9,8 @@ import '@/i18n/config';
 
 const h = vi.hoisted(() => {
   const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), 15);
+  const day = now.getDate() === 15 ? 16 : 15;
+  const d = new Date(now.getFullYear(), now.getMonth(), day);
   return {
     year: now.getFullYear(),
     dateStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
