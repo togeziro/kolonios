@@ -8,41 +8,79 @@ import {
 } from './data-table';
 import type { ExtendedColumnFilter } from '@/types/data-table';
 
-function fakeColumn(pin: string | false, size = 100) {
+type FakePinnedLeaf = { id: string; getSize: () => number };
+
+function fakeColumn({
+  pin = false,
+  size = 100,
+  id = 'name',
+  pinnedLeaves = [{ id, getSize: () => size }]
+}: {
+  pin?: false | 'start' | 'end';
+  size?: number;
+  id?: string;
+  pinnedLeaves?: FakePinnedLeaf[];
+} = {}) {
   return {
+    id,
     getIsPinned: () => pin,
-    getIsLastColumn: () => true,
-    getIsFirstColumn: () => false,
-    getStart: () => 0,
-    getAfter: () => 0,
-    getSize: () => size
+    getSize: () => size,
+    getLeafColumns: () => [{ id }],
+    table: {
+      getStartLeafColumns: () => pinnedLeaves,
+      getEndLeafColumns: () => pinnedLeaves
+    }
   };
 }
 
 describe('getCommonPinningStyles', () => {
   it('returns relative positioning when unpinned', () => {
-    const styles = getCommonPinningStyles({ column: fakeColumn(false) as never });
+    const styles = getCommonPinningStyles({ column: fakeColumn() as never });
     expect(styles.position).toBe('relative');
     expect(styles.boxShadow).toBeUndefined();
     expect(styles.width).toBe(100);
   });
 
-  it('returns sticky left styles for the last left-pinned column', () => {
-    const styles = getCommonPinningStyles({ column: fakeColumn('left') as never });
+  it('returns sticky start styles for the last start-pinned column', () => {
+    const styles = getCommonPinningStyles({ column: fakeColumn({ pin: 'start' }) as never });
     expect(styles.position).toBe('sticky');
     expect(styles.left).toBe('0px');
     expect(styles.boxShadow).toContain('inset');
   });
 
-  it('returns sticky right styles for the first right-pinned column', () => {
-    const column = {
-      ...fakeColumn('right'),
-      getIsFirstColumn: () => true,
-      getIsLastColumn: () => false
-    };
-    const styles = getCommonPinningStyles({ column: column as never });
+  it('returns sticky end styles for the first end-pinned column', () => {
+    const styles = getCommonPinningStyles({ column: fakeColumn({ pin: 'end' }) as never });
     expect(styles.position).toBe('sticky');
     expect(styles.right).toBe('0px');
+    expect(styles.boxShadow).toContain('inset');
+  });
+
+  it('offsets a start-pinned column by the width of the columns before it', () => {
+    const styles = getCommonPinningStyles({
+      column: fakeColumn({
+        pin: 'start',
+        id: 'actions',
+        pinnedLeaves: [
+          { id: 'name', getSize: () => 120 },
+          { id: 'actions', getSize: () => 80 }
+        ]
+      }) as never
+    });
+    expect(styles.left).toBe('120px');
+  });
+
+  it('offsets an end-pinned column by the width of the columns after it', () => {
+    const styles = getCommonPinningStyles({
+      column: fakeColumn({
+        pin: 'end',
+        id: 'actions',
+        pinnedLeaves: [
+          { id: 'actions', getSize: () => 80 },
+          { id: 'status', getSize: () => 100 }
+        ]
+      }) as never
+    });
+    expect(styles.right).toBe('100px');
   });
 });
 

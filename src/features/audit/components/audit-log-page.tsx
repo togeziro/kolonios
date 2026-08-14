@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
+import { useTable } from '@tanstack/react-table';
+import { appFeatures } from '@/lib/table-features';
 import { Search } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Button } from '@/components/ui/button';
@@ -34,12 +35,11 @@ export function AuditLogPage() {
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appFeatures,
     data: rows,
     columns: auditLogColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } }
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } }
   });
 
   return (

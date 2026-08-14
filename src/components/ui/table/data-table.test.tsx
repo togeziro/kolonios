@@ -1,19 +1,20 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { useTable } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
+import { appFeatures, type AppFeatures } from '@/lib/table-features';
 import { DataTable } from './data-table';
 
-const columns: ColumnDef<{ id: number; name: string }>[] = [
+const columns: ColumnDef<AppFeatures, { id: number; name: string }>[] = [
   { accessorKey: 'name', header: 'Name', cell: ({ row }) => row.original.name }
 ];
 
 function TestTable() {
-  const table = useReactTable({
+  const table = useTable<AppFeatures, { id: number; name: string }>({
+    features: appFeatures,
     data: [{ id: 1, name: 'Ada' }],
-    columns,
-    getCoreRowModel: getCoreRowModel()
+    columns
   });
   return (
     <DataTable table={table} tableClassName='min-w-[600px]' rowClassName='custom-row'>

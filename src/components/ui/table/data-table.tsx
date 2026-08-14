@@ -11,17 +11,19 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { getCommonPinningStyles } from '@/lib/data-table';
+import type { RowData } from '@tanstack/react-table';
+import type { AppReactTable } from '@/lib/table-features';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-interface DataTableProps<TData> extends React.ComponentProps<'div'> {
-  table: TanstackTable<TData>;
+interface DataTableProps<TData extends RowData> extends React.ComponentProps<'div'> {
+  table: AppReactTable<TData>;
   actionBar?: React.ReactNode;
   tableClassName?: string;
   rowClassName?: string;
 }
 
-export function DataTable<TData>({
+export function DataTable<TData extends RowData>({
   table,
   actionBar,
   tableClassName,

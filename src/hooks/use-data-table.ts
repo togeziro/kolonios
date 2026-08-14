@@ -1,25 +1,20 @@
 import {
   type ColumnFiltersState,
   type ColumnPinningState,
+  type ColumnVisibilityState,
   type PaginationState,
+  type RowData,
   type RowSelectionState,
   type SortingState,
   type TableOptions,
   type TableState,
   type Updater,
-  type VisibilityState,
-  getCoreRowModel,
-  getFacetedMinMaxValues,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable
+  useTable
 } from '@tanstack/react-table';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import * as React from 'react';
 
+import { appFeatures, type AppFeatures } from '@/lib/table-features';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import {
   buildFilterSearchParams,
@@ -32,19 +27,14 @@ import type { SearchParams, NavigateWithSearch } from '@/types';
 
 const DEBOUNCE_MS = 300;
 
-interface UseDataTableProps<TData>
+interface UseDataTableProps<TData extends RowData>
   extends
     Omit<
-      TableOptions<TData>,
-      | 'state'
-      | 'pageCount'
-      | 'getCoreRowModel'
-      | 'manualFiltering'
-      | 'manualPagination'
-      | 'manualSorting'
+      TableOptions<AppFeatures, TData>,
+      'state' | 'pageCount' | 'features' | 'manualFiltering' | 'manualPagination' | 'manualSorting'
     >,
-    Required<Pick<TableOptions<TData>, 'pageCount'>> {
-  initialState?: Omit<Partial<TableState>, 'sorting'> & {
+    Required<Pick<TableOptions<AppFeatures, TData>, 'pageCount'>> {
+  initialState?: Omit<Partial<TableState<AppFeatures>>, 'sorting'> & {
     sorting?: ExtendedColumnSort<TData>[];
   };
   history?: 'push' | 'replace';
@@ -57,7 +47,7 @@ interface UseDataTableProps<TData>
   startTransition?: React.TransitionStartFunction;
 }
 
-export function useDataTable<TData>(props: UseDataTableProps<TData>) {
+export function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   const {
     columns,
     pageCount = -1,
@@ -75,11 +65,11 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
     initialState?.rowSelection ?? {}
   );
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
+  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>(
     initialState?.columnVisibility ?? {}
   );
   const [columnPinning, setColumnPinning] = React.useState<ColumnPinningState>(
-    initialState?.columnPinning ?? {}
+    initialState?.columnPinning ?? { start: [], end: [] }
   );
 
   // Read pagination from search params
@@ -210,8 +200,9 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     [debouncedSetFilterValues, filterableColumns, enableAdvancedFilter]
   );
 
-  const table = useReactTable({
+  const table = useTable<AppFeatures, TData>({
     ...tableProps,
+    features: appFeatures,
     columns,
     initialState,
     pageCount,
@@ -234,13 +225,6 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     onColumnFiltersChange,
     onColumnVisibilityChange: setColumnVisibility,
     onColumnPinningChange: setColumnPinning,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true

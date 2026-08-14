@@ -1,8 +1,9 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import type { AdminAttendanceReportRow } from '@/lib/db/attendance';
 import { Badge } from '@/components/ui/badge';
 
-export const adminAttendanceColumns: ColumnDef<AdminAttendanceReportRow>[] = [
+export const adminAttendanceColumns: ColumnDef<AppFeatures, AdminAttendanceReportRow>[] = [
   {
     id: 'date',
     accessorKey: 'attendance.date',

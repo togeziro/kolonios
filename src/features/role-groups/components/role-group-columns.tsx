@@ -1,4 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import { MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { Link } from '@tanstack/react-router';
 import { formatDate } from '@/lib/format';
 import type { RoleGroup } from '../api/types';
 
-export const roleGroupColumns: ColumnDef<RoleGroup>[] = [
+export const roleGroupColumns: ColumnDef<AppFeatures, RoleGroup>[] = [
   {
     id: 'search',
     accessorFn: (row) => [row.name, row.description].join(' '),

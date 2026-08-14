@@ -4,12 +4,13 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Customer } from '../../api/types';
 import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import { Icons } from '@/components/icons';
 import { formatDate } from '@/lib/format';
 import { CellAction } from './cell-action';
 import { STATUS_OPTIONS } from './options';
 
-export const columns: ColumnDef<Customer>[] = [
+export const columns: ColumnDef<AppFeatures, Customer>[] = [
   {
     id: 'select',
     size: 40,
@@ -43,7 +44,7 @@ export const columns: ColumnDef<Customer>[] = [
   {
     id: 'customer_code',
     accessorKey: 'customer_code',
-    header: ({ column }: { column: Column<Customer, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Customer, unknown> }) => (
       <DataTableColumnHeader column={column} title='customer.code' />
     ),
     cell: ({ cell }) => (
@@ -60,7 +61,7 @@ export const columns: ColumnDef<Customer>[] = [
   {
     id: 'full_name',
     accessorKey: 'full_name',
-    header: ({ column }: { column: Column<Customer, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Customer, unknown> }) => (
       <DataTableColumnHeader column={column} title='customer.name' />
     ),
     cell: ({ row }) => (
@@ -82,14 +83,14 @@ export const columns: ColumnDef<Customer>[] = [
   },
   {
     accessorKey: 'email',
-    header: ({ column }: { column: Column<Customer, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Customer, unknown> }) => (
       <DataTableColumnHeader column={column} title='customer.email' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Customer['email']>()}</div>
   },
   {
     accessorKey: 'phone',
-    header: ({ column }: { column: Column<Customer, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Customer, unknown> }) => (
       <DataTableColumnHeader column={column} title='customer.phone' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Customer['phone']>()}</div>
@@ -98,7 +99,7 @@ export const columns: ColumnDef<Customer>[] = [
     id: 'status',
     accessorKey: 'status',
     enableSorting: false,
-    header: ({ column }: { column: Column<Customer, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Customer, unknown> }) => (
       <DataTableColumnHeader column={column} title='customer.status' />
     ),
     cell: ({ cell }) => {
@@ -114,7 +115,7 @@ export const columns: ColumnDef<Customer>[] = [
   },
   {
     accessorKey: 'created_at',
-    header: ({ column }: { column: Column<Customer, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Customer, unknown> }) => (
       <DataTableColumnHeader column={column} title='table.createdAt' />
     ),
     cell: ({ cell }) => {

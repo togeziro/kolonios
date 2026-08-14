@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-header';
 import type { NationalHoliday } from '@/lib/db/schema/attendance';
 import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import { Icons } from '@/components/icons';
 import { Translation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
@@ -25,11 +26,11 @@ function SourceBadge({ source }: { source: NationalHoliday['source'] }) {
   );
 }
 
-export const columns: ColumnDef<NationalHoliday>[] = [
+export const columns: ColumnDef<AppFeatures, NationalHoliday>[] = [
   {
     id: 'date',
     accessorKey: 'date',
-    header: ({ column }: { column: Column<NationalHoliday, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, NationalHoliday, unknown> }) => (
       <DataTableColumnHeader column={column} title='holiday.date' />
     ),
     cell: ({ cell }) => {
@@ -48,7 +49,7 @@ export const columns: ColumnDef<NationalHoliday>[] = [
   {
     id: 'name',
     accessorKey: 'name',
-    header: ({ column }: { column: Column<NationalHoliday, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, NationalHoliday, unknown> }) => (
       <DataTableColumnHeader column={column} title='holiday.name' />
     ),
     cell: ({ row }) => (
@@ -73,7 +74,7 @@ export const columns: ColumnDef<NationalHoliday>[] = [
     id: 'is_recurring',
     accessorKey: 'is_recurring',
     enableSorting: false,
-    header: ({ column }: { column: Column<NationalHoliday, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, NationalHoliday, unknown> }) => (
       <DataTableColumnHeader column={column} title='holiday.recurring' />
     ),
     cell: ({ cell }) => {
@@ -89,7 +90,7 @@ export const columns: ColumnDef<NationalHoliday>[] = [
     id: 'source',
     accessorKey: 'source',
     enableSorting: false,
-    header: ({ column }: { column: Column<NationalHoliday, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, NationalHoliday, unknown> }) => (
       <DataTableColumnHeader column={column} title='holiday.source' />
     ),
     cell: ({ cell }) => {

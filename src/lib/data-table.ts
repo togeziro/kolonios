@@ -1,26 +1,56 @@
 import type { ExtendedColumnFilter, FilterOperator, FilterVariant } from '@/types/data-table';
-import type { Column } from '@tanstack/react-table';
+import type { Column, RowData } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 
 import { dataTableConfig } from '@/config/data-table';
 
-export function getCommonPinningStyles<TData>({
+export function getCommonPinningStyles<TData extends RowData>({
   column
 }: {
-  column: Column<TData>;
+  column: Column<AppFeatures, TData>;
 }): React.CSSProperties {
   const isPinned = column.getIsPinned();
   const isCompactActionColumn = column.id === 'actions' && column.getSize() <= 48;
-  const isLastLeftPinnedColumn = isPinned === 'left' && column.getIsLastColumn('left');
-  const isFirstRightPinnedColumn = isPinned === 'right' && column.getIsFirstColumn('right');
+
+  let left: number | undefined;
+  let right: number | undefined;
+  let boxShadow: string | undefined;
+
+  if (isPinned) {
+    const leafId = column.getLeafColumns()[0]?.id;
+    const pinnedLeaves =
+      isPinned === 'start' ? column.table.getStartLeafColumns() : column.table.getEndLeafColumns();
+    const pinnedIds = pinnedLeaves.map((leaf) => leaf.id);
+
+    let offset = 0;
+    if (isPinned === 'start') {
+      for (const leaf of pinnedLeaves) {
+        if (leaf.id === leafId) break;
+        offset += leaf.getSize();
+      }
+      left = offset;
+    } else {
+      for (let i = pinnedLeaves.length - 1; i >= 0; i--) {
+        if (pinnedLeaves[i]?.id === leafId) break;
+        offset += pinnedLeaves[i]?.getSize() ?? 0;
+      }
+      right = offset;
+    }
+
+    const isLastStartPinnedColumn =
+      isPinned === 'start' && pinnedIds[pinnedIds.length - 1] === leafId;
+    const isFirstEndPinnedColumn = isPinned === 'end' && pinnedIds[0] === leafId;
+    boxShadow = isLastStartPinnedColumn
+      ? '-5px 0 5px -5px var(--border) inset'
+      : isFirstEndPinnedColumn
+        ? '5px 0 5px -5px var(--border) inset'
+        : undefined;
+  }
 
   return {
-    boxShadow: isLastLeftPinnedColumn
-      ? '-5px 0 5px -5px var(--border) inset'
-      : isFirstRightPinnedColumn
-        ? '5px 0 5px -5px var(--border) inset'
-        : undefined,
-    left: isPinned === 'left' ? `${column.getStart('left')}px` : undefined,
-    right: isPinned === 'right' ? `${column.getAfter('right')}px` : undefined,
+    boxShadow,
+    left: left !== undefined ? `${left}px` : undefined,
+    right: right !== undefined ? `${right}px` : undefined,
     position: isPinned ? 'sticky' : 'relative',
     background: isPinned ? 'var(--background)' : undefined,
     width: isCompactActionColumn ? '1%' : column.getSize(),

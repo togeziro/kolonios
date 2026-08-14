@@ -11,6 +11,7 @@ import {
 import { Icons } from '@/components/icons';
 import { formatCurrency } from '@/lib/format';
 import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 
 export interface DesignationRow {
   id: number;
@@ -28,12 +29,12 @@ export function getDesignationColumns(
   onEdit: (row: DesignationRow) => void,
   onDelete: (row: DesignationRow) => void,
   t: (key: string) => string
-): ColumnDef<DesignationRow>[] {
+): ColumnDef<AppFeatures, DesignationRow>[] {
   return [
     {
       id: 'code',
       accessorKey: 'code',
-      header: ({ column }: { column: Column<DesignationRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DesignationRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('common.code')} />
       ),
       cell: ({ cell }) => <div className='font-mono text-xs'>{cell.getValue<string>()}</div>
@@ -41,7 +42,7 @@ export function getDesignationColumns(
     {
       id: 'name',
       accessorKey: 'name',
-      header: ({ column }: { column: Column<DesignationRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DesignationRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('common.name')} />
       ),
       cell: ({ row }) => (
@@ -54,14 +55,14 @@ export function getDesignationColumns(
     {
       id: 'department_name',
       accessorKey: 'department_name',
-      header: ({ column }: { column: Column<DesignationRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DesignationRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('masterdata.department')} />
       )
     },
     {
       id: 'base_salary',
       accessorKey: 'base_salary',
-      header: ({ column }: { column: Column<DesignationRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DesignationRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('masterdata.baseSalaryRp')} />
       ),
       cell: ({ cell }) => {
@@ -72,7 +73,7 @@ export function getDesignationColumns(
     {
       id: 'is_active',
       accessorKey: 'is_active',
-      header: ({ column }: { column: Column<DesignationRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DesignationRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('common.status')} />
       ),
       cell: ({ cell }) => {

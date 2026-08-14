@@ -1,13 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
+import { appFeatures } from '@/lib/table-features';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  type SortingState,
-  type ColumnPinningState,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable
-} from '@tanstack/react-table';
+import { type SortingState, type ColumnPinningState, useTable } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { designationsQueryOptions, departmentsQueryOptions } from '../api/queries';
@@ -126,17 +120,15 @@ export default function DesignationManagePage() {
     [handleEdit, handleDelete, t]
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appFeatures,
     data: displayData,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     initialState: {
-      pagination: { pageSize: 10 },
-      columnPinning: { right: ['actions'] } as ColumnPinningState
+      pagination: { pageIndex: 0, pageSize: 10 },
+      columnPinning: { start: [], end: ['actions'] } as ColumnPinningState
     }
   });
 

@@ -4,12 +4,13 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Employee } from '../../api/types';
 import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import { Icons } from '@/components/icons';
 import { formatDate } from '@/lib/format';
 import { CellAction } from './cell-action';
 import { STATUS_OPTIONS } from './options';
 
-export const columns: ColumnDef<Employee>[] = [
+export const columns: ColumnDef<AppFeatures, Employee>[] = [
   {
     id: 'select',
     size: 40,
@@ -43,7 +44,7 @@ export const columns: ColumnDef<Employee>[] = [
   {
     id: 'employee_code',
     accessorKey: 'employee_code',
-    header: ({ column }: { column: Column<Employee, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Employee, unknown> }) => (
       <DataTableColumnHeader column={column} title='common.code' />
     ),
     cell: ({ cell }) => (
@@ -60,7 +61,7 @@ export const columns: ColumnDef<Employee>[] = [
   {
     id: 'full_name',
     accessorKey: 'full_name',
-    header: ({ column }: { column: Column<Employee, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Employee, unknown> }) => (
       <DataTableColumnHeader column={column} title='common.name' />
     ),
     cell: ({ row }) => (
@@ -83,7 +84,7 @@ export const columns: ColumnDef<Employee>[] = [
   {
     id: 'department_name',
     accessorKey: 'department_name',
-    header: ({ column }: { column: Column<Employee, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Employee, unknown> }) => (
       <DataTableColumnHeader column={column} title='employee.department' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Employee['department_name']>()}</div>
@@ -91,14 +92,14 @@ export const columns: ColumnDef<Employee>[] = [
   {
     id: 'designation_name',
     accessorKey: 'designation_name',
-    header: ({ column }: { column: Column<Employee, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Employee, unknown> }) => (
       <DataTableColumnHeader column={column} title='employee.designation' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Employee['designation_name']>()}</div>
   },
   {
     accessorKey: 'phone',
-    header: ({ column }: { column: Column<Employee, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Employee, unknown> }) => (
       <DataTableColumnHeader column={column} title='common.phone' />
     ),
     cell: ({ cell }) => <div>{cell.getValue<Employee['phone']>()}</div>
@@ -107,7 +108,7 @@ export const columns: ColumnDef<Employee>[] = [
     id: 'status',
     accessorKey: 'status',
     enableSorting: false,
-    header: ({ column }: { column: Column<Employee, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Employee, unknown> }) => (
       <DataTableColumnHeader column={column} title='employee.status' />
     ),
     cell: ({ cell }) => {
@@ -123,7 +124,7 @@ export const columns: ColumnDef<Employee>[] = [
   },
   {
     accessorKey: 'created_at',
-    header: ({ column }: { column: Column<Employee, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, Employee, unknown> }) => (
       <DataTableColumnHeader column={column} title='table.createdAt' />
     ),
     cell: ({ cell }) => {

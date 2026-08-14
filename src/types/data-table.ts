@@ -1,10 +1,10 @@
 import type { DataTableConfig } from '@/config/data-table';
 import type { FilterItemSchema } from '@/lib/parsers';
-import type { ColumnSort, Row, RowData } from '@tanstack/react-table';
+import type { Row, RowData, TableFeatures } from '@tanstack/react-table';
 
 declare module '@tanstack/react-table' {
   // biome-ignore lint/correctness/noUnusedVariables: Interface type parameters required by @tanstack/react-table
-  interface ColumnMeta<TData extends RowData, TValue> {
+  interface ColumnMeta<TFeatures extends TableFeatures, TData extends RowData, TValue> {
     label?: string;
     placeholder?: string;
     variant?: FilterVariant;
@@ -26,15 +26,16 @@ export type FilterOperator = DataTableConfig['operators'][number];
 export type FilterVariant = DataTableConfig['filterVariants'][number];
 export type JoinOperator = DataTableConfig['joinOperators'][number];
 
-export interface ExtendedColumnSort<TData> extends Omit<ColumnSort, 'id'> {
+export interface ExtendedColumnSort<TData> {
   id: Extract<keyof TData, string>;
+  desc: boolean;
 }
 
 export interface ExtendedColumnFilter<TData> extends FilterItemSchema {
   id: Extract<keyof TData, string>;
 }
 
-export interface DataTableRowAction<TData> {
-  row: Row<TData>;
+export interface DataTableRowAction<TData extends RowData> {
+  row: Row<TableFeatures, TData>;
   variant: 'update' | 'delete';
 }

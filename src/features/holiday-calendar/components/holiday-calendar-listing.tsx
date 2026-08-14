@@ -1,12 +1,6 @@
 import { useState } from 'react';
-import {
-  type ColumnFiltersState,
-  type ColumnPinningState,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  useReactTable
-} from '@tanstack/react-table';
+import { appFeatures } from '@/lib/table-features';
+import { type ColumnFiltersState, type ColumnPinningState, useTable } from '@tanstack/react-table';
 import { CalendarX2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -58,7 +52,8 @@ export function HolidayCalendarListing() {
 
   const holidays = (data as { holidays?: NationalHoliday[] } | undefined)?.holidays ?? [];
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appFeatures,
     data: holidays,
     columns,
     defaultColumn: {
@@ -68,12 +63,9 @@ export function HolidayCalendarListing() {
     },
     state: { columnFilters },
     onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      columnPinning: { right: ['actions'] } as ColumnPinningState,
-      pagination: { pageSize: 12 }
+      columnPinning: { start: [], end: ['actions'] } as ColumnPinningState,
+      pagination: { pageIndex: 0, pageSize: 12 }
     }
   });
 

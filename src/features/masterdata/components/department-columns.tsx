@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/icons';
 import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 
 export interface DepartmentRow {
   id: number;
@@ -22,12 +23,12 @@ export function getDepartmentColumns(
   onEdit: (row: DepartmentRow) => void,
   onDelete: (row: DepartmentRow) => void,
   t: (key: string) => string
-): ColumnDef<DepartmentRow>[] {
+): ColumnDef<AppFeatures, DepartmentRow>[] {
   return [
     {
       id: 'code',
       accessorKey: 'code',
-      header: ({ column }: { column: Column<DepartmentRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DepartmentRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('common.code')} />
       ),
       cell: ({ cell }) => <div className='font-mono text-xs'>{cell.getValue<string>()}</div>
@@ -35,7 +36,7 @@ export function getDepartmentColumns(
     {
       id: 'name',
       accessorKey: 'name',
-      header: ({ column }: { column: Column<DepartmentRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DepartmentRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('common.name')} />
       ),
       cell: ({ row }) => (
@@ -48,7 +49,7 @@ export function getDepartmentColumns(
     {
       id: 'description',
       accessorKey: 'description',
-      header: ({ column }: { column: Column<DepartmentRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DepartmentRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('masterdata.description')} />
       ),
       cell: ({ cell }) => (
@@ -58,7 +59,7 @@ export function getDepartmentColumns(
     {
       id: 'is_active',
       accessorKey: 'is_active',
-      header: ({ column }: { column: Column<DepartmentRow, unknown> }) => (
+      header: ({ column }: { column: Column<AppFeatures, DepartmentRow, unknown> }) => (
         <DataTableColumnHeader column={column} title={t('common.status')} />
       ),
       cell: ({ cell }) => {

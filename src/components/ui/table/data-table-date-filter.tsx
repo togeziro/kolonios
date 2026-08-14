@@ -1,4 +1,5 @@
-import type { Column } from '@tanstack/react-table';
+import type { Column, RowData } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/components/icons';
 import * as React from 'react';
@@ -45,13 +46,13 @@ function parseColumnFilterValue(value: unknown) {
   return [];
 }
 
-interface DataTableDateFilterProps<TData> {
-  column: Column<TData, unknown>;
+interface DataTableDateFilterProps<TData extends RowData> {
+  column: Column<AppFeatures, TData, unknown>;
   title?: string;
   multiple?: boolean;
 }
 
-export function DataTableDateFilter<TData>({
+export function DataTableDateFilter<TData extends RowData>({
   column,
   title,
   multiple

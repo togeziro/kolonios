@@ -1,5 +1,6 @@
 import type { Option } from '@/types/data-table';
-import type { Column } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
+import type { Column, RowData } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/components/icons';
 
@@ -21,14 +22,14 @@ import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { CheckIcon } from '@radix-ui/react-icons';
 
-interface DataTableFacetedFilterProps<TData, TValue> {
-  column?: Column<TData, TValue>;
+interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
+  column?: Column<AppFeatures, TData, TValue>;
   title?: string;
   options: Option[];
   multiple?: boolean;
 }
 
-export function DataTableFacetedFilter<TData, TValue>({
+export function DataTableFacetedFilter<TData extends RowData, TValue>({
   column,
   title,
   options,

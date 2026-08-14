@@ -1,12 +1,6 @@
 import { useState } from 'react';
-import {
-  type ColumnFiltersState,
-  type ColumnPinningState,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  useReactTable
-} from '@tanstack/react-table';
+import { appFeatures } from '@/lib/table-features';
+import { type ColumnFiltersState, type ColumnPinningState, useTable } from '@tanstack/react-table';
 import { Search, AlertTriangle, ChevronRight, FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +31,8 @@ export default function RoleGroupListingPage() {
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appFeatures,
     data: groups,
     columns: roleGroupColumns,
     defaultColumn: {
@@ -47,13 +42,10 @@ export default function RoleGroupListingPage() {
     },
     state: { columnFilters },
     onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       columnVisibility: { search: false },
-      columnPinning: { right: ['actions'] } as ColumnPinningState,
-      pagination: { pageSize: 12 }
+      columnPinning: { start: [], end: ['actions'] } as ColumnPinningState,
+      pagination: { pageIndex: 0, pageSize: 12 }
     }
   });
 

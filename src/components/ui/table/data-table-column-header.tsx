@@ -1,6 +1,7 @@
-import type { Column } from '@tanstack/react-table';
+import type { Column, RowData } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/components/icons';
+import type { AppFeatures } from '@/lib/table-features';
 
 import {
   DropdownMenu,
@@ -12,14 +13,14 @@ import {
 import { cn } from '@/lib/utils';
 import { ChevronDownIcon, ChevronUpIcon, CaretSortIcon, Cross2Icon } from '@radix-ui/react-icons';
 
-interface DataTableColumnHeaderProps<TData, TValue> extends React.ComponentProps<
+interface DataTableColumnHeaderProps<TData extends RowData, TValue> extends React.ComponentProps<
   typeof DropdownMenuTrigger
 > {
-  column: Column<TData, TValue>;
+  column: Column<AppFeatures, TData, TValue>;
   title: string;
 }
 
-export function DataTableColumnHeader<TData, TValue>({
+export function DataTableColumnHeader<TData extends RowData, TValue>({
   column,
   title,
   className,

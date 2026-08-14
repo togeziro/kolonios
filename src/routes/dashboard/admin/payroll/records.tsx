@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { useTable } from '@tanstack/react-table';
+import { appFeatures } from '@/lib/table-features';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -128,15 +129,15 @@ function RecordsPage() {
       setAdjustments([]);
     }
   });
-  const table = useReactTable({
+  const table = useTable({
     data: records,
     columns,
-    getCoreRowModel: getCoreRowModel(),
+    features: appFeatures,
     manualPagination: true,
     pageCount,
     state: {
       pagination: { pageIndex: (filters.page ?? 1) - 1, pageSize: filters.limit ?? 25 },
-      columnPinning: { right: ['actions'] }
+      columnPinning: { start: [], end: ['actions'] }
     },
     onPaginationChange: (updater) => {
       const next =

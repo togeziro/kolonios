@@ -1,4 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import type { TFunction } from 'i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ export function createPayrollRecordColumns(options: {
   onAdjust: (row: RecordRow) => void;
   onOverride: (row: RecordRow) => void;
   onDetail: (row: RecordRow) => void;
-}): ColumnDef<RecordRow>[] {
+}): ColumnDef<AppFeatures, RecordRow>[] {
   const { t } = options;
   return [
     {

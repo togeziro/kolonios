@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { useTable } from '@tanstack/react-table';
+import { appFeatures } from '@/lib/table-features';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -63,10 +64,10 @@ export function AdminAttendanceReport() {
 
   const records = data?.records ?? [];
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appFeatures,
     data: records,
     columns: adminAttendanceColumns,
-    getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     pageCount: totalPages,
     state: {

@@ -1,8 +1,9 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import type { AuditLogListItem } from '../api/service';
 import { formatDate } from '@/lib/format';
 
-export const auditLogColumns: ColumnDef<AuditLogListItem>[] = [
+export const auditLogColumns: ColumnDef<AppFeatures, AuditLogListItem>[] = [
   {
     id: 'time',
     accessorKey: 'createdAt',

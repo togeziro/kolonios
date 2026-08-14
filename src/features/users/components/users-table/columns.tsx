@@ -5,12 +5,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import type { User } from '../../api/types';
 import { Column, ColumnDef } from '@tanstack/react-table';
+import type { AppFeatures } from '@/lib/table-features';
 import { Icons } from '@/components/icons';
 import { CellAction } from './cell-action';
 import { AUTH_ROLE_OPTIONS } from './options';
 import { getColorForName } from '@/lib/avatar-color';
 
-export const columns: ColumnDef<User>[] = [
+export const columns: ColumnDef<AppFeatures, User>[] = [
   {
     id: 'select',
     size: 40,
@@ -44,7 +45,7 @@ export const columns: ColumnDef<User>[] = [
   {
     id: 'name',
     accessorKey: 'name',
-    header: ({ column }: { column: Column<User, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, User, unknown> }) => (
       <DataTableColumnHeader column={column} title='common.name' />
     ),
     cell: ({ row }) => (
@@ -68,7 +69,7 @@ export const columns: ColumnDef<User>[] = [
     id: 'role',
     accessorKey: 'role',
     enableSorting: false,
-    header: ({ column }: { column: Column<User, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, User, unknown> }) => (
       <DataTableColumnHeader column={column} title='user.role' />
     ),
     cell: ({ row }) => {
@@ -91,7 +92,7 @@ export const columns: ColumnDef<User>[] = [
   },
   {
     accessorKey: 'status',
-    header: ({ column }: { column: Column<User, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, User, unknown> }) => (
       <DataTableColumnHeader column={column} title='user.status' />
     ),
     cell: ({ cell }) => {
@@ -102,7 +103,7 @@ export const columns: ColumnDef<User>[] = [
   {
     id: 'created_at',
     accessorFn: (row) => new Date(row.created_at).getTime(),
-    header: ({ column }: { column: Column<User, unknown> }) => (
+    header: ({ column }: { column: Column<AppFeatures, User, unknown> }) => (
       <DataTableColumnHeader column={column} title='user.joinedDate' />
     ),
     cell: ({ row }) => (

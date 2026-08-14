@@ -61,7 +61,7 @@ export function UsersTable() {
     shallow: true,
     debounceMs: 500,
     initialState: {
-      columnPinning: { right: ['actions'] }
+      columnPinning: { start: [], end: ['actions'] }
     }
   });
 

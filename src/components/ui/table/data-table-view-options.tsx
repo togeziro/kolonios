@@ -1,4 +1,5 @@
-import type { Table } from '@tanstack/react-table';
+import type { RowData, Table } from '@tanstack/react-table';
+import type { AppReactTable } from '@/lib/table-features';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -15,16 +16,19 @@ import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { CheckIcon } from '@radix-ui/react-icons';
 
-interface DataTableViewOptionsProps<TData> {
-  table: Table<TData>;
+interface DataTableViewOptionsProps<TData extends RowData> {
+  table: AppReactTable<TData>;
 }
 
-interface ColumnVisibilityMenuProps<TData> {
-  table: Table<TData>;
+interface ColumnVisibilityMenuProps<TData extends RowData> {
+  table: AppReactTable<TData>;
   trigger?: React.ReactNode;
 }
 
-export function ColumnVisibilityMenu<TData>({ table, trigger }: ColumnVisibilityMenuProps<TData>) {
+export function ColumnVisibilityMenu<TData extends RowData>({
+  table,
+  trigger
+}: ColumnVisibilityMenuProps<TData>) {
   const { t } = useTranslation();
 
   const columns = React.useMemo(
@@ -72,7 +76,9 @@ export function ColumnVisibilityMenu<TData>({ table, trigger }: ColumnVisibility
   );
 }
 
-export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps<TData>) {
+export function DataTableViewOptions<TData extends RowData>({
+  table
+}: DataTableViewOptionsProps<TData>) {
   const { t } = useTranslation();
   return (
     <div className='ml-auto hidden lg:block'>
