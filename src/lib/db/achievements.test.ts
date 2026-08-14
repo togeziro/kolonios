@@ -3,6 +3,7 @@ import { getAchievementData } from './achievements';
 import { db } from '@/lib/db';
 import { employeeShifts } from './schema/attendance';
 import { seedUser, resetAllTables, seedTicket } from '@/test-utils/db';
+import { businessDateInTimeZone } from '@/lib/dates';
 
 const TEST_USER_ID = 'test-user-att-123';
 
@@ -99,5 +100,35 @@ describe('getAchievementData', () => {
     ]);
     const result = await getAchievementData(TEST_USER_ID);
     expect(result.monthNightOwlCheckOuts).toBe(2);
+  });
+
+  it('computes a streak of consecutive present days ending today', async () => {
+    const today = businessDateInTimeZone(new Date());
+    const [y, m, d] = today.split('-').map(Number);
+    const daysAgo = (n: number) => {
+      const dt = new Date(y, m - 1, d);
+      dt.setDate(dt.getDate() - n);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    };
+    await db.insert(employeeShifts).values([
+      { user_id: TEST_USER_ID, date: daysAgo(0), attendance_status: 'present' },
+      { user_id: TEST_USER_ID, date: daysAgo(1), attendance_status: 'present' },
+      { user_id: TEST_USER_ID, date: daysAgo(2), attendance_status: 'present' },
+      { user_id: TEST_USER_ID, date: daysAgo(5), attendance_status: 'absent' }
+    ]);
+    const result = await getAchievementData(TEST_USER_ID);
+    expect(result.currentStreak).toBe(3);
+    expect(result.bestStreak).toBe(3);
+  });
+
+  it('counts tickets completed this week', async () => {
+    await seedTicket({
+      task_type: 'maintenance',
+      status: 'completed',
+      assigned_to: TEST_USER_ID,
+      completed_at: new Date()
+    });
+    const result = await getAchievementData(TEST_USER_ID);
+    expect(result.weekTasksCompleted).toBe(1);
   });
 });

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { employeeShifts } from '@/lib/db/schema/attendance';
 import { tickets } from '@/lib/db/schema/tickets';
+import { businessDateInTimeZone } from '@/lib/dates';
 import { and, eq, gte, lte } from 'drizzle-orm';
 
 export type AchievementData = {
@@ -25,25 +26,27 @@ function dateStr(d: Date): string {
 }
 
 function businessDateNow(): string {
-  return dateStr(new Date());
+  return businessDateInTimeZone(new Date());
 }
 
 function getMonthStart(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-01`;
+  const bd = businessDateInTimeZone(new Date());
+  return `${bd.slice(0, 7)}-01`;
 }
 
 function getMonthEnd(): string {
-  const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(lastDay)}`;
+  const bd = businessDateInTimeZone(new Date());
+  const [y, m] = bd.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return `${bd.slice(0, 7)}-${pad2(lastDay)}`;
 }
 
 function getWeekStart(): Date {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.getFullYear(), now.getMonth(), diff);
+  const bd = businessDateInTimeZone(new Date());
+  const [y, m, d] = bd.split('-').map(Number);
+  const day = new Date(y, m - 1, d).getDay();
+  const diff = d - day + (day === 0 ? -6 : 1);
+  const monday = new Date(y, m - 1, diff);
   monday.setHours(0, 0, 0, 0);
   return monday;
 }
@@ -55,7 +58,9 @@ export async function getAchievementData(userId: string): Promise<AchievementDat
   const weekStart = getWeekStart();
 
   // Attendance records for last 90 days (streak + monthly stats + week dots)
-  const ninetyDaysAgo = new Date();
+  const bd = businessDateInTimeZone(new Date());
+  const [y, m, day] = bd.split('-').map(Number);
+  const ninetyDaysAgo = new Date(y, m - 1, day);
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   const ninetyDaysAgoStr = dateStr(ninetyDaysAgo);
 
