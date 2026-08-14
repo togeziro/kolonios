@@ -6,6 +6,7 @@ import {
   tickets,
   ticketLegs,
   ticketMaterials,
+  ticketPhotos,
   taskRequirements,
   employeeSkills
 } from './schema/tickets';
@@ -17,13 +18,15 @@ import type {
   TicketDetail,
   TicketLeg,
   TicketMaterial,
+  TicketPhoto,
   TicketListFilters,
   TicketListResponse,
   TicketDetailResponse,
   TicketActionResponse,
   CreateTicketResponse,
   NewTicketInput,
-  TicketDomain
+  TicketDomain,
+  WorkSessionSubmitInput
 } from '@/features/tickets/api/types';
 
 export const MAX_ACTIVE_TICKETS = 3;
@@ -138,6 +141,21 @@ async function loadMaterials(ticketId: number): Promise<TicketMaterial[]> {
   }));
 }
 
+async function loadPhotos(ticketId: number): Promise<TicketPhoto[]> {
+  const rows = await db
+    .select({
+      id: ticketPhotos.id,
+      legId: ticketPhotos.leg_id,
+      fileUrl: ticketPhotos.file_url,
+      caption: ticketPhotos.caption
+    })
+    .from(ticketPhotos)
+    .innerJoin(ticketLegs, eq(ticketPhotos.leg_id, ticketLegs.id))
+    .where(eq(ticketLegs.ticket_id, ticketId))
+    .orderBy(asc(ticketPhotos.id));
+  return rows;
+}
+
 async function getEligibilityProfile(userId: string) {
   const [employee, skillRows] = await Promise.all([
     db.select().from(employees).where(eq(employees.id, userId)).limit(1),
@@ -231,6 +249,7 @@ export async function getTicketDetail(
       ...ticket,
       legs: await loadLegs(ticketId),
       materials: await loadMaterials(ticketId),
+      photos: await loadPhotos(ticketId),
       requesterId: row.requester_id,
       createdAt: row.created_at.toISOString()
     };
@@ -288,6 +307,7 @@ export async function createTicket(
         ...ticket,
         legs: await loadLegs(row.id),
         materials: await loadMaterials(row.id),
+        photos: await loadPhotos(row.id),
         requesterId: row.requester_id,
         createdAt: row.created_at.toISOString()
       }
@@ -470,5 +490,88 @@ export async function completeTicket(
     };
   } catch (e) {
     mapDbError(e, 'tickets.completeTicket');
+  }
+}
+
+export async function submitWorkSession(
+  userId: string,
+  ticketId: number,
+  input: WorkSessionSubmitInput
+): Promise<TicketActionResponse> {
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [ticket] = await tx
+        .select()
+        .from(tickets)
+        .where(
+          and(
+            eq(tickets.id, ticketId),
+            eq(tickets.taken_by, userId),
+            eq(tickets.status, 'in_progress')
+          )
+        )
+        .limit(1);
+      if (!ticket) return { success: false, message: 'Ticket not found or not in progress by you' };
+
+      const legs = await tx
+        .select()
+        .from(ticketLegs)
+        .where(eq(ticketLegs.ticket_id, ticketId))
+        .orderBy(asc(ticketLegs.leg_number))
+        .limit(1);
+      const leg = legs[0];
+      if (!leg) return { success: false, message: 'Ticket has no legs' };
+
+      if (input.materials.length > 0) {
+        await tx.insert(ticketMaterials).values(
+          input.materials.map((m) => ({
+            leg_id: leg.id,
+            material_name: m.name,
+            qty: m.qty,
+            unit: m.unit,
+            source: m.source,
+            barcode: ''
+          }))
+        );
+      }
+
+      if (input.photos.length > 0) {
+        await tx.insert(ticketPhotos).values(
+          input.photos.map((p) => ({
+            leg_id: leg.id,
+            file_url: p.fileUrl,
+            caption: '',
+            uploader_id: userId
+          }))
+        );
+      }
+
+      await tx
+        .update(ticketLegs)
+        .set({
+          status: 'completed',
+          completed_at: new Date(),
+          notes: input.notes,
+          updated_at: new Date()
+        })
+        .where(eq(ticketLegs.id, leg.id));
+
+      await tx
+        .update(tickets)
+        .set({ status: 'completed', completed_at: new Date(), updated_at: new Date() })
+        .where(eq(tickets.id, ticketId));
+
+      return { success: true, message: 'Work session submitted' };
+    });
+    if (!result.success) return result;
+    const [row] = await db.select().from(tickets).where(eq(tickets.id, ticketId)).limit(1);
+    if (!row) return { success: false, message: 'Ticket not found' };
+    return {
+      success: true,
+      message: 'Work session submitted',
+      ticket: await toTicket(row, await loadRequirements(ticketId))
+    };
+  } catch (e) {
+    mapDbError(e, 'tickets.submitWorkSession');
   }
 }

@@ -60,6 +60,7 @@ export type TicketMaterial = {
 export type TicketDetail = Ticket & {
   legs: TicketLeg[];
   materials: TicketMaterial[];
+  photos: TicketPhoto[];
   requesterId: string | null;
   createdAt: string;
 };
