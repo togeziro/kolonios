@@ -56,6 +56,13 @@ export const companySettings = pgTable('company_settings', {
     .notNull()
     .default({}),
   locale: text('locale').notNull().default('id-ID'),
+  storage_provider: text('storage_provider').notNull().default('idrive_e2'),
+  storage_endpoint: text('storage_endpoint'),
+  storage_region: text('storage_region'),
+  storage_bucket: text('storage_bucket'),
+  storage_access_key: text('storage_access_key'),
+  storage_secret_key: text('storage_secret_key'),
+  storage_force_path_style: boolean('storage_force_path_style').notNull().default(false),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });
