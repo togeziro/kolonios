@@ -13,8 +13,8 @@ describe('storage config', () => {
     ]);
   });
 
-  it('idrive_e2 is virtual-hosted (no forcePathStyle) and minio/custom/r2 are path-style', () => {
-    expect(STORAGE_PROVIDER_PRESETS.idrive_e2.forcePathStyle).toBe(false);
+  it('idrive_e2 uses path-style addressing like minio/r2/custom; aws_s3 is virtual-hosted', () => {
+    expect(STORAGE_PROVIDER_PRESETS.idrive_e2.forcePathStyle).toBe(true);
     expect(STORAGE_PROVIDER_PRESETS.aws_s3.forcePathStyle).toBe(false);
     expect(STORAGE_PROVIDER_PRESETS.minio.forcePathStyle).toBe(true);
     expect(STORAGE_PROVIDER_PRESETS.cloudflare_r2.forcePathStyle).toBe(true);

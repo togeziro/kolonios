@@ -8,7 +8,7 @@ export const STORAGE_PROVIDER_PRESETS: Record<
   idrive_e2: {
     defaultEndpoint: '',
     defaultRegion: 'us-east-1',
-    forcePathStyle: false
+    forcePathStyle: true
   },
   aws_s3: {
     defaultEndpoint: '',
