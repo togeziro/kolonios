@@ -1060,6 +1060,13 @@
     "selectCustomer": "Select customer…",
     "searchCustomer": "Search customer…",
     "noCustomers": "No customers found",
-    "reworkBanner": "Returned for rework"
+    "reworkBanner": "Returned for rework",
+    "completedTitle": "Job completed",
+    "viewSummary": "View Summary",
+    "rating": "Rating",
+    "materials": "Materials",
+    "unitTotal": "units",
+    "completedAt": "Completed {when}",
+    "materialsLegTag": "({name})"
   }
 }

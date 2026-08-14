@@ -2,7 +2,13 @@ import { and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { buildConditions } from './utils';
-import { tickets, ticketLegs, taskRequirements, employeeSkills } from './schema/tickets';
+import {
+  tickets,
+  ticketLegs,
+  ticketMaterials,
+  taskRequirements,
+  employeeSkills
+} from './schema/tickets';
 import { employees } from './schema/employees';
 import { customers } from './schema/customers';
 import { locations } from './schema/attendance';
@@ -10,6 +16,7 @@ import type {
   Ticket,
   TicketDetail,
   TicketLeg,
+  TicketMaterial,
   TicketListFilters,
   TicketListResponse,
   TicketDetailResponse,
@@ -78,6 +85,7 @@ async function toTicket(row: TicketRow, reqs: RequirementRow[]): Promise<Ticket>
     requiredSkills: reqs.map((r) => r.skill).filter((s): s is string => s != null),
     assignedTo: row.assigned_to,
     takenBy: row.taken_by,
+    rating: row.rating ?? null,
     reviewNote: row.review_note || null,
     reviewedBy: row.reviewed_by,
     completedAt: row.completed_at ? row.completed_at.toISOString() : null
@@ -105,6 +113,29 @@ async function loadLegs(ticketId: number): Promise<TicketLeg[]> {
     .where(eq(ticketLegs.ticket_id, ticketId))
     .orderBy(asc(ticketLegs.leg_number));
   return rows.map(toLeg);
+}
+
+async function loadMaterials(ticketId: number): Promise<TicketMaterial[]> {
+  const rows = await db
+    .select({
+      material: ticketMaterials,
+      legName: ticketLegs.name,
+      legNumber: ticketLegs.leg_number
+    })
+    .from(ticketMaterials)
+    .innerJoin(ticketLegs, eq(ticketMaterials.leg_id, ticketLegs.id))
+    .where(eq(ticketLegs.ticket_id, ticketId))
+    .orderBy(asc(ticketLegs.leg_number));
+  return rows.map(({ material, legName }) => ({
+    id: material.id,
+    legId: material.leg_id,
+    legName,
+    materialName: material.material_name,
+    qty: material.qty,
+    unit: material.unit,
+    source: material.source,
+    barcode: material.barcode
+  }));
 }
 
 async function getEligibilityProfile(userId: string) {
@@ -199,6 +230,7 @@ export async function getTicketDetail(
     const detail: TicketDetail = {
       ...ticket,
       legs: await loadLegs(ticketId),
+      materials: await loadMaterials(ticketId),
       requesterId: row.requester_id,
       createdAt: row.created_at.toISOString()
     };
@@ -255,6 +287,7 @@ export async function createTicket(
       ticket: {
         ...ticket,
         legs: await loadLegs(row.id),
+        materials: await loadMaterials(row.id),
         requesterId: row.requester_id,
         createdAt: row.created_at.toISOString()
       }

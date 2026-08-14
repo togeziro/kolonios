@@ -28,6 +28,7 @@ export type Ticket = {
   requiredSkills: string[];
   assignedTo: string | null;
   takenBy: string | null;
+  rating: number | null;
   reviewNote: string | null;
   reviewedBy: string | null;
   completedAt: string | null;
@@ -45,8 +46,20 @@ export type TicketLeg = {
   notes: string;
 };
 
+export type TicketMaterial = {
+  id: number;
+  legId: number;
+  legName: string;
+  materialName: string;
+  qty: number;
+  unit: string;
+  source: 'warehouse' | 'van';
+  barcode: string;
+};
+
 export type TicketDetail = Ticket & {
   legs: TicketLeg[];
+  materials: TicketMaterial[];
   requesterId: string | null;
   createdAt: string;
 };

@@ -1060,6 +1060,13 @@
     "selectCustomer": "Pilih pelanggan…",
     "searchCustomer": "Cari pelanggan…",
     "noCustomers": "Tidak ada pelanggan ditemukan",
-    "reworkBanner": "Dikembalikan untuk revisi"
+    "reworkBanner": "Dikembalikan untuk revisi",
+    "completedTitle": "Pekerjaan selesai",
+    "viewSummary": "Lihat Ringkasan",
+    "rating": "Penilaian",
+    "materials": "Material",
+    "unitTotal": "unit",
+    "completedAt": "Selesai {when}",
+    "materialsLegTag": "({name})"
   }
 }

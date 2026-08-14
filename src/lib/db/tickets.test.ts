@@ -20,6 +20,7 @@ import {
   seedLocation,
   seedTicket,
   seedTicketLeg,
+  seedTicketMaterial,
   seedTicketRequirement,
   seedEmployeeSkill
 } from '@/test-utils/db';
@@ -154,6 +155,50 @@ describe('tickets data access (integration)', () => {
       const res = await getTicketDetail(USER_A, 999_999);
       expect(res.success).toBe(false);
       expect(res.message).toBeDefined();
+    });
+
+    it('maps the rating from the tickets table', async () => {
+      await seedUser(USER_A);
+      const ticket = await seedTicket({ title: 'Rated job', status: 'completed', rating: 5 });
+      const res = await getTicketDetail(USER_A, ticket.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.rating).toBe(5);
+    });
+
+    it('returns materials per leg with leg names', async () => {
+      await seedUser(USER_A);
+      const ticket = await seedTicket({ title: 'Materials job', status: 'completed' });
+      const leg = await seedTicketLeg(ticket.id, { status: 'completed', name: 'Install' });
+      await seedTicketMaterial(leg.id, { material_name: 'Fiber Router', qty: 2, unit: 'unit' });
+      await seedTicketMaterial(leg.id, {
+        material_name: 'Patch cable',
+        qty: 4,
+        source: 'warehouse'
+      });
+      const res = await getTicketDetail(USER_A, ticket.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.materials).toEqual([
+        {
+          id: expect.any(Number),
+          legId: leg.id,
+          legName: 'Install',
+          materialName: 'Fiber Router',
+          qty: 2,
+          unit: 'unit',
+          source: 'van',
+          barcode: ''
+        },
+        {
+          id: expect.any(Number),
+          legId: leg.id,
+          legName: 'Install',
+          materialName: 'Patch cable',
+          qty: 4,
+          unit: '',
+          source: 'warehouse',
+          barcode: ''
+        }
+      ]);
     });
   });
 

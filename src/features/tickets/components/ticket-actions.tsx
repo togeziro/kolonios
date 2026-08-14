@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { useTakeTicket, useStartLeg, useCompleteTicket } from '../api/hooks';
@@ -65,6 +66,18 @@ export default function TicketActions({ ticket }: { ticket: TicketDetail }) {
             )}
             {t('ticket.markComplete')}
           </Button>
+        )}
+        {ticket.status === 'completed' && (
+          <Link
+            to='/dashboard/tickets/$ticketId/completed'
+            params={{ ticketId: String(ticket.id) }}
+            className='w-full'
+          >
+            <Button variant='secondary' className='w-full'>
+              <Icons.check className='mr-2 h-4 w-4' />
+              {t('ticket.viewSummary')}
+            </Button>
+          </Link>
         )}
       </div>
     </div>

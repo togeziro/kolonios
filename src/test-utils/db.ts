@@ -278,6 +278,17 @@ export async function seedTicketRequirement(
   return req;
 }
 
+export async function seedTicketMaterial(
+  legId: number,
+  overrides: Partial<typeof ticketMaterials.$inferInsert> = {}
+) {
+  const [material] = await db
+    .insert(ticketMaterials)
+    .values({ leg_id: legId, material_name: 'Test Material', ...overrides })
+    .returning();
+  return material;
+}
+
 export async function seedEmployeeSkill(userId: string, skill: string) {
   await db.insert(employeeSkills).values({ user_id: userId, skill });
 }

@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   integer,
+  smallint,
   uniqueIndex
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
@@ -73,6 +74,7 @@ export const tickets = pgTable('tickets', {
   location_id: integer('location_id').references(() => locations.id),
   due_at: timestamp('due_at'),
   estimated_minutes: integer('estimated_minutes'),
+  rating: smallint('rating'),
   assigned_to: text('assigned_to').references(() => user.id),
   taken_by: text('taken_by').references(() => user.id),
   taken_at: timestamp('taken_at'),
