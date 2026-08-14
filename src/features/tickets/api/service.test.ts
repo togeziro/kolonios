@@ -70,10 +70,12 @@ describe('startLegFn', () => {
 });
 
 describe('getCompletedTicketsFn', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serverFnProvider.handler = getCompletedTicketsFn_createServerFn_handler;
+  });
 
   it('guards with my_work.view permission and fetches the user completed tickets', async () => {
-    serverFnProvider.handler = getCompletedTicketsFn_createServerFn_handler;
     mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
     mocks.getCompletedTickets.mockResolvedValue({ success: true, tickets: [] });
     const res = await getCompletedTicketsFn({} as never);
