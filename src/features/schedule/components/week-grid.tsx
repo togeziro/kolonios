@@ -32,7 +32,7 @@ export function WeekGrid({ cells }: { cells: MonthGridCell[] }) {
               !cell.isHoliday &&
               !cell.isDayOff &&
               'bg-primary/10 text-foreground',
-            !cell.isWorkingDay && cell.date && 'text-muted-foreground/60'
+            !cell.isWorkingDay && !cell.isHoliday && !cell.isDayOff && 'text-muted-foreground/60'
           )}
         >
           {Number(cell.date.slice(8, 10))}
