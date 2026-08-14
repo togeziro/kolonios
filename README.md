@@ -31,6 +31,7 @@
 - **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
 - **Ticket system** — `tasks` migrated to a full ticket system (`tickets` + estafet `ticket_legs`/`ticket_materials`/`ticket_photos`, code `T-{id}`): eligibility-gated Open Tickets pool (Take), Create Ticket with searchable customer picker, Ticket Detail (Estafet + Rework rejection banner) with leg timeline and Take/Start/Complete actions, Ticket Completed summary (rating + materials), My Work tabs (In Progress / Available / Completed + pending approval), desktop Tickets nav group
+- **S3-compatible object storage** — photos (attendance selfies, customer ID cards, ticket photos) upload directly to S3-compatible storage (IDrive e2 / AWS S3 / MinIO / Cloudflare R2 / custom) via short-lived presigned PUT URLs; Postgres stores only object keys. Provider + credentials configured from the admin UI (`/dashboard/admin/storage-settings`) with a Test Connection button and masked-secret handling; presigned GETs are IDOR-guarded (folder→permission map + per-user attendance ownership)
 - **Customer management** — full CRUD with search, filter & pagination; auto-generated customer codes
 - **Employee management** — full CRUD with department joins and filtering
 - **Masterdata CRUD** — department and designation management from the UI (create/edit/delete)
@@ -69,6 +70,7 @@
 | [Notifications](/dashboard/notifications)                      | Notification center with bell badge, popover preview, and full page with tabs.                                                                                |
 | [Holiday Calendar](/dashboard/admin/holiday-calendar)          | CRUD national/company holidays, API import, calendar view, admin settings.                                                                                    |
 | [Holiday Settings](/dashboard/admin/holiday-calendar/settings) | Holiday API provider configuration (Nager.Date / OpenHolidays / Custom REST).                                                                                 |
+| [Storage Settings](/dashboard/admin/storage-settings)          | S3-compatible object storage config: provider presets, endpoint/region/bucket, access keys, Test Connection.                                                  |
 | [Payroll](/dashboard/admin/payroll)                            | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.                                                                    |
 | [My Payslips](/dashboard/payroll/payslips)                     | Employee self-service: payslip history with PDF download.                                                                                                     |
 | [Not Found](/notfound)                                         | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                                                                             |
@@ -104,6 +106,7 @@ src/
 │   ├── role-groups/               # RBAC role groups (permission matrix UI + queries)
 │   ├── users/                     # User management table (React Query)
 │   ├── notifications/             # Notification center (React Query + PostgreSQL)
+│   ├── storage/                   # S3-compatible storage: settings UI, presign server functions
 │   └── auth/                      # Auth components
 │
 ├── lib/                           # Core utilities
@@ -125,6 +128,12 @@ src/
 │   ├── logger.ts                  # structured pino logger
 │   ├── parsers.ts                 # sort/filter parsers
 │   ├── rate-limit.ts              # rate limiter (returns HTTP 429 on exhaustion)
+│   ├── storage/                   # Server-only S3 layer: presign client, key builders, provider presets
+│   │   ├── types.ts               # StorageProvider / StorageConfig types
+│   │   ├── keys.ts                # Object key builders (attendance/customers/tickets)
+│   │   ├── config.ts              # Provider presets + deriveStorageConfig from company_settings
+│   │   ├── presign.ts             # buildStorageClient, presigned PUT/GET URLs, testConnection
+│   │   └── upload-client.ts       # Client-side uploadSelfie helper (presigned direct upload)
 │   └── query-client.ts            # React Query client config
 ├── hooks/                         # Custom hooks (use-data-table, use-mobile, etc.)
 ├── config/                        # Navigation, infobar, data table config
