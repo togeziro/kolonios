@@ -65,4 +65,39 @@ describe('BadgesGrid', () => {
     );
     expect(screen.getAllByText(/OLT Master/).length).toBeGreaterThanOrEqual(2);
   });
+
+  it('renders localized badge copy from i18n keys', async () => {
+    await i18n.changeLanguage('id');
+    try {
+      render(
+        <I18nextProvider i18n={i18n}>
+          <BadgesGrid badges={badges} recentUnlocks={[]} />
+        </I18nextProvider>
+      );
+      expect(screen.getByText('Selesaikan 10 cek OLT')).toBeTruthy();
+      expect(screen.getByText('Check-in sebelum 07:00')).toBeTruthy();
+      expect(screen.getByText('Selesaikan 5 tugas dalam <30 menit')).toBeTruthy();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
+  it('falls back to server title and description for unknown badge keys', () => {
+    const unknownBadges: AchievementBadge[] = [
+      {
+        key: 'mystery_badge',
+        title: 'Mystery Badge',
+        description: 'Mystery description',
+        icon: 'phone',
+        unlocked: true
+      }
+    ];
+    render(
+      <I18nextProvider i18n={i18n}>
+        <BadgesGrid badges={unknownBadges} recentUnlocks={[]} />
+      </I18nextProvider>
+    );
+    expect(screen.getByText('Mystery Badge')).toBeTruthy();
+    expect(screen.getByText('Mystery description')).toBeTruthy();
+  });
 });

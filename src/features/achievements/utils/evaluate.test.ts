@@ -87,6 +87,15 @@ describe('evaluateAchievements', () => {
     expect(result.badges).toHaveLength(6);
   });
 
+  it('passes through last7Days for the streak week dots', () => {
+    const last7Days = [
+      { date: '2026-08-15', checkedIn: true },
+      { date: '2026-08-14', checkedIn: false }
+    ];
+    const result = evaluateAchievements(achievementData({ last7Days }));
+    expect(result.last7Days).toEqual(last7Days);
+  });
+
   it('returns recent unlocks for all unlocked badges', () => {
     const result = evaluateAchievements(
       achievementData({ monthEarlyCheckIns: 5, currentStreak: 30 })

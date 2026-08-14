@@ -18,6 +18,7 @@ export type AchievementResult = {
   weeklyTargets: { label: string; current: number; target: number }[];
   recentUnlocks: { badgeKey: string; unlockedAt: string }[];
   badges: AchievementBadge[];
+  last7Days: { date: string; checkedIn: boolean }[];
 };
 
 function evaluateBadges(data: AchievementData): AchievementBadge[] {
@@ -81,6 +82,7 @@ export function evaluateAchievements(data: AchievementData): AchievementResult {
       { label: 'earlyCheckIns', current: data.monthEarlyCheckIns, target: EARLY_CHECKINS_TARGET }
     ],
     recentUnlocks,
-    badges
+    badges,
+    last7Days: data.last7Days
   };
 }

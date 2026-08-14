@@ -136,7 +136,7 @@ export async function getAchievementData(userId: string): Promise<AchievementDat
   const fastFinisherCount = completedTickets.filter((t) => {
     if (!t.takenAt || !t.completedAt) return false;
     const elapsed = (t.completedAt.getTime() - t.takenAt.getTime()) / (1000 * 60);
-    return elapsed < 30;
+    return elapsed >= 0 && elapsed < 30;
   }).length;
 
   // Weekly tasks completed (business-date comparison against the business Monday)

@@ -129,4 +129,16 @@ describe('getAchievementData', () => {
     const result = await getAchievementData(TEST_USER_ID);
     expect(result.weekTasksCompleted).toBe(1);
   });
+
+  it('does not count tickets completed before taken_at as fast finishers', async () => {
+    await seedTicket({
+      task_type: 'inspection',
+      status: 'completed',
+      assigned_to: TEST_USER_ID,
+      taken_at: new Date('2026-08-10T10:00:00'),
+      completed_at: new Date('2026-08-10T09:00:00')
+    });
+    const result = await getAchievementData(TEST_USER_ID);
+    expect(result.fastFinisherCount).toBe(0);
+  });
 });

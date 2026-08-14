@@ -11,6 +11,15 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   moon: Icons.moon
 };
 
+const BADGE_KEY_MAP: Record<string, string> = {
+  olt_master: 'oltMaster',
+  early_bird: 'earlyBird',
+  fast_finisher: 'fastFinisher',
+  all_rounder: 'allRounder',
+  reliable: 'reliable',
+  night_owl: 'nightOwl'
+};
+
 export function BadgesGrid({
   badges,
   recentUnlocks
@@ -19,6 +28,15 @@ export function BadgesGrid({
   recentUnlocks: { badgeKey: string; unlockedAt: string }[];
 }) {
   const { t } = useTranslation();
+
+  const badgeTitle = (badge: AchievementBadge): string => {
+    const key = BADGE_KEY_MAP[badge.key];
+    return key ? t(`achievements.${key}`) : badge.title;
+  };
+  const badgeDescription = (badge: AchievementBadge): string => {
+    const key = BADGE_KEY_MAP[badge.key];
+    return key ? t(`achievements.${key}Desc`) : badge.description;
+  };
 
   return (
     <div>
@@ -30,7 +48,7 @@ export function BadgesGrid({
               <div key={unlock.badgeKey} className='flex items-center gap-3'>
                 <Icons.badgeCheck className='size-5 text-white' />
                 <p className='text-sm font-medium text-zinc-300'>
-                  <span className='font-bold text-white'>{badge?.title}</span>
+                  {badge && <span className='font-bold text-white'>{badgeTitle(badge)}</span>}
                   {` · ${t('achievements.unlockedYesterday')}`}
                 </p>
               </div>
@@ -67,8 +85,8 @@ export function BadgesGrid({
                   className={cn('size-6', badge.unlocked ? 'text-white' : 'text-zinc-500')}
                 />
               </div>
-              <h4 className='text-sm font-bold leading-tight'>{badge.title}</h4>
-              <p className='text-[11px] leading-snug text-zinc-400'>{badge.description}</p>
+              <h4 className='text-sm font-bold leading-tight'>{badgeTitle(badge)}</h4>
+              <p className='text-[11px] leading-snug text-zinc-400'>{badgeDescription(badge)}</p>
             </div>
           );
         })}
