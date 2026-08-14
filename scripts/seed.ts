@@ -844,6 +844,7 @@ async function seedRoleGroups() {
           tickets: { view: true, add: true, edit: true },
           customers: { view: true },
           notifications: { view: true },
+          achievements: { view: true },
           payroll: { view: true }
         },
         is_admin: false
