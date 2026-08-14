@@ -40,7 +40,7 @@ const defaultSettings: StorageSettingsForm = {
   bucket: '',
   accessKeyId: '',
   secretAccessKey: '',
-  forcePathStyle: false
+  forcePathStyle: STORAGE_PROVIDER_PRESETS.idrive_e2.forcePathStyle
 };
 
 export function StorageSettings() {

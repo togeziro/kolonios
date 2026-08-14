@@ -68,13 +68,22 @@ export const testStorageConnectionFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requirePermission('storage', 'edit');
     const { testConnection } = await import('@/lib/storage/presign');
+    // Secret-key round-trip rule: a blank secret means "keep the stored
+    // secret" — testing the config about to be saved (same rule as
+    // updateStorageSettingsFn).
+    const { getCompanySettings } = await import('@/lib/db/masterdata');
+    const existing = await getCompanySettings();
+    const secret =
+      data.secretAccessKey.trim().length > 0
+        ? data.secretAccessKey
+        : (existing?.settings?.storage_secret_key ?? '');
     const config: StorageConfig = {
       provider: data.provider,
       endpoint: data.endpoint,
       region: data.region,
       bucket: data.bucket,
       accessKeyId: data.accessKeyId,
-      secretAccessKey: data.secretAccessKey,
+      secretAccessKey: secret,
       forcePathStyle: data.forcePathStyle
     };
     return testConnection(config);

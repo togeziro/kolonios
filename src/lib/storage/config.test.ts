@@ -38,8 +38,45 @@ describe('storage config', () => {
       bucket: 'koloni-dev',
       accessKeyId: 'ak',
       secretAccessKey: 'sk',
-      forcePathStyle: false
+      // DB default false is overridden by the idrive_e2 preset (path style)
+      forcePathStyle: true
     });
+  });
+
+  it('falls back to the preset forcePathStyle when the stored flag is the DB default false and the preset requires true', () => {
+    const settings = {
+      storage_provider: 'idrive_e2',
+      storage_endpoint: 'https://us-east-1.idrivee2.com',
+      storage_region: 'us-east-1',
+      storage_bucket: 'koloni-dev',
+      storage_access_key: 'ak',
+      storage_secret_key: 'sk',
+      storage_force_path_style: false
+    } as unknown as CompanySetting;
+    expect(deriveStorageConfig(settings)?.forcePathStyle).toBe(true);
+  });
+
+  it('keeps stored false for providers whose preset does not require path style', () => {
+    const settings = {
+      storage_provider: 'aws_s3',
+      storage_endpoint: 'https://s3.amazonaws.com',
+      storage_region: 'us-east-1',
+      storage_bucket: 'koloni-dev',
+      storage_access_key: 'ak',
+      storage_secret_key: 'sk',
+      storage_force_path_style: false
+    } as unknown as CompanySetting;
+    expect(deriveStorageConfig(settings)?.forcePathStyle).toBe(false);
+  });
+
+  it('uses the preset forcePathStyle when the stored flag is unset', () => {
+    const settings = {
+      storage_provider: 'idrive_e2',
+      storage_bucket: 'koloni-dev',
+      storage_access_key: 'ak',
+      storage_secret_key: 'sk'
+    } as unknown as CompanySetting;
+    expect(deriveStorageConfig(settings)?.forcePathStyle).toBe(true);
   });
 
   it('returns null when storage is not configured (no bucket)', () => {

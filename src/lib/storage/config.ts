@@ -51,7 +51,10 @@ export function deriveStorageConfig(
     accessKeyId: settings.storage_access_key,
     secretAccessKey: settings.storage_secret_key,
     forcePathStyle:
-      settings.storage_force_path_style ?? STORAGE_PROVIDER_PRESETS[provider].forcePathStyle
+      settings.storage_force_path_style === false &&
+      STORAGE_PROVIDER_PRESETS[provider].forcePathStyle === true
+        ? STORAGE_PROVIDER_PRESETS[provider].forcePathStyle
+        : (settings.storage_force_path_style ?? STORAGE_PROVIDER_PRESETS[provider].forcePathStyle)
   };
 }
 
