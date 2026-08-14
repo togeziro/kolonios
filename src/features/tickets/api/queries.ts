@@ -5,6 +5,7 @@ import {
   getTicketDetailFn,
   getCompletedTicketsFn
 } from './service';
+import { getObjectUrlFn } from '@/features/storage/api/service';
 import type { TicketListFilters } from './types';
 
 export const ticketsKeys = {
@@ -37,4 +38,10 @@ export const ticketDetailQueryOptions = (ticketId: number) =>
   queryOptions({
     queryKey: ticketsKeys.detail(ticketId),
     queryFn: () => getTicketDetailFn({ data: { ticketId } })
+  });
+
+export const photoUrlQueryOptions = (key: string) =>
+  queryOptions({
+    queryKey: [...ticketsKeys.all, 'photo', key] as const,
+    queryFn: () => getObjectUrlFn({ data: { key } })
   });

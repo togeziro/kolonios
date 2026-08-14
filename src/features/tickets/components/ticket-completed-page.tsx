@@ -7,12 +7,24 @@ import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { useAppLocale } from '@/lib/locale';
 import { formatDate } from '@/lib/format';
-import { ticketDetailQueryOptions } from '../api/queries';
+import { photoUrlQueryOptions, ticketDetailQueryOptions } from '../api/queries';
 import LegTimeline from './leg-timeline';
 import type { TicketMaterial } from '../api/types';
 
 export function totalMaterialQty(materials: TicketMaterial[]): number {
   return materials.reduce((sum, m) => sum + m.qty, 0);
+}
+
+function PhotoThumb({ photo }: { photo: { id: number; fileUrl: string } }) {
+  const { data } = useQuery(photoUrlQueryOptions(photo.fileUrl));
+  if (!data?.url) return null;
+  return (
+    <img
+      src={data.url}
+      alt={`completion ${photo.id}`}
+      className='h-24 w-full rounded-lg border object-cover'
+    />
+  );
 }
 
 export default function TicketCompletedPage({ ticketId }: { ticketId: number }) {
@@ -101,6 +113,19 @@ export default function TicketCompletedPage({ ticketId }: { ticketId: number }) 
               </li>
             ))}
           </ul>
+        </Card>
+      )}
+
+      {ticket.photos.length > 0 && (
+        <Card className='space-y-2 rounded-2xl border p-4 dark:border-zinc-800/50 dark:bg-zinc-900'>
+          <p className='text-[10px] font-bold tracking-widest uppercase text-muted-foreground'>
+            {t('workSession.completionPhotos')}
+          </p>
+          <div className='grid grid-cols-2 gap-2'>
+            {ticket.photos.map((p) => (
+              <PhotoThumb key={p.id} photo={p} />
+            ))}
+          </div>
         </Card>
       )}
 
