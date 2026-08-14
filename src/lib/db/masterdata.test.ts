@@ -268,4 +268,74 @@ describe('company settings (integration)', () => {
     expect(result.length).toBe(1);
     expect(result[0].column_default).toContain('{}');
   });
+
+  it('should have storage_provider column with default value', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'storage_provider'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].column_default).toContain('idrive_e2');
+  });
+
+  it('should have storage_endpoint column (nullable)', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'storage_endpoint'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].is_nullable).toBe('YES');
+  });
+
+  it('should have storage_region column (nullable)', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'storage_region'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].is_nullable).toBe('YES');
+  });
+
+  it('should have storage_bucket column (nullable)', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'storage_bucket'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].is_nullable).toBe('YES');
+  });
+
+  it('should have storage_access_key column (nullable)', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'storage_access_key'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].is_nullable).toBe('YES');
+  });
+
+  it('should have storage_secret_key column (nullable)', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'storage_secret_key'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].is_nullable).toBe('YES');
+  });
+
+  it('should have storage_force_path_style column with default false', async () => {
+    const result = await db.execute(sql`
+      SELECT column_name, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'company_settings' AND column_name = 'storage_force_path_style'
+    `);
+    expect(result.length).toBe(1);
+    expect(result[0].column_default).toContain('false');
+  });
 });
