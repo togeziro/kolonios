@@ -2,9 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import type { TicketLeg, TicketLegStatus } from '../api/types';
 
+export function completedLegCount(legs: TicketLeg[]): number {
+  return legs.filter((l) => l.status === 'approved' || l.status === 'completed').length;
+}
+
 export function progressFromLegs(legs: TicketLeg[]): string {
-  const done = legs.filter((l) => l.status === 'approved' || l.status === 'completed').length;
-  return `${done}/${legs.length}`;
+  return `${completedLegCount(legs)}/${legs.length}`;
 }
 
 const legStatusBadge: Partial<Record<TicketLegStatus, 'outline' | 'secondary' | 'default'>> = {

@@ -436,7 +436,7 @@ export const operations: Operation[] = [
     path: '/tickets',
     summary: 'Create a ticket with optional estafet legs',
     permission: 'tickets.add',
-    queryParams: asQuery(createTicketSchema),
+    body: createTicketSchema,
     responseDescription: 'Created ticket detail'
   }
 ];

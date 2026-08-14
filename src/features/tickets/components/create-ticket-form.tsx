@@ -79,8 +79,10 @@ export default function CreateTicketForm() {
         value,
         legs.filter((l) => l.name.trim().length > 0)
       );
-      await createTicket.mutateAsync(input);
-      navigate({ to: '/dashboard/jobs' });
+      const res = await createTicket.mutateAsync(input);
+      if (res?.success) {
+        navigate({ to: '/dashboard/jobs' });
+      }
     }
   });
 

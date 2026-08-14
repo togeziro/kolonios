@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { useSession } from '@/lib/auth/auth-client';
 import { useTakeTicket, useStartLeg, useCompleteTicket } from '../api/hooks';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import type { TicketDetail } from '../api/types';
@@ -11,7 +10,6 @@ export default function TicketActions({ ticket }: { ticket: TicketDetail }) {
   const takeTicket = useTakeTicket();
   const startLeg = useStartLeg();
   const completeTicket = useCompleteTicket();
-  const { data: session } = useSession();
   const { isAdmin, permissions } = useRoleGroupPermissions();
   // NOTE: DB layer is the source of truth; UI gating only hides obviously
   // impossible actions. Edit-permission check:

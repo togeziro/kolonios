@@ -8,7 +8,7 @@ import { Icons } from '@/components/icons';
 import { useAppLocale } from '@/lib/locale';
 import { formatDue } from './ticket-card';
 import { ticketDetailQueryOptions } from '../api/queries';
-import LegTimeline, { progressFromLegs } from './leg-timeline';
+import LegTimeline, { completedLegCount, progressFromLegs } from './leg-timeline';
 import TicketActions from './ticket-actions';
 import type { TicketStatus } from '../api/types';
 
@@ -72,6 +72,14 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
             {ticket.status.replace('_', ' ')}
           </Badge>
         </div>
+        {ticket.description && (
+          <div className='space-y-1.5'>
+            <p className='dark:text-zinc-400 text-[10px] font-bold tracking-widest uppercase text-muted-foreground'>
+              {t('ticket.description')}
+            </p>
+            <p className='text-muted-foreground text-sm leading-relaxed'>{ticket.description}</p>
+          </div>
+        )}
         <div className='grid grid-cols-2 gap-2 text-sm'>
           {ticket.customer && (
             <p className='text-muted-foreground'>
@@ -118,28 +126,39 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
             </p>
           )}
         </div>
+        {ticket.requiredSkills.length > 0 && (
+          <div className='space-y-1.5'>
+            <p className='dark:text-zinc-400 text-[10px] font-bold tracking-widest uppercase text-muted-foreground'>
+              {t('ticket.skills')}
+            </p>
+            <div className='flex flex-wrap gap-1.5'>
+              {ticket.requiredSkills.map((skill) => (
+                <Badge
+                  key={skill}
+                  variant='outline'
+                  className='dark:bg-zinc-800 h-6 rounded-full px-2.5 text-[11px] font-bold dark:text-zinc-300'
+                >
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
       </Card>
 
-      {ticket.legs.length > 0 && (
-        <Card className='dark:border-zinc-800/50 space-y-3 rounded-2xl p-4 dark:bg-zinc-900'>
-          <div className='flex items-center justify-between'>
-            <h3 className='dark:text-white text-sm font-semibold'>{t('ticket.legs')}</h3>
-            <span className='text-xs font-bold text-muted-foreground'>
-              {progressFromLegs(ticket.legs)}
-            </span>
-          </div>
-          <Progress
-            value={
-              (ticket.legs.filter((l) => l.status === 'approved' || l.status === 'completed')
-                .length /
-                Math.max(ticket.legs.length, 1)) *
-              100
-            }
-            className='dark:bg-zinc-800 h-1.5'
-          />
-          <LegTimeline legs={ticket.legs} />
-        </Card>
-      )}
+      <Card className='dark:border-zinc-800/50 space-y-3 rounded-2xl p-4 dark:bg-zinc-900'>
+        <div className='flex items-center justify-between'>
+          <h3 className='dark:text-white text-sm font-semibold'>{t('ticket.legs')}</h3>
+          <span className='text-xs font-bold text-muted-foreground'>
+            {progressFromLegs(ticket.legs)}
+          </span>
+        </div>
+        <Progress
+          value={(completedLegCount(ticket.legs) / Math.max(ticket.legs.length, 1)) * 100}
+          className='dark:bg-zinc-800 h-1.5'
+        />
+        <LegTimeline legs={ticket.legs} />
+      </Card>
 
       <TicketActions ticket={ticket} />
     </div>

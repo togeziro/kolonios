@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { openTicketsQueryOptions } from '../api/queries';
 import TicketCard from './ticket-card';
 import type { TicketPriority } from '../api/types';
@@ -19,6 +20,8 @@ export default function JobsPage() {
   const { t } = useTranslation();
   const { domain, priority } = useSearch({ from: JobsRoute.id });
   const navigate = useNavigate();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canCreate = isAdmin || permissions.tickets?.add === true;
   const filters = {
     ...(domain ? { domain: domain as 'field' | 'backoffice' } : {}),
     ...(priority ? { priority: priority as TicketPriority } : {})
@@ -40,11 +43,13 @@ export default function JobsPage() {
           <button onClick={() => setFilters({})} className='text-muted-foreground text-xs'>
             {t('ticket.clearFilters')}
           </button>
-          <Link to='/dashboard/tickets/new'>
-            <Button size='sm' className='gap-1'>
-              <Icons.plusCircle className='h-3.5 w-3.5' /> {t('ticket.newTicket')}
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link to='/dashboard/tickets/new'>
+              <Button size='sm' className='gap-1'>
+                <Icons.plusCircle className='h-3.5 w-3.5' /> {t('ticket.newTicket')}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
       <div className='flex gap-2'>

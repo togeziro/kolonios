@@ -1014,7 +1014,6 @@
     "low": "Rendah",
     "medium": "Sedang",
     "high": "Tinggi",
-    "taking": "Mengambil…",
     "takeTicket": "Ambil Tiket",
     "inProgressCount": "Sedang Berjalan ({{count}})",
     "nothingInProgress": "Tidak ada yang sedang berjalan",
@@ -1050,12 +1049,11 @@
     "formDueDate": "Tenggat",
     "formEstimatedMinutes": "Estimasi menit (opsional)",
     "formDescription": "Deskripsi",
+    "description": "Deskripsi",
+    "skills": "Keterampilan yang dibutuhkan",
     "back": "Kembali",
-    "progress": "Progres",
     "leg": "Leg",
     "startLeg": "Mulai Leg",
-    "invalidTicket": "Tiket tidak ditemukan",
-    "createdAt": "Dibuat",
-    "details": "Detail"
+    "invalidTicket": "Tiket tidak ditemukan"
   }
 }

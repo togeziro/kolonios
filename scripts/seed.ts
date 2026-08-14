@@ -828,6 +828,7 @@ async function seedRoleGroups() {
         permissions: {
           ...coreModules,
           jobs: { view: true },
+          tickets: { view: true },
           notifications: { view: true },
           payroll: { view: true }
         },

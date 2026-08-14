@@ -1014,7 +1014,6 @@
     "low": "Low",
     "medium": "Medium",
     "high": "High",
-    "taking": "Taking…",
     "takeTicket": "Take Ticket",
     "inProgressCount": "In Progress ({{count}})",
     "nothingInProgress": "Nothing in progress",
@@ -1050,12 +1049,11 @@
     "formDueDate": "Due date",
     "formEstimatedMinutes": "Estimated minutes (optional)",
     "formDescription": "Description",
+    "description": "Description",
+    "skills": "Required skills",
     "back": "Back",
-    "progress": "Progress",
     "leg": "Leg",
     "startLeg": "Start Leg",
-    "invalidTicket": "Ticket not found",
-    "createdAt": "Created",
-    "details": "Details"
+    "invalidTicket": "Ticket not found"
   }
 }
