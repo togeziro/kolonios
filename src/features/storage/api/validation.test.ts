@@ -29,7 +29,7 @@ describe('storage validation', () => {
     ).toThrow();
   });
 
-  it('rejects blank bucket or keys', () => {
+  it('rejects a blank bucket', () => {
     expect(() =>
       storageSettingsSchema.parse({
         provider: 'idrive_e2',
@@ -54,6 +54,19 @@ describe('storage validation', () => {
       forcePathStyle: false
     });
     expect(parsed.secretAccessKey).toBe('');
+  });
+
+  it('allows a blank accessKeyId (means keep stored access key)', () => {
+    const parsed = storageSettingsSchema.parse({
+      provider: 'idrive_e2',
+      endpoint: '',
+      region: 'us-east-1',
+      bucket: 'koloni-dev',
+      accessKeyId: '',
+      secretAccessKey: 's',
+      forcePathStyle: false
+    });
+    expect(parsed.accessKeyId).toBe('');
   });
 
   it('restricts upload folder to the allowlist', () => {

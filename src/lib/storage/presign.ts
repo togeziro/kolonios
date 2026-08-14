@@ -5,6 +5,7 @@ import {
   GetObjectCommand
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { logger } from '@/lib/logger';
 import type { StorageConfig } from './types';
 
 const DEFAULT_EXPIRES_IN = 900;
@@ -46,12 +47,67 @@ export async function createPresignedGetUrl(
 
 export async function testConnection(
   config: StorageConfig
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true } | { ok: false; error: string; code: string }> {
   try {
     const client = buildStorageClient(config);
     await client.send(new HeadBucketCommand({ Bucket: config.bucket }));
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Unknown storage error' };
+    const status =
+      e instanceof Error
+        ? (e as unknown as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+        : undefined;
+    const name = e instanceof Error ? e.name : 'UnknownError';
+    const detail = e instanceof Error ? e.message : 'Unknown storage error';
+    const code = errorCode(name, status, detail);
+    logger.error(
+      { err: e, provider: config.provider, bucket: config.bucket, code },
+      'storage.test-connection-failed'
+    );
+    return { ok: false, error: friendlyError(code), code };
+  }
+}
+
+function errorCode(name: string, status: number | undefined, detail: string): string {
+  if (status === 401) return 'UNAUTHORIZED';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  const lower = `${name} ${detail}`.toLowerCase();
+  if (
+    lower.includes('invalidaccesskeyid') ||
+    lower.includes('invalidaccess') ||
+    lower.includes('access denied') ||
+    lower.includes('signaturedoesnotmatch') ||
+    lower.includes('signature')
+  ) {
+    return 'INVALID_CREDENTIALS';
+  }
+  if (
+    lower.includes('network') ||
+    lower.includes('timeout') ||
+    lower.includes('socket') ||
+    lower.includes('fetch failed')
+  ) {
+    return 'NETWORK_ERROR';
+  }
+  if (lower.includes('no such bucket') || lower.includes('bucket not found')) {
+    return 'NOT_FOUND';
+  }
+  return 'CONNECTION_FAILED';
+}
+
+function friendlyError(code: string): string {
+  switch (code) {
+    case 'UNAUTHORIZED':
+    case 'INVALID_CREDENTIALS':
+      return 'Invalid access key or secret.';
+    case 'FORBIDDEN':
+      return 'Access key does not have permission to access the bucket.';
+    case 'NOT_FOUND':
+      return 'Bucket not found or not accessible.';
+    case 'NETWORK_ERROR':
+      return 'Could not reach the storage endpoint.';
+    default:
+      return 'Storage connection failed.';
   }
 }

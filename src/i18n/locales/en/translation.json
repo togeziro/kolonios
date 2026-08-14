@@ -1105,6 +1105,7 @@
     "testFailed": "Connection failed: {{error}}",
     "settingsSaved": "Storage settings saved",
     "settingsSaveFailed": "Failed to save storage settings",
-    "settingsLoadFailed": "Failed to load storage settings"
+    "settingsLoadFailed": "Failed to load storage settings",
+    "accessKeyStoredHint": "Stored access key: {{masked}}"
   }
 }

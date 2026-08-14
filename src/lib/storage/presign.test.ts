@@ -83,4 +83,41 @@ describe('storage presign', () => {
     const result = await testConnection(config);
     expect(result.ok).toBe(false);
   });
+
+  it('maps an auth failure to INVALID_CREDENTIALS with a masked message', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      Object.assign(new Error('InvalidAccessKeyId: secret-access-key leaked in message'), {
+        $metadata: { httpStatusCode: 400 }
+      })
+    );
+    const result = await testConnection(config);
+    expect(result).toMatchObject({ ok: false, code: 'INVALID_CREDENTIALS' });
+    expect(result.ok === false && result.error).toBe('Invalid access key or secret.');
+  });
+
+  it('maps HTTP 403 to FORBIDDEN', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      Object.assign(new Error('AccessDenied'), { $metadata: { httpStatusCode: 403 } })
+    );
+    const result = await testConnection(config);
+    expect(result.ok === false && result.code).toBe('FORBIDDEN');
+  });
+
+  it('maps HTTP 404 to NOT_FOUND', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      Object.assign(new Error('NoSuchBucket'), { $metadata: { httpStatusCode: 404 } })
+    );
+    const result = await testConnection(config);
+    expect(result.ok === false && result.code).toBe('NOT_FOUND');
+    expect(result.ok === false && result.error).toBe('Bucket not found or not accessible.');
+  });
+
+  it('maps network failures to NETWORK_ERROR', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      new TypeError('fetch failed: socket hang up')
+    );
+    const result = await testConnection(config);
+    expect(result.ok === false && result.code).toBe('NETWORK_ERROR');
+    expect(result.ok === false && result.error).toBe('Could not reach the storage endpoint.');
+  });
 });

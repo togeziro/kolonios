@@ -22,7 +22,7 @@ vi.mock('@/features/storage/api', () => ({
         endpoint: '',
         region: 'us-east-1',
         bucket: 'koloni-dev',
-        accessKeyId: 'ak',
+        accessKeyIdMasked: '••••ak',
         secretKeyMasked: '••••sk',
         forcePathStyle: false
       }

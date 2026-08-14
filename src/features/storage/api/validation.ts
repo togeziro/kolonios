@@ -13,7 +13,9 @@ export const storageSettingsSchema = z.object({
   endpoint: z.string().trim().max(500).default(''),
   region: z.string().trim().max(100).default('us-east-1'),
   bucket: z.string().trim().min(1).max(100),
-  accessKeyId: z.string().trim().min(1).max(200),
+  // Blank access key = "keep the stored access key" (round-trip rule,
+  // mirrors secretAccessKey). Shadowed by masking the returned value.
+  accessKeyId: z.string().trim().max(200).default(''),
   // Blank secret = "keep the stored secret" (secret-key round-trip rule).
   secretAccessKey: z.string().trim().max(200).default(''),
   forcePathStyle: z.boolean()

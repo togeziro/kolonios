@@ -1105,6 +1105,7 @@
     "testFailed": "Koneksi gagal: {{error}}",
     "settingsSaved": "Pengaturan penyimpanan tersimpan",
     "settingsSaveFailed": "Gagal menyimpan pengaturan penyimpanan",
-    "settingsLoadFailed": "Gagal memuat pengaturan penyimpanan"
+    "settingsLoadFailed": "Gagal memuat pengaturan penyimpanan",
+    "accessKeyStoredHint": "Access key tersimpan: {{masked}}"
   }
 }

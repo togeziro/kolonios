@@ -72,9 +72,10 @@ export function StorageSettings() {
           endpoint: data.settings!.endpoint,
           region: data.settings!.region,
           bucket: data.settings!.bucket,
-          accessKeyId: data.settings!.accessKeyId,
-          // Secret-key round-trip rule: load blank; the stored secret is only
-          // shown as masked helper text and preserved server-side on save.
+          // Access-key round-trip rule (mirrors the secret): load blank; the
+          // stored access key is only shown as a masked hint and preserved
+          // server-side on save.
+          accessKeyId: '',
           secretAccessKey: '',
           forcePathStyle: data.settings!.forcePathStyle
         },
@@ -219,8 +220,19 @@ export function StorageSettings() {
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       autoComplete='off'
-                      required
+                      placeholder={
+                        data?.settings?.accessKeyIdMasked
+                          ? t('storage.secretKeyMaskedPlaceholder')
+                          : ''
+                      }
                     />
+                    {data?.settings?.accessKeyIdMasked && (
+                      <span className='text-muted-foreground text-xs'>
+                        {t('storage.accessKeyStoredHint', {
+                          masked: data.settings.accessKeyIdMasked
+                        })}
+                      </span>
+                    )}
                   </div>
                 )}
               </form.AppField>
