@@ -30,7 +30,8 @@
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
 - **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
-- **Ticket system** — `tasks` migrated to a full ticket system (`tickets` + estafet `ticket_legs`/`ticket_materials`/`ticket_photos`, code `T-{id}`): eligibility-gated Open Tickets pool (Take), Create Ticket with searchable customer picker, Ticket Detail (Estafet + Rework rejection banner) with leg timeline and Take/Start/Complete actions, Ticket Completed summary (rating + materials), My Work tabs (In Progress / Available / Completed + pending approval), desktop Tickets nav group
+- **Ticket system** — `tasks` migrated to a full ticket system (`tickets` + estafet `ticket_legs`/`ticket_materials`/`ticket_photos`, code `T-{id}`): eligibility-gated Open Tickets pool (Take), Create Ticket with searchable customer picker, Ticket Detail (Estafet + Rework rejection banner) with leg timeline and Take/Start/Complete actions, Work Session (completion photos via S3, materials ±qty steppers, notes, Finish & Submit), Ticket Completed summary (rating + materials + photo grid), My Work tabs (In Progress / Available / Completed + pending approval), desktop Tickets nav group
+- **Achievements** — technician self-service screen (`/dashboard/achievements`, linked from Profile): attendance streak card with week dots, weekly performance targets, and a 6-badge collection (OLT Master, Early Bird, Fast Finisher, All-rounder, Reliable, Night Owl). All metrics computed on the fly from existing attendance + ticket data (`getAchievementData` + pure `evaluateAchievements`) — zero new tables, no migration
 - **S3-compatible object storage** — photos (attendance selfies, customer ID cards, ticket photos) upload directly to S3-compatible storage (IDrive e2 / AWS S3 / MinIO / Cloudflare R2 / custom) via short-lived presigned PUT URLs; Postgres stores only object keys. Provider + credentials configured from the admin UI (`/dashboard/admin/storage-settings`) with a Test Connection button and masked-secret handling; presigned GETs are IDOR-guarded (folder→permission map + per-user attendance ownership)
 - **Customer management** — full CRUD with search, filter & pagination; auto-generated customer codes
 - **Employee management** — full CRUD with department joins and filtering
@@ -56,10 +57,12 @@
 | [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                                                  |
 | [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                                                           |
 | [My Work](/dashboard/my-work)                                  | Technician/SPV tabs: In Progress / Available / Completed + pending approval (dark mobile shell).                                                              |
+| [Achievements](/dashboard/achievements)                        | Technician streak card, weekly targets, and badges grid (Profile sub-page).                                                                                   |
 | [Available Jobs](/dashboard/jobs)                              | Eligibility-gated open-ticket pool with Take action (bottom-nav "Office").                                                                                    |
 | [New Ticket](/dashboard/tickets/new)                           | Create a ticket: type/channel, customer, asset, location, priority, estafet legs.                                                                             |
 | [Ticket Detail](/dashboard/tickets/$ticketId)                  | Ticket header, leg progress + timeline, Take/Start/Complete actions; rework rejection banner.                                                                 |
-| [Ticket Completed](/dashboard/tickets/$ticketId/completed)     | Success summary: rating, materials, full leg timeline.                                                                                                        |
+| [Work Session](/dashboard/work-session/$ticketId)              | In-progress ticket working view: completion photos (camera + S3 upload), materials ±qty steppers, notes, Finish & Submit.                                     |
+| [Ticket Completed](/dashboard/tickets/$ticketId/completed)     | Success summary: rating, materials, photo grid, full leg timeline.                                                                                            |
 | [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                                                          |
 | [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                                                               |
 | [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                                                            |
@@ -98,6 +101,7 @@ src/
 │
 ├── features/                      # Feature-sliced modules
 │   ├── attendance/                # Check-in/out, leave, performance (Haversine geo-fencing)
+│   ├── achievements/              # Technician streak, weekly targets, badges (computed from attendance + tickets)
 │   ├── tickets/                   # Ticket system: create/detail, leg timeline, jobs pool (replaces tasks)
 │   ├── customers/                 # Customer CRUD, code generation
 │   ├── employees/                 # Employee CRUD with department joins
@@ -121,6 +125,7 @@ src/
 │   │   ├── employees.ts           # Employee CRUD with joins (uses utils)
 │   │   ├── masterdata.ts          # Department/designation CRUD (uses utils)
 │   │   ├── attendance.ts          # Attendance CRUD with Haversine (uses utils)
+│   │   ├── achievements.ts        # Achievement aggregates: streak, monthly stats, ticket counts (uses utils)
 │   │   ├── payroll.ts             # Payroll data access with effective-date resolution (uses utils)
 │   │   ├── audit.ts               # Audit log (uses utils)
 │   │   └── tickets.ts               # Ticket/leg system (replaces tasks.ts, uses utils)
