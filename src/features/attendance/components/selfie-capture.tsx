@@ -7,6 +7,9 @@ export interface SelfieCaptureProps {
   disabled?: boolean;
   onCapture: (dataUrl: string) => void;
   onClear: () => void;
+  captureLabel?: string;
+  captureNowLabel?: string;
+  retakeLabel?: string;
 }
 
 /**
@@ -14,7 +17,15 @@ export interface SelfieCaptureProps {
  * returned as a data URL; no camera library is used. Shows a preview with a
  * retake flow.
  */
-export function SelfieCapture({ required, disabled, onCapture, onClear }: SelfieCaptureProps) {
+export function SelfieCapture({
+  required,
+  disabled,
+  onCapture,
+  onClear,
+  captureLabel,
+  captureNowLabel,
+  retakeLabel
+}: SelfieCaptureProps) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -91,8 +102,8 @@ export function SelfieCapture({ required, disabled, onCapture, onClear }: Selfie
           onClick={() => void startCamera()}
         >
           {required
-            ? `* ${t('attendanceAdmin.captureSelfie')}`
-            : t('attendanceAdmin.captureSelfie')}
+            ? `* ${captureLabel ?? t('attendanceAdmin.captureSelfie')}`
+            : (captureLabel ?? t('attendanceAdmin.captureSelfie'))}
         </Button>
         {error && <p className='text-xs text-destructive'>{error}</p>}
       </div>
@@ -115,12 +126,12 @@ export function SelfieCapture({ required, disabled, onCapture, onClear }: Selfie
       <div className='flex gap-2'>
         {!preview && (
           <Button type='button' size='sm' className='flex-1' onClick={capture} disabled={disabled}>
-            {t('attendanceAdmin.captureNow')}
+            {captureNowLabel ?? t('attendanceAdmin.captureNow')}
           </Button>
         )}
         {preview && (
           <Button type='button' variant='outline' size='sm' className='flex-1' onClick={retake}>
-            {t('attendanceAdmin.retake')}
+            {retakeLabel ?? t('attendanceAdmin.retake')}
           </Button>
         )}
       </div>

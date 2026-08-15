@@ -1133,5 +1133,27 @@
     "reliableDesc": "30 days without missed attendance",
     "nightOwl": "Night Owl",
     "nightOwlDesc": "Complete a shift after 20:00"
+  },
+  "workSession": {
+    "title": "Work Session",
+    "instructions": "Instructions",
+    "completionPhotos": "Completion Photos",
+    "addPhoto": "Add Photo",
+    "capturePhoto": "Capture",
+    "retake": "Retake",
+    "materialsUsed": "Materials Used",
+    "addMaterial": "Add material",
+    "materialName": "Material name",
+    "unit": "Unit",
+    "van": "Van",
+    "warehouse": "Warehouse",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes about this session",
+    "finishSubmit": "Finish & Submit",
+    "notInProgress": "This ticket is not in progress",
+    "back": "Back",
+    "submitSuccess": "Work session submitted",
+    "submitFailed": "Failed to submit work session",
+    "photoUploadFailed": "Photo upload failed"
   }
 }

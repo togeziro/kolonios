@@ -1133,5 +1133,27 @@
     "reliableDesc": "30 hari tanpa absen",
     "nightOwl": "Night Owl",
     "nightOwlDesc": "Selesaikan shift setelah 20:00"
+  },
+  "workSession": {
+    "title": "Sesi Kerja",
+    "instructions": "Instruksi",
+    "completionPhotos": "Foto Penyelesaian",
+    "addPhoto": "Tambah Foto",
+    "capturePhoto": "Ambil",
+    "retake": "Ulangi",
+    "materialsUsed": "Material Terpakai",
+    "addMaterial": "Tambah material",
+    "materialName": "Nama material",
+    "unit": "Satuan",
+    "van": "Van",
+    "warehouse": "Gudang",
+    "notes": "Catatan",
+    "notesPlaceholder": "Catatan sesi ini",
+    "finishSubmit": "Selesai & Kirim",
+    "notInProgress": "Tiket ini tidak sedang dikerjakan",
+    "back": "Kembali",
+    "submitSuccess": "Sesi kerja terkirim",
+    "submitFailed": "Gagal mengirim sesi kerja",
+    "photoUploadFailed": "Gagal mengunggah foto"
   }
 }
