@@ -137,6 +137,13 @@ export default function MyWorkPage() {
           <Icons.calendar className='size-5 text-muted-foreground' />
           {t('navigation.leave')}
         </Link>
+        <Link
+          to='/dashboard/schedule'
+          className='flex items-center gap-3 rounded-lg p-2 text-sm font-medium transition-colors hover:bg-muted'
+        >
+          <Icons.calendar className='size-5 text-muted-foreground' />
+          {t('navigation.schedule')}
+        </Link>
       </Card>
     </div>
   );

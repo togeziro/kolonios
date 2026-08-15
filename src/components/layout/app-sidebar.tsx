@@ -35,6 +35,7 @@ export const navTitleKeys: Record<string, string> = {
   Dashboard: 'navigation.dashboard',
   'My Work': 'navigation.myWork',
   Attendance: 'navigation.attendance',
+  Schedule: 'navigation.schedule',
   Leave: 'navigation.leave',
   Profile: 'navigation.profile',
   Customers: 'navigation.customers',

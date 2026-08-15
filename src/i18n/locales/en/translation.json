@@ -9,6 +9,7 @@
     "home": "Home",
     "myWork": "My Work",
     "attendance": "Attendance",
+    "schedule": "Schedule",
     "leave": "Leave",
     "profile": "Profile",
     "payslips": "Payslips",
@@ -987,6 +988,19 @@
     "dayThu": "Thu",
     "dayFri": "Fri",
     "daySat": "Sat"
+  },
+  "schedule": {
+    "pageTitle": "My Schedule",
+    "pageDescription": "Your shift schedule, day offs and holidays",
+    "loadError": "Couldn't load your schedule",
+    "todayShift": "Today's Shift",
+    "noSchedule": "No schedule assigned",
+    "dayOff": "Day off",
+    "holiday": "Holiday",
+    "week": "This Week",
+    "month": "Month",
+    "shiftHours": "Shift hours",
+    "lateTolerance": "Late tolerance: {{minutes}} min"
   },
   "portal": {
     "title": "Customer Portal",

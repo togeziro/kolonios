@@ -21,6 +21,7 @@ describe('nav-config', () => {
       'Tickets',
       'My Work',
       'Attendance',
+      'Schedule',
       'Leave',
       'Payroll',
       'Payslips',
@@ -34,7 +35,7 @@ describe('nav-config', () => {
 
   it('flags employee self-service items hidden for admins', () => {
     const hidden = navItems.filter((item) => item.hiddenForAdmin).map((item) => item.title);
-    expect(hidden).toEqual(['My Work', 'Attendance', 'Payslips', 'Profile']);
+    expect(hidden).toEqual(['My Work', 'Attendance', 'Schedule', 'Payslips', 'Profile']);
   });
 
   it('nests tickets pages under a Tickets dropdown', () => {
@@ -116,6 +117,7 @@ describe('filterNavItemsByRole', () => {
     overview: { view: true },
     my_work: { view: true },
     attendance: { view: true },
+    schedule: { view: true },
     leave: { view: true },
     profile: { view: true },
     customers: { view: true, add: true, edit: true },

@@ -11,6 +11,7 @@
     "achievements": "Pencapaian",
     "myWork": "Pekerjaan Saya",
     "attendance": "Absensi",
+    "schedule": "Jadwal",
     "leave": "Cuti",
     "profile": "Profil",
     "payslips": "Slip Gaji",
@@ -987,6 +988,19 @@
     "dayThu": "Kam",
     "dayFri": "Jum",
     "daySat": "Sab"
+  },
+  "schedule": {
+    "pageTitle": "Jadwal Saya",
+    "pageDescription": "Jadwal shift, hari libur, dan cuti Anda",
+    "loadError": "Gagal memuat jadwal Anda",
+    "todayShift": "Shift Hari Ini",
+    "noSchedule": "Tidak ada jadwal",
+    "dayOff": "Hari libur",
+    "holiday": "Libur nasional",
+    "week": "Minggu Ini",
+    "month": "Bulan",
+    "shiftHours": "Jam shift",
+    "lateTolerance": "Toleransi keterlambatan: {{minutes}} menit"
   },
   "portal": {
     "title": "Portal Pelanggan",
