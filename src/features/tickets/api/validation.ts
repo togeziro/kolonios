@@ -33,3 +33,23 @@ export const createTicketSchema = z.object({
 export const legIdSchema = z.object({
   legId: z.number().int().positive()
 });
+
+export const workSessionMaterialSchema = z.object({
+  name: z.string().min(1).max(200),
+  qty: z.number().int().min(1).max(999),
+  unit: z.string().max(20),
+  source: z.enum(['warehouse', 'van'])
+});
+
+export const workSessionPhotoSchema = z.object({
+  fileUrl: z.string().min(1).max(500)
+});
+
+export const submitWorkSessionSchema = z.object({
+  ticketId: z.number().int().positive(),
+  materials: z.array(workSessionMaterialSchema).max(20),
+  photos: z.array(workSessionPhotoSchema).min(1).max(4),
+  notes: z.string().max(2000)
+});
+
+export type WorkSessionSubmit = z.infer<typeof submitWorkSessionSchema>;

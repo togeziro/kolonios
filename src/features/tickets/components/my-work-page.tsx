@@ -48,7 +48,11 @@ export default function MyWorkPage() {
 
   const cardAction = (task: Ticket) => (
     <Link
-      to='/dashboard/tickets/$ticketId'
+      to={
+        task.status === 'in_progress'
+          ? '/dashboard/work-session/$ticketId'
+          : '/dashboard/tickets/$ticketId'
+      }
       params={{ ticketId: String(task.id) }}
       className='block'
     >
