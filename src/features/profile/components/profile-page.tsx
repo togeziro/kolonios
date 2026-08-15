@@ -88,6 +88,15 @@ export default function ProfilePage() {
           <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
         </Link>
         <hr />
+        <Link
+          to='/dashboard/achievements'
+          className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
+        >
+          <Icons.badgeCheck className='text-muted-foreground h-4 w-4' />
+          {t('navigation.achievements')}
+          <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
+        </Link>
+        <hr />
         <button
           onClick={handleLogout}
           className='hover:bg-muted flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left text-sm'
