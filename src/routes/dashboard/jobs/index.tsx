@@ -4,8 +4,7 @@ import { zodValidator } from '@tanstack/zod-adapter';
 import JobsPage from '@/features/tickets/components/jobs-page';
 
 const jobsSearchSchema = z.object({
-  domain: z.enum(['field', 'backoffice']).optional(),
-  priority: z.enum(['low', 'medium', 'high']).optional()
+  domain: z.enum(['field', 'backoffice']).optional()
 });
 
 export const Route = createFileRoute('/dashboard/jobs/')({
