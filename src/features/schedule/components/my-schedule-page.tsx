@@ -6,7 +6,6 @@ import { TodayShiftCard } from './today-shift-card';
 import { WeekGrid } from './week-grid';
 import { MonthCalendar } from './month-calendar';
 import { businessDateInTimeZone } from '@/lib/dates';
-import { Icons } from '@/components/icons';
 
 function currentMonth(): string {
   return businessDateInTimeZone(new Date()).slice(0, 7);
