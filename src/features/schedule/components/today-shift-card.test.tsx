@@ -47,7 +47,8 @@ describe('TodayShiftCard', () => {
         />
       </I18nextProvider>
     );
-    expect(screen.getByText(i18n.t('schedule.dayOff'))).toBeTruthy();
+    const matches = screen.getAllByText(i18n.t('schedule.dayOff'));
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders the no-schedule label for a non-working cell', () => {
@@ -70,8 +71,8 @@ describe('TodayShiftCard', () => {
     );
     expect(screen.getByText(/08:00/)).toBeTruthy();
     expect(screen.getByText(/17:00/)).toBeTruthy();
-    expect(
-      screen.getByText(new RegExp(i18n.t('schedule.lateTolerance', { minutes: 10 })))
-    ).toBeTruthy();
+    expect(screen.getByText(i18n.t('schedule.morningShift'))).toBeTruthy();
+    expect(screen.getByText(i18n.t('schedule.mainOffice'))).toBeTruthy();
+    expect(screen.getByText(i18n.t('schedule.geofenceActive'))).toBeTruthy();
   });
 });

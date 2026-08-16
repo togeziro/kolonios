@@ -5,6 +5,7 @@ import { useSession, signOut } from '@/lib/auth/auth-client';
 import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 interface MobileHeaderProps {
   dark: boolean;
@@ -105,6 +106,7 @@ export function MobileHeader({ dark, onToggleDark }: MobileHeaderProps) {
         >
           {dark ? <Icons.sun className='h-5 w-5' /> : <Icons.moon className='h-5 w-5' />}
         </button>
+        <LanguageSwitcher />
         <div className='relative'>
           <button
             aria-label={t('navigation.notifications')}

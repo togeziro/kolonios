@@ -39,13 +39,13 @@ const emptyForm: ScheduleFormState = {
 };
 
 const DAY_I18N_KEYS = [
-  'attendanceAdmin.daySun',
-  'attendanceAdmin.dayMon',
-  'attendanceAdmin.dayTue',
-  'attendanceAdmin.dayWed',
-  'attendanceAdmin.dayThu',
-  'attendanceAdmin.dayFri',
-  'attendanceAdmin.daySat'
+  'attendance.daySun',
+  'attendance.dayMon',
+  'attendance.dayTue',
+  'attendance.dayWed',
+  'attendance.dayThu',
+  'attendance.dayFri',
+  'attendance.daySat'
 ];
 
 export function ScheduleForm() {
