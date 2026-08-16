@@ -1,11 +1,9 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
-import HandoffConfirmation from "@/features/tickets/components/handoff-confirmation";
+import { createFileRoute, useParams } from '@tanstack/react-router';
+import HandoffConfirmation from '@/features/tickets/components/handoff-confirmation';
 
-export const Route = createFileRoute(
-  "/dashboard/work-session/$ticketId/handoff",
-)({
-  head: () => ({ meta: [{ title: "Dashboard: Handoff" }] }),
-  component: HandoffRoute,
+export const Route = createFileRoute('/dashboard/work-session/$ticketId/handoff')({
+  head: () => ({ meta: [{ title: 'Dashboard: Handoff' }] }),
+  component: HandoffRoute
 });
 
 function HandoffRoute() {

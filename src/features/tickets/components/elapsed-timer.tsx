@@ -31,7 +31,9 @@ export default function ElapsedTimer({
   const elapsed = takenAt ? Math.max(0, now - new Date(takenAt).getTime()) : 0;
 
   return (
-    <Card className={`space-y-1 rounded-2xl border p-4 dark:border-zinc-800/50 dark:bg-zinc-900 ${className ?? ''}`}>
+    <Card
+      className={`space-y-1 rounded-2xl border p-4 dark:border-zinc-800/50 dark:bg-zinc-900 ${className ?? ''}`}
+    >
       <div className='flex items-center gap-2'>
         <span className='h-2 w-2 rounded-full bg-orange-500' />
         <p className='text-[10px] font-bold tracking-widest uppercase text-muted-foreground'>
