@@ -263,6 +263,14 @@ export const navItems: NavItem[] = [
         isActive: false,
         module: 'storage',
         items: []
+      },
+      {
+        title: 'Work Log Settings',
+        url: '/dashboard/admin/worklog-settings',
+        icon: 'settings',
+        isActive: false,
+        module: 'settings',
+        items: []
       }
     ]
   },

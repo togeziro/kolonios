@@ -28,6 +28,7 @@
     "auditLog": "Audit Log",
     "roleGroups": "Role Groups",
     "holidayCalendar": "Holiday Calendar",
+    "workLogSettings": "Work Log Settings",
     "achievements": "Achievements",
     "goToAttendance": "Go to attendance",
     "toggleTheme": "Toggle theme",
@@ -1201,7 +1202,26 @@
     "step0": "New",
     "step1": "Open",
     "step2": "In Progress",
-    "step3": "Done"
+    "step3": "Done",
+    "logLocationDenied": "Location permission denied",
+    "logLocationUnavailable": "Location not available on this device",
+    "logLocationTimeout": "Could not get location (timeout)",
+    "locationPickerTitle": "Confirm Location",
+    "locationPickerDescription": "Your position is shown on the map. Drag the marker to adjust if needed, then confirm.",
+    "locationPickerConfirm": "Confirm Location",
+    "locationPickerLocating": "Locating...",
+    "locationRecorded": "Location recorded"
+  },
+  "worklogSettings": {
+    "title": "Work Log Settings",
+    "pageDescription": "Configure how technicians log locations from the work session page.",
+    "description": "Work log settings are company-wide. Changes apply to every technician immediately.",
+    "lenientLabel": "Lenient location logging",
+    "lenientHint": "Accept any reported position (including low-accuracy fixes indoors) without rejecting on accuracy. Speeds up the location button on the work log. The logged entry still records the reported accuracy.",
+    "enabled": "Lenient location logging enabled",
+    "disabled": "Lenient location logging disabled",
+    "saveFailed": "Could not save work log settings",
+    "loadFailed": "Could not load work log settings"
   },
   "priority": {
     "high": "High",

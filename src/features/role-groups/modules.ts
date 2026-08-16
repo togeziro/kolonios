@@ -13,6 +13,7 @@ const MODULES = [
   { key: 'notifications', label: 'Notifications', actions: ['view'] },
   { key: 'holiday', label: 'Holiday Calendar', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'storage', label: 'Storage', actions: ['view', 'edit'] },
+  { key: 'settings', label: 'Settings', actions: ['view', 'edit'] },
   { key: 'profile', label: 'Profile', actions: ['view'] },
   { key: 'jobs', label: 'Jobs', actions: ['view'] },
   {

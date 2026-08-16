@@ -19,6 +19,7 @@ export interface GetCurrentLocationOptions {
   timeoutMs?: number;
   maxAgeMs?: number;
   maxAccuracyMeters?: number;
+  highAccuracy?: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -36,6 +37,7 @@ export function getCurrentLocation(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxAgeMs = options.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
   const maxAccuracyMeters = options.maxAccuracyMeters ?? DEFAULT_MAX_ACCURACY_METERS;
+  const highAccuracy = options.highAccuracy ?? true;
 
   return new Promise((resolve) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -81,7 +83,7 @@ export function getCurrentLocation(
           settle({ status: 'unavailable' });
         }
       },
-      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 0 }
+      { enableHighAccuracy: highAccuracy, timeout: timeoutMs, maximumAge: 0 }
     );
   });
 }

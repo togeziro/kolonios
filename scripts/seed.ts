@@ -924,6 +924,7 @@ async function seedRoleGroups() {
           users: { view: true },
           audit_log: { view: true },
           attendance_admin: { view: true },
+          settings: { view: true, edit: true },
           payroll: {
             view: true,
             add: true,
