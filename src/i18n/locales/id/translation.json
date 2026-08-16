@@ -1195,5 +1195,22 @@
     "submitFailed": "Gagal mengirim sesi kerja",
     "photoUploadFailed": "Gagal mengunggah foto",
     "elapsed": "Durasi"
+  },
+  "handoff": {
+    "legSubmitted": "Leg {{leg}} diserahkan",
+    "submittedTitle": "Pekerjaan diserahkan",
+    "awaitingPickup": "Menunggu pengambilan",
+    "nextStep": "Langkah berikutnya",
+    "nextLegName": "Leg {{leg}} · {{name}}",
+    "assignedToUser": "Ditugaskan ke teknisi",
+    "poolFallback": "Belum ditugaskan — akan masuk antrean tugas",
+    "ready": "Siap",
+    "noNextLeg": "Tidak ada leg berikutnya",
+    "handoffNote": "Catatan serah terima",
+    "handoffNotePlaceholder": "Tinggalkan catatan untuk teknisi berikutnya…",
+    "saveHandoffNote": "Simpan catatan serah terima",
+    "backToMyWork": "Kembali ke Pekerjaan Saya",
+    "saved": "Catatan serah terima disimpan",
+    "saveFailed": "Gagal menyimpan catatan serah terima"
   }
 }
