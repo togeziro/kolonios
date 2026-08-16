@@ -1113,7 +1113,8 @@
     "openTickets": "Open Tickets",
     "openedBy": "Opened by",
     "take": "Take",
-    "noOpenTickets": "No open tickets available"
+    "noOpenTickets": "No open tickets available",
+    "unavailable": "Unavailable"
   },
   "storage": {
     "title": "Storage Settings",

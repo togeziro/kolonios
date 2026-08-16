@@ -26,7 +26,17 @@ function relativeTime(dateStr: string): string {
   return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: dateFnsLocale() });
 }
 
-function OpenTicketCard({ ticket, onTake }: { ticket: Ticket; onTake: (id: number) => void }) {
+function OpenTicketCard({
+  ticket,
+  onTake,
+  disabled,
+  reasons
+}: {
+  ticket: Ticket;
+  onTake: (id: number) => void;
+  disabled?: boolean;
+  reasons?: string[];
+}) {
   const { t } = useTranslation();
   const p = priorityConfig[ticket.priority];
 
@@ -74,8 +84,15 @@ function OpenTicketCard({ ticket, onTake }: { ticket: Ticket; onTake: (id: numbe
         )}
       </div>
 
+      {reasons && reasons.length > 0 && (
+        <div className='dark:text-zinc-400 flex items-start gap-2 rounded-lg border border-dashed px-3 py-2 text-sm'>
+          <Icons.warning className='mt-0.5 h-4 w-4 shrink-0' />
+          <span>{reasons.join(' · ')}</span>
+        </div>
+      )}
       <Button
         onClick={() => onTake(ticket.id)}
+        disabled={disabled}
         className={`mt-2 w-full py-3 font-semibold ${
           ticket.priority === 'high'
             ? 'dark:bg-zinc-100 dark:text-zinc-900 bg-zinc-900 text-white'
@@ -100,6 +117,7 @@ export default function JobsPage() {
 
   const { data, isLoading } = useQuery(openTicketsQueryOptions(filters));
   const tickets = data?.tickets ?? [];
+  const unavailable = data?.unavailable ?? [];
 
   function setDomain(next: TicketDomain | undefined) {
     navigate({ to: '/dashboard/jobs', search: { domain: next } });
@@ -164,15 +182,37 @@ export default function JobsPage() {
           <div className='flex justify-center py-8'>
             <Icons.spinner className='h-6 w-6 animate-spin text-muted-foreground' />
           </div>
-        ) : tickets.length === 0 ? (
+        ) : tickets.length === 0 && unavailable.length === 0 ? (
           <p className='text-muted-foreground py-8 text-center text-sm'>
             {t('ticket.noOpenTickets')}
           </p>
         ) : (
           <div className='flex flex-col gap-4'>
             {tickets.map((ticket) => (
-              <OpenTicketCard key={ticket.id} ticket={ticket} onTake={handleTake} />
+              <OpenTicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onTake={handleTake}
+                disabled={takeTicket.isPending}
+              />
             ))}
+            {unavailable.length > 0 && (
+              <>
+                <h2 className='dark:text-zinc-500 pt-4 text-xs font-semibold uppercase tracking-wider text-zinc-400'>
+                  {t('ticket.unavailable')}
+                </h2>
+                {unavailable.map((ticket) => (
+                  <div key={ticket.id} className='opacity-75'>
+                    <OpenTicketCard
+                      ticket={ticket}
+                      onTake={() => {}}
+                      disabled
+                      reasons={ticket.eligibilityReasons}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </main>
