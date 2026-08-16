@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth.server';
 import { mapDbError } from '../errors';
 import { db } from './index';

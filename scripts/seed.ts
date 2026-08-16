@@ -51,8 +51,6 @@ import {
 import { eq } from 'drizzle-orm';
 import { businessDateInTimeZone } from '../src/lib/dates';
 
-const ROLES = ['admin', 'hr', 'employee', 'technician', 'customer'] as const;
-
 async function seedUsers() {
   const demo = {
     email: 'admin@example.com',

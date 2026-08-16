@@ -79,7 +79,6 @@ export function ColumnVisibilityMenu<TData extends RowData>({
 export function DataTableViewOptions<TData extends RowData>({
   table
 }: DataTableViewOptionsProps<TData>) {
-  const { t } = useTranslation();
   return (
     <div className='ml-auto hidden lg:block'>
       <ColumnVisibilityMenu table={table} />

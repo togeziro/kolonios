@@ -29,8 +29,8 @@ src/features/holiday-calendar/components/holiday-columns.tsx:85
 src/features/holiday-calendar/components/holiday-columns.tsx:94
 src/features/masterdata/components/department-columns.tsx:81
 src/features/masterdata/components/department-columns.tsx:84
-src/features/masterdata/components/designation-columns.tsx:95
-src/features/masterdata/components/designation-columns.tsx:98
+src/features/masterdata/components/designation-columns.tsx:94
+src/features/masterdata/components/designation-columns.tsx:97
 src/features/notifications/components/notification-center.tsx:45
 src/features/notifications/components/notifications-page.tsx:77
 src/features/overview/components/area-graph.tsx:112

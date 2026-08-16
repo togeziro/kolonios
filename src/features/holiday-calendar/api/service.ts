@@ -24,7 +24,7 @@ import {
 export const createNationalHolidayFn = createServerFn({ method: 'POST' })
   .validator(createNationalHolidaySchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('holiday', 'add');
+    await requirePermission('holiday', 'add');
 
     try {
       const result = await createNationalHoliday({
@@ -92,7 +92,7 @@ export const getNationalHolidayFn = createServerFn({ method: 'GET' })
 export const updateNationalHolidayFn = createServerFn({ method: 'POST' })
   .validator(updateNationalHolidaySchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('holiday', 'edit');
+    await requirePermission('holiday', 'edit');
 
     try {
       const result = await updateNationalHoliday(data.id, data.data);
@@ -112,7 +112,7 @@ export const updateNationalHolidayFn = createServerFn({ method: 'POST' })
 export const deleteNationalHolidayFn = createServerFn({ method: 'POST' })
   .validator(deleteNationalHolidaySchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('holiday', 'delete');
+    await requirePermission('holiday', 'delete');
 
     try {
       const result = await deleteNationalHoliday(data.id);

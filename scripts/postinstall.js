@@ -25,12 +25,13 @@ const newLine =
 
 const file = path.resolve(__dirname, '..', target);
 
-if (!fs.existsSync(file)) {
+let content;
+try {
+  content = fs.readFileSync(file, 'utf8');
+} catch {
   console.warn(`[postinstall] skip: ${target} not found`);
   process.exit(0);
 }
-
-const content = fs.readFileSync(file, 'utf8');
 
 if (content.includes(sentinel)) {
   process.exit(0);

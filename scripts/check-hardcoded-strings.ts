@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import ts from 'typescript';
 
@@ -47,9 +47,12 @@ function walk(dir: string) {
 }
 for (const root of ROOTS) walk(root);
 
-const baseline = existsSync(BASELINE)
-  ? new Set(readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean))
-  : new Set<string>();
+let baseline: Set<string>;
+try {
+  baseline = new Set(readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean));
+} catch {
+  baseline = new Set<string>();
+}
 const found = new Map<string, string>(); // "file:line" -> message
 
 for (const file of files) {
