@@ -25,6 +25,11 @@ const MODULES = [
     key: 'tickets',
     label: 'Tickets',
     actions: ['view', 'add', 'edit']
+  },
+  {
+    key: 'spv_review',
+    label: 'SPV Review',
+    actions: ['view', 'edit']
   }
 ] as const;
 

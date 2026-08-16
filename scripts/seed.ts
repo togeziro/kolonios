@@ -266,6 +266,12 @@ async function seedMasterdata() {
     },
     { name: 'Field Technician', code: 'FLD_TECH', department_id: opsId, base_salary: 4500000 },
     {
+      name: 'Field Supervisor',
+      code: 'FLD_SUP',
+      department_id: opsId,
+      base_salary: 7000000
+    },
+    {
       name: 'Senior Field Technician',
       code: 'SR_TECH',
       department_id: opsId,
@@ -308,6 +314,12 @@ async function seedDemoUsers() {
     {
       email: 'technician@example.com',
       name: 'Demo Technician',
+      password: 'Password123!',
+      role: 'technician' as const
+    },
+    {
+      email: 'spv@example.com',
+      name: 'Demo Supervisor',
       password: 'Password123!',
       role: 'technician' as const
     }
@@ -367,6 +379,13 @@ async function seedEmployees() {
       email: 'technician@example.com',
       department_code: 'OPS',
       designation_code: 'FLD_TECH'
+    },
+    {
+      employee_code: 'EMP005',
+      full_name: 'Demo Supervisor',
+      email: 'spv@example.com',
+      department_code: 'OPS',
+      designation_code: 'FLD_SUP'
     }
   ];
 
@@ -485,7 +504,8 @@ async function seedPayroll() {
     'admin@example.com': { type: 'monthly', amount: '10000000.00' },
     'hr@example.com': { type: 'monthly', amount: '5000000.00' },
     'employee@example.com': { type: 'daily', amount: '250000.00' },
-    'technician@example.com': { type: 'hourly', amount: '50000.00' }
+    'technician@example.com': { type: 'hourly', amount: '50000.00' },
+    'spv@example.com': { type: 'monthly', amount: '7000000.00' }
   };
 
   for (const employee of employeeRows) {
@@ -885,6 +905,7 @@ async function seedAchievementsDemo() {
 async function seedRoleGroups() {
   const adminId = 'zzzrg-admin';
   const techId = 'zzzrg-technician';
+  const spvId = 'zzzrg-spv';
   const hrId = 'zzzrg-hr';
   const employeeId = 'zzzrg-employee';
 
@@ -963,6 +984,24 @@ async function seedRoleGroups() {
           payroll: { view: true }
         },
         is_admin: false
+      },
+      {
+        id: spvId,
+        name: 'SPV',
+        description: 'Supervisor — field ops with review & leave approval',
+        permissions: {
+          ...coreModules,
+          jobs: { view: true },
+          tickets: { view: true, add: true, edit: true },
+          customers: { view: true },
+          notifications: { view: true },
+          schedule: { view: true },
+          achievements: { view: true },
+          payroll: { view: true },
+          leave: { view: true, edit: true },
+          spv_review: { view: true, edit: true }
+        },
+        is_admin: false
       }
     ])
     .onConflictDoNothing();
@@ -974,7 +1013,8 @@ async function seedRoleGroups() {
     [byEmail.get('admin@example.com'), adminId, 'Administrator', 'admin@example.com'],
     [byEmail.get('hr@example.com'), hrId, 'HR', 'hr@example.com'],
     [byEmail.get('employee@example.com'), employeeId, 'Employee', 'employee@example.com'],
-    [byEmail.get('technician@example.com'), techId, 'Technician', 'technician@example.com']
+    [byEmail.get('technician@example.com'), techId, 'Technician', 'technician@example.com'],
+    [byEmail.get('spv@example.com'), spvId, 'SPV', 'spv@example.com']
   ] as const;
 
   for (const [userId, roleGroupId, name, email] of assignments) {
@@ -1056,7 +1096,7 @@ export async function seedPerformance() {
 
   const users = await db.select({ id: user.id, email: user.email }).from(user);
   const byEmail = new Map(users.map((row) => [row.email, row.id]));
-  const staffEmails = ['employee@example.com', 'technician@example.com'];
+  const staffEmails = ['employee@example.com', 'technician@example.com', 'spv@example.com'];
   const now = new Date();
   const dates = [
     new Date(now.getFullYear(), now.getMonth() - 2, 11),

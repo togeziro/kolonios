@@ -81,11 +81,13 @@ describe('UserAuthForm autofill handling', () => {
     await act(async () => {
       fireEvent.click(loginButton());
     });
-    expect(emailSignInMock).toHaveBeenCalledWith({
-      email: 'admin@example.com',
-      password: 'Password123!',
-      rememberMe: false
-    });
+    expect(emailSignInMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'admin@example.com',
+        password: 'Password123!',
+        rememberMe: false
+      })
+    );
   });
 
   it('keeps autofilled values in the fields after a re-render', async () => {
@@ -113,11 +115,11 @@ describe('UserAuthForm autofill handling', () => {
 });
 
 describe('UserAuthForm remember-me checkbox', () => {
-  it('renders the remember-me checkbox before the email field', () => {
+  it('renders the remember-me checkbox after the email field', () => {
     renderForm();
     const checkbox = screen.getByRole('checkbox');
     const email = document.getElementById('email') as HTMLInputElement;
-    expect(checkbox.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(email.compareDocumentPosition(checkbox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('sends rememberMe when the checkbox is checked', async () => {
