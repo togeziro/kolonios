@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { legIdSchema, createTicketSchema, submitWorkSessionSchema } from './validation';
+import {
+  legIdSchema,
+  createTicketSchema,
+  submitWorkSessionSchema,
+  submitHandoffNoteSchema
+} from './validation';
 
 describe('tickets validation', () => {
   it('accepts positive integer leg ids and rejects everything else', () => {
@@ -74,5 +79,60 @@ describe('submitWorkSessionSchema', () => {
       notes: ''
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('submitWorkSessionSchema log', () => {
+  const base = () => ({
+    ticketId: 42,
+    materials: [],
+    photos: [{ fileUrl: 'tickets/0/1.jpg' }],
+    notes: ''
+  });
+
+  it('accepts an empty log (defaults to [])', () => {
+    const res = submitWorkSessionSchema.safeParse(base());
+    expect(res.success).toBe(true);
+    expect(res.data?.log).toEqual([]);
+  });
+
+  it('accepts up to 50 valid log entries', () => {
+    const log = Array.from({ length: 50 }, () => ({ kind: 'note' as const, body: 'x' }));
+    expect(submitWorkSessionSchema.safeParse({ ...base(), log }).success).toBe(true);
+  });
+
+  it('rejects a log with more than 50 entries', () => {
+    const log = Array.from({ length: 51 }, () => ({ kind: 'note' as const, body: 'x' }));
+    expect(submitWorkSessionSchema.safeParse({ ...base(), log }).success).toBe(false);
+  });
+
+  it('rejects an invalid log kind', () => {
+    expect(
+      submitWorkSessionSchema.safeParse({ ...base(), log: [{ kind: 'voice', body: 'x' }] }).success
+    ).toBe(false);
+  });
+
+  it('rejects an oversize log body', () => {
+    expect(
+      submitWorkSessionSchema.safeParse({
+        ...base(),
+        log: [{ kind: 'note', body: 'x'.repeat(501) }]
+      }).success
+    ).toBe(false);
+  });
+});
+
+describe('submitHandoffNoteSchema', () => {
+  it('accepts a valid leg id and note', () => {
+    expect(submitHandoffNoteSchema.safeParse({ legId: 7, note: 'Pick up at 3pm' }).success).toBe(
+      true
+    );
+  });
+
+  it('rejects a bad leg id or oversize note', () => {
+    expect(submitHandoffNoteSchema.safeParse({ legId: 0, note: '' }).success).toBe(false);
+    expect(submitHandoffNoteSchema.safeParse({ legId: 1, note: 'x'.repeat(2001) }).success).toBe(
+      false
+    );
   });
 });

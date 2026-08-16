@@ -45,11 +45,22 @@ export const workSessionPhotoSchema = z.object({
   fileUrl: z.string().min(1).max(500)
 });
 
+export const workSessionLogEntrySchema = z.object({
+  kind: z.enum(['note', 'photo', 'location', 'meter']),
+  body: z.string().min(1).max(500)
+});
+
+export const submitHandoffNoteSchema = z.object({
+  legId: z.number().int().positive(),
+  note: z.string().min(1).max(2000)
+});
+
 export const submitWorkSessionSchema = z.object({
   ticketId: z.number().int().positive(),
   materials: z.array(workSessionMaterialSchema).max(20),
   photos: z.array(workSessionPhotoSchema).min(1).max(4),
-  notes: z.string().max(2000)
+  notes: z.string().max(2000),
+  log: z.array(workSessionLogEntrySchema).max(50).default([])
 });
 
 export type WorkSessionSubmit = z.infer<typeof submitWorkSessionSchema>;

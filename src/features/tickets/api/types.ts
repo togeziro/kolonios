@@ -3,10 +3,18 @@ import type {
   TicketLegStatus,
   TicketPriority,
   TicketChannel,
-  TicketTaskType
+  TicketTaskType,
+  TicketWorklogKind
 } from '@/lib/db/schema/tickets';
 
-export type { TicketStatus, TicketLegStatus, TicketPriority, TicketChannel, TicketTaskType };
+export type {
+  TicketStatus,
+  TicketLegStatus,
+  TicketPriority,
+  TicketChannel,
+  TicketTaskType,
+  TicketWorklogKind
+};
 
 export type TicketDomain = 'field' | 'backoffice';
 
@@ -28,6 +36,7 @@ export type Ticket = {
   requiredSkills: string[];
   assignedTo: string | null;
   takenBy: string | null;
+  takenAt: string | null;
   rating: number | null;
   reviewNote: string | null;
   reviewedBy: string | null;
@@ -61,6 +70,7 @@ export type TicketDetail = Ticket & {
   legs: TicketLeg[];
   materials: TicketMaterial[];
   photos: TicketPhoto[];
+  worklog: TicketWorklog[];
   requesterId: string | null;
   createdAt: string;
 };
@@ -83,6 +93,27 @@ export type TicketActionResponse = {
   success: boolean;
   message?: string;
   ticket?: Ticket;
+  nextLeg?: NextLegInfo | null;
+  isLastLeg?: boolean;
+};
+
+export type TicketWorklog = {
+  id: number;
+  legId: number;
+  kind: TicketWorklogKind;
+  body: string;
+  createdAt: string;
+  createdBy: string | null;
+};
+
+export type WorkLogEntryInput = {
+  kind: TicketWorklogKind;
+  body: string;
+};
+
+export type NextLegInfo = {
+  legNumber: number;
+  name: string;
 };
 
 export type CreateTicketResponse = TicketDetailResponse;
@@ -123,6 +154,7 @@ export type WorkSessionSubmitInput = {
   materials: WorkSessionMaterialInput[];
   photos: WorkSessionPhotoInput[];
   notes: string;
+  log: WorkLogEntryInput[];
 };
 
 export type TicketPhoto = {
