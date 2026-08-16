@@ -1194,7 +1194,24 @@
     "submitSuccess": "Sesi kerja terkirim",
     "submitFailed": "Gagal mengirim sesi kerja",
     "photoUploadFailed": "Gagal mengunggah foto",
-    "elapsed": "Durasi"
+    "elapsed": "Durasi",
+    "inProgress": "Sedang Berlangsung",
+    "domainField": "Lapangan",
+    "domainBackoffice": "Backoffice",
+    "step0": "Baru",
+    "step1": "Terbuka",
+    "step2": "Berlangsung",
+    "step3": "Selesai"
+  },
+  "priority": {
+    "high": "Tinggi",
+    "medium": "Sedang",
+    "low": "Rendah"
+  },
+  "taskType": {
+    "installation": "Pemasangan",
+    "maintenance": "Perawatan",
+    "inspection": "Inspeksi"
   },
   "handoff": {
     "legSubmitted": "Leg {{leg}} diserahkan",
