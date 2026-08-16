@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from '@tanstack/react-router';
 
-export const Route = createFileRoute("/dashboard/work-session/$ticketId")({
-  head: () => ({ meta: [{ title: "Dashboard: Work Session" }] }),
-  component: WorkSessionLayout,
+export const Route = createFileRoute('/dashboard/work-session/$ticketId')({
+  head: () => ({ meta: [{ title: 'Dashboard: Work Session' }] }),
+  component: WorkSessionLayout
 });
 
 function WorkSessionLayout() {

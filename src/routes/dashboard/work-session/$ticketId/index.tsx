@@ -1,8 +1,8 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
-import WorkSessionPage from "@/features/tickets/components/work-session-page";
+import { createFileRoute, useParams } from '@tanstack/react-router';
+import WorkSessionPage from '@/features/tickets/components/work-session-page';
 
-export const Route = createFileRoute("/dashboard/work-session/$ticketId/")({
-  component: WorkSessionRoute,
+export const Route = createFileRoute('/dashboard/work-session/$ticketId/')({
+  component: WorkSessionRoute
 });
 
 function WorkSessionRoute() {

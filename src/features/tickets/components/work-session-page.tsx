@@ -71,7 +71,8 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
     );
   }
 
-  const domainLabel = ticket.domain === 'field' ? t('workSession.domainField') : t('workSession.domainBackoffice');
+  const domainLabel =
+    ticket.domain === 'field' ? t('workSession.domainField') : t('workSession.domainBackoffice');
   const isField = (FIELD_TASK_TYPES as readonly string[]).includes(ticket.taskType);
 
   const finish = () => {
@@ -86,7 +87,10 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
               params: { ticketId: String(ticketId) }
             });
           } else {
-            navigate({ to: '/dashboard/work-session/$ticketId/handoff', params: { ticketId: String(ticketId) } });
+            navigate({
+              to: '/dashboard/work-session/$ticketId/handoff',
+              params: { ticketId: String(ticketId) }
+            });
           }
         }
       }
@@ -121,7 +125,9 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
           </Badge>
         </div>
         <div className='flex flex-wrap gap-2'>
-          <Badge className={`h-6 rounded-full px-3 text-[11px] font-bold ${ticket.priority === 'high' ? priorityTone.high : ticket.priority === 'medium' ? priorityTone.medium : priorityTone.low}`}>
+          <Badge
+            className={`h-6 rounded-full px-3 text-[11px] font-bold ${ticket.priority === 'high' ? priorityTone.high : ticket.priority === 'medium' ? priorityTone.medium : priorityTone.low}`}
+          >
             {t(`priority.${ticket.priority}`)}
           </Badge>
           <Badge variant='outline' className='h-6 rounded-full px-3 text-[11px] font-bold'>
@@ -168,7 +174,9 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
             <div
               className={`h-1.5 w-full rounded-full ${s < active ? 'bg-green-500' : s === active ? 'bg-green-500' : 'bg-zinc-800 dark:bg-zinc-700'}`}
             />
-            <span className={`text-[10px] font-bold uppercase ${s === active ? 'text-green-500' : 'text-muted-foreground'}`}>
+            <span
+              className={`text-[10px] font-bold uppercase ${s === active ? 'text-green-500' : 'text-muted-foreground'}`}
+            >
               {t(`workSession.step${s}`)}
             </span>
           </div>
