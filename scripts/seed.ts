@@ -49,6 +49,7 @@ import {
   type NewCustomer
 } from '../src/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { businessDateInTimeZone } from '../src/lib/dates';
 
 const ROLES = ['admin', 'hr', 'employee', 'technician', 'customer'] as const;
 
@@ -769,6 +770,120 @@ async function seedTickets() {
   console.log('Seeded 5 tickets, 4 ticket requirements, 3 employee skills');
 }
 
+async function seedAchievementsDemo() {
+  const users = await db.select({ id: user.id, email: user.email }).from(user);
+  const byEmail = new Map(users.map((u) => [u.email, u.id]));
+  const techId = byEmail.get('technician@example.com');
+  const adminId = byEmail.get('admin@example.com');
+  if (!techId || !adminId) throw new Error('Demo users not found for achievements seed');
+
+  const shiftsRows = await db.select({ id: shifts.id, name: shifts.name }).from(shifts);
+  const morning = shiftsRows.find((s) => s.name === 'Morning Shift');
+  if (!morning) throw new Error('Morning Shift not found for achievements seed');
+
+  // --- Attendance history: 35 consecutive present days ending today (business TZ) ---
+  const businessDate = businessDateInTimeZone(new Date());
+  const today = new Date(`${businessDate}T00:00:00`);
+  const monthPrefix = businessDate.slice(0, 7);
+
+  // Pick 5 distinct early-check-in dates within this month (and within the streak window)
+  const earlyDates = new Set<string>();
+  let cursor = new Date(today);
+  while (earlyDates.size < 5 && cursor >= new Date(`${businessDate.slice(0, 7)}-01T00:00:00`)) {
+    earlyDates.add(businessDateInTimeZone(cursor));
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  // If month is younger than 5 days (e.g. the 1st–4th), backfill from previous month:
+  let backfill = 0;
+  while (earlyDates.size < 5) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 5 - backfill);
+    earlyDates.add(businessDateInTimeZone(d));
+    backfill++;
+  }
+
+  const attendanceRows: Array<{
+    user_id: string;
+    shift_id: number;
+    date: string;
+    check_in_time: string;
+    check_out_time: string;
+    check_in_timestamp: Date;
+    check_out_timestamp: Date;
+    attendance_status: string;
+  }> = [];
+
+  for (let i = 34; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = businessDateInTimeZone(d);
+    const isEarly = earlyDates.has(dateStr);
+    attendanceRows.push({
+      user_id: techId,
+      shift_id: morning.id,
+      date: dateStr,
+      check_in_time: isEarly ? '06:45' : '08:05',
+      check_out_time: '17:30',
+      check_in_timestamp: new Date(`${dateStr}T${isEarly ? '06:45' : '08:05'}:00`),
+      check_out_timestamp: new Date(`${dateStr}T17:30:00`),
+      attendance_status: 'present'
+    });
+  }
+
+  await db.insert(employeeShifts).values(attendanceRows);
+  console.log(
+    `Seeded ${attendanceRows.length} attendance days for achievements (5 early check-ins in ${monthPrefix})`
+  );
+
+  // --- Completed tickets: 10 inspection tickets (OLT Master) ---
+  const weekStart = new Date(today);
+  while (weekStart.getDay() !== 1) weekStart.setDate(weekStart.getDate() - 1); // back to Monday
+
+  const mkDate = (d: Date, hour: number, minute: number) => {
+    const dateStr = businessDateInTimeZone(d);
+    return new Date(
+      `${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`
+    );
+  };
+
+  // 4 tickets completed this week (business Monday → today)
+  const weekTickets = [0, 1, 2, 3].map((i) => {
+    const completed = new Date(weekStart);
+    completed.setDate(completed.getDate() + Math.min(i, 4)); // Mon..Fri-ish, clamped to today window
+    if (completed > today) completed.setTime(today.getTime());
+    const completedAt = mkDate(completed, 10 + i, 0);
+    const takenAt = new Date(completedAt);
+    takenAt.setMinutes(takenAt.getMinutes() - 120); // 2h elapsed → NOT fast finisher
+    return { completedAt, takenAt, title: `Weekly OLT inspection ${i + 1}` };
+  });
+
+  // 6 tickets completed earlier this month (before the business Monday)
+  const earlierTickets = [0, 1, 2, 3, 4, 5].map((i) => {
+    const completed = new Date(weekStart);
+    completed.setDate(completed.getDate() - (i + 1) * 3); // spread over prior days
+    const completedAt = mkDate(completed, 9 + (i % 6), 30);
+    const takenAt = new Date(completedAt);
+    takenAt.setMinutes(takenAt.getMinutes() - 120);
+    return { completedAt, takenAt, title: `OLT inspection follow-up ${i + 1}` };
+  });
+
+  await db.insert(tickets).values(
+    [...weekTickets, ...earlierTickets].map(({ completedAt, takenAt, title }) => ({
+      title,
+      description: 'Seeded completed ticket for achievements demo.',
+      task_type: 'inspection' as const,
+      status: 'completed' as const,
+      priority: 'medium' as const,
+      assigned_to: techId,
+      taken_by: techId,
+      taken_at: takenAt,
+      completed_at: completedAt,
+      created_by: adminId
+    }))
+  );
+  console.log(`Seeded 10 completed inspection tickets for achievements (4 this week, 6 earlier)`);
+}
+
 async function seedRoleGroups() {
   const adminId = 'zzzrg-admin';
   const techId = 'zzzrg-technician';
@@ -977,6 +1092,9 @@ export async function seedDatabase() {
   await seedPayroll();
   await seedCustomers();
   await seedTickets();
+  if (process.env.SEED_DEMO_ACHIEVEMENTS === '1') {
+    await seedAchievementsDemo();
+  }
   await seedRoleGroups();
   await seedAttendanceSchedules();
   await seedPerformance();

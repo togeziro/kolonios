@@ -178,6 +178,19 @@ database (4 demo users, 4 employee records, role groups, customers, etc.), so
 no separate `db:seed` is needed on a new checkout. Run `bun run db:seed`
 manually only to force a re-seed.
 
+```bash
+bun run db:seed          # optional: force a re-seed
+                         # SEED_DEMO_ACHIEVEMENTS=1 bun run db:seed adds the
+                         #   demo technician's attendance history + 10 completed
+                         #   inspection tickets so the Achievements screen shows
+                         #   unlocked badges (OLT Master, Early Bird, Reliable)
+                         #
+                         # Note: a plain db:seed run wipes that demo state
+                         #   (tickets + attendance are re-seeded from scratch).
+                         #   The local .env sets SEED_DEMO_ACHIEVEMENTS=1 so a
+                         #   plain `bun run db:seed` restores it automatically.
+```
+
 Run the development server:
 
 ```bash
