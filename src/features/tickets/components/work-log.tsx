@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import type { WorkLogEntryInput } from '../api/types';
 import { SelfieCapture } from '@/features/attendance/components/selfie-capture';
-import { PHOTO_UPLOAD_FAILED, uploadTicketPhoto } from '@/lib/storage/upload-client';
+import { uploadTicketPhoto } from '@/lib/storage/upload-client';
 import { getCurrentLocation } from '@/features/attendance/utils/geolocation';
 
 export default function WorkLog({
@@ -67,10 +67,8 @@ export default function WorkLog({
         setPhotoKey(key);
         addEntry({ kind: 'photo', body: key });
       })
-      .catch((e: unknown) => {
-        if (e instanceof Error && e.message === PHOTO_UPLOAD_FAILED) {
-          toast.error(t('workSession.logPhotoFailed'));
-        }
+      .catch(() => {
+        toast.error(t('workSession.logPhotoFailed'));
       })
       .finally(() => setPhotoPending(false));
   };

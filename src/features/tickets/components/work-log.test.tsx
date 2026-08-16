@@ -7,13 +7,21 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import type { WorkLogEntryInput } from '../api/types';
 import WorkLog from './work-log';
+import { uploadTicketPhoto } from '@/lib/storage/upload-client';
 
 function WorkLogHost({ disabled }: { disabled?: boolean }) {
   const [log, setLog] = useState<WorkLogEntryInput[]>([]);
   return <WorkLog entries={log} onChange={setLog} disabled={disabled} />;
 }
 
-const { locMock } = vi.hoisted(() => ({ locMock: vi.fn() }));
+const { locMock, toastMock } = vi.hoisted(() => ({
+  locMock: vi.fn(),
+  toastMock: { error: vi.fn() }
+}));
+
+vi.mock('sonner', () => ({
+  toast: toastMock
+}));
 
 vi.mock('@/features/attendance/utils/geolocation', () => ({
   getCurrentLocation: () => locMock()
@@ -77,7 +85,7 @@ describe('WorkLog', () => {
     );
   });
 
-  it('appends a meter entry and ignores empty input', () => {
+  it('appends a meter entry', () => {
     const onChange = vi.fn();
     render(
       <I18nextProvider i18n={i18n}>
@@ -89,6 +97,29 @@ describe('WorkLog', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /add meter/i }));
     expect(onChange).toHaveBeenCalledWith([{ kind: 'meter', body: '855nm' }]);
+  });
+
+  it('ignores empty input — add buttons do not emit entries when their fields are blank', () => {
+    const onChange = vi.fn();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <WorkLog entries={[]} onChange={onChange} disabled={false} />
+      </I18nextProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /add note/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add meter/i }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('toasts a generic photo upload failure', async () => {
+    vi.mocked(uploadTicketPhoto).mockRejectedValueOnce(new Error('storage not configured'));
+    render(
+      <I18nextProvider i18n={i18n}>
+        <WorkLog entries={[]} onChange={vi.fn()} disabled={false} />
+      </I18nextProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /capture-photo/i }));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalled());
   });
 
   it('preserves entries added while geolocation is pending', async () => {

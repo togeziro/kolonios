@@ -28,9 +28,7 @@ import type {
   CreateTicketResponse,
   NewTicketInput,
   TicketDomain,
-  WorkSessionSubmitInput,
-  WorkLogEntryInput,
-  NextLegInfo
+  WorkSessionSubmitInput
 } from '@/features/tickets/api/types';
 
 export const MAX_ACTIVE_TICKETS = 3;
@@ -551,7 +549,9 @@ export async function submitWorkSession(
         )
         .limit(1);
       const leg = legs[0];
-      if (!leg) return { success: false, message: 'Ticket has no legs' };
+      if (!leg || !['open', 'assigned', 'in_progress'].includes(leg.status)) {
+        return { success: false, message: 'Leg is no longer submittable' };
+      }
 
       if (input.materials.length > 0) {
         await tx.insert(ticketMaterials).values(
@@ -593,7 +593,7 @@ export async function submitWorkSession(
         .set({
           status: 'submitted',
           completed_at: new Date(),
-          notes: input.notes,
+          notes: input.notes ? input.notes : leg.notes,
           updated_at: new Date()
         })
         .where(eq(ticketLegs.id, leg.id));
