@@ -29,6 +29,7 @@ import {
   ticketLegs,
   ticketMaterials,
   ticketPhotos,
+  ticketWorklog,
   taskRequirements,
   employeeSkills
 } from '@/lib/db/schema/tickets';
@@ -93,6 +94,7 @@ export async function resetAllTables() {
   await db.delete(performanceReports);
   await db.delete(ticketMaterials);
   await db.delete(ticketPhotos);
+  await db.delete(ticketWorklog);
   await db.delete(ticketLegs);
   await db.delete(employeeSkills);
   await db.delete(taskRequirements);
@@ -287,6 +289,17 @@ export async function seedTicketMaterial(
     .values({ leg_id: legId, material_name: 'Test Material', ...overrides })
     .returning();
   return material;
+}
+
+export async function seedTicketWorklog(
+  legId: number,
+  overrides: Partial<typeof ticketWorklog.$inferInsert> = {}
+) {
+  const [entry] = await db
+    .insert(ticketWorklog)
+    .values({ leg_id: legId, kind: 'note', body: 'Test entry', ...overrides })
+    .returning();
+  return entry;
 }
 
 export async function seedEmployeeSkill(userId: string, skill: string) {
