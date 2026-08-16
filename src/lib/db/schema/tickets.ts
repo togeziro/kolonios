@@ -59,6 +59,13 @@ export const ticketTaskTypeEnum = pgEnum('ticket_task_type', [
 
 export const ticketMaterialSourceEnum = pgEnum('ticket_material_source', ['warehouse', 'van']);
 
+export const ticketWorklogKindEnum = pgEnum('ticket_worklog_kind', [
+  'note',
+  'photo',
+  'location',
+  'meter'
+]);
+
 export const tickets = pgTable('tickets', {
   id: serial('id').primaryKey(),
   ticket_code: text('ticket_code'),
@@ -133,6 +140,17 @@ export const ticketPhotos = pgTable('ticket_photos', {
   uploader_id: text('uploader_id').references(() => user.id)
 });
 
+export const ticketWorklog = pgTable('ticket_worklog', {
+  id: serial('id').primaryKey(),
+  leg_id: integer('leg_id')
+    .notNull()
+    .references(() => ticketLegs.id, { onDelete: 'cascade' }),
+  kind: ticketWorklogKindEnum('kind').notNull(),
+  body: text('body').notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  created_by: text('created_by').references(() => user.id)
+});
+
 export const taskRequirements = pgTable('task_requirements', {
   id: serial('id').primaryKey(),
   task_id: integer('task_id')
@@ -197,12 +215,20 @@ export const ticketLegRelations = relations(ticketLegs, ({ one, many }) => ({
     references: [user.id]
   }),
   materials: many(ticketMaterials),
-  photos: many(ticketPhotos)
+  photos: many(ticketPhotos),
+  worklog: many(ticketWorklog)
 }));
 
 export const ticketMaterialRelations = relations(ticketMaterials, ({ one }) => ({
   leg: one(ticketLegs, {
     fields: [ticketMaterials.leg_id],
+    references: [ticketLegs.id]
+  })
+}));
+
+export const ticketWorklogRelations = relations(ticketWorklog, ({ one }) => ({
+  leg: one(ticketLegs, {
+    fields: [ticketWorklog.leg_id],
     references: [ticketLegs.id]
   })
 }));
@@ -238,5 +264,8 @@ export type NewTicket = typeof tickets.$inferInsert;
 export type TicketLeg = typeof ticketLegs.$inferSelect;
 export type TicketMaterial = typeof ticketMaterials.$inferSelect;
 export type TicketPhoto = typeof ticketPhotos.$inferSelect;
+export type TicketWorklogKind = (typeof ticketWorklogKindEnum.enumValues)[number];
+export type TicketWorklog = typeof ticketWorklog.$inferSelect;
+export type NewTicketWorklog = typeof ticketWorklog.$inferInsert;
 export type TaskRequirement = typeof taskRequirements.$inferSelect;
 export type EmployeeSkill = typeof employeeSkills.$inferSelect;
