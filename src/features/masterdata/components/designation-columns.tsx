@@ -91,7 +91,7 @@ export function getDesignationColumns(
       cell: ({ row }) => (
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger className='flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none'>
-            <span className='sr-only'>Open menu</span>
+            <span className='sr-only'>{t('common.openMenu')}</span>
             <Icons.ellipsis className='h-4 w-4' />
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>

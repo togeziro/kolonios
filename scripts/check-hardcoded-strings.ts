@@ -29,7 +29,8 @@ const IGNORED_ATTRS = new Set([
   'form',
   'asChild',
   'htmlFor',
-  'mode'
+  'mode',
+  'align'
 ]);
 const SKIP_DIRECTIVE = '// i18n:skip';
 const BASELINE = join(process.cwd(), 'scripts/i18n-hardcoded-baseline.txt');
