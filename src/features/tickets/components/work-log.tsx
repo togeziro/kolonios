@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,11 +20,15 @@ export default function WorkLog({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
   const [note, setNote] = useState('');
   const [meter, setMeter] = useState('');
   const [photoKey, setPhotoKey] = useState<string | null>(null);
+  const [locPending, setLocPending] = useState(false);
+  const [photoPending, setPhotoPending] = useState(false);
 
-  const addEntry = (entry: WorkLogEntryInput) => onChange([...entries, entry]);
+  const addEntry = (entry: WorkLogEntryInput) => onChange([...entriesRef.current, entry]);
 
   const addNote = () => {
     const body = note.trim();
@@ -34,13 +38,18 @@ export default function WorkLog({
   };
 
   const addLocation = async () => {
-    const res = await getCurrentLocation();
-    if (res.status !== 'success') {
-      toast.error(t('workSession.logLocationFailed'));
-      return;
+    setLocPending(true);
+    try {
+      const res = await getCurrentLocation();
+      if (res.status !== 'success') {
+        toast.error(t('workSession.logLocationFailed'));
+        return;
+      }
+      const { latitude, longitude } = res.location;
+      addEntry({ kind: 'location', body: `${latitude},${longitude}` });
+    } finally {
+      setLocPending(false);
     }
-    const { latitude, longitude } = res.location;
-    addEntry({ kind: 'location', body: `${latitude},${longitude}` });
   };
 
   const addMeter = () => {
@@ -52,6 +61,7 @@ export default function WorkLog({
 
   const capturePhoto = (dataUrl: string) => {
     setPhotoKey(null);
+    setPhotoPending(true);
     uploadTicketPhoto(dataUrl, Date.now())
       .then((key) => {
         setPhotoKey(key);
@@ -61,7 +71,8 @@ export default function WorkLog({
         if (e instanceof Error && e.message === PHOTO_UPLOAD_FAILED) {
           toast.error(t('workSession.logPhotoFailed'));
         }
-      });
+      })
+      .finally(() => setPhotoPending(false));
   };
 
   return (
@@ -124,7 +135,7 @@ export default function WorkLog({
           <div className='flex overflow-hidden rounded-xl border dark:border-zinc-800/50'>
             <SelfieCapture
               required={false}
-              disabled={disabled}
+              disabled={disabled || photoPending}
               captureLabel={t('workSession.logAddPhoto')}
               captureNowLabel={t('workSession.capturePhoto')}
               retakeLabel={t('workSession.retake')}
@@ -137,7 +148,7 @@ export default function WorkLog({
             type='button'
             variant='outline'
             size='sm'
-            disabled={disabled}
+            disabled={disabled || locPending}
             onClick={addLocation}
           >
             <Icons.location className='mr-1 size-4' />
