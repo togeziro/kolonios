@@ -28,6 +28,11 @@ describe('progressFromLegs', () => {
     expect(completed).toBe('1/2');
   });
 
+  it('counts a submitted leg as complete', () => {
+    const completed = progressFromLegs([leg('submitted'), leg('in_progress')]);
+    expect(completed).toBe('1/2');
+  });
+
   it('returns 0/0 for an empty leg list', () => {
     expect(progressFromLegs([])).toBe('0/0');
   });

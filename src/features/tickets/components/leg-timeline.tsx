@@ -3,7 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import type { TicketLeg, TicketLegStatus } from '../api/types';
 
 export function completedLegCount(legs: TicketLeg[]): number {
-  return legs.filter((l) => l.status === 'approved' || l.status === 'completed').length;
+  return legs.filter(
+    (l) => l.status === 'approved' || l.status === 'completed' || l.status === 'submitted'
+  ).length;
 }
 
 export function progressFromLegs(legs: TicketLeg[]): string {

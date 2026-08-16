@@ -120,6 +120,12 @@ describe('submitWorkSessionSchema log', () => {
       }).success
     ).toBe(false);
   });
+
+  it('rejects a log entry with an empty body', () => {
+    expect(
+      submitWorkSessionSchema.safeParse({ ...base(), log: [{ kind: 'note', body: '' }] }).success
+    ).toBe(false);
+  });
 });
 
 describe('submitHandoffNoteSchema', () => {

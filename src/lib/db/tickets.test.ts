@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import {
   listOpenTickets,
   getTicketDetail,
@@ -14,7 +14,13 @@ import {
   MAX_ACTIVE_TICKETS
 } from './tickets';
 import { db } from '@/lib/db';
-import { tickets, ticketLegs } from './schema/tickets';
+import {
+  tickets,
+  ticketLegs,
+  ticketMaterials,
+  ticketPhotos,
+  ticketWorklog
+} from './schema/tickets';
 import {
   resetAllTables,
   seedUser,
@@ -586,6 +592,65 @@ describe('tickets data access (integration)', () => {
         .where(eq(tickets.id, ticket.id));
       expect(ticketRow?.status).toBe('completed');
     });
+
+    it('preserves pre-existing leg notes when the submitted notes are empty', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Keep notes',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const leg = await seedTicketLeg(ticket.id, { status: 'in_progress', notes: 'Original' });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/4.jpg' }],
+        notes: '',
+        log: []
+      });
+      expect(res.success).toBe(true);
+
+      const [legRow] = await db
+        .select({ notes: ticketLegs.notes })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, leg.id));
+      expect(legRow?.notes).toBe('Original');
+    });
+
+    it('does not erase a saved handoff note when re-submitting the last leg', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Handoff note',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const leg = await seedTicketLeg(ticket.id, {
+        status: 'in_progress',
+        notes: 'Handoff: Send courier'
+      });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/5.jpg' }],
+        notes: '',
+        log: []
+      });
+      expect(res.success).toBe(true);
+
+      const [legRow] = await db
+        .select({ notes: ticketLegs.notes })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, leg.id));
+      expect(legRow?.notes).toBe('Handoff: Send courier');
+
+      const [ticketRow] = await db
+        .select({ status: tickets.status })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(ticketRow?.status).toBe('completed');
+    });
   });
 
   describe('submitWorkSession leg advance + worklog', () => {
@@ -685,6 +750,48 @@ describe('tickets data access (integration)', () => {
         .from(tickets)
         .where(eq(tickets.id, ticket.id));
       expect(row?.status).toBe('completed');
+    });
+
+    it('blocks re-submission after a leg advance without inserting duplicates', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Double submit',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const leg1 = await seedTicketLeg(ticket.id, { name: 'Leg 1', status: 'submitted' });
+      const leg2 = await seedTicketLeg(ticket.id, { name: 'Leg 2', status: 'assigned' });
+
+      const countRows = async () => {
+        const [materials, photos, worklog] = await Promise.all([
+          db
+            .select()
+            .from(ticketMaterials)
+            .where(inArray(ticketMaterials.leg_id, [leg1.id, leg2.id])),
+          db
+            .select()
+            .from(ticketPhotos)
+            .where(inArray(ticketPhotos.leg_id, [leg1.id, leg2.id])),
+          db
+            .select()
+            .from(ticketWorklog)
+            .where(inArray(ticketWorklog.leg_id, [leg1.id, leg2.id]))
+        ]);
+        return [materials.length, photos.length, worklog.length] as const;
+      };
+
+      const before = await countRows();
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [{ name: 'ONT', qty: 1, unit: '', source: 'van' }],
+        photos: [{ fileUrl: 'tickets/0/6.jpg' }],
+        notes: '',
+        log: [{ kind: 'note', body: 'duplicate?' }]
+      });
+      expect(res.success).toBe(false);
+
+      expect(await countRows()).toEqual(before);
     });
   });
 
