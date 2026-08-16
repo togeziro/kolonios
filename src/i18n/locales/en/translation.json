@@ -1194,7 +1194,24 @@
     "submitSuccess": "Work session submitted",
     "submitFailed": "Failed to submit work session",
     "photoUploadFailed": "Photo upload failed",
-    "elapsed": "Elapsed"
+    "elapsed": "Elapsed",
+    "inProgress": "In Progress",
+    "domainField": "Field",
+    "domainBackoffice": "Backoffice",
+    "step0": "New",
+    "step1": "Open",
+    "step2": "In Progress",
+    "step3": "Done"
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "taskType": {
+    "installation": "Installation",
+    "maintenance": "Maintenance",
+    "inspection": "Inspection"
   },
   "handoff": {
     "legSubmitted": "Leg {{leg}} submitted",
