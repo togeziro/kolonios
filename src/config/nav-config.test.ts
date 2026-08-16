@@ -70,6 +70,16 @@ describe('nav-config', () => {
     expect(children).toEqual(['Holiday Calendar', 'Holiday Settings']);
   });
 
+  it('nests the work log settings page under a Settings dropdown', () => {
+    const settings = navItems.find((item) => item.title === 'Settings');
+    const children = settings?.items?.map((item) => item.title) ?? [];
+    const urls = settings?.items?.map((item) => item.url) ?? [];
+    expect(children).toContain('Work Log Settings');
+    expect(urls).toContain('/dashboard/admin/worklog-settings');
+    const workLog = settings?.items?.find((item) => item.title === 'Work Log Settings');
+    expect(workLog?.module).toBe('settings');
+  });
+
   it('gates dropdown parents by their module so children inherit access', () => {
     const payroll = navItems.find((item) => item.title === 'Payroll');
     const attendance = navItems.find((item) => item.title === 'Attendance Management');

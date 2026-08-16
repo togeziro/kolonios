@@ -23,19 +23,23 @@ function mockGeolocation(impl: {
   };
 
   const handlers: { success?: (p: unknown) => void; error?: (e: unknown) => void } = {};
+  let lastOptions: unknown;
 
   const geolocation = {
-    getCurrentPosition: vi.fn((success?: (p: unknown) => void, error?: (e: unknown) => void) => {
-      if (impl.never) return;
-      if (impl.onSuccess === false || impl.denied || impl.unavailable) {
-        const code: GeoErrorCode = impl.denied ? 1 : 2;
-        error?.({ code, PERMISSION_DENIED: 1, message: 'denied' });
-        return;
+    getCurrentPosition: vi.fn(
+      (success?: (p: unknown) => void, error?: (e: unknown) => void, options?: unknown) => {
+        lastOptions = options;
+        if (impl.never) return;
+        if (impl.onSuccess === false || impl.denied || impl.unavailable) {
+          const code: GeoErrorCode = impl.denied ? 1 : 2;
+          error?.({ code, PERMISSION_DENIED: 1, message: 'denied' });
+          return;
+        }
+        handlers.success = success;
+        handlers.error = error;
+        success?.(position);
       }
-      handlers.success = success;
-      handlers.error = error;
-      success?.(position);
-    })
+    )
   };
 
   Object.defineProperty(globalThis, 'navigator', {
@@ -43,7 +47,7 @@ function mockGeolocation(impl: {
     configurable: true
   });
 
-  return { position, handlers };
+  return { position, handlers, lastOptions: () => lastOptions };
 }
 
 function removeGeolocation() {
@@ -118,5 +122,28 @@ describe('getCurrentLocation', () => {
     mockGeolocation({ stale: true });
     const result = await getCurrentLocation({ maxAgeMs: 0 });
     expect(result.status).toBe('success');
+  });
+
+  it('uses enableHighAccuracy: true by default', async () => {
+    const mock = mockGeolocation({ onSuccess: true });
+    await getCurrentLocation();
+    const options = mock.lastOptions() as { enableHighAccuracy?: boolean } | undefined;
+    expect(options?.enableHighAccuracy).toBe(true);
+  });
+
+  it('passes enableHighAccuracy: false when highAccuracy option is false', async () => {
+    const mock = mockGeolocation({ onSuccess: true });
+    await getCurrentLocation({ highAccuracy: false });
+    const options = mock.lastOptions() as { enableHighAccuracy?: boolean } | undefined;
+    expect(options?.enableHighAccuracy).toBe(false);
+  });
+
+  it('returns success even with poor accuracy when accuracy gate is disabled (lenient mode)', async () => {
+    mockGeolocation({ inaccurate: true });
+    const result = await getCurrentLocation({ maxAccuracyMeters: 0 });
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.location.accuracy).toBe(500);
+    }
   });
 });

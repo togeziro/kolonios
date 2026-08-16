@@ -8,6 +8,7 @@
     "notifications": "Notifikasi",
     "home": "Beranda",
     "holidayCalendar": "Kalender Libur",
+    "workLogSettings": "Pengaturan Log Kerja",
     "achievements": "Pencapaian",
     "myWork": "Pekerjaan Saya",
     "attendance": "Absensi",
@@ -1201,7 +1202,26 @@
     "step0": "Baru",
     "step1": "Terbuka",
     "step2": "Berlangsung",
-    "step3": "Selesai"
+    "step3": "Selesai",
+    "logLocationDenied": "Izin lokasi ditolak",
+    "logLocationUnavailable": "Lokasi tidak tersedia di perangkat ini",
+    "logLocationTimeout": "Gagal mendapatkan lokasi (waktu habis)",
+    "locationPickerTitle": "Konfirmasi Lokasi",
+    "locationPickerDescription": "Posisi Anda ditampilkan di peta. Seret penanda untuk menyesuaikan jika perlu, lalu konfirmasi.",
+    "locationPickerConfirm": "Konfirmasi Lokasi",
+    "locationPickerLocating": "Mencari lokasi...",
+    "locationRecorded": "Lokasi tercatat"
+  },
+  "worklogSettings": {
+    "title": "Pengaturan Log Kerja",
+    "pageDescription": "Atur cara teknisi mencatat lokasi dari halaman sesi kerja.",
+    "description": "Pengaturan log kerja berlaku untuk seluruh perusahaan. Perubahan langsung berlaku untuk setiap teknisi.",
+    "lenientLabel": "Pencatatan lokasi longgar",
+    "lenientHint": "Menerima posisi apa pun yang dilaporkan (termasuk akurasi rendah di dalam ruangan) tanpa menolak berdasarkan akurasi. Mempercepat tombol lokasi di log kerja. Entri tetap mencatat akurasi yang dilaporkan.",
+    "enabled": "Pencatatan lokasi longgar diaktifkan",
+    "disabled": "Pencatatan lokasi longgar dinonaktifkan",
+    "saveFailed": "Tidak dapat menyimpan pengaturan log kerja",
+    "loadFailed": "Tidak dapat memuat pengaturan log kerja"
   },
   "priority": {
     "high": "Tinggi",

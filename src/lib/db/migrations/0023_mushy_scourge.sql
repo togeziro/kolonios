@@ -1,0 +1,1 @@
+ALTER TABLE "company_settings" ADD COLUMN "worklog_location_lenient" boolean DEFAULT false NOT NULL;
