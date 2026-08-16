@@ -1183,6 +1183,7 @@
     "back": "Back",
     "submitSuccess": "Work session submitted",
     "submitFailed": "Failed to submit work session",
-    "photoUploadFailed": "Photo upload failed"
+    "photoUploadFailed": "Photo upload failed",
+    "elapsed": "Elapsed"
   }
 }

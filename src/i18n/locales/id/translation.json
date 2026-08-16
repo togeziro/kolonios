@@ -1183,6 +1183,7 @@
     "back": "Kembali",
     "submitSuccess": "Sesi kerja terkirim",
     "submitFailed": "Gagal mengirim sesi kerja",
-    "photoUploadFailed": "Gagal mengunggah foto"
+    "photoUploadFailed": "Gagal mengunggah foto",
+    "elapsed": "Durasi"
   }
 }
