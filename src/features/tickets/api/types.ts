@@ -41,6 +41,8 @@ export type Ticket = {
   reviewNote: string | null;
   reviewedBy: string | null;
   completedAt: string | null;
+  createdByName: string | null;
+  createdAt: string;
 };
 
 export type TicketLeg = {

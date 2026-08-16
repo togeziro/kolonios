@@ -24,6 +24,8 @@ function ticket(status: Ticket['status']): Ticket {
     takenBy: null,
     takenAt: null,
     completedAt: null,
+    createdByName: null,
+    createdAt: new Date().toISOString(),
     reviewNote: null,
     reviewedBy: null,
     rating: null
