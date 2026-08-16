@@ -14,6 +14,7 @@ import {
 import { employees } from './schema/employees';
 import { customers } from './schema/customers';
 import { locations } from './schema/attendance';
+import { user } from './auth-schema';
 import type {
   Ticket,
   TicketDetail,
@@ -67,7 +68,11 @@ async function loadLocation(locationId: number | null) {
   return location ?? null;
 }
 
-async function toTicket(row: TicketRow, reqs: RequirementRow[]): Promise<Ticket> {
+async function toTicket(
+  row: TicketRow,
+  reqs: RequirementRow[],
+  creatorName: string | null = null
+): Promise<Ticket> {
   const [customer, location] = await Promise.all([
     loadCustomer(row.customer_id),
     loadLocation(row.location_id)
@@ -94,7 +99,9 @@ async function toTicket(row: TicketRow, reqs: RequirementRow[]): Promise<Ticket>
     rating: row.rating ?? null,
     reviewNote: row.review_note || null,
     reviewedBy: row.reviewed_by,
-    completedAt: row.completed_at ? row.completed_at.toISOString() : null
+    completedAt: row.completed_at ? row.completed_at.toISOString() : null,
+    createdByName: creatorName,
+    createdAt: row.created_at.toISOString()
   };
 }
 
@@ -240,13 +247,21 @@ export async function listOpenTickets(
       filters.priority != null ? eq(tickets.priority, filters.priority) : undefined
     ]);
 
-    const rows = await db.select().from(tickets).where(where).orderBy(desc(tickets.created_at));
+    const rows = await db
+      .select({
+        ticket: tickets,
+        creatorName: user.name
+      })
+      .from(tickets)
+      .leftJoin(user, eq(tickets.created_by, user.id))
+      .where(where)
+      .orderBy(desc(tickets.created_at));
 
     const eligible: TicketListResponse['tickets'] = [];
     const unavailable: TicketListResponse['unavailable'] = [];
     for (const row of rows) {
-      const reqs = await loadRequirements(row.id);
-      const ticket = await toTicket(row, reqs);
+      const reqs = await loadRequirements(row.ticket.id);
+      const ticket = await toTicket(row.ticket, reqs, row.creatorName ?? null);
       const reasons = unmetReasons(reqs, profile);
       if (reasons.length === 0) {
         eligible.push(ticket);
