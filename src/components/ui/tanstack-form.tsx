@@ -66,6 +66,7 @@ function Form({
   );
   return (
     <form
+      method='POST'
       onSubmit={handleSubmit}
       className={cn('mx-auto flex w-full flex-col gap-2 p-2 md:p-5', props.className)}
       noValidate

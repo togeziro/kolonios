@@ -36,13 +36,21 @@ export default function UserAuthForm() {
         return;
       }
       startTransition(async () => {
+        let rateLimited = false;
         const { error } = await authClient.signIn.email({
           email,
           password,
-          rememberMe: value.remember
+          rememberMe: value.remember,
+          fetchOptions: {
+            onError: async (ctx) => {
+              if (ctx.response.status === 429) {
+                rateLimited = true;
+              }
+            }
+          }
         });
         if (error) {
-          toast.error(error.message || t('auth.signInFailed'));
+          toast.error(rateLimited ? t('auth.signInRateLimit') : t('auth.signInFailed'));
         } else {
           await queryClient.invalidateQueries({
             queryKey: ['settings', 'locale']
@@ -80,25 +88,6 @@ export default function UserAuthForm() {
     <form.AppForm>
       <form.Form className='w-full space-y-4'>
         <form.AppField
-          name='remember'
-          children={(field) => (
-            <div className='flex items-center gap-2'>
-              <Checkbox
-                id='remember'
-                name='remember'
-                checked={!!field.state.value}
-                onCheckedChange={(checked) => field.handleChange(!!checked)}
-              />
-              <label
-                htmlFor='remember'
-                className='text-sm font-normal leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-              >
-                {t('auth.rememberMe30')}
-              </label>
-            </div>
-          )}
-        />
-        <form.AppField
           name='email'
           children={(field) => (
             <field.FieldSet>
@@ -133,6 +122,25 @@ export default function UserAuthForm() {
               autoComplete='current-password'
               inputRef={passwordRef}
             />
+          )}
+        />
+        <form.AppField
+          name='remember'
+          children={(field) => (
+            <div className='flex items-center gap-2'>
+              <Checkbox
+                id='remember'
+                name='remember'
+                checked={!!field.state.value}
+                onCheckedChange={(checked) => field.handleChange(!!checked)}
+              />
+              <label
+                htmlFor='remember'
+                className='text-sm font-normal leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+              >
+                {t('auth.rememberMe30')}
+              </label>
+            </div>
           )}
         />
         <Button disabled={loading} className='ml-auto w-full' type='submit'>

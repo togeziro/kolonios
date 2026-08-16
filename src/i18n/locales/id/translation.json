@@ -306,6 +306,7 @@
     "rememberMe30": "Ingat saya selama 30 hari",
     "signIn": "Masuk",
     "signInFailed": "Gagal masuk",
+    "signInRateLimit": "Terlalu banyak percobaan masuk. Silakan tunggu sebentar dan coba lagi.",
     "signOut": "Keluar",
     "signUp": "Daftar",
     "tagline": "Rancang. Bangun. Luncurkan. Ulangi.",

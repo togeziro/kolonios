@@ -306,6 +306,7 @@
     "rememberMe30": "Remember me for 30 days",
     "signIn": "Sign In",
     "signInFailed": "Sign in failed",
+    "signInRateLimit": "Too many login attempts. Please wait a moment and try again.",
     "signOut": "Sign out",
     "signUp": "Sign Up",
     "tagline": "Design. Build. Launch. Repeat.",
