@@ -1195,5 +1195,22 @@
     "submitFailed": "Failed to submit work session",
     "photoUploadFailed": "Photo upload failed",
     "elapsed": "Elapsed"
+  },
+  "handoff": {
+    "legSubmitted": "Leg {{leg}} submitted",
+    "submittedTitle": "Work submitted",
+    "awaitingPickup": "Awaiting pickup",
+    "nextStep": "Next step",
+    "nextLegName": "Leg {{leg}} · {{name}}",
+    "assignedToUser": "Assigned to a technician",
+    "poolFallback": "Not assigned — will sit in the task pool",
+    "ready": "Ready",
+    "noNextLeg": "No further legs",
+    "handoffNote": "Handoff note",
+    "handoffNotePlaceholder": "Leave a note for the next technician…",
+    "saveHandoffNote": "Save handoff note",
+    "backToMyWork": "Back to My Work",
+    "saved": "Handoff note saved",
+    "saveFailed": "Could not save handoff note"
   }
 }

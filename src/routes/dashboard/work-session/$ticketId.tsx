@@ -1,14 +1,10 @@
-import { createFileRoute, useParams } from '@tanstack/react-router';
-import WorkSessionPage from '@/features/tickets/components/work-session-page';
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/dashboard/work-session/$ticketId')({
-  head: () => ({ meta: [{ title: 'Dashboard: Work Session' }] }),
-  component: WorkSessionRoute
+export const Route = createFileRoute("/dashboard/work-session/$ticketId")({
+  head: () => ({ meta: [{ title: "Dashboard: Work Session" }] }),
+  component: WorkSessionLayout,
 });
 
-function WorkSessionRoute() {
-  const { ticketId } = useParams({ from: Route.id });
-  const parsed = Number(ticketId);
-  const valid = Number.isInteger(parsed) && parsed > 0;
-  return <WorkSessionPage ticketId={valid ? parsed : 0} />;
+function WorkSessionLayout() {
+  return <Outlet />;
 }
