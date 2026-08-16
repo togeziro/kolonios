@@ -10,6 +10,7 @@ import {
   getCompletedTickets,
   completeTicket,
   submitWorkSession,
+  addHandoffNote,
   MAX_ACTIVE_TICKETS
 } from './tickets';
 import { db } from '@/lib/db';
@@ -479,7 +480,8 @@ describe('tickets data access (integration)', () => {
       const res = await submitWorkSession(USER_A, ticket.id, {
         materials: [{ name: 'Drop cable', qty: 15, unit: 'm', source: 'van' }],
         photos: [{ fileUrl: 'tickets/0/1.jpg' }],
-        notes: 'Spliced and tested'
+        notes: 'Spliced and tested',
+        log: []
       });
 
       expect(res.success).toBe(true);
@@ -501,7 +503,7 @@ describe('tickets data access (integration)', () => {
         .select({ status: ticketLegs.status, notes: ticketLegs.notes })
         .from(ticketLegs)
         .where(eq(ticketLegs.id, leg.id));
-      expect(legRow?.status).toBe('completed');
+      expect(legRow?.status).toBe('submitted');
       expect(legRow?.notes).toBe('Spliced and tested');
     });
 
@@ -516,7 +518,8 @@ describe('tickets data access (integration)', () => {
       const res = await submitWorkSession(USER_A, ticket.id, {
         materials: [],
         photos: [{ fileUrl: 'tickets/0/1.jpg' }],
-        notes: ''
+        notes: '',
+        log: []
       });
       expect(res.success).toBe(false);
     });
@@ -535,7 +538,8 @@ describe('tickets data access (integration)', () => {
       const res = await submitWorkSession(USER_A, ticket.id, {
         materials: [{ name: 'ONT', qty: 1, unit: '', source: 'van' }],
         photos: [{ fileUrl: 'tickets/0/2.jpg' }],
-        notes: ''
+        notes: '',
+        log: []
       });
       expect(res.success).toBe(true);
 
@@ -543,7 +547,14 @@ describe('tickets data access (integration)', () => {
         .select({ id: ticketLegs.id, status: ticketLegs.status })
         .from(ticketLegs)
         .where(eq(ticketLegs.id, firstLeg.id));
-      expect(legRow?.status).toBe('completed');
+      expect(legRow?.status).toBe('submitted');
+      const legs = await db
+        .select({ status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.ticket_id, ticket.id));
+      expect(legs.map((l) => l.status)).toEqual(['submitted', 'assigned']);
+      const detail = await getTicketDetail(USER_A, ticket.id);
+      expect(detail.ticket?.status).toBe('in_progress');
     });
 
     it('prefers the in-progress leg when an earlier leg is still open', async () => {
@@ -554,26 +565,184 @@ describe('tickets data access (integration)', () => {
         taken_by: USER_A,
         taken_at: new Date()
       });
-      const firstLeg = await seedTicketLeg(ticket.id, { status: 'open' });
+      await seedTicketLeg(ticket.id, { status: 'open' });
       const secondLeg = await seedTicketLeg(ticket.id, { status: 'in_progress' });
-
       const res = await submitWorkSession(USER_A, ticket.id, {
         materials: [],
         photos: [{ fileUrl: 'tickets/0/3.jpg' }],
-        notes: ''
+        notes: '',
+        log: []
       });
       expect(res.success).toBe(true);
 
-      const [firstRow] = await db
-        .select({ status: ticketLegs.status })
-        .from(ticketLegs)
-        .where(eq(ticketLegs.id, firstLeg.id));
       const [secondRow] = await db
         .select({ status: ticketLegs.status })
         .from(ticketLegs)
         .where(eq(ticketLegs.id, secondLeg.id));
-      expect(firstRow?.status).toBe('open');
-      expect(secondRow?.status).toBe('completed');
+      expect(secondRow?.status).toBe('submitted');
+      const [ticketRow] = await db
+        .select({ status: tickets.status })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(ticketRow?.status).toBe('completed');
+    });
+  });
+
+  describe('submitWorkSession leg advance + worklog', () => {
+    it('advances to the pre-assigned next leg and keeps the ticket in progress', async () => {
+      await seedEmployee(USER_A);
+      await seedUser(USER_B);
+      const ticket = await seedTicket({
+        title: 'Two leg',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      await seedTicketLeg(ticket.id, { name: 'Survey', status: 'in_progress' });
+      await seedTicketLeg(ticket.id, { name: 'Install', status: 'open', assignee_id: USER_B });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/9.jpg' }],
+        notes: 'Survey done',
+        log: [
+          { kind: 'note', body: 'Found the OLT' },
+          { kind: 'meter', body: '855 nm' }
+        ]
+      });
+      expect(res.success).toBe(true);
+      expect(res.isLastLeg).toBe(false);
+      expect(res.nextLeg).toEqual({ legNumber: 2, name: 'Install' });
+
+      const legs = await db
+        .select({ leg_number: ticketLegs.leg_number, status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.ticket_id, ticket.id))
+        .orderBy(ticketLegs.leg_number);
+      expect(legs).toEqual([
+        { leg_number: 1, status: 'submitted' },
+        { leg_number: 2, status: 'assigned' }
+      ]);
+
+      const detail = await getTicketDetail(USER_A, ticket.id);
+      expect(detail.ticket?.status).toBe('in_progress');
+      expect(detail.ticket?.worklog).toHaveLength(2);
+      expect(detail.ticket?.worklog[0]).toMatchObject({ kind: 'note', body: 'Found the OLT' });
+      expect(detail.ticket?.worklog[1]).toMatchObject({ kind: 'meter', body: '855 nm' });
+    });
+
+    it('advances to an open (unassigned) next leg — pool semantics', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Open next',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      await seedTicketLeg(ticket.id, { name: 'Leg 1', status: 'in_progress' });
+      await seedTicketLeg(ticket.id, { name: 'Leg 2', status: 'open' });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/8.jpg' }],
+        notes: '',
+        log: []
+      });
+      expect(res.success).toBe(true);
+      expect(res.isLastLeg).toBe(false);
+      expect(res.nextLeg).toEqual({ legNumber: 2, name: 'Leg 2' });
+
+      const legs = await db
+        .select({ status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.ticket_id, ticket.id))
+        .orderBy(ticketLegs.leg_number);
+      expect(legs.map((l) => l.status)).toEqual(['submitted', 'assigned']);
+    });
+
+    it('completes the ticket on the last leg and reports isLastLeg', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Last leg',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      await seedTicketLeg(ticket.id, { name: 'Only', status: 'in_progress' });
+
+      const res = await submitWorkSession(USER_A, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/7.jpg' }],
+        notes: 'Done',
+        log: [{ kind: 'note', body: 'All good' }]
+      });
+      expect(res.success).toBe(true);
+      expect(res.isLastLeg).toBe(true);
+      expect(res.nextLeg).toBeNull();
+
+      const [row] = await db
+        .select({ status: tickets.status })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(row?.status).toBe('completed');
+    });
+  });
+
+  describe('addHandoffNote', () => {
+    it('appends a Handoff prefix to the submitted leg of a ticket taken by the user', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Pickup',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const leg = await seedTicketLeg(ticket.id, { name: 'Install', status: 'submitted' });
+
+      const res = await addHandoffNote(USER_A, leg.id, 'Materials in van, send courier');
+      expect(res.success).toBe(true);
+
+      const [row] = await db
+        .select({ notes: ticketLegs.notes })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, leg.id));
+      expect(row?.notes).toBe('Handoff: Materials in van, send courier');
+    });
+
+    it('appends to existing notes with a newline separator', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Pickup 2',
+        status: 'in_progress',
+        taken_by: USER_A,
+        taken_at: new Date()
+      });
+      const leg = await seedTicketLeg(ticket.id, {
+        name: 'Install',
+        notes: 'Spliced',
+        status: 'submitted'
+      });
+
+      await addHandoffNote(USER_A, leg.id, 'Courier: Budi');
+      const [row] = await db
+        .select({ notes: ticketLegs.notes })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, leg.id));
+      expect(row?.notes).toBe('Spliced\nHandoff: Courier: Budi');
+    });
+
+    it('rejects a leg not owned by the user', async () => {
+      await seedEmployee(USER_A);
+      await seedUser(USER_B);
+      const ticket = await seedTicket({
+        title: 'Not mine',
+        status: 'in_progress',
+        taken_by: USER_B,
+        taken_at: new Date()
+      });
+      const leg = await seedTicketLeg(ticket.id, { name: 'Install', status: 'submitted' });
+      const res = await addHandoffNote(USER_A, leg.id, 'Nope');
+      expect(res.success).toBe(false);
     });
   });
 });

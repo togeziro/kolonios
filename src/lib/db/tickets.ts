@@ -7,6 +7,7 @@ import {
   ticketLegs,
   ticketMaterials,
   ticketPhotos,
+  ticketWorklog,
   taskRequirements,
   employeeSkills
 } from './schema/tickets';
@@ -19,6 +20,7 @@ import type {
   TicketLeg,
   TicketMaterial,
   TicketPhoto,
+  TicketWorklog,
   TicketListFilters,
   TicketListResponse,
   TicketDetailResponse,
@@ -26,7 +28,9 @@ import type {
   CreateTicketResponse,
   NewTicketInput,
   TicketDomain,
-  WorkSessionSubmitInput
+  WorkSessionSubmitInput,
+  WorkLogEntryInput,
+  NextLegInfo
 } from '@/features/tickets/api/types';
 
 export const MAX_ACTIVE_TICKETS = 3;
@@ -88,6 +92,7 @@ async function toTicket(row: TicketRow, reqs: RequirementRow[]): Promise<Ticket>
     requiredSkills: reqs.map((r) => r.skill).filter((s): s is string => s != null),
     assignedTo: row.assigned_to,
     takenBy: row.taken_by,
+    takenAt: row.taken_at ? row.taken_at.toISOString() : null,
     rating: row.rating ?? null,
     reviewNote: row.review_note || null,
     reviewedBy: row.reviewed_by,
@@ -154,6 +159,27 @@ async function loadPhotos(ticketId: number): Promise<TicketPhoto[]> {
     .where(eq(ticketLegs.ticket_id, ticketId))
     .orderBy(asc(ticketPhotos.id));
   return rows;
+}
+
+function toWorklog(row: typeof ticketWorklog.$inferSelect): TicketWorklog {
+  return {
+    id: row.id,
+    legId: row.leg_id,
+    kind: row.kind,
+    body: row.body,
+    createdAt: row.created_at.toISOString(),
+    createdBy: row.created_by
+  };
+}
+
+async function loadWorklog(ticketId: number): Promise<TicketWorklog[]> {
+  const rows = await db
+    .select()
+    .from(ticketWorklog)
+    .innerJoin(ticketLegs, eq(ticketWorklog.leg_id, ticketLegs.id))
+    .where(eq(ticketLegs.ticket_id, ticketId))
+    .orderBy(asc(ticketWorklog.id));
+  return rows.map(({ ticket_worklog }) => toWorklog(ticket_worklog));
 }
 
 async function getEligibilityProfile(userId: string) {
@@ -250,6 +276,7 @@ export async function getTicketDetail(
       legs: await loadLegs(ticketId),
       materials: await loadMaterials(ticketId),
       photos: await loadPhotos(ticketId),
+      worklog: await loadWorklog(ticketId),
       requesterId: row.requester_id,
       createdAt: row.created_at.toISOString()
     };
@@ -308,6 +335,7 @@ export async function createTicket(
         legs: await loadLegs(row.id),
         materials: await loadMaterials(row.id),
         photos: await loadPhotos(row.id),
+        worklog: await loadWorklog(row.id),
         requesterId: row.requester_id,
         createdAt: row.created_at.toISOString()
       }
@@ -549,32 +577,107 @@ export async function submitWorkSession(
         );
       }
 
+      if (input.log.length > 0) {
+        await tx.insert(ticketWorklog).values(
+          input.log.map((entry) => ({
+            leg_id: leg.id,
+            kind: entry.kind,
+            body: entry.body,
+            created_by: userId
+          }))
+        );
+      }
+
       await tx
         .update(ticketLegs)
         .set({
-          status: 'completed',
+          status: 'submitted',
           completed_at: new Date(),
           notes: input.notes,
           updated_at: new Date()
         })
         .where(eq(ticketLegs.id, leg.id));
 
-      await tx
-        .update(tickets)
-        .set({ status: 'completed', completed_at: new Date(), updated_at: new Date() })
-        .where(eq(tickets.id, ticketId));
+      const nextLegs = await tx
+        .select()
+        .from(ticketLegs)
+        .where(
+          and(
+            eq(ticketLegs.ticket_id, ticketId),
+            sql`${ticketLegs.leg_number} > ${leg.leg_number}`,
+            inArray(ticketLegs.status, ['open', 'assigned'])
+          )
+        )
+        .orderBy(asc(ticketLegs.leg_number))
+        .limit(1);
+      const nextLeg = nextLegs[0] ?? null;
 
-      return { success: true, message: 'Work session submitted' };
+      if (nextLeg) {
+        await tx
+          .update(ticketLegs)
+          .set({ status: 'assigned', updated_at: new Date() })
+          .where(eq(ticketLegs.id, nextLeg.id));
+      } else {
+        await tx
+          .update(tickets)
+          .set({
+            status: 'completed',
+            completed_at: new Date(),
+            updated_at: new Date()
+          })
+          .where(eq(tickets.id, ticketId));
+      }
+
+      return {
+        success: true,
+        message: 'Work session submitted',
+        nextLeg: nextLeg ? { legNumber: nextLeg.leg_number, name: nextLeg.name } : null,
+        isLastLeg: !nextLeg
+      };
     });
     if (!result.success) return result;
     const [row] = await db.select().from(tickets).where(eq(tickets.id, ticketId)).limit(1);
     if (!row) return { success: false, message: 'Ticket not found' };
     return {
-      success: true,
-      message: 'Work session submitted',
+      ...result,
       ticket: await toTicket(row, await loadRequirements(ticketId))
     };
   } catch (e) {
     mapDbError(e, 'tickets.submitWorkSession');
+  }
+}
+
+export async function addHandoffNote(
+  userId: string,
+  legId: number,
+  note: string
+): Promise<TicketActionResponse> {
+  try {
+    const [leg] = await db.select().from(ticketLegs).where(eq(ticketLegs.id, legId)).limit(1);
+    if (!leg) return { success: false, message: 'Leg not found' };
+
+    const [ticket] = await db
+      .select({ id: tickets.id, taken_by: tickets.taken_by })
+      .from(tickets)
+      .where(and(eq(tickets.id, leg.ticket_id), eq(tickets.taken_by, userId)))
+      .limit(1);
+    if (!ticket)
+      return { success: false, message: 'You can only hand off legs of tickets you took' };
+
+    if (leg.status !== 'submitted') {
+      return { success: false, message: 'Only submitted legs can be handed off' };
+    }
+
+    await db
+      .update(ticketLegs)
+      .set({
+        notes: leg.notes ? `${leg.notes}\nHandoff: ${note}` : `Handoff: ${note}`,
+        updated_at: new Date()
+      })
+      .where(eq(ticketLegs.id, leg.id));
+
+    return { success: true, message: 'Handoff note added' };
+  } catch (e) {
+    mapDbError(e, 'tickets.addHandoffNote');
   }
 }
