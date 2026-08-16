@@ -1,14 +1,10 @@
-import { createFileRoute, useParams } from '@tanstack/react-router';
-import TicketDetailPage from '@/features/tickets/components/ticket-detail-page';
+import { createFileRoute, Outlet } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/dashboard/tickets/$ticketId')({
   head: () => ({ meta: [{ title: 'Dashboard: Ticket' }] }),
-  component: TicketDetailRoute
+  component: TicketDetailLayout
 });
 
-function TicketDetailRoute() {
-  const { ticketId } = useParams({ from: Route.id });
-  const parsed = Number(ticketId);
-  const valid = Number.isInteger(parsed) && parsed > 0;
-  return <TicketDetailPage ticketId={valid ? parsed : 0} />;
+function TicketDetailLayout() {
+  return <Outlet />;
 }
