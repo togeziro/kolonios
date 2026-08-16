@@ -121,7 +121,7 @@ export default function HandoffConfirmation({ ticketId }: { ticketId: number }) 
         </Button>
       </Card>
 
-      <div className='fixed inset-x-0 bottom-0 border-t bg-background/95 p-3 backdrop-blur dark:border-zinc-800/50 dark:bg-zinc-950/95'>
+      <div className='fixed inset-x-0 bottom-0 border-t bg-background/95 p-3 backdrop-blur dark:border-zinc-800/50 dark:bg-zinc-950/95 max-md:bottom-[calc(5rem+env(safe-area-inset-bottom))]'>
         <Link to='/dashboard/my-work'>
           <Button variant='outline' className='w-full'>
             {t('handoff.backToMyWork')}
