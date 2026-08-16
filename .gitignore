@@ -90,3 +90,6 @@ e2e/.auth/
 .impeccable/live/*.png
 # impeccable-ignore-end
 .worktrees/
+
+# SDD scratch (per-plan agent workspace)
+.superpowers/
