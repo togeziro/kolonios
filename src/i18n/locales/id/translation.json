@@ -1113,7 +1113,8 @@
     "openTickets": "Tiket Terbuka",
     "openedBy": "Dibuka oleh",
     "take": "Ambil",
-    "noOpenTickets": "Tidak ada tiket terbuka"
+    "noOpenTickets": "Tidak ada tiket terbuka",
+    "unavailable": "Tidak tersedia"
   },
   "storage": {
     "title": "Pengaturan Penyimpanan",
