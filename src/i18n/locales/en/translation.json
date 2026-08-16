@@ -1109,7 +1109,11 @@
     "pendingApproval": "Pending Approval",
     "noPendingApproval": "Nothing pending approval",
     "noCompletedTickets": "No completed tickets yet",
-    "selfService": "Self Service"
+    "selfService": "Self Service",
+    "openTickets": "Open Tickets",
+    "openedBy": "Opened by",
+    "take": "Take",
+    "noOpenTickets": "No open tickets available"
   },
   "storage": {
     "title": "Storage Settings",

@@ -1109,7 +1109,11 @@
     "pendingApproval": "Menunggu Persetujuan",
     "noPendingApproval": "Tidak ada yang menunggu persetujuan",
     "noCompletedTickets": "Belum ada tiket selesai",
-    "selfService": "Layanan Mandiri"
+    "selfService": "Layanan Mandiri",
+    "openTickets": "Tiket Terbuka",
+    "openedBy": "Dibuka oleh",
+    "take": "Ambil",
+    "noOpenTickets": "Tidak ada tiket terbuka"
   },
   "storage": {
     "title": "Pengaturan Penyimpanan",
