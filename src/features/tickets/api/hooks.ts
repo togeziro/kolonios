@@ -6,7 +6,8 @@ import {
   completeTicketFn,
   createTicketFn,
   startLegFn,
-  submitWorkSessionFn
+  submitWorkSessionFn,
+  submitHandoffNoteFn
 } from './service';
 import { ticketsKeys } from './queries';
 import type { NewTicketInput } from './types';
@@ -105,5 +106,23 @@ export function useSubmitWorkSession() {
       }
     },
     onError: () => toast.error(t('workSession.submitFailed'))
+  });
+}
+
+export function useSubmitHandoffNote() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    mutationFn: ({ legId, note }: { legId: number; note: string }) =>
+      submitHandoffNoteFn({ data: { legId, note } }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('handoff.saved'));
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+      } else {
+        toast.error(res?.message ?? t('handoff.saveFailed'));
+      }
+    },
+    onError: () => toast.error(t('handoff.saveFailed'))
   });
 }

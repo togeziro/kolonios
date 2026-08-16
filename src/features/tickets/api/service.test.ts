@@ -10,7 +10,9 @@ const mocks = vi.hoisted(() => ({
   completeTicket: vi.fn(),
   createTicket: vi.fn(),
   startLeg: vi.fn(),
-  getCompletedTickets: vi.fn()
+  getCompletedTickets: vi.fn(),
+  submitWorkSession: vi.fn(),
+  addHandoffNote: vi.fn()
 }));
 
 // The split query supplies the production provider handler behind each exported
@@ -31,7 +33,9 @@ vi.mock('@/lib/db/tickets', () => ({
   completeTicket: mocks.completeTicket,
   createTicket: mocks.createTicket,
   startLeg: mocks.startLeg,
-  getCompletedTickets: mocks.getCompletedTickets
+  getCompletedTickets: mocks.getCompletedTickets,
+  submitWorkSession: mocks.submitWorkSession,
+  addHandoffNote: mocks.addHandoffNote
 }));
 vi.mock('@tanstack/react-start', () => ({
   createServerFn: () => {
@@ -74,6 +78,10 @@ import { takeTicketFn_createServerFn_handler } from './service?tss-serverfn-spli
 import { completeTicketFn_createServerFn_handler } from './service?tss-serverfn-split';
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { createTicketFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { submitWorkSessionFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { submitHandoffNoteFn_createServerFn_handler } from './service?tss-serverfn-split';
 
 serverFnProvider.handler = startLegFn_createServerFn_handler;
 
@@ -85,7 +93,9 @@ import {
   getTicketDetailFn,
   takeTicketFn,
   completeTicketFn,
-  createTicketFn
+  createTicketFn,
+  submitWorkSessionFn,
+  submitHandoffNoteFn
 } from './service';
 
 describe('startLegFn', () => {
@@ -221,6 +231,52 @@ describe('createTicketFn', () => {
       title: 'Install OLT',
       taskType: 'installation'
     });
+    expect(res).toEqual({ success: true });
+  });
+});
+
+describe('submitWorkSessionFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serverFnProvider.handler = submitWorkSessionFn_createServerFn_handler;
+  });
+
+  it('guards with tickets.edit + write rate limit and passes the worklog through', async () => {
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.submitWorkSession.mockResolvedValue({ success: true, isLastLeg: false, nextLeg: null });
+    const input = {
+      ticketId: 7,
+      materials: [],
+      photos: [{ fileUrl: 'tickets/0/1.jpg' }],
+      notes: '',
+      log: [{ kind: 'note', body: 'Done' }]
+    };
+    const res = await submitWorkSessionFn({ data: input } as never);
+    expect(mocks.requirePermission).toHaveBeenCalledWith('tickets', 'edit');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
+    expect(mocks.submitWorkSession).toHaveBeenCalledWith('u1', 7, {
+      materials: input.materials,
+      photos: input.photos,
+      notes: input.notes,
+      log: input.log
+    });
+    expect(res).toEqual({ success: true, isLastLeg: false, nextLeg: null });
+  });
+});
+
+describe('submitHandoffNoteFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serverFnProvider.handler = submitHandoffNoteFn_createServerFn_handler;
+  });
+
+  it('guards with tickets.edit + write rate limit and appends the handoff note', async () => {
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.addHandoffNote.mockResolvedValue({ success: true });
+    const res = await submitHandoffNoteFn({ data: { legId: 3, note: 'Send courier' } } as never);
+    expect(mocks.requirePermission).toHaveBeenCalledWith('tickets', 'edit');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
+    expect(mocks.addHandoffNote).toHaveBeenCalledWith('u1', 3, 'Send courier');
     expect(res).toEqual({ success: true });
   });
 });
