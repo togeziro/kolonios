@@ -29,6 +29,8 @@ describe('nav-config', () => {
       'Attendance Management',
       'Holiday Calendar',
       'Settings',
+      'Review Queue',
+      'Leave Approvals',
       'Profile'
     ]);
   });
@@ -36,6 +38,17 @@ describe('nav-config', () => {
   it('flags employee self-service items hidden for admins', () => {
     const hidden = navItems.filter((item) => item.hiddenForAdmin).map((item) => item.title);
     expect(hidden).toEqual(['My Work', 'Attendance', 'Schedule', 'Payslips', 'Profile']);
+  });
+
+  it('includes SPV-only review queue and leave approvals items', () => {
+    const reviewQueue = navItems.find((item) => item.title === 'Review Queue');
+    const leaveApprovals = navItems.find((item) => item.title === 'Leave Approvals');
+    expect(reviewQueue).toBeDefined();
+    expect(reviewQueue!.module).toBe('spv_review');
+    expect(reviewQueue!.url).toBe('/dashboard/spv/review');
+    expect(leaveApprovals).toBeDefined();
+    expect(leaveApprovals!.module).toBe('spv_review');
+    expect(leaveApprovals!.url).toBe('/dashboard/spv/leave-approvals');
   });
 
   it('nests tickets pages under a Tickets dropdown', () => {
@@ -142,7 +155,8 @@ describe('filterNavItemsByRole', () => {
     audit_log: { view: true },
     role_groups: { view: true },
     tickets: { view: true, add: true },
-    jobs: { view: true }
+    jobs: { view: true },
+    spv_review: { view: true, edit: true }
   };
 
   it('admin sees everything except employee self-service items', () => {
@@ -157,7 +171,9 @@ describe('filterNavItemsByRole', () => {
       'Broadcast',
       'Attendance Management',
       'Holiday Calendar',
-      'Settings'
+      'Settings',
+      'Review Queue',
+      'Leave Approvals'
     ]);
   });
 
@@ -170,6 +186,24 @@ describe('filterNavItemsByRole', () => {
       'Leave',
       'Profile'
     ]);
+  });
+
+  it('SPV sees Review Queue and Leave Approvals when spv_review module is granted', () => {
+    const spvPerms: Permissions = {
+      ...technicianPerms,
+      spv_review: { view: true, edit: true }
+    };
+    const filtered = filterNavItemsByRole(navItems, spvPerms, false);
+    const titles = topLevelTitles(filtered);
+    expect(titles).toContain('Review Queue');
+    expect(titles).toContain('Leave Approvals');
+  });
+
+  it('non-SPV does not see Review Queue or Leave Approvals', () => {
+    const filtered = filterNavItemsByRole(navItems, technicianPerms, false);
+    const titles = topLevelTitles(filtered);
+    expect(titles).not.toContain('Review Queue');
+    expect(titles).not.toContain('Leave Approvals');
   });
 
   it('non-admin with full permissions sees everything', () => {

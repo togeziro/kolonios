@@ -31,6 +31,12 @@ describe('resolveShell', () => {
     );
   });
 
+  it('maps SPV role group to fieldops', () => {
+    expect(resolveShell({ role: 'technician', roleGroup: group({ name: 'SPV' }) })).toBe(
+      'fieldops'
+    );
+  });
+
   it('falls back to legacy role when no role group is assigned', () => {
     expect(resolveShell({ role: 'admin', roleGroup: null })).toBe('backoffice');
     expect(resolveShell({ role: 'hr', roleGroup: null })).toBe('backoffice');

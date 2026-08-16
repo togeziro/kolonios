@@ -275,6 +275,22 @@ export const navItems: NavItem[] = [
     ]
   },
   {
+    title: 'Review Queue',
+    url: '/dashboard/spv/review',
+    icon: 'workspace',
+    isActive: false,
+    module: 'spv_review',
+    items: []
+  },
+  {
+    title: 'Leave Approvals',
+    url: '/dashboard/spv/leave-approvals',
+    icon: 'calendar',
+    isActive: false,
+    module: 'spv_review',
+    items: []
+  },
+  {
     title: 'Profile',
     url: '/dashboard/profile',
     icon: 'profile',
