@@ -39,10 +39,10 @@ export function MobileShell() {
 
   return (
     <div
-      className={`${dark ? 'dark' : ''} mx-auto min-h-screen max-w-[430px] overflow-x-hidden border-x bg-background shadow-2xl`}
+      className={`${dark ? 'dark' : ''} mx-auto flex h-[100dvh] max-w-[430px] flex-col overflow-hidden border-x bg-background shadow-2xl`}
     >
       <MobileHeader dark={dark} onToggleDark={toggleDark} />
-      <main className='pb-[calc(5rem+env(safe-area-inset-bottom))]'>
+      <main className='min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))]'>
         <Outlet />
       </main>
       <BottomNav />
