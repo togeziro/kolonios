@@ -9,7 +9,6 @@ import {
 import { checkInFn } from '@/features/attendance/api/service';
 import { CheckInScan } from '@/features/attendance/components/check-in-scan';
 import { CheckInSuccess } from '@/features/attendance/components/check-in-success';
-import { matchFace } from '@/lib/face/match';
 import { uploadSelfie } from '@/lib/storage/upload-client';
 import { getCurrentLocation } from '@/features/attendance/utils/geolocation';
 import { toast } from 'sonner';
