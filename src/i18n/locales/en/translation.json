@@ -403,6 +403,13 @@
     "cameraError": "Camera access denied",
     "noFace": "No face detected. Please try again."
   },
+  "checkInSuccess": {
+    "title": "Check-in successful",
+    "presentAt": "You're marked present at {{location}}",
+    "geofenceOk": "Geofence OK",
+    "selfieOk": "Selfie OK",
+    "done": "Done"
+  },
   "language": {
     "english": "English",
     "indonesian": "Indonesian",
