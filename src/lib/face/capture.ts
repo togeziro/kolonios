@@ -47,7 +47,7 @@ export async function captureFrame(video: HTMLVideoElement): Promise<FaceDetecti
   }
 
   const face = result.face[0];
-  const descriptor = face.embedding ? Array.from(face.embedding) : null;
+  const descriptor = face.embedding ? (Array.from(face.embedding) as number[]) : null;
   const antiSpoofScore = face.real ?? null;
   const livenessScore = face.live ?? null;
 
