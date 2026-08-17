@@ -389,6 +389,13 @@
     "attachment": "Lampiran",
     "attachmentRequiredHint": "Lampiran wajib untuk jenis cuti ini"
   },
+  "faceCapture": {
+    "startVerification": "Mulai verifikasi wajah",
+    "capture": "Tangkap",
+    "positionFace": "Posisikan wajah Anda dalam bingkai",
+    "cameraError": "Akses kamera ditolak",
+    "noFace": "Wajah tidak terdeteksi. Silakan coba lagi."
+  },
   "language": {
     "english": "Inggris",
     "indonesian": "Indonesia",
