@@ -389,6 +389,13 @@
     "attachment": "Attachment",
     "attachmentRequiredHint": "Attachment required for this leave type"
   },
+  "checkIn": {
+    "title": "Check-In",
+    "onShift": "On shift",
+    "checkOut": "Check out",
+    "geofenceActive": "GEOFENCE ACTIVE",
+    "faceRecognition": "Face Recognition"
+  },
   "faceCapture": {
     "startVerification": "Start face verification",
     "capture": "Capture",

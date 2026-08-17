@@ -30,6 +30,7 @@ import {
   IconCreditCard,
   IconDeviceLaptop,
   IconDots,
+  IconDotsVertical,
   IconDownload,
   IconEdit,
   IconExternalLink,
@@ -71,6 +72,7 @@ import {
   IconSend,
   IconSettings,
   IconShare,
+  IconShield,
   IconSlash,
   IconSparkles,
   IconStack2,
@@ -151,6 +153,7 @@ export const Icons = {
   phone: IconPhone,
   video: IconVideo,
   send: IconSend,
+  shield: IconShield,
   paperclip: IconPaperclip,
 
   // Files
@@ -178,6 +181,7 @@ export const Icons = {
   plusCircle: IconCirclePlus,
   xCircle: IconCircleX,
   minus: IconMinus,
+  moreVertical: IconDotsVertical,
 
   // Theme
   sun: IconSun,
