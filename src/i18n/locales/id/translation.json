@@ -389,6 +389,13 @@
     "attachment": "Lampiran",
     "attachmentRequiredHint": "Lampiran wajib untuk jenis cuti ini"
   },
+  "checkIn": {
+    "title": "Check-In",
+    "onShift": "Sedang bertugas",
+    "checkOut": "Check out",
+    "geofenceActive": "GEOFENCE AKTIF",
+    "faceRecognition": "Pengenalan Wajah"
+  },
   "faceCapture": {
     "startVerification": "Mulai verifikasi wajah",
     "capture": "Tangkap",
