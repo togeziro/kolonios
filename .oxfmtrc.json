@@ -18,7 +18,8 @@
     "src/routeTree.gen.ts",
     "pnpm-lock.yaml",
     "CHANGELOG.md",
-    "src/lib/db/migrations/**"
+    "src/lib/db/migrations/**",
+    "public/models/**"
   ],
   "overrides": [
     {
