@@ -403,6 +403,13 @@
     "cameraError": "Akses kamera ditolak",
     "noFace": "Wajah tidak terdeteksi. Silakan coba lagi."
   },
+  "checkInSuccess": {
+    "title": "Check-in berhasil",
+    "presentAt": "Anda tercatat hadir di {{location}}",
+    "geofenceOk": "Geofence OK",
+    "selfieOk": "Selfie OK",
+    "done": "Selesai"
+  },
   "language": {
     "english": "Inggris",
     "indonesian": "Indonesia",
