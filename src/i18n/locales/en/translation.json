@@ -57,6 +57,7 @@
     "date": "Date",
     "update": "Update",
     "view": "View",
+    "yes": "Yes",
     "back": "Back",
     "submit": "Submit",
     "search": "Search",
@@ -67,6 +68,7 @@
     "all": "All",
     "code": "Code",
     "name": "Name",
+    "no": "No",
     "active": "Active",
     "inactive": "Inactive",
     "phone": "Phone",
@@ -402,6 +404,14 @@
     "positionFace": "Position your face within the frame",
     "cameraError": "Camera access denied",
     "noFace": "No face detected. Please try again."
+  },
+  "faceSettings": {
+    "title": "Attendance Settings",
+    "showSeconds": "Show Seconds",
+    "validationMode": "Attendance Face Validation",
+    "realtime": "Realtime before attendance is saved",
+    "background": "System background after attendance is saved",
+    "accuracyLevel": "Attendance Face Validation Accuracy"
   },
   "checkInSuccess": {
     "title": "Check-in successful",
