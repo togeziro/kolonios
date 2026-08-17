@@ -57,6 +57,7 @@
     "date": "Tanggal",
     "update": "Perbarui",
     "view": "Lihat",
+    "yes": "Ya",
     "back": "Kembali",
     "submit": "Kirim",
     "search": "Cari",
@@ -67,6 +68,7 @@
     "all": "Semua",
     "code": "Kode",
     "name": "Nama",
+    "no": "Tidak",
     "active": "Aktif",
     "inactive": "Tidak Aktif",
     "phone": "Telepon",
@@ -402,6 +404,14 @@
     "positionFace": "Posisikan wajah Anda dalam bingkai",
     "cameraError": "Akses kamera ditolak",
     "noFace": "Wajah tidak terdeteksi. Silakan coba lagi."
+  },
+  "faceSettings": {
+    "title": "Pengaturan Absensi",
+    "showSeconds": "Tampilkan Detik",
+    "validationMode": "Validasi Wajah Absensi",
+    "realtime": "Realtime sebelum absensi disimpan",
+    "background": "Sistem latar belakang setelah absensi disimpan",
+    "accuracyLevel": "Akurasi Validasi Wajah Absensi"
   },
   "checkInSuccess": {
     "title": "Check-in berhasil",
