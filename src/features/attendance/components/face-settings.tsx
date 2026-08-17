@@ -35,10 +35,8 @@ export function FaceSettings({
     setSaving(false);
   };
 
-  const accuracyLabels = ['Loose', 'Medium', 'Tight'] as const;
-  const accuracyIndex = accuracyLabels.indexOf(
-    accuracyLevel.toUpperCase() as (typeof accuracyLabels)[number]
-  );
+  const accuracyLabels = ['loose', 'medium', 'tight'] as const;
+  const accuracyIndex = Math.max(0, accuracyLabels.indexOf(accuracyLevel));
 
   return (
     <Card>
@@ -86,19 +84,14 @@ export function FaceSettings({
           <Label>{t('faceSettings.accuracyLevel')}</Label>
           <Slider
             value={[accuracyIndex]}
-            onValueChange={([v]) =>
-              setAccuracyLevel(accuracyLabels[v].toLowerCase() as typeof accuracyLevel)
-            }
+            onValueChange={([v]) => setAccuracyLevel(accuracyLabels[v])}
             max={2}
             step={1}
           />
           <div className='flex justify-between text-xs text-zinc-400'>
             {accuracyLabels.map((l) => (
-              <span
-                key={l}
-                className={l.toLowerCase() === accuracyLevel ? 'font-medium text-white' : ''}
-              >
-                {l}
+              <span key={l} className={l === accuracyLevel ? 'font-medium text-white' : ''}>
+                {l.charAt(0).toUpperCase() + l.slice(1)}
               </span>
             ))}
           </div>
