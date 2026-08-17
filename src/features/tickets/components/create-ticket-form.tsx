@@ -13,7 +13,7 @@ import { Icons } from '@/components/icons';
 import { locationsQueryOptions } from '@/features/attendance/api/queries';
 import { useCreateTicket } from '../api/hooks';
 import CustomerPicker from './customer-picker';
-import type { TicketTaskType, TicketChannel } from '../api/types';
+import type { TicketTaskType, TicketChannel, TicketPriority } from '../api/types';
 import type { NewTicketInput, NewLegInput } from '../api/types';
 
 export type CreateTicketFormValues = {
@@ -24,6 +24,7 @@ export type CreateTicketFormValues = {
   customerId: string | undefined;
   assetName: string;
   locationId: number | undefined;
+  priority: TicketPriority | undefined;
   dueDate: string | undefined;
   estimatedMinutes: number | undefined;
   legs: NewLegInput[];
@@ -41,6 +42,7 @@ export function toCreateTicketInput(
     customerId: values.customerId,
     assetName: values.assetName || undefined,
     locationId: values.locationId,
+    priority: values.priority,
     dueAt: values.dueDate,
     estimatedMinutes: values.estimatedMinutes,
     legs: legs.length > 0 ? legs : undefined
@@ -74,6 +76,7 @@ export default function CreateTicketForm() {
       customerId: undefined as string | undefined,
       assetName: '',
       locationId: undefined as number | undefined,
+      priority: 'medium' as TicketPriority,
       dueDate: undefined as string | undefined,
       estimatedMinutes: undefined as number | undefined,
       legs: [{ name: 'Survey', description: '' }] as NewLegInput[]
@@ -211,6 +214,34 @@ export default function CreateTicketForm() {
                     </option>
                   ))}
                 </NativeSelect>
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field name='priority'>
+            {(field) => (
+              <div className='space-y-1.5'>
+                <Label>{t('ticket.priority')}</Label>
+                <div className='flex gap-2'>
+                  {(['low', 'medium', 'high'] as TicketPriority[]).map((p) => (
+                    <button
+                      key={p}
+                      type='button'
+                      onClick={() => field.handleChange(p)}
+                      className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${
+                        field.state.value === p
+                          ? p === 'high'
+                            ? 'bg-red-500/20 text-red-400'
+                            : p === 'medium'
+                              ? 'bg-amber-500/20 text-amber-400'
+                              : 'bg-zinc-700 text-zinc-300'
+                          : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {t(`ticket.${p}`)}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </form.Field>
