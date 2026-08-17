@@ -43,6 +43,14 @@ export default defineConfig({
     tailwindcss(),
     tanstackStart({
       importProtection: {
+        // Server: @vladmandic/human is browser-only (WebGL + camera). Its node
+        // entry (human.node.js) pulls in @tensorflow/tfjs-node, which is not
+        // installed. Mock the import in the server bundle — the face pipeline
+        // only ever runs in browser event handlers, never during SSR.
+        behavior: 'mock',
+        server: {
+          specifiers: ['@vladmandic/human']
+        },
         client: {
           specifiers: ['postgres', 'pg-native', 'pg']
         }
