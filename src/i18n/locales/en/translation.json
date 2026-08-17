@@ -389,6 +389,13 @@
     "attachment": "Attachment",
     "attachmentRequiredHint": "Attachment required for this leave type"
   },
+  "faceCapture": {
+    "startVerification": "Start face verification",
+    "capture": "Capture",
+    "positionFace": "Position your face within the frame",
+    "cameraError": "Camera access denied",
+    "noFace": "No face detected. Please try again."
+  },
   "language": {
     "english": "English",
     "indonesian": "Indonesian",
