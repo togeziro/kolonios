@@ -11,9 +11,9 @@ interface CheckInScanProps {
   location: {
     id: number;
     name: string;
-    latitude: number;
-    longitude: number;
-    radius: number;
+    latitude: number | null;
+    longitude: number | null;
+    radius: number | null;
   } | null;
   shift: { id: number; name: string; start_time: string; end_time: string } | null;
   isCheckedIn: boolean;
@@ -76,12 +76,14 @@ export function CheckInScan({
                 {t('checkIn.geofenceActive')}
               </Badge>
             </div>
-            <LocationMap
-              coordinates={{ lat: location.latitude, lng: location.longitude }}
-              radius={location.radius}
-              readOnly
-              height={120}
-            />
+            {location.latitude != null && location.longitude != null && (
+              <LocationMap
+                coordinates={{ lat: location.latitude, lng: location.longitude }}
+                radius={location.radius ?? 100}
+                readOnly
+                height={120}
+              />
+            )}
           </CardContent>
         </Card>
       )}
