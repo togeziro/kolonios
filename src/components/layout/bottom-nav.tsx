@@ -37,7 +37,7 @@ export function BottomNav() {
       className='bg-background/80 fixed inset-x-0 bottom-0 z-50 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-lg'
     >
       <Link
-        to='/dashboard/attendance'
+        to='/dashboard/attendance/check-in'
         aria-label={t('navigation.goToAttendance')}
         className='bg-primary text-primary-foreground absolute -top-6 left-1/2 z-10 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-2xl shadow-lg'
       >
