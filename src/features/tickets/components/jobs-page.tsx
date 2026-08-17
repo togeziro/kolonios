@@ -57,6 +57,9 @@ function OpenTicketCard({
           </div>
           <h3 className='dark:text-zinc-100 font-semibold leading-tight'>{ticket.title}</h3>
         </div>
+        <span className='dark:bg-zinc-800 dark:text-zinc-300 shrink-0 rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-700'>
+          {t('ticket.open')}
+        </span>
       </div>
 
       <div className='flex flex-col gap-2'>
@@ -93,11 +96,7 @@ function OpenTicketCard({
       <Button
         onClick={() => onTake(ticket.id)}
         disabled={disabled}
-        className={`mt-2 w-full py-3 font-semibold ${
-          ticket.priority === 'high'
-            ? 'dark:bg-zinc-100 dark:text-zinc-900 bg-zinc-900 text-white'
-            : 'dark:bg-zinc-800 dark:text-zinc-100 bg-zinc-200 text-zinc-900'
-        }`}
+        className='mt-2 w-full py-3 font-semibold dark:bg-zinc-100 dark:text-zinc-900 bg-zinc-900 text-white'
       >
         {t('ticket.take')}
       </Button>

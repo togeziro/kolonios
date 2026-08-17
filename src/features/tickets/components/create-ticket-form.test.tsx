@@ -16,6 +16,7 @@ describe('toCreateTicketInput', () => {
         customerId: undefined,
         assetName: '',
         locationId: 2,
+        priority: 'high',
         estimatedMinutes: 90,
         dueDate: '2026-08-20',
         legs: []
@@ -31,6 +32,7 @@ describe('toCreateTicketInput', () => {
       taskType: 'installation',
       channel: 'walk_in',
       locationId: 2,
+      priority: 'high',
       estimatedMinutes: 90,
       dueAt: '2026-08-20',
       legs: [
@@ -51,6 +53,7 @@ describe('toCreateTicketInput', () => {
         customerId: undefined,
         assetName: '',
         locationId: undefined,
+        priority: undefined,
         dueDate: undefined,
         estimatedMinutes: undefined,
         legs: []
