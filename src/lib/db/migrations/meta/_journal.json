@@ -169,6 +169,13 @@
       "when": 1786898159330,
       "tag": "0023_mushy_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786955153017,
+      "tag": "0024_rainy_demogoblin",
+      "breakpoints": true
     }
   ]
 }

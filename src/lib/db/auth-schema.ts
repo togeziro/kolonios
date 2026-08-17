@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, text, timestamp, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, json, index } from 'drizzle-orm/pg-core';
 import { employees } from './schema/employees';
 import { customers } from './schema/customers';
 
@@ -17,7 +17,9 @@ export const user = pgTable('user', {
   role: text('role'),
   banned: boolean('banned').default(false),
   banReason: text('ban_reason'),
-  banExpires: timestamp('ban_expires')
+  banExpires: timestamp('ban_expires'),
+  faceDescriptor: json('face_descriptor').$type<number[][]>(),
+  faceRegisteredAt: timestamp('face_registered_at', { withTimezone: true })
 });
 
 export const session = pgTable(
