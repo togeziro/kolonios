@@ -71,9 +71,17 @@
   }
 }
 
-::view-transition-new(root) {
-  /* Apply the reveal animation */
-  animation: reveal 0.4s ease-in-out forwards;
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-new(root) {
+    animation: reveal 0.4s ease-in-out forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
 }
 
 /* Holiday Calendar - Holiday date marker */
