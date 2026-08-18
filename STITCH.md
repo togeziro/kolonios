@@ -59,9 +59,11 @@ tools (see "SPV-only" section).
 - ✅ Notifications Center
 
 #### Attendance / Work Session
-- ✅ Check-In (Scan) — GPS + face card, 2-step flow (`/dashboard/attendance/check-in`)
+- ✅ Check-In (Scan) — GPS + face card, 2-step flow (`/dashboard/attendance/check-in`); face verification is **server-side** (matching against enrolled descriptors, anti-spoof/liveness gated)
 - ✅ Check-In Camera — Face capture with Human.js live overlay
 - ✅ Check-In Success — Confirmation screen with status badges
+- ✅ Face Enrollment — technician self-service face registration (`/dashboard/attendance/face-settings`)
+- ✅ Attendance Settings — face validation config (admin; `/dashboard/admin/attendance/face-settings`)
 - ✅ Attendance Correction
 - ✅ Attendance History
 - ✅ Work Session (Unified) Updated
@@ -117,7 +119,7 @@ for backoffice.
 - ✅ Staff Dashboard (admin/HR branch)
 
 #### Attendance
-- ✅ Attendance Settings — face validation config (native UI component `<FaceSettings />`)
+- ✅ Attendance Settings — face validation config (admin route `/dashboard/admin/attendance/face-settings`, wired to `company_settings`)
 
 #### Tickets / Jobs
 - ✅ Create Ticket

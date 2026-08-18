@@ -22,7 +22,8 @@ describe('sidebar navigation translations', () => {
       'Attendance Locations',
       'Attendance Schedules',
       'Attendance Assignments',
-      'Attendance Reports'
+      'Attendance Reports',
+      'Attendance Face Settings'
     ]) {
       expect(navTitleKeys[title], `missing nav key for ${title}`).toBeDefined();
     }

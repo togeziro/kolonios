@@ -11,42 +11,74 @@ import { CheckInScan } from '@/features/attendance/components/check-in-scan';
 import { CheckInSuccess } from '@/features/attendance/components/check-in-success';
 import { uploadSelfie } from '@/lib/storage/upload-client';
 import { getCurrentLocation } from '@/features/attendance/utils/geolocation';
+import {
+  myFaceEnrollmentQueryOptions,
+  faceSettingsQueryOptions
+} from '@/features/face/api/queries';
+import { verifyFaceFn } from '@/features/face/api/service';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/dashboard/attendance/check-in')({
   component: CheckInPage
 });
 
 function CheckInPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'scan' | 'success'>('scan');
   const [checkInTime, setCheckInTime] = useState('');
   const [checkInLocation, setCheckInLocation] = useState('');
+  const [faceError, setFaceError] = useState<string | null>(null);
 
   const { data: todayData } = useQuery(myAttendanceQueryOptions());
-  const { data: locationsData } = useQuery(locationsQueryOptions());
-  const { data: shiftsData } = useQuery(shiftsQueryOptions());
+  const { data: locationsData, isPending: locationsPending } = useQuery(locationsQueryOptions());
+  const { data: shiftsData, isPending: shiftsPending } = useQuery(shiftsQueryOptions());
+  const { data: faceEnrollment, isPending: faceEnrollmentPending } = useQuery(
+    myFaceEnrollmentQueryOptions()
+  );
+  const { data: faceSettings, isPending: faceSettingsPending } = useQuery(
+    faceSettingsQueryOptions()
+  );
 
   const attendance = todayData?.attendance;
   const isCheckedIn = attendance && attendance.attendance?.check_in_time;
   const isCheckedOut = attendance && attendance.attendance?.check_out_time;
-  const location = locationsData?.locations?.[0] ?? null;
-  const shift = shiftsData?.shifts?.[0] ?? null;
+  // Query data is client-only: rendering location/shift cards from it during
+  // hydration would mismatch the server HTML (SSR renders without the data).
+  // Defer those cards until the queries resolve after mount.
+  const location =
+    !locationsPending && !shiftsPending ? (locationsData?.locations?.[0] ?? null) : null;
+  const shift = !locationsPending && !shiftsPending ? (shiftsData?.shifts?.[0] ?? null) : null;
 
-  // Load face config from company_settings (default: background, medium)
-  const validationMode = 'background' as 'background' | 'realtime';
-  const accuracyLevel = 'medium' as const;
+  const validationMode = faceSettings?.validationMode ?? 'background';
+  const accuracyLevel = faceSettings?.accuracyLevel ?? 'medium';
 
   const checkInMutation = useMutation({
-    mutationFn: async ({ descriptor, photo }: { descriptor: number[]; photo: string }) => {
-      // For background mode: save attendance first, validate async
-      // For realtime mode: validate first, then save
-      if (validationMode === 'realtime') {
-        // TODO: Match against enrolled descriptors when enrollment is built
-        // For now, accept all face captures in realtime mode
-        // const enrolled = await getEnrolledDescriptors(userId);
-        // const result = matchFace(descriptor, enrolled, accuracyLevel);
-        // if (!result.matched) throw new Error('Face validation failed');
+    mutationFn: async ({
+      descriptor,
+      photo,
+      antiSpoofScore,
+      livenessScore
+    }: {
+      descriptor: number[];
+      photo: string;
+      antiSpoofScore: number | null;
+      livenessScore: number | null;
+    }) => {
+      // Server-side face verification (matching + anti-spoof/liveness gate).
+      // The client never decides "matched" — only the server does.
+      const verify = await verifyFaceFn({
+        data: {
+          descriptor,
+          antiSpoofScore: antiSpoofScore ?? undefined,
+          livenessScore: livenessScore ?? undefined
+        }
+      });
+      if (!verify.verified) {
+        throw new Error(
+          verify.reason === 'NOT_ENROLLED' ? 'FACE_NOT_ENROLLED' : 'FACE_VERIFICATION_FAILED'
+        );
       }
 
       let photoKey: string | undefined;
@@ -54,7 +86,7 @@ function CheckInPage() {
         try {
           photoKey = await uploadSelfie(photo, 'attendance');
         } catch {
-          toast.error('Photo upload failed');
+          toast.error(t('checkIn.photoUploadFailed'));
           return;
         }
       }
@@ -79,17 +111,35 @@ function CheckInPage() {
         setCheckInLocation(location?.name ?? '');
         setStep('success');
       } else {
-        toast.error(res?.message ?? 'Check-in failed');
+        toast.error(res?.message ?? t('checkIn.failed'));
       }
     },
-    onError: () => {
-      toast.error('Check-in failed');
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'FACE_NOT_ENROLLED') {
+        setFaceError(t('checkIn.faceNotEnrolledError'));
+      } else if (message === 'FACE_VERIFICATION_FAILED') {
+        setFaceError(t('checkIn.faceVerificationFailed'));
+      } else {
+        toast.error(t('checkIn.failed'));
+      }
     }
   });
 
   const handleCheckIn = useCallback(
-    (descriptor: number[], photo: string, matched: boolean) => {
-      checkInMutation.mutate({ descriptor, photo });
+    (
+      descriptor: number[],
+      photo: string,
+      antiSpoofScore: number | null,
+      livenessScore: number | null
+    ) => {
+      setFaceError(null);
+      checkInMutation.mutate({
+        descriptor,
+        photo,
+        antiSpoofScore,
+        livenessScore
+      });
     },
     [checkInMutation]
   );
@@ -108,6 +158,8 @@ function CheckInPage() {
       shift={shift}
       isCheckedIn={!!isCheckedIn && !isCheckedOut}
       accuracyLevel={accuracyLevel}
+      faceEnrolled={faceEnrollment?.enrolled ?? false}
+      faceEnrollmentPending={faceEnrollmentPending || faceSettingsPending}
       onCheckIn={handleCheckIn}
       onCheckOut={() => {}}
     />

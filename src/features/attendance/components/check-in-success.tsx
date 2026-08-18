@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,10 +13,17 @@ interface CheckInSuccessProps {
 
 export function CheckInSuccess({ time, locationName, onDone }: CheckInSuccessProps) {
   const { t } = useTranslation();
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    const timer = setTimeout(onDone, 3000);
-    return () => clearTimeout(timer);
+    mountedRef.current = true;
+    const timer = setTimeout(() => {
+      if (mountedRef.current) onDone();
+    }, 3000);
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(timer);
+    };
   }, [onDone]);
 
   return (
@@ -40,7 +47,7 @@ export function CheckInSuccess({ time, locationName, onDone }: CheckInSuccessPro
               {t('checkInSuccess.geofenceOk')}
             </Badge>
             <Badge variant='outline' className='border-green-500 text-green-400'>
-              {t('checkInSuccess.selfieOk')}
+              {t('checkInSuccess.faceOk')}
             </Badge>
           </div>
 

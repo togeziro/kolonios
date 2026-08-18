@@ -5,6 +5,8 @@
 // fire. This makes Better Auth's `/api/auth/*` endpoint reachable.
 //
 // The patch is idempotent: it no-ops if already applied.
+require('./patch-react-router-asset.js');
+
 const fs = require('fs');
 const path = require('path');
 

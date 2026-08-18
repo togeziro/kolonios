@@ -1,41 +1,57 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { faceSettingsQueryOptions } from '@/features/face/api/queries';
+import { updateFaceSettingsFn } from '@/features/face/api/service';
+import type { FaceAccuracyLevel, FaceValidationMode } from '@/lib/face/types';
 
 interface FaceSettingsProps {
-  initialShowSeconds?: boolean;
-  initialValidationMode?: 'realtime' | 'background';
-  initialAccuracyLevel?: 'loose' | 'medium' | 'tight';
-  onSave: (settings: {
+  onSave?: (settings: {
     showSeconds: boolean;
-    validationMode: 'realtime' | 'background';
-    accuracyLevel: 'loose' | 'medium' | 'tight';
+    validationMode: FaceValidationMode;
+    accuracyLevel: FaceAccuracyLevel;
   }) => void;
 }
 
-export function FaceSettings({
-  initialShowSeconds = false,
-  initialValidationMode = 'background',
-  initialAccuracyLevel = 'medium',
-  onSave
-}: FaceSettingsProps) {
+export function FaceSettings({ onSave }: FaceSettingsProps) {
   const { t } = useTranslation();
-  const [showSeconds, setShowSeconds] = useState(initialShowSeconds);
-  const [validationMode, setValidationMode] = useState(initialValidationMode);
-  const [accuracyLevel, setAccuracyLevel] = useState(initialAccuracyLevel);
+  const queryClient = useQueryClient();
+  const { data: settings } = useQuery(faceSettingsQueryOptions());
+  const [showSeconds, setShowSeconds] = useState(false);
+  const [validationMode, setValidationMode] = useState<FaceValidationMode>('background');
+  const [accuracyLevel, setAccuracyLevel] = useState<FaceAccuracyLevel>('medium');
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!settings) return;
+    setShowSeconds(settings.showSeconds);
+    setValidationMode(settings.validationMode);
+    setAccuracyLevel(settings.accuracyLevel);
+  }, [settings]);
+
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
-    onSave({ showSeconds, validationMode, accuracyLevel });
-    setSaving(false);
+    try {
+      const payload = { showSeconds, validationMode, accuracyLevel };
+      await updateFaceSettingsFn({ data: payload });
+      onSave?.(payload);
+      queryClient.invalidateQueries({ queryKey: ['face'] });
+      toast.success(t('common.saved'));
+    } catch {
+      toast.error(t('common.failed'));
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const accuracyLabels = ['loose', 'medium', 'tight'] as const;
+  const accuracyLabels: FaceAccuracyLevel[] = ['loose', 'medium', 'tight'];
   const accuracyIndex = Math.max(0, accuracyLabels.indexOf(accuracyLevel));
 
   return (
@@ -66,7 +82,7 @@ export function FaceSettings({
           <Label>{t('faceSettings.validationMode')}</Label>
           <RadioGroup
             value={validationMode}
-            onValueChange={(v) => setValidationMode(v as typeof validationMode)}
+            onValueChange={(v) => setValidationMode(v as FaceValidationMode)}
             className='space-y-2'
           >
             <div className='flex items-center gap-2'>

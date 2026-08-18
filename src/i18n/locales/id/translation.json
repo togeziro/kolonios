@@ -26,6 +26,7 @@
     "attendanceSchedules": "Jadwal Absensi",
     "attendanceAssignments": "Penugasan Absensi",
     "attendanceReports": "Laporan Absensi",
+    "attendanceFaceSettings": "Pengaturan Wajah Absensi",
     "departments": "Departemen",
     "jobTitles": "Jabatan",
     "auditLog": "Log Audit",
@@ -81,6 +82,8 @@
     "today": "Hari ini",
     "system": "Sistem",
     "custom": "Kustom",
+    "saved": "Berhasil disimpan",
+    "failed": "Terjadi kesalahan",
     "importJson": "Impor JSON"
   },
   "confirm": {
@@ -396,27 +399,55 @@
     "onShift": "Sedang bertugas",
     "checkOut": "Check out",
     "geofenceActive": "GEOFENCE AKTIF",
-    "faceRecognition": "Pengenalan Wajah"
+    "faceRecognition": "Pengenalan Wajah",
+    "faceEnrolled": "Wajah terdaftar",
+    "faceNotEnrolled": "Wajah belum terdaftar",
+    "faceStatusLoading": "Memeriksa…",
+    "photoUploadFailed": "Gagal mengunggah foto",
+    "failed": "Check-in gagal",
+    "faceNotEnrolledError": "Anda belum mendaftarkan wajah. Silakan daftar di Pengaturan Wajah terlebih dahulu.",
+    "faceVerificationFailed": "Verifikasi wajah gagal. Silakan coba lagi."
   },
   "faceCapture": {
     "startVerification": "Mulai verifikasi wajah",
     "capture": "Tangkap",
     "positionFace": "Posisikan wajah Anda dalam bingkai",
     "cameraError": "Akses kamera ditolak",
-    "noFace": "Wajah tidak terdeteksi. Silakan coba lagi."
+    "noFace": "Wajah tidak terdeteksi. Silakan coba lagi.",
+    "multipleFaces": "Terlalu banyak wajah terdeteksi. Pastikan hanya wajah Anda dalam bingkai.",
+    "loadingModels": "Memuat model wajah...",
+    "verifying": "Memverifikasi wajah...",
+    "spoofDetected": "Verifikasi wajah ditolak: kemungkinan percobaan spoof.",
+    "verificationFailed": "Verifikasi wajah gagal. Silakan coba lagi."
   },
   "faceSettings": {
     "title": "Pengaturan Absensi",
+    "subtitle": "Atur bagaimana validasi wajah diterapkan pada check-in absensi.",
     "showSeconds": "Tampilkan Detik",
     "validationMode": "Validasi Wajah Absensi",
     "realtime": "Realtime sebelum absensi disimpan",
     "background": "Sistem latar belakang setelah absensi disimpan",
     "accuracyLevel": "Akurasi Validasi Wajah Absensi"
   },
+  "faceEnrollment": {
+    "title": "Pendaftaran Wajah",
+    "subtitle": "Daftarkan wajah Anda untuk verifikasi check-in absensi.",
+    "statusTitle": "Status pendaftaran",
+    "statusEnrolled": "Terdaftar ({{count}})",
+    "statusNotEnrolled": "Belum terdaftar",
+    "description": "Tangkap wajah Anda beberapa kali. Tangkapan terakhir digunakan untuk pendaftaran.",
+    "captures": "{{count}} tangkapan siap",
+    "enrollButton": "Daftarkan wajah",
+    "clearButton": "Hapus",
+    "enrolled": "Wajah berhasil didaftarkan.",
+    "cleared": "Pendaftaran wajah dihapus.",
+    "failed": "Pendaftaran wajah gagal. Silakan coba lagi."
+  },
   "checkInSuccess": {
     "title": "Check-in berhasil",
     "presentAt": "Anda tercatat hadir di {{location}}",
     "geofenceOk": "Geofence OK",
+    "faceOk": "Wajah OK",
     "selfieOk": "Selfie OK",
     "done": "Selesai"
   },
@@ -1259,6 +1290,22 @@
     "disabled": "Pencatatan lokasi longgar dinonaktifkan",
     "saveFailed": "Tidak dapat menyimpan pengaturan log kerja",
     "loadFailed": "Tidak dapat memuat pengaturan log kerja"
+  },
+  "rateLimitSettings": {
+    "title": "Pengaturan Batas Permintaan",
+    "pageDescription": "Atur berapa banyak permintaan yang diterima aplikasi sebelum dibatasi.",
+    "description": "Batas permintaan melindungi API dari penyalahgunaan. Nilai yang diatur di sini menggantikan variabel lingkungan RATE_LIMIT_MAX dan RATE_LIMIT_WINDOW_MS dan langsung berlaku.",
+    "appliedHint": "Batas yang berlaku: {{max}} permintaan per {{window}} detik.",
+    "maxLabel": "Maks. permintaan",
+    "maxHint": "Jumlah maksimum permintaan per jendela (10–10.000).",
+    "windowLabel": "Jendela (detik)",
+    "windowHint": "Jendela waktu dalam detik (1–3.600).",
+    "saved": "Pengaturan batas permintaan disimpan",
+    "saveFailed": "Tidak dapat menyimpan pengaturan batas permintaan",
+    "loadFailed": "Tidak dapat memuat pengaturan batas permintaan",
+    "reset": "Kembalikan ke bawaan",
+    "resetting": "Mengembalikan…",
+    "resetDone": "Pengaturan batas permintaan dikembalikan ke bawaan"
   },
   "priority": {
     "high": "Tinggi",

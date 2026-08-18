@@ -162,7 +162,12 @@ export function Map({
           container: containerRef.current,
           style: baseStyle as never,
           center: coordinates ? [coordinates.lng, coordinates.lat] : [106.8456, -6.2088],
-          zoom: 13
+          zoom: 13,
+          // Attribution is rendered outside the map (the page shows
+          // "© OpenStreetMap contributors"), so the in-map attribution
+          // toggle button is disabled — it would otherwise overlay the
+          // geolocate control and intercept clicks on it.
+          attributionControl: false
         });
         mapRef.current = map;
 

@@ -14,6 +14,13 @@ export const auth = betterAuth({
         protocol: 'auto',
         fallback: 'http://localhost:3000'
       },
+  trustedOrigins: [
+    'http://localhost:3000',
+    'http://localhost:4173',
+    'http://127.0.0.1:3000',
+    'http://172.17.16.3:3000',
+    'https://172.17.16.3:8082'
+  ],
   database: drizzleAdapter(db, {
     provider: 'pg'
   }),

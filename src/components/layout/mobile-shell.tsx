@@ -25,16 +25,14 @@ export function MobileShell() {
   }, [setTheme]);
 
   const toggleDark = () => {
-    setDark((d) => {
-      const next = !d;
-      setTheme(next ? 'dark' : 'light');
-      try {
-        localStorage.setItem(SHELL_DARK_KEY, String(next));
-      } catch {
-        // ignore storage failures
-      }
-      return next;
-    });
+    const next = !dark;
+    setDark(next);
+    setTheme(next ? 'dark' : 'light');
+    try {
+      localStorage.setItem(SHELL_DARK_KEY, String(next));
+    } catch {
+      // ignore storage failures
+    }
   };
 
   return (
