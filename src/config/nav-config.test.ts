@@ -73,7 +73,8 @@ describe('nav-config', () => {
       'Attendance Locations',
       'Attendance Schedules',
       'Attendance Assignments',
-      'Attendance Reports'
+      'Attendance Reports',
+      'Attendance Face Settings'
     ]);
   });
 

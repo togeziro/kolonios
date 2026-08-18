@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { FACE_DESCRIPTOR_LENGTH } from '@/lib/face/types';
 import { faceEnrollmentSchema, faceVerifySchema, faceSettingsSchema } from './validation';
 
 function makeDescriptor(): number[] {
-  return Array.from({ length: 512 }, (_, i) => Math.sin(i) * 0.5);
+  return Array.from({ length: FACE_DESCRIPTOR_LENGTH }, (_, i) => Math.sin(i) * 0.5);
 }
 
 describe('face validation schemas', () => {
