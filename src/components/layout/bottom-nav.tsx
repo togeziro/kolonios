@@ -31,9 +31,9 @@ export function BottomNav() {
 
   return (
     <motion.nav
-      initial={{ y: 60 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.3, delay: 0.2 }}
+      initial={reduceMotion ? false : { y: 60 }}
+      animate={reduceMotion ? {} : { y: 0 }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.3, delay: 0.2 }}
       className='bg-background/80 fixed inset-x-0 bottom-0 z-50 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-lg'
     >
       <Link
