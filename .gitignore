@@ -93,3 +93,4 @@ e2e/.auth/
 
 # SDD scratch (per-plan agent workspace)
 .superpowers/
+.commandcode/

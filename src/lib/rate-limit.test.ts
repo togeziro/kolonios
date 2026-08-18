@@ -4,12 +4,15 @@ const TEST_LIMIT = 5;
 
 describe('checkRateLimit', { timeout: 30000 }, () => {
   let checkRateLimit: (key: string) => Promise<void>;
+  let getAppliedRateLimits: () => Promise<{ max: number; windowMs: number }>;
 
   beforeAll(async () => {
     vi.stubEnv('RATE_LIMIT_MAX', String(TEST_LIMIT));
+    vi.stubEnv('RATE_LIMIT_WINDOW_MS', '60000');
     vi.resetModules();
     const mod = await import('./rate-limit');
     checkRateLimit = mod.checkRateLimit;
+    getAppliedRateLimits = mod.getAppliedRateLimits;
   });
 
   afterAll(() => {
@@ -36,5 +39,10 @@ describe('checkRateLimit', { timeout: 30000 }, () => {
     }
     await expect(checkRateLimit(keyA)).rejects.toThrow('Rate limit exceeded');
     await expect(checkRateLimit(keyB)).resolves.not.toThrow();
+  });
+
+  it('falls back to env defaults when DB settings are absent', async () => {
+    const limits = await getAppliedRateLimits();
+    expect(limits).toEqual({ max: TEST_LIMIT, windowMs: 60_000 });
   });
 });

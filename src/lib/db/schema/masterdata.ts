@@ -64,6 +64,8 @@ export const companySettings = pgTable('company_settings', {
   storage_secret_key: text('storage_secret_key'),
   storage_force_path_style: boolean('storage_force_path_style').notNull().default(false),
   worklog_location_lenient: boolean('worklog_location_lenient').notNull().default(false),
+  rate_limit_max: integer('rate_limit_max'),
+  rate_limit_window_ms: integer('rate_limit_window_ms'),
   faceValidationMode: text('face_validation_mode').notNull().default('background'),
   faceAccuracyLevel: text('face_accuracy_level').notNull().default('medium'),
   showSeconds: boolean('show_seconds').notNull().default(false),

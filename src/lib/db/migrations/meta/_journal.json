@@ -176,6 +176,13 @@
       "when": 1786955153017,
       "tag": "0024_rainy_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787065783190,
+      "tag": "0025_same_shatterstar",
+      "breakpoints": true
     }
   ]
 }

@@ -14,11 +14,23 @@ interface CheckInScanProps {
     longitude: number | null;
     radius: number | null;
   } | null;
-  shift: { id: number; name: string; start_time: string; end_time: string } | null;
+  shift: {
+    id: number;
+    name: string;
+    start_time: string;
+    end_time: string;
+  } | null;
   isCheckedIn: boolean;
   elapsedTime?: string;
   accuracyLevel: 'loose' | 'medium' | 'tight';
-  onCheckIn: (descriptor: number[], photo: string, matched: boolean) => void;
+  faceEnrolled: boolean;
+  faceEnrollmentPending?: boolean;
+  onCheckIn: (
+    descriptor: number[],
+    photo: string,
+    antiSpoofScore: number | null,
+    livenessScore: number | null
+  ) => void;
   onCheckOut: () => void;
 }
 
@@ -28,13 +40,20 @@ export function CheckInScan({
   isCheckedIn,
   elapsedTime,
   accuracyLevel,
+  faceEnrolled,
+  faceEnrollmentPending = false,
   onCheckIn,
   onCheckOut
 }: CheckInScanProps) {
   const { t } = useTranslation();
 
-  const handleCapture = (descriptor: number[], photo: string) => {
-    onCheckIn(descriptor, photo, true);
+  const handleCapture = (
+    descriptor: number[],
+    photo: string,
+    antiSpoofScore: number | null,
+    livenessScore: number | null
+  ) => {
+    onCheckIn(descriptor, photo, antiSpoofScore, livenessScore);
   };
 
   return (
@@ -77,7 +96,10 @@ export function CheckInScan({
             </div>
             {location.latitude != null && location.longitude != null && (
               <LocationMap
-                coordinates={{ lat: location.latitude, lng: location.longitude }}
+                coordinates={{
+                  lat: location.latitude,
+                  lng: location.longitude
+                }}
                 radius={location.radius ?? 100}
                 readOnly
                 height={120}
@@ -90,6 +112,25 @@ export function CheckInScan({
       <Card>
         <CardHeader>
           <CardTitle className='text-center'>{t('checkIn.faceRecognition')}</CardTitle>
+          <div className='flex justify-center gap-2'>
+            {faceEnrollmentPending ? (
+              // SSR-safe placeholder: query data is client-only, so rendering
+              // the real badge during hydration would mismatch the server HTML.
+              <Badge variant='outline' className='border-zinc-600 text-zinc-400'>
+                {t('checkIn.faceStatusLoading')}
+              </Badge>
+            ) : (
+              <Badge
+                variant='outline'
+                className={
+                  faceEnrolled ? 'border-green-500 text-green-400' : 'border-zinc-600 text-zinc-400'
+                }
+              >
+                {faceEnrolled ? t('checkIn.faceEnrolled') : t('checkIn.faceNotEnrolled')}
+              </Badge>
+            )}
+            <Badge variant='outline'>{accuracyLevel}</Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <FaceCapture onCapture={handleCapture} />

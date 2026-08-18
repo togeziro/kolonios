@@ -178,6 +178,14 @@ export const navItems: NavItem[] = [
         isActive: false,
         module: 'attendance_admin',
         items: []
+      },
+      {
+        title: 'Attendance Face Settings',
+        url: '/dashboard/admin/attendance/face-settings',
+        icon: 'settings',
+        isActive: false,
+        module: 'attendance_admin',
+        items: []
       }
     ]
   },
@@ -268,6 +276,14 @@ export const navItems: NavItem[] = [
         title: 'Work Log Settings',
         url: '/dashboard/admin/worklog-settings',
         icon: 'settings',
+        isActive: false,
+        module: 'settings',
+        items: []
+      },
+      {
+        title: 'Rate Limit Settings',
+        url: '/dashboard/admin/rate-limit',
+        icon: 'shield',
         isActive: false,
         module: 'settings',
         items: []
