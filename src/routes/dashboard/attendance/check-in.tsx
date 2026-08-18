@@ -29,7 +29,7 @@ function CheckInPage() {
   const [step, setStep] = useState<'scan' | 'success'>('scan');
   const [checkInTime, setCheckInTime] = useState('');
   const [checkInLocation, setCheckInLocation] = useState('');
-  const [faceError, setFaceError] = useState<string | null>(null);
+  const [, setFaceError] = useState<string | null>(null);
 
   const { data: todayData } = useQuery(myAttendanceQueryOptions());
   const { data: locationsData, isPending: locationsPending } = useQuery(locationsQueryOptions());
