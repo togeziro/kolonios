@@ -5,9 +5,9 @@ interface HeadingProps {
 
 export function Heading({ title, description }: HeadingProps) {
   return (
-    <div>
-      <h1 className='text-3xl font-bold tracking-tight'>{title}</h1>
-      <p className='text-muted-foreground text-sm'>{description}</p>
+    <div className='min-w-0'>
+      <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>{title}</h1>
+      <p className='text-muted-foreground max-w-[65ch] text-sm leading-relaxed'>{description}</p>
     </div>
   );
 }
