@@ -51,7 +51,6 @@ function CheckInPage() {
     !locationsPending && !shiftsPending ? (locationsData?.locations?.[0] ?? null) : null;
   const shift = !locationsPending && !shiftsPending ? (shiftsData?.shifts?.[0] ?? null) : null;
 
-  const validationMode = faceSettings?.validationMode ?? 'background';
   const accuracyLevel = faceSettings?.accuracyLevel ?? 'medium';
 
   const checkInMutation = useMutation({
