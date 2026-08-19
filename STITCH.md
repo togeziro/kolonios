@@ -39,137 +39,80 @@ excessive color.
 Local DESIGN.md: `./DESIGN.md` (light-mode web UI tokens; the Stitch theme is
 the dark technician variant).
 
-## Screen Inventory (visible)
+## Screen Inventory (visible — 36 screens)
 
-33 visible screens. Grouped by role and navigation order — reorder in the
-Stitch UI. Status: ✅ built, 🔨 unbuilt. See `docs/TICKETS.md` for codebase
-implementation status, `docs/TODO.md` for build order.
+Source of truth: `list_screens` + `get_project` (2026-08-18). 56 instances total — 36 visible, 20 hidden (junk). Status: ✅ built, 🔨 not built, ⚠️ partial/rework, 🔁 duplicate.
 
----
+### Full Status Table
 
-### Technician screens (mobile — MobileShell)
+| # | Screen (Stitch title) | Role | Stitch | Code | Status | Route / Notes |
+|---|---|---|---|---|---|---|
+| 1 | Staff Dashboard | Technician | ✅ | ✅ | ✅ | `/dashboard/overview` |
+| 2 | My Work Tab (Self Service) Updated | Technician | ✅ | ✅ | ✅ | `/dashboard/my-work` |
+| 3 | Office Tab (Admin Tools) Updated | Technician | ✅ | ✅ | ✅ | `/dashboard/overview` (role branch) |
+| 4 | Notifications Center | Technician | ✅ | ✅ | ✅ | `/dashboard/notifications` |
+| 5 | Check-In (Scan) | Technician | ✅ | ✅ | ✅ | `/dashboard/attendance/check-in` — GPS + face, 2-step, server-side verification |
+| 6 | Check-In Camera (Updated Nav) | Technician | ✅ | ✅ | ✅ | **Canonical** — Human.js overlay |
+| 7 | Check-In Camera | Technician | ✅ | ✅ | 🔁 | Duplicate of #6 — hide this one |
+| 8 | Check-In Success | Technician | ✅ | ✅ | ✅ | confirmation + badges |
+| 9 | Face Enrollment | Technician | ✅ | ✅ | ✅ | `/dashboard/attendance/face-settings` (self-service) |
+| 10 | Attendance Settings | Technician | ✅ | ✅ | ✅ | `/dashboard/admin/attendance/face-settings` (`company_settings`) |
+| 11 | Attendance Correction | Technician | ✅ | ✅ | ✅ | `/dashboard/attendance` (sheet) |
+| 12 | Attendance History (Updated Nav) | Technician | ✅ | ✅ | ✅ | **Canonical** |
+| 13 | Attendance History | Technician | ✅ | ✅ | 🔁 | Duplicate of #12 — hide this one |
+| 14 | Work Session (Unified) Updated | Technician | ✅ | ✅ | ✅ | `/dashboard/work-session/$ticketId` — on-site state folded in |
+| 15 | Work Session (Dynamic Materials) | Technician | ✅ | ✅ | ✅ | same route — materials/photos/log variant |
+| 16 | Handoff Confirmation | Technician | ✅ | ✅ | ✅ | `/dashboard/work-session/$ticketId/handoff` |
+| 17 | Daily Checklist | Technician | ✅ | ❌ | 🔨 | Stitch exists, no route |
+| 18 | En Route Navigation | Technician | ✅ | ✅ | ✅ | `/dashboard/en-route/$ticketId` — MapLibre preview (blue device marker via live GPS, orange destination pin, dashed guide line, fitBounds), TurfJS distance readout, Open Maps handoff, Call Customer, "I've Arrived" (`assigned → in_progress` + worklog) |
+| 19 | Open Tickets | Technician | ✅ | ✅ | ✅ | `/dashboard/jobs` — was 🔨, now built (`jobs-page.tsx`) |
+| 20 | Create Ticket | Technician | ✅ | ✅ | ✅ | `/dashboard/tickets/new` |
+| 21 | Ticket Detail (Estafet) | Technician | ✅ | ✅ | ✅ | `/dashboard/tickets/$ticketId` |
+| 22 | Ticket Detail (Rework) — T-1042 | Technician | ✅ | ✅ | ✅ | same route — rework branch |
+| 23 | Ticket Completed — T-1042 | Technician | ✅ | ✅ | ✅ | `/dashboard/tickets/$ticketId/completed` |
+| 24 | Next Leg Pool | Technician | ✅ | ❌ | 🔨 | Stitch exists, no route (overlaps Available Jobs) |
+| 25 | My Leave | Technician | ✅ | ✅ | ✅ | `/dashboard/leave` |
+| 26 | Leave History | Technician | ✅ | ✅ | ✅ | `/dashboard/leave` (tab) |
+| 27 | New Leave Request | Technician | ✅ | ✅ | ✅ | `/dashboard/leave` (sheet) |
+| 28 | Holiday Calendar | Technician | ✅ | ✅ | ✅ | `/dashboard/admin/holiday-calendar` |
+| 29 | My Schedule | Technician | ✅ | ✅ | ✅ | `/dashboard/schedule` |
+| 30 | Profile Tab | Technician | ✅ | ✅ | ⚠️ | `/dashboard/profile` — 111 lines, needs rework to match Stitch |
+| 31 | Edit Profile | Technician | ✅ | ❌ | 🔨 | Stitch `Edit Profile`, no route |
+| 32 | Change Password | Technician | ✅ | ❌ | 🔨 | Stitch `Change Password`, no route |
+| 33 | Settings | Technician | ✅ | ❌ | 🔨 | Stitch `Settings` (mobile), no route |
+| 34 | Achievements | Technician | ✅ | ✅ | ✅ | `/dashboard/achievements` |
+| 35 | SPV Review Queue | SPV only | ✅ | ❌ | 🔨 | `/dashboard/spv/review` — nav-config only, no route files |
+| 36 | Review Ticket (SPV) | SPV only | ✅ | ❌ | 🔨 | planned `/dashboard/spv/review/$ticketId` |
+| 37 | Leave Approvals Queue | SPV only | ✅ | ❌ | 🔨 | `/dashboard/spv/leave-approvals` — nav-config only |
+| — | Working (On Site) | — | hidden | — | 🔁 | Folded into #14 — do not recreate |
 
-All screens below are **technician-only**. SPV also has all of these + review
-tools (see "SPV-only" section).
+### Build Summary
 
-#### Dashboard / Home
-- ✅ Staff Dashboard (technician branch)
-- ✅ My Work Tab (Self Service) Updated
-- ✅ Office Tab (Admin Tools) Updated
-- ✅ Notifications Center
+| Role | Stitch visible | Code built | Code missing / rework | Duplicates to hide |
+|------|---------------|------------|----------------------|-------------------|
+| Technician | 34 (incl. 2 dups) | 27 | 6 🔨 + 1 ⚠️ | 2 |
+| SPV | 34 + 3 = 37 | 27 + 0 | 6 + 3 = 9 + 1 ⚠️ | 2 |
+| Admin/HR (desktop) | 9 | 6 | 3 🔨 + 1 ⚠️ | 0 |
+| **Total unique** | **36 visible** (56 instances) | **~27 routes** (62 files in `src/routes/dashboard/**`) | **9 without route + 1 rework** | **3 hidden junk** |
 
-#### Attendance / Work Session
-- ✅ Check-In (Scan) — GPS + face card, 2-step flow (`/dashboard/attendance/check-in`); face verification is **server-side** (matching against enrolled descriptors, anti-spoof/liveness gated)
-- ✅ Check-In Camera — Face capture with Human.js live overlay
-- ✅ Check-In Success — Confirmation screen with status badges
-- ✅ Face Enrollment — technician self-service face registration (`/dashboard/attendance/face-settings`)
-- ✅ Attendance Settings — face validation config (admin; `/dashboard/admin/attendance/face-settings`)
-- ✅ Attendance Correction
-- ✅ Attendance History
-- ✅ Work Session (Unified) Updated
-- ✅ Work Session (Dynamic Materials)
-- 🔨 **Daily Checklist** — checklist items with status/photo/note, progress, submit for review
-- ✅ Handoff Confirmation
-- 🔨 **En Route Navigation** — MapLibre map, route line, call customer, "I've Arrived"
-- 🔨 **Working (On Site)** — on-site state of the session: map + task card + Finish & Submit (folded into work-session route)
+### Unbuilt / Rework by Priority
 
-#### Tickets / Jobs
-- 🔨 **Open Tickets** — filter chips (All/Field/Backoffice), priority badges, Take button
-- ✅ Create Ticket
-- ✅ Ticket Detail (Estafet)
-- ✅ Ticket Detail (Rework) — T-1042
-- ✅ Ticket Completed — T-1042
-- 🔨 **Next Leg Pool** — filterable available next legs with Take
+| Priority | Screen | Blocker |
+|---|---|---|
+| 1 | Daily Checklist | needs route + checklist API |
+| 2 | Next Leg Pool | needs route (currently overlaps `/dashboard/jobs`) |
+| 3 | SPV Review Queue | needs `src/routes/dashboard/spv/**` |
+| 4 | Review Ticket (SPV) | needs evidence review + approve/reject |
+| 5 | Leave Approvals Queue | needs `src/routes/dashboard/spv/**` |
+| 6 | Settings (Mobile) | needs mobile settings route |
+| 7 | Change Password | needs route + strength meter + forgot link |
+| 8 | Edit Profile | needs route (email locked) |
+| 9 | Profile Tab rework | expand `profile-page.tsx` to Stitch hierarchy |
+| 10 | Forgot Password flow | requires email provider |
 
-#### Leave / Schedule
-- ✅ My Leave
-- ✅ Leave History
-- ✅ New Leave Request
-- ✅ Holiday Calendar
-- ✅ My Schedule
+> Old `docs/TODO.md` / `docs/TICKETS.md` refs removed — `docs/` now only contains `superpowers/`.
 
-#### Profile / Settings
-- ✅ Profile Tab
-- 🔨 **Edit Profile** — personal info editable, email locked, work info read-only
-- 🔨 **Change Password** — current/new/confirm, strength meter, "Forgot password?" link
-- 🔨 **Settings (Mobile)** — profile card, preferences (language/theme/notifications), account, danger zone
-- ✅ Achievements
-
----
-
-### SPV-only screens (mobile — MobileShell, `spv_review` permission)
-
-SPV sees **all technician screens above** + these review/approval screens:
-
-#### Tickets / Jobs
-- 🔨 **SPV Review Queue** — pending summary strip, review cards, approve/reject
-- 🔨 **Review Ticket (SPV)** — evidence review (photos, summary, materials, SOP), approve/reject
-
-#### Leave / Schedule
-- 🔨 **Leave Approvals Queue** — summary pills, segmented tabs, approve/reject
-
----
-
-### Admin / HR screens (desktop sidebar)
-
-Admin/HR keep current desktop pages. Stitch mobile versions are not built
-for backoffice.
-
-#### Dashboard / Home
-- ✅ Staff Dashboard (admin/HR branch)
-
-#### Attendance
-- ✅ Attendance Settings — face validation config (admin route `/dashboard/admin/attendance/face-settings`, wired to `company_settings`)
-
-#### Tickets / Jobs
-- ✅ Create Ticket
-- ✅ Ticket Detail
-
-#### Leave / Schedule
-- ✅ Holiday Calendar (`/dashboard/admin/holiday-calendar`)
-
-#### Profile / Settings
-- ✅ Profile Tab
-- 🔨 Edit Profile
-- 🔨 Change Password
-- 🔨 Settings
-
----
-
-## Build Summary
-
-| Role | Built | Unbuilt | Total |
-|------|-------|---------|-------|
-| Technician | 24 | 8 | 32 |
-| SPV | 24 + 0 | 8 + 3 | 35 |
-| Admin/HR (desktop) | 7 | 3 | 10 |
-
-### Unbuilt screens by priority (from `docs/TODO.md`)
-
-**Phase 1 — remaining:**
-1. Open Tickets (technician + SPV + admin)
-
-**Phase 2 — field work session (technician + SPV):**
-2. Daily Checklist
-3. En Route Navigation
-4. Working (On Site)
-5. Next Leg Pool
-
-**Phase 3 — SPV-only:**
-6. SPV Review Queue
-7. Review Ticket (SPV)
-8. Leave Approvals Queue
-
-**Phase 3 — self-service (technician + SPV + admin):**
-9. Settings (Mobile)
-10. Change Password
-11. Edit Profile
-12. Profile Tab rework
-
-**Cross-cutting:**
-13. Forgot Password flow (all roles — requires email provider)
-
-## Hidden Screens (junk — not counted)
+## Hidden Screens (junk — not counted, keep hidden)
 
 Hidden screens are deleted/experimental — ignore them entirely:
 - Working (On Site) — folded into work-session route's on-site state

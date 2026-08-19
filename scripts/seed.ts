@@ -610,23 +610,26 @@ async function seedCustomers() {
   const adminUser = adminUsers[0];
   if (!adminUser) throw new Error('Admin user not found for created_by reference');
 
-  const customersToCreate = Array.from({ length: 10 }, (_, i) => ({
-    email: `customer${i + 1}@example.com`,
-    name: faker.person.fullName(),
-    password: 'Password123!',
-    role: 'customer' as const,
-    customer_code: `CUST-${String(i + 1).padStart(4, '0')}`,
-    phone: faker.phone.number({ style: 'international' }),
-    address: `${faker.location.streetAddress()}, ${faker.location.city()}`,
-    latitude: faker.location.latitude({ min: -6.5, max: -6.0 }),
-    longitude: faker.location.longitude({ min: 106.5, max: 107.0 }),
-    id_card_number: `3201${String(i + 1).padStart(12, '0')}`,
-    service_data: JSON.stringify({
-      pppoe_username: `cust${i + 1}`,
-      pppoe_password: faker.internet.password()
-    }),
-    billing_address: `${faker.location.streetAddress()}, ${faker.location.city()}`
-  }));
+  const customersToCreate = Array.from({ length: 10 }, (_, i) => {
+    const hasCoordinates = i !== 1;
+    return {
+      email: `customer${i + 1}@example.com`,
+      name: faker.person.fullName(),
+      password: 'Password123!',
+      role: 'customer' as const,
+      customer_code: `CUST-${String(i + 1).padStart(4, '0')}`,
+      phone: faker.phone.number({ style: 'international' }),
+      address: `${faker.location.streetAddress()}, ${faker.location.city()}`,
+      latitude: hasCoordinates ? faker.location.latitude({ min: -6.5, max: -6.0 }) : 0,
+      longitude: hasCoordinates ? faker.location.longitude({ min: 106.5, max: 107.0 }) : 0,
+      id_card_number: `3201${String(i + 1).padStart(12, '0')}`,
+      service_data: JSON.stringify({
+        pppoe_username: `cust${i + 1}`,
+        pppoe_password: faker.internet.password()
+      }),
+      billing_address: `${faker.location.streetAddress()}, ${faker.location.city()}`
+    };
+  });
 
   const customerRecords: NewCustomer[] = [];
 
@@ -694,19 +697,22 @@ async function seedTickets() {
   const locs = await db.select({ id: locations.id, name: locations.name }).from(locations);
   const locMap = new Map(locs.map((l) => [l.name, l.id]));
   const custs = await db
-    .select({ id: customers.id, full_name: customers.full_name })
-    .from(customers);
-  const cust = custs[0]?.id;
+    .select({ id: customers.id, full_name: customers.full_name, latitude: customers.latitude })
+    .from(customers)
+    .orderBy(customers.customer_code);
+  const custWithCoords = custs.find((c) => c.latitude !== 0)?.id;
+  const custNoCoords = custs.find((c) => c.latitude === 0)?.id;
 
   await db.insert(employeeSkills).values([
     { user_id: techId, skill: 'Fiber Optic' },
     { user_id: techId, skill: 'Networking' },
+    { user_id: techId, skill: 'Customer Care' },
     { user_id: empId, skill: 'Customer Care' }
   ]);
 
   const due = (days: number) => new Date(Date.now() + days * 86400000);
 
-  const [, t2, t3, t4, t5] = await db
+  const [t1, t2, t3, t4, t5] = await db
     .insert(tickets)
     .values([
       {
@@ -727,8 +733,7 @@ async function seedTickets() {
         task_type: 'installation',
         status: 'open',
         priority: 'high',
-        location_id: locMap.get('Head Office') ?? null,
-        customer_id: cust,
+        customer_id: custWithCoords,
         asset_name: 'Fiber Router',
         due_at: due(2),
         estimated_minutes: 120,
@@ -751,7 +756,6 @@ async function seedTickets() {
         task_type: 'maintenance',
         status: 'open',
         priority: 'medium',
-        location_id: locMap.get('Head Office') ?? null,
         due_at: due(1),
         estimated_minutes: 90,
         created_by: adminId
@@ -762,7 +766,7 @@ async function seedTickets() {
         task_type: 'sales',
         status: 'open',
         priority: 'low',
-        location_id: locMap.get('Head Office') ?? null,
+        customer_id: custNoCoords,
         due_at: due(4),
         estimated_minutes: 60,
         created_by: adminId
@@ -773,16 +777,16 @@ async function seedTickets() {
   await db
     .insert(ticketLegs)
     .values(
-      [t2, t3, t4, t5].flatMap((t) => [
+      [t1, t2, t3, t4, t5].flatMap((t) => [
         { ticket_id: t.id, leg_number: 1, name: t.title, status: 'open' as const }
       ])
     );
 
   await db.insert(taskRequirements).values([
     { task_id: t2.id, designation_id: desigMap.get('FLD_TECH'), skill: 'Fiber Optic' },
-    { task_id: t3.id, department_id: deptMap.get('ENG'), skill: 'Networking' },
+    { task_id: t3.id, department_id: deptMap.get('OPS'), skill: 'Networking' },
     { task_id: t4.id, designation_id: desigMap.get('FLD_TECH') },
-    { task_id: t5.id, department_id: deptMap.get('SALES'), skill: 'Customer Care' }
+    { task_id: t5.id, department_id: deptMap.get('OPS'), skill: 'Customer Care' }
   ]);
 
   console.log('Seeded 5 tickets, 4 ticket requirements, 3 employee skills');

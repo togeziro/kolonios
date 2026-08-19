@@ -6,6 +6,7 @@ import {
   completeTicketFn,
   createTicketFn,
   startLegFn,
+  arriveTicketFn,
   submitWorkSessionFn,
   submitHandoffNoteFn
 } from './service';
@@ -88,6 +89,29 @@ export function useStartLeg() {
       }
     },
     onError: () => toast.error(t('ticket.startFailed'))
+  });
+}
+
+export function useArriveTicket() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    mutationFn: (input: {
+      ticketId: number;
+      latitude?: number;
+      longitude?: number;
+      accuracy?: number;
+    }) => arriveTicketFn({ data: input }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('enRoute.arrivedSuccess'));
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
+      } else {
+        toast.error(res?.message ?? t('enRoute.arrivedFailed'));
+      }
+    },
+    onError: () => toast.error(t('enRoute.arrivedFailed'))
   });
 }
 

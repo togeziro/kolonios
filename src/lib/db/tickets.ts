@@ -51,7 +51,14 @@ async function loadRequirements(ticketId: number): Promise<RequirementRow[]> {
 async function loadCustomer(customerId: string | null) {
   if (!customerId) return null;
   const [customer] = await db
-    .select({ id: customers.id, name: customers.full_name })
+    .select({
+      id: customers.id,
+      name: customers.full_name,
+      phone: customers.phone,
+      address: customers.address,
+      latitude: customers.latitude,
+      longitude: customers.longitude
+    })
     .from(customers)
     .where(eq(customers.id, customerId))
     .limit(1);
@@ -457,6 +464,59 @@ export async function startLeg(userId: string, legId: number): Promise<TicketAct
     return { success: true, message: 'Leg started' };
   } catch (e) {
     mapDbError(e, 'tickets.startLeg');
+  }
+}
+
+export async function arriveTicket(
+  userId: string,
+  ticketId: number,
+  location?: { latitude: number; longitude: number; accuracy: number }
+): Promise<TicketActionResponse> {
+  try {
+    const [ticket] = await db
+      .select()
+      .from(tickets)
+      .where(and(eq(tickets.id, ticketId), isMine(userId)))
+      .limit(1);
+    if (!ticket) return { success: false, message: 'You can only arrive at tickets you took' };
+    if (ticket.status !== 'assigned') {
+      return { success: false, message: 'Ticket can only be arrived from assigned' };
+    }
+
+    const legs = await db
+      .select()
+      .from(ticketLegs)
+      .where(eq(ticketLegs.ticket_id, ticketId))
+      .orderBy(asc(ticketLegs.leg_number))
+      .limit(1);
+    const leg = legs[0];
+    if (!leg) return { success: false, message: 'Ticket has no legs' };
+
+    const [updated] = await db
+      .update(tickets)
+      .set({ status: 'in_progress', updated_at: new Date() })
+      .where(and(eq(tickets.id, ticketId), eq(tickets.status, 'assigned')))
+      .returning();
+    if (!updated) return { success: false, message: 'Ticket is no longer available' };
+
+    const body =
+      location && Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
+        ? `${location.latitude},${location.longitude} ±${location.accuracy}m`
+        : 'arrived (no location fix)';
+    await db.insert(ticketWorklog).values({
+      leg_id: leg.id,
+      kind: 'location',
+      body,
+      created_by: userId
+    });
+
+    return {
+      success: true,
+      message: 'Arrived',
+      ticket: await toTicket(updated, await loadRequirements(ticketId))
+    };
+  } catch (e) {
+    mapDbError(e, 'tickets.arriveTicket');
   }
 }
 

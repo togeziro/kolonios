@@ -94,6 +94,7 @@
     "@tanstack/react-table": "^9.1.2",
     "@tanstack/router-plugin": "^1.168.30",
     "@tanstack/zod-adapter": "^1.167.0",
+    "@turf/distance": "^7.4.0",
     "@vladmandic/human": "^3.3.6",
     "better-auth": "1.6.26",
     "class-variance-authority": "^0.7.1",

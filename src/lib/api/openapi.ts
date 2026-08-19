@@ -40,7 +40,8 @@ import {
   ticketIdSchema,
   listOpenTicketsSchema,
   createTicketSchema,
-  legIdSchema
+  legIdSchema,
+  arriveTicketSchema
 } from '@/features/tickets/api/validation';
 
 export type Operation = {
@@ -429,6 +430,16 @@ export const operations: Operation[] = [
     permission: 'tickets.edit',
     pathParams: { legId: legIdSchema.shape.legId },
     responseDescription: 'Started leg'
+  },
+  {
+    operationId: 'arriveTicket',
+    method: 'post',
+    path: '/tickets/{ticketId}/arrive',
+    summary: 'Mark an assigned ticket as arrived (moves it to in_progress)',
+    permission: 'tickets.edit',
+    pathParams: { ticketId: ticketIdSchema.shape.ticketId },
+    body: arriveTicketSchema,
+    responseDescription: 'Arrived ticket'
   },
   {
     operationId: 'createTicket',

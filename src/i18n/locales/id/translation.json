@@ -1333,5 +1333,28 @@
     "backToMyWork": "Kembali ke Pekerjaan Saya",
     "saved": "Catatan serah terima disimpan",
     "saveFailed": "Gagal menyimpan catatan serah terima"
+  },
+  "enRoute": {
+    "title": "Dalam Perjalanan",
+    "arrived": "Saya Sudah Tiba",
+    "arrivedSuccess": "Kedatangan tercatat",
+    "arrivedFailed": "Tidak dapat mencatat kedatangan",
+    "callCustomer": "Hubungi Pelanggan",
+    "noPhone": "Tidak ada nomor telepon",
+    "openMaps": "Buka Maps",
+    "destination": "Tujuan",
+    "destinationUnavailable": "Tidak ada tujuan",
+    "arriveConfirmTitle": "Tiba tanpa lokasi?",
+    "arriveConfirmDescription": "Lokasi Anda tidak dapat ditangkap. Anda tetap dapat menandai diri tiba — kedatangan akan dicatat tanpa koordinat.",
+    "arriveWithoutLocation": "Tiba Tanpa Lokasi",
+    "cancel": "Batal",
+    "locationFailed": "Tidak dapat mendapatkan lokasi",
+    "enRouteTo": "Dalam perjalanan ke",
+    "notAssigned": "Tiket ini tidak ditugaskan kepada Anda",
+    "inProgressHint": "Tiket ini sudah dalam pengerjaan",
+    "back": "Kembali",
+    "mapFailed": "Peta tidak dapat dimuat",
+    "distanceTo": "Jarak ke tujuan",
+    "findMyLocation": "Temukan lokasi saya"
   }
 }

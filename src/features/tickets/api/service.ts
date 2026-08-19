@@ -6,6 +6,7 @@ import {
   listOpenTicketsSchema,
   createTicketSchema,
   legIdSchema,
+  arriveTicketSchema,
   submitWorkSessionSchema,
   submitHandoffNoteSchema
 } from './validation';
@@ -75,6 +76,21 @@ export const startLegFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     const { startLeg } = await import('@/lib/db/tickets');
     return startLeg(session.user.id, data.legId);
+  });
+
+export const arriveTicketFn = createServerFn({ method: 'POST' })
+  .validator(arriveTicketSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('tickets', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { arriveTicket } = await import('@/lib/db/tickets');
+    return arriveTicket(
+      session.user.id,
+      data.ticketId,
+      data.latitude != null && data.longitude != null
+        ? { latitude: data.latitude, longitude: data.longitude, accuracy: data.accuracy ?? 0 }
+        : undefined
+    );
   });
 
 export const submitWorkSessionFn = createServerFn({ method: 'POST' })
