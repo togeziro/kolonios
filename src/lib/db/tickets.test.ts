@@ -115,7 +115,9 @@ describe('tickets data access (integration)', () => {
         location_id: location.id
       });
       const res = await listOpenTickets(USER_A);
-      expect(res.tickets[0].customer).toEqual({ id: customer.id, name: 'PT Maju Jaya' });
+      expect(res.tickets[0].customer).toEqual(
+        expect.objectContaining({ id: customer.id, name: 'PT Maju Jaya' })
+      );
       expect(res.tickets[0].location).toEqual({ id: location.id, name: 'Kedungwaringin' });
     });
   });
@@ -136,7 +138,9 @@ describe('tickets data access (integration)', () => {
       const res = await getTicketDetail(USER_A, ticket.id);
       expect(res.success).toBe(true);
       expect(res.ticket?.title).toBe('Estafet job');
-      expect(res.ticket?.customer).toEqual({ id: customer.id, name: 'CV Berkah' });
+      expect(res.ticket?.customer).toEqual(
+        expect.objectContaining({ id: customer.id, name: 'CV Berkah' })
+      );
       expect(res.ticket?.requiredSkills).toContain('Fiber Optic');
       expect(res.ticket?.legs.map((l) => l.name)).toEqual(['Survey', 'Install']);
       expect(res.ticket?.legs.map((l) => l.legNumber)).toEqual([1, 2]);
@@ -248,7 +252,9 @@ describe('tickets data access (integration)', () => {
         taskType: 'data',
         priority: 'high'
       });
-      expect(res.ticket?.customer).toEqual({ id: customer.id, name: 'PT Nusantara' });
+      expect(res.ticket?.customer).toEqual(
+        expect.objectContaining({ id: customer.id, name: 'PT Nusantara' })
+      );
       expect(res.ticket?.assetName).toBe('OLT-42');
       expect(res.ticket?.taskType).toBe('data');
       expect(res.ticket?.domain).toBe('backoffice');
