@@ -1333,5 +1333,28 @@
     "backToMyWork": "Back to My Work",
     "saved": "Handoff note saved",
     "saveFailed": "Could not save handoff note"
+  },
+  "enRoute": {
+    "title": "En Route",
+    "arrived": "I've Arrived",
+    "arrivedSuccess": "Arrival recorded",
+    "arrivedFailed": "Could not record arrival",
+    "callCustomer": "Call Customer",
+    "noPhone": "No phone number",
+    "openMaps": "Open Maps",
+    "destination": "Destination",
+    "destinationUnavailable": "No destination",
+    "arriveConfirmTitle": "Arrive without location?",
+    "arriveConfirmDescription": "Your location could not be captured. You can still mark yourself as arrived — the arrival will be recorded without coordinates.",
+    "arriveWithoutLocation": "Arrive Without Location",
+    "cancel": "Cancel",
+    "locationFailed": "Could not get location",
+    "enRouteTo": "En route to",
+    "notAssigned": "This ticket is not assigned to you",
+    "inProgressHint": "This ticket is already in progress",
+    "back": "Back",
+    "mapFailed": "Map could not be loaded",
+    "distanceTo": "Distance to destination",
+    "findMyLocation": "Find my location"
   }
 }

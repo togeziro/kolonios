@@ -30,7 +30,7 @@
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
 - **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
-- **Ticket system** — `tasks` migrated to a full ticket system (`tickets` + estafet `ticket_legs`/`ticket_materials`/`ticket_photos`, code `T-{id}`): eligibility-gated Open Tickets pool (Take), Create Ticket with searchable customer picker, Ticket Detail (Estafet + Rework rejection banner) with leg timeline and Take/Start/Complete actions, Work Session (completion photos via S3, materials ±qty steppers, notes, Finish & Submit), Ticket Completed summary (rating + materials + photo grid), My Work tabs (In Progress / Available / Completed + pending approval), desktop Tickets nav group
+- **Ticket system** — `tasks` migrated to a full ticket system (`tickets` + estafet `ticket_legs`/`ticket_materials`/`ticket_photos`, code `T-{id}`): eligibility-gated Open Tickets pool (Take), Create Ticket with searchable customer picker, Ticket Detail (Estafet + Rework rejection banner) with leg timeline and Take/Start/Complete actions, **En Route navigation** (MapLibre map with live-GPS blue device marker, orange destination pin, dashed guide line, fitBounds, TurfJS distance readout, Open Maps handoff, arrival confirmation), Work Session (completion photos via S3, materials ±qty steppers, notes, Finish & Submit), Ticket Completed summary (rating + materials + photo grid), My Work tabs (In Progress / Available / Completed + pending approval), desktop Tickets nav group
 - **Achievements** — technician self-service screen (`/dashboard/achievements`, linked from Profile): attendance streak card with week dots, weekly performance targets, and a 6-badge collection (OLT Master, Early Bird, Fast Finisher, All-rounder, Reliable, Night Owl). All metrics computed on the fly from existing attendance + ticket data (`getAchievementData` + pure `evaluateAchievements`) — zero new tables, no migration
 - **S3-compatible object storage** — photos (attendance selfies, customer ID cards, ticket photos) upload directly to S3-compatible storage (IDrive e2 / AWS S3 / MinIO / Cloudflare R2 / custom) via short-lived presigned PUT URLs; Postgres stores only object keys. Provider + credentials configured from the admin UI (`/dashboard/admin/storage-settings`) with a Test Connection button and masked-secret handling; presigned GETs are IDOR-guarded (folder→permission map + per-user attendance ownership)
 - **Customer management** — full CRUD with search, filter & pagination; auto-generated customer codes
@@ -47,36 +47,37 @@
 
 ## Pages
 
-| Page                                                           | Description                                                                                                                                                   |
-| :------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Dashboard Overview](/dashboard/overview)                      | Cards with Recharts graphs, Suspense-bound loading. Dark technician dashboard (attendance, My Work, Available Jobs, performance) for `role === 'technician'`. |
-| [Attendance](/dashboard/attendance)                            | Check-in/out with geo-fencing validation, today's status, attendance history table.                                                                           |
-| [Locations](/dashboard/admin/attendance/locations)             | Manage work locations with geofence radius, GPS/selfie policy, and a locate button (MapLibre map + manual coordinate inputs).                                 |
-| [Schedules](/dashboard/admin/attendance/schedules)             | Create shifts with per-weekday rules.                                                                                                                         |
-| [Assignments](/dashboard/admin/attendance/assignments)         | Assign schedules to employees (individual/bulk) and create day offs.                                                                                          |
-| [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                                                  |
-| [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                                                           |
-| [My Work](/dashboard/my-work)                                  | Technician/SPV tabs: In Progress / Available / Completed + pending approval (dark mobile shell).                                                              |
-| [Achievements](/dashboard/achievements)                        | Technician streak card, weekly targets, and badges grid (Profile sub-page).                                                                                   |
-| [Available Jobs](/dashboard/jobs)                              | Eligibility-gated open-ticket pool with Take action (bottom-nav "Office").                                                                                    |
-| [New Ticket](/dashboard/tickets/new)                           | Create a ticket: type/channel, customer, asset, location, priority, estafet legs.                                                                             |
-| [Ticket Detail](/dashboard/tickets/$ticketId)                  | Ticket header, leg progress + timeline, Take/Start/Complete actions; rework rejection banner.                                                                 |
-| [Work Session](/dashboard/work-session/$ticketId)              | In-progress ticket working view: completion photos (camera + S3 upload), materials ±qty steppers, notes, Finish & Submit.                                     |
-| [Ticket Completed](/dashboard/tickets/$ticketId/completed)     | Success summary: rating, materials, photo grid, full leg timeline.                                                                                            |
-| [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                                                          |
-| [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                                                               |
-| [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                                                            |
-| [Departments](/dashboard/admin/departments)                    | CRUD management for company departments.                                                                                                                      |
-| [Job Titles](/dashboard/admin/designations)                    | CRUD for designations with department assignment and base salary.                                                                                             |
-| [Role Groups](/dashboard/admin/role-groups)                    | RBAC group management: per-module permission toggles for each role group.                                                                                     |
-| [Users (Table)](/dashboard/users)                              | Users table with React Query + URL state pattern.                                                                                                             |
-| [Notifications](/dashboard/notifications)                      | Notification center with bell badge, popover preview, and full page with tabs.                                                                                |
-| [Holiday Calendar](/dashboard/admin/holiday-calendar)          | CRUD national/company holidays, API import, calendar view, admin settings.                                                                                    |
-| [Holiday Settings](/dashboard/admin/holiday-calendar/settings) | Holiday API provider configuration (Nager.Date / OpenHolidays / Custom REST).                                                                                 |
-| [Storage Settings](/dashboard/admin/storage-settings)          | S3-compatible object storage config: provider presets, endpoint/region/bucket, access keys, Test Connection.                                                  |
-| [Payroll](/dashboard/admin/payroll)                            | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.                                                                    |
-| [My Payslips](/dashboard/payroll/payslips)                     | Employee self-service: payslip history with PDF download.                                                                                                     |
-| [Not Found](/notfound)                                         | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                                                                             |
+| Page                                                           | Description                                                                                                                                                                 |
+| :------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Dashboard Overview](/dashboard/overview)                      | Cards with Recharts graphs, Suspense-bound loading. Dark technician dashboard (attendance, My Work, Available Jobs, performance) for `role === 'technician'`.               |
+| [Attendance](/dashboard/attendance)                            | Check-in/out with geo-fencing validation, today's status, attendance history table.                                                                                         |
+| [Locations](/dashboard/admin/attendance/locations)             | Manage work locations with geofence radius, GPS/selfie policy, and a locate button (MapLibre map + manual coordinate inputs).                                               |
+| [Schedules](/dashboard/admin/attendance/schedules)             | Create shifts with per-weekday rules.                                                                                                                                       |
+| [Assignments](/dashboard/admin/attendance/assignments)         | Assign schedules to employees (individual/bulk) and create day offs.                                                                                                        |
+| [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                                                                |
+| [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                                                                         |
+| [My Work](/dashboard/my-work)                                  | Technician/SPV tabs: In Progress / Available / Completed + pending approval (dark mobile shell).                                                                            |
+| [Achievements](/dashboard/achievements)                        | Technician streak card, weekly targets, and badges grid (Profile sub-page).                                                                                                 |
+| [Available Jobs](/dashboard/jobs)                              | Eligibility-gated open-ticket pool with Take action (bottom-nav "Office").                                                                                                  |
+| [New Ticket](/dashboard/tickets/new)                           | Create a ticket: type/channel, customer, asset, location, priority, estafet legs.                                                                                           |
+| [Ticket Detail](/dashboard/tickets/$ticketId)                  | Ticket header, leg progress + timeline, Take/Start/Complete actions; rework rejection banner.                                                                               |
+| [En Route](/dashboard/en-route/$ticketId)                      | MapLibre preview map: live-GPS blue device marker, orange destination pin, dashed guide line, fitBounds, TurfJS distance to destination, Open Maps handoff, "I've Arrived". |
+| [Work Session](/dashboard/work-session/$ticketId)              | In-progress ticket working view: completion photos (camera + S3 upload), materials ±qty steppers, notes, Finish & Submit.                                                   |
+| [Ticket Completed](/dashboard/tickets/$ticketId/completed)     | Success summary: rating, materials, photo grid, full leg timeline.                                                                                                          |
+| [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                                                                        |
+| [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                                                                             |
+| [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                                                                          |
+| [Departments](/dashboard/admin/departments)                    | CRUD management for company departments.                                                                                                                                    |
+| [Job Titles](/dashboard/admin/designations)                    | CRUD for designations with department assignment and base salary.                                                                                                           |
+| [Role Groups](/dashboard/admin/role-groups)                    | RBAC group management: per-module permission toggles for each role group.                                                                                                   |
+| [Users (Table)](/dashboard/users)                              | Users table with React Query + URL state pattern.                                                                                                                           |
+| [Notifications](/dashboard/notifications)                      | Notification center with bell badge, popover preview, and full page with tabs.                                                                                              |
+| [Holiday Calendar](/dashboard/admin/holiday-calendar)          | CRUD national/company holidays, API import, calendar view, admin settings.                                                                                                  |
+| [Holiday Settings](/dashboard/admin/holiday-calendar/settings) | Holiday API provider configuration (Nager.Date / OpenHolidays / Custom REST).                                                                                               |
+| [Storage Settings](/dashboard/admin/storage-settings)          | S3-compatible object storage config: provider presets, endpoint/region/bucket, access keys, Test Connection.                                                                |
+| [Payroll](/dashboard/admin/payroll)                            | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.                                                                                  |
+| [My Payslips](/dashboard/payroll/payslips)                     | Employee self-service: payslip history with PDF download.                                                                                                                   |
+| [Not Found](/notfound)                                         | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                                                                                           |
 
 ## Feature-based Organization
 
@@ -301,24 +302,25 @@ The server-function RPC boundary is hardened at every endpoint:
 
 Detailed docs live in [`docs/`](./docs/):
 
-| Doc                                                                                    | Contents                                                       |
-| -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [docs/PRD.md](./docs/PRD.md)                                                           | Product requirements, features, security, roadmap              |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                         | Tech stack, data flow, patterns                                |
-| [docs/API.md](./docs/API.md)                                                           | Server function & auth reference                               |
-| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                               | Notable changes                                                |
-| [docs/TODO.md](./docs/TODO.md)                                                         | Task tracking                                                  |
-| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                             | Attendance module deep-dive                                    |
-| [docs/MOBILE.md](./docs/MOBILE.md)                                                     | Mobile staff dashboard                                         |
-| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                               | Shell registry + customer portal architecture 🆕               |
-| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                   | Payroll module deep-dive 🆕                                    |
-| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                 | Kerjoo payroll requirement reference (finish-payroll scope) 🆕 |
-| [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕  |
-| [docs/KERJOO_FEATURES_COMPLETE.md](./docs/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (live sidebar, 18 groups) 🆕      |
-| [docs/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios feature comparison + sidebar structure 🆕   |
-| [docs/MISSING_FEATURES_PRIORITIZED.md](./docs/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan with effort estimates 🆕           |
-| [docs/TICKETS.md](./docs/TICKETS.md)                                                   | Ticket system + field ops (Stitch-driven design spec) 🆕       |
-| [docs/audit/](./docs/audit/)                                                           | Repository audit + implementation summary                      |
+| Doc                                                                                    | Contents                                                             |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [docs/PRD.md](./docs/PRD.md)                                                           | Product requirements, features, security, roadmap                    |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                         | Tech stack, data flow, patterns                                      |
+| [docs/API.md](./docs/API.md)                                                           | Server function & auth reference                                     |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                               | Notable changes                                                      |
+| [docs/TODO.md](./docs/TODO.md)                                                         | Task tracking                                                        |
+| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                             | Attendance module deep-dive                                          |
+| [docs/MOBILE.md](./docs/MOBILE.md)                                                     | Mobile staff dashboard                                               |
+| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                               | Shell registry + customer portal architecture 🆕                     |
+| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                   | Payroll module deep-dive 🆕                                          |
+| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                 | Kerjoo payroll requirement reference (finish-payroll scope) 🆕       |
+| [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕        |
+| [docs/KERJOO_FEATURES_COMPLETE.md](./docs/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (live sidebar, 18 groups) 🆕            |
+| [docs/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios feature comparison + sidebar structure 🆕         |
+| [docs/MISSING_FEATURES_PRIORITIZED.md](./docs/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan with effort estimates 🆕                 |
+| [docs/TICKETS.md](./docs/TICKETS.md)                                                   | Ticket system + field ops (Stitch-driven design spec) 🆕             |
+| [docs/EN_ROUTE.md](./docs/EN_ROUTE.md)                                                 | En Route navigation deep-dive: data flow, fix validation, testing 🆕 |
+| [docs/audit/](./docs/audit/)                                                           | Repository audit + implementation summary                            |
 
 ## Code Quality & Architecture
 

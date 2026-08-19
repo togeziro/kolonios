@@ -24,7 +24,14 @@ export type Ticket = {
   title: string;
   description: string;
   channel: TicketChannel;
-  customer: { id: string; name: string } | null;
+  customer: {
+    id: string;
+    name: string;
+    phone: string | null;
+    address: string;
+    latitude: number;
+    longitude: number;
+  } | null;
   assetName: string;
   taskType: TicketTaskType;
   domain: TicketDomain;

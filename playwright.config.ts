@@ -23,12 +23,21 @@ export default defineConfig({
     }
   },
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'setup', testMatch: /.*auth.*\.setup\.ts/ },
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/admin.json'
+      },
+      dependencies: ['setup']
+    },
+    {
+      name: 'technician',
+      testMatch: /en-route\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/technician.json'
       },
       dependencies: ['setup']
     }

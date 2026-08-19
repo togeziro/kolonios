@@ -51,7 +51,9 @@ export default function MyWorkPage() {
       to={
         task.status === 'in_progress'
           ? '/dashboard/work-session/$ticketId'
-          : '/dashboard/tickets/$ticketId'
+          : task.status === 'assigned'
+            ? '/dashboard/en-route/$ticketId'
+            : '/dashboard/tickets/$ticketId'
       }
       params={{ ticketId: String(task.id) }}
       className='block'
