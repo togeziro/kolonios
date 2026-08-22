@@ -48,7 +48,7 @@ import {
   type NewShift,
   type NewCustomer
 } from '../src/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { businessDateInTimeZone } from '../src/lib/dates';
 
 async function seedUsers() {
@@ -1143,6 +1143,7 @@ export async function seedDatabase() {
   await seedPerformance();
   const userId = await seedUsers();
   await seedNotifications(userId);
+  await db.execute(sql`UPDATE tickets SET ticket_code = 'T-' || id WHERE ticket_code IS NULL`);
   console.log('Seed complete');
   await dbClient?.end();
 }
