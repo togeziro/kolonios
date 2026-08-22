@@ -1060,6 +1060,41 @@
     "errNoCheckIn": "No check-in record found for today",
     "errAlreadyCheckedOut": "Already checked out today"
   },
+  "checklist": {
+    "pageTitle": "Daily Checklist",
+    "pageDescription": "Your daily equipment checks",
+    "banner": "Complete your daily checklist before starting other work.",
+    "dateLabel": "Date",
+    "nameLabel": "Name",
+    "shiftLabel": "Shift",
+    "items": {
+      "cekOlt": "Cek OLT",
+      "cekAccu": "Cek ACCU",
+      "cekUispRadio": "Cek UISP/Radio",
+      "cekTemp": "Cek Temp",
+      "cekUps": "Cek UPS",
+      "cekElectricMeter": "Cek Electric Meter"
+    },
+    "outcome": {
+      "ok": "OK",
+      "issue": "Issue",
+      "pending": "Pending"
+    },
+    "timeLog": "Time log",
+    "started": "Started {{time}}",
+    "ended": "Ended {{time}}",
+    "progressLabel": "Progress",
+    "progress": "{{done}} of {{total}} completed",
+    "globalNoteLabel": "Global note",
+    "addGlobalNote": "Add Global Note",
+    "submitForReview": "Submit for review",
+    "empty": {
+      "noSchedule": "No schedule assigned — no checklist today",
+      "day_off": "Today is your day off. No checklist needed.",
+      "holiday": "It's a holiday. No checklist today."
+    },
+    "loadError": "Couldn't load your checklist"
+  },
   "schedule": {
     "pageTitle": "My Schedule",
     "pageDescription": "Your shift schedule, day offs and holidays",

@@ -620,8 +620,8 @@ describe('attendance data access (integration)', () => {
       const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
       expect(res.holidays).toEqual(
         expect.arrayContaining([
-          { date: '2026-08-17', name: 'Independence Day' },
-          { date: '1999-08-21', name: 'Recurring Aug 21' }
+          { date: '2026-08-17', name: 'Independence Day', isRecurring: false },
+          { date: '1999-08-21', name: 'Recurring Aug 21', isRecurring: true }
         ])
       );
       expect(res.holidays).not.toEqual(

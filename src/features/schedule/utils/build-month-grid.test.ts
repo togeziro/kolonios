@@ -63,7 +63,7 @@ describe('buildMonthGrid', () => {
   it('marks holidays with their name', () => {
     const cells = buildMonthGrid(
       '2026-08',
-      monthData({ holidays: [{ date: '2026-08-17', name: 'Independence Day' }] })
+      monthData({ holidays: [{ date: '2026-08-17', name: 'Independence Day', isRecurring: false }] })
     );
     const holiday = cells.find((c) => c.date === '2026-08-17');
     expect(holiday?.isHoliday).toBe(true);

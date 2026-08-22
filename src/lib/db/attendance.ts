@@ -617,7 +617,7 @@ export type ScheduleMonthData = {
   weekdayRules: ScheduleWeekdayRuleRow[];
   overrides: { date: string; shiftId: number }[];
   dayOffs: string[];
-  holidays: { date: string; name: string }[];
+  holidays: { date: string; name: string; isRecurring: boolean }[];
 };
 
 export async function getMonthlyScheduleData(
@@ -680,7 +680,11 @@ export async function getMonthlyScheduleData(
     );
 
   const holidayRows = await db
-    .select({ date: nationalHolidays.date, name: nationalHolidays.name })
+    .select({
+      date: nationalHolidays.date,
+      name: nationalHolidays.name,
+      isRecurring: nationalHolidays.is_recurring
+    })
     .from(nationalHolidays)
     .where(
       or(
@@ -704,7 +708,11 @@ export async function getMonthlyScheduleData(
     weekdayRules,
     overrides,
     dayOffs: dayOffRows.map((r) => r.date),
-    holidays: holidayRows
+    holidays: holidayRows.map((r) => ({
+      date: r.date,
+      name: r.name,
+      isRecurring: r.isRecurring ?? false
+    }))
   };
 }
 

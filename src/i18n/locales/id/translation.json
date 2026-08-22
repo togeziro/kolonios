@@ -1060,6 +1060,41 @@
     "errNoCheckIn": "Tidak ada catatan check-in untuk hari ini",
     "errAlreadyCheckedOut": "Sudah check-out hari ini"
   },
+  "checklist": {
+    "pageTitle": "Checklist Harian",
+    "pageDescription": "Pemeriksaan peralatan harian Anda",
+    "banner": "Lengkapi checklist harian Anda sebelum mengerjakan pekerjaan lain.",
+    "dateLabel": "Tanggal",
+    "nameLabel": "Nama",
+    "shiftLabel": "Shift",
+    "items": {
+      "cekOlt": "Cek OLT",
+      "cekAccu": "Cek ACCU",
+      "cekUispRadio": "Cek UISP/Radio",
+      "cekTemp": "Cek Temp",
+      "cekUps": "Cek UPS",
+      "cekElectricMeter": "Cek Electric Meter"
+    },
+    "outcome": {
+      "ok": "OK",
+      "issue": "Isu",
+      "pending": "Menunggu"
+    },
+    "timeLog": "Catatan waktu",
+    "started": "Mulai {{time}}",
+    "ended": "Selesai {{time}}",
+    "progressLabel": "Progres",
+    "progress": "{{done}} dari {{total}} selesai",
+    "globalNoteLabel": "Catatan umum",
+    "addGlobalNote": "Tambah Catatan Umum",
+    "submitForReview": "Kirim untuk ditinjau",
+    "empty": {
+      "noSchedule": "Tidak ada jadwal — tidak ada checklist hari ini",
+      "day_off": "Hari ini hari libur Anda. Tidak perlu checklist.",
+      "holiday": "Hari libur. Tidak ada checklist hari ini."
+    },
+    "loadError": "Gagal memuat checklist Anda"
+  },
   "schedule": {
     "pageTitle": "Jadwal Saya",
     "pageDescription": "Jadwal shift, hari libur, dan cuti Anda",

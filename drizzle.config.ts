@@ -7,6 +7,7 @@ export default defineConfig({
     './src/lib/db/schema/employees.ts',
     './src/lib/db/schema/masterdata.ts',
     './src/lib/db/schema/tickets.ts',
+    './src/lib/db/schema/checklists.ts',
     './src/lib/db/schema/customers.ts',
     './src/lib/db/schema/audit-log.ts',
     './src/lib/db/schema/role-groups.ts',
