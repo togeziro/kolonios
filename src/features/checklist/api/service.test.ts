@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   businessDateInTimeZone: vi.fn(),
   getMonthlyScheduleData: vi.fn(),
   findDailyChecklist: vi.fn(),
-  createDailyChecklistWithItems: vi.fn()
+  createDailyChecklistWithItems: vi.fn(),
+  updateChecklistItem: vi.fn(),
+  setGlobalNote: vi.fn()
 }));
 
 const serverFnProvider = vi.hoisted(() => ({
@@ -23,7 +25,9 @@ vi.mock('@/lib/db/attendance', () => ({
 }));
 vi.mock('@/lib/db/checklists', () => ({
   findDailyChecklist: mocks.findDailyChecklist,
-  createDailyChecklistWithItems: mocks.createDailyChecklistWithItems
+  createDailyChecklistWithItems: mocks.createDailyChecklistWithItems,
+  updateChecklistItem: mocks.updateChecklistItem,
+  setGlobalNote: mocks.setGlobalNote
 }));
 vi.mock('@tanstack/react-start', () => ({
   createServerFn: () => {
@@ -52,13 +56,22 @@ vi.mock('@tanstack/react-start/ssr-rpc', () => ({
 
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { getMyDailyChecklistFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { updateChecklistItemFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { setGlobalNoteFn_createServerFn_handler } from './service?tss-serverfn-split';
 
 serverFnProvider.handler = getMyDailyChecklistFn_createServerFn_handler;
 
-import { getMyDailyChecklistFn } from './service';
+import { getMyDailyChecklistFn, updateChecklistItemFn, setGlobalNoteFn } from './service';
 
 const WORKING_SCHEDULE = {
-  assignment: { shiftId: 1, effectiveFrom: '2026-01-01', effectiveTo: null, shiftName: 'Morning Shift' },
+  assignment: {
+    shiftId: 1,
+    effectiveFrom: '2026-01-01',
+    effectiveTo: null,
+    shiftName: 'Morning Shift'
+  },
   weekdayRules: [
     {
       dayOfWeek: 3,
@@ -115,7 +128,9 @@ describe('getMyDailyChecklistFn', () => {
   it('returns the existing checklist untouched on a second open', async () => {
     mocks.findDailyChecklist.mockResolvedValue({
       checklist: dbRow({ status: 'submitted' }),
-      items: [{ id: 5, checklist_id: 1, item_key: 'cekOlt', outcome: 'ok', note: '', photo_key: '' }]
+      items: [
+        { id: 5, checklist_id: 1, item_key: 'cekOlt', outcome: 'ok', note: '', photo_key: '' }
+      ]
     });
     const res = await getMyDailyChecklistFn({} as never);
     expect(mocks.createDailyChecklistWithItems).not.toHaveBeenCalled();
@@ -136,17 +151,21 @@ describe('getMyDailyChecklistFn', () => {
       ]
     });
     const res = await getMyDailyChecklistFn({} as never);
-    expect(mocks.createDailyChecklistWithItems).toHaveBeenCalledWith(
-      'u1',
-      '2026-08-12',
-      { shiftId: 1, shiftName: 'Morning Shift', startTime: '08:00', endTime: '17:00' }
-    );
+    expect(mocks.createDailyChecklistWithItems).toHaveBeenCalledWith('u1', '2026-08-12', {
+      shiftId: 1,
+      shiftName: 'Morning Shift',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
     expect(res.checklist).toEqual(expect.objectContaining({ checklistDate: '2026-08-12' }));
     expect(res.items).toHaveLength(1);
   });
 
   it('creates nothing on a day off', async () => {
-    mocks.getMonthlyScheduleData.mockResolvedValue({ ...WORKING_SCHEDULE, dayOffs: ['2026-08-12'] });
+    mocks.getMonthlyScheduleData.mockResolvedValue({
+      ...WORKING_SCHEDULE,
+      dayOffs: ['2026-08-12']
+    });
     const res = await getMyDailyChecklistFn({} as never);
     expect(res).toEqual({ success: true, dayStatus: 'day_off', checklist: null, items: [] });
     expect(mocks.findDailyChecklist).not.toHaveBeenCalled();
@@ -168,5 +187,49 @@ describe('getMyDailyChecklistFn', () => {
     const res = await getMyDailyChecklistFn({} as never);
     expect(res.dayStatus).toBe('no_schedule');
     expect(mocks.createDailyChecklistWithItems).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateChecklistItemFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serverFnProvider.handler = updateChecklistItemFn_createServerFn_handler;
+  });
+
+  it('guards with checklist.edit + write rate limit and passes the patch through', async () => {
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.updateChecklistItem.mockResolvedValue({ success: true, item: { id: 3 } });
+    const res = await updateChecklistItemFn({
+      data: { itemId: 3, outcome: 'issue', note: 'ACCU drop' }
+    } as never);
+    expect(mocks.requirePermission).toHaveBeenCalledWith('checklist', 'edit');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
+    expect(mocks.updateChecklistItem).toHaveBeenCalledWith('u1', 3, {
+      outcome: 'issue',
+      note: 'ACCU drop',
+      photoKey: undefined
+    });
+    expect(res).toEqual({ success: true, item: { id: 3 } });
+  });
+
+  it('rejects a patch with no fields', async () => {
+    await expect(updateChecklistItemFn({ data: { itemId: 3 } } as never)).rejects.toThrow();
+  });
+});
+
+describe('setGlobalNoteFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serverFnProvider.handler = setGlobalNoteFn_createServerFn_handler;
+  });
+
+  it('guards with checklist.edit + write rate limit and saves the note', async () => {
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.setGlobalNote.mockResolvedValue({ success: true });
+    const res = await setGlobalNoteFn({ data: { checklistId: 9, note: 'Rain delay' } } as never);
+    expect(mocks.requirePermission).toHaveBeenCalledWith('checklist', 'edit');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
+    expect(mocks.setGlobalNote).toHaveBeenCalledWith('u1', 9, 'Rain delay');
+    expect(res).toEqual({ success: true });
   });
 });

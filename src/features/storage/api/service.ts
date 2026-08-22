@@ -15,7 +15,8 @@ import {
 const FOLDER_PERMISSION = {
   attendance: ['attendance', 'view'],
   customers: ['customers', 'add'],
-  tickets: ['tickets', 'view']
+  tickets: ['tickets', 'view'],
+  checklists: ['checklist', 'edit']
 } as const;
 
 // Masked places are shown in the UI as hints; submitting that text means
@@ -184,7 +185,7 @@ export const getUploadUrlFn = createServerFn({ method: 'POST' })
     if (!derived) throw new Error('Storage is not configured');
     const config = await readyConfig(derived);
     const { buildStorageClient, createPresignedPutUrl } = await import('@/lib/storage/presign');
-    const { attendanceSelfieKey, customerIdCardKey, ticketPhotoKey } =
+    const { attendanceSelfieKey, customerIdCardKey, ticketPhotoKey, checklistPhotoKey } =
       await import('@/lib/storage/keys');
     const timestamp = Date.now();
     let key: string;
@@ -195,6 +196,9 @@ export const getUploadUrlFn = createServerFn({ method: 'POST' })
       // before the row exists) — never the session user's id.
       if (!data.ownerId) throw new Error('ownerId is required for customer uploads');
       key = customerIdCardKey(data.ownerId);
+    } else if (data.folder === 'checklists') {
+      const itemId = Number(data.ownerId) || timestamp;
+      key = checklistPhotoKey(session.user.id, itemId, timestamp);
     } else {
       // tickets: photoId unknown until the ticket photo row exists; the
       // ticket feature supplies ownerId when wiring its upload UI.
@@ -228,6 +232,7 @@ export const getObjectUrlFn = createServerFn({ method: 'POST' })
     const [folderModule, folderAction] = folderPermission;
     await requirePermission(folderModule, folderAction);
     let isAdmin = false;
+    let canReviewChecklists = false;
     if (folder === 'attendance') {
       try {
         await requirePermission('attendance', 'edit');
@@ -236,7 +241,15 @@ export const getObjectUrlFn = createServerFn({ method: 'POST' })
         isAdmin = false;
       }
     }
-    if (!canViewKey(data.key, session.user.id, isAdmin)) {
+    if (folder === 'checklists') {
+      try {
+        await requirePermission('checklist', 'approve');
+        canReviewChecklists = true;
+      } catch {
+        canReviewChecklists = false;
+      }
+    }
+    if (!canViewKey(data.key, session.user.id, isAdmin, canReviewChecklists)) {
       throw new Error('Not allowed to view this object');
     }
 

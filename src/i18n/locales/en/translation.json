@@ -1087,13 +1087,19 @@
     "progress": "{{done}} of {{total}} completed",
     "globalNoteLabel": "Global note",
     "addGlobalNote": "Add Global Note",
+    "addNote": "Add note",
+    "addPhoto": "Add photo",
+    "noteSaved": "Note saved",
+    "photoAttached": "Photo attached",
+    "updateFailed": "Couldn't save your change",
     "submitForReview": "Submit for review",
     "empty": {
       "noSchedule": "No schedule assigned — no checklist today",
       "day_off": "Today is your day off. No checklist needed.",
       "holiday": "It's a holiday. No checklist today."
     },
-    "loadError": "Couldn't load your checklist"
+    "loadError": "Couldn't load your checklist",
+    "photoInvalid": "Please choose an image file"
   },
   "schedule": {
     "pageTitle": "My Schedule",

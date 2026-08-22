@@ -9,3 +9,7 @@ export function customerIdCardKey(customerId: string): string {
 export function ticketPhotoKey(ticketId: number, photoId: number): string {
   return `tickets/${ticketId}/${photoId}.jpg`;
 }
+
+export function checklistPhotoKey(userId: string, itemId: number, timestamp: number): string {
+  return `checklists/${userId}/${itemId}-${timestamp}.jpg`;
+}

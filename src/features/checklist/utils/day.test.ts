@@ -36,7 +36,9 @@ describe('resolveChecklistDay', () => {
   });
 
   it('holiday skips the checklist even on a working day', () => {
-    const res = resolveChecklistDay(base({ holidays: [{ date: '2026-08-12', name: 'Independence Day', isRecurring: false }] }));
+    const res = resolveChecklistDay(
+      base({ holidays: [{ date: '2026-08-12', name: 'Independence Day', isRecurring: false }] })
+    );
     expect(res.status).toBe('holiday');
     expect(res.schedule).toBeNull();
   });

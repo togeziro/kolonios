@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { businessDateInTimeZone } from '@/lib/dates';
+import { updateChecklistItemSchema, setGlobalNoteSchema } from './validation';
 import { resolveChecklistDay, type HolidayRow } from '../utils/day';
 import type { ChecklistItem, DailyChecklist, DailyChecklistResponse } from './types';
 import type { DailyChecklistItem } from '@/lib/db/schema/checklists';
@@ -44,13 +45,8 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
   const session = await requirePermission('checklist', 'view');
   await checkRateLimit(`checklist:${session.user.id}`);
 
-  const [
-    { getMonthlyScheduleData },
-    { findDailyChecklist, createDailyChecklistWithItems }
-  ] = await Promise.all([
-    import('@/lib/db/attendance'),
-    import('@/lib/db/checklists')
-  ]);
+  const [{ getMonthlyScheduleData }, { findDailyChecklist, createDailyChecklistWithItems }] =
+    await Promise.all([import('@/lib/db/attendance'), import('@/lib/db/checklists')]);
 
   const today = businessDateInTimeZone(new Date());
   const month = today.slice(0, 7);
@@ -100,5 +96,27 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
     items: serializeItems(created.items)
   };
 });
+
+export const updateChecklistItemFn = createServerFn({ method: 'POST' })
+  .validator(updateChecklistItemSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('checklist', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { updateChecklistItem } = await import('@/lib/db/checklists');
+    return updateChecklistItem(session.user.id, data.itemId, {
+      outcome: data.outcome,
+      note: data.note,
+      photoKey: data.photoKey
+    });
+  });
+
+export const setGlobalNoteFn = createServerFn({ method: 'POST' })
+  .validator(setGlobalNoteSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('checklist', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { setGlobalNote } = await import('@/lib/db/checklists');
+    return setGlobalNote(session.user.id, data.checklistId, data.note);
+  });
 
 export type { DailyChecklistResponse };

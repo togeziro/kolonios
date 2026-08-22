@@ -1,7 +1,4 @@
-import type {
-  ChecklistItemOutcome,
-  DailyChecklistStatus
-} from '@/lib/db/schema/checklists';
+import type { ChecklistItemOutcome, DailyChecklistStatus } from '@/lib/db/schema/checklists';
 
 export type { ChecklistItemOutcome, DailyChecklistStatus };
 

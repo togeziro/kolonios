@@ -23,7 +23,7 @@ export const storageSettingsSchema = z.object({
 
 export const testStorageConnectionSchema = storageSettingsSchema;
 
-export const uploadFolderSchema = z.enum(['attendance', 'customers', 'tickets']);
+export const uploadFolderSchema = z.enum(['attendance', 'customers', 'tickets', 'checklists']);
 
 export const getUploadUrlSchema = z.object({
   folder: uploadFolderSchema,
