@@ -1102,7 +1102,16 @@
     "photoInvalid": "Please choose an image file",
     "submitSuccess": "Checklist submitted for review",
     "blockedPending": "Some items are still pending",
-    "blockedIssue": "Issues need a note before submitting"
+    "blockedIssue": "Issues need a note before submitting",
+    "entryTitle": "Daily Checklist",
+    "chipPending": "Complete today's checklist",
+    "chipRejected": "Checklist rejected — review and resubmit",
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
   },
   "schedule": {
     "pageTitle": "My Schedule",

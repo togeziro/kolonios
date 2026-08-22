@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { myTicketsQueryOptions, completedTicketsQueryOptions } from '../api/queries';
+import ChecklistEntryCard from '@/features/checklist/components/checklist-entry-card';
 import TicketCard from './ticket-card';
 import AvailableTab from './available-tab';
 import type { Ticket } from '../api/types';
@@ -66,6 +67,7 @@ export default function MyWorkPage() {
 
   return (
     <div className='space-y-4 p-4'>
+      <ChecklistEntryCard variant='chip' />
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className='grid w-full grid-cols-3'>
           <TabsTrigger value='in_progress'>{t('ticket.tabInProgress')}</TabsTrigger>

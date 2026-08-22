@@ -1102,7 +1102,16 @@
       "holiday": "Hari libur. Tidak ada checklist hari ini."
     },
     "loadError": "Gagal memuat checklist Anda",
-    "photoInvalid": "Silakan pilih file gambar"
+    "photoInvalid": "Silakan pilih file gambar",
+    "entryTitle": "Checklist Harian",
+    "chipPending": "Lengkapi checklist hari ini",
+    "chipRejected": "Checklist ditolak — tinjau dan kirim ulang",
+    "status": {
+      "draft": "Draf",
+      "submitted": "Terkirim",
+      "approved": "Disetujui",
+      "rejected": "Ditolak"
+    }
   },
   "schedule": {
     "pageTitle": "Jadwal Saya",
