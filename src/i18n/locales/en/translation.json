@@ -1099,7 +1099,10 @@
       "holiday": "It's a holiday. No checklist today."
     },
     "loadError": "Couldn't load your checklist",
-    "photoInvalid": "Please choose an image file"
+    "photoInvalid": "Please choose an image file",
+    "submitSuccess": "Checklist submitted for review",
+    "blockedPending": "Some items are still pending",
+    "blockedIssue": "Issues need a note before submitting"
   },
   "schedule": {
     "pageTitle": "My Schedule",

@@ -8,7 +8,12 @@ const mocks = vi.hoisted(() => ({
   findDailyChecklist: vi.fn(),
   createDailyChecklistWithItems: vi.fn(),
   updateChecklistItem: vi.fn(),
-  setGlobalNote: vi.fn()
+  setGlobalNote: vi.fn(),
+  submitDailyChecklist: vi.fn(),
+  reopenDailyChecklist: vi.fn(),
+  listChecklistReviewerIds: vi.fn(),
+  addNotification: vi.fn(),
+  withAudit: vi.fn()
 }));
 
 const serverFnProvider = vi.hoisted(() => ({
@@ -27,8 +32,13 @@ vi.mock('@/lib/db/checklists', () => ({
   findDailyChecklist: mocks.findDailyChecklist,
   createDailyChecklistWithItems: mocks.createDailyChecklistWithItems,
   updateChecklistItem: mocks.updateChecklistItem,
-  setGlobalNote: mocks.setGlobalNote
+  setGlobalNote: mocks.setGlobalNote,
+  submitDailyChecklist: mocks.submitDailyChecklist,
+  reopenDailyChecklist: mocks.reopenDailyChecklist,
+  listChecklistReviewerIds: mocks.listChecklistReviewerIds
 }));
+vi.mock('@/lib/db/notifications', () => ({ addNotification: mocks.addNotification }));
+vi.mock('@/lib/audit', () => ({ withAudit: mocks.withAudit }));
 vi.mock('@tanstack/react-start', () => ({
   createServerFn: () => {
     let validator: { parse(input: unknown): unknown } | undefined;
@@ -60,10 +70,20 @@ import { getMyDailyChecklistFn_createServerFn_handler } from './service?tss-serv
 import { updateChecklistItemFn_createServerFn_handler } from './service?tss-serverfn-split';
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { setGlobalNoteFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { submitChecklistFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { reopenChecklistFn_createServerFn_handler } from './service?tss-serverfn-split';
 
 serverFnProvider.handler = getMyDailyChecklistFn_createServerFn_handler;
 
-import { getMyDailyChecklistFn, updateChecklistItemFn, setGlobalNoteFn } from './service';
+import {
+  getMyDailyChecklistFn,
+  updateChecklistItemFn,
+  setGlobalNoteFn,
+  submitChecklistFn,
+  reopenChecklistFn
+} from './service';
 
 const WORKING_SCHEDULE = {
   assignment: {
@@ -231,5 +251,90 @@ describe('setGlobalNoteFn', () => {
     expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
     expect(mocks.setGlobalNote).toHaveBeenCalledWith('u1', 9, 'Rain delay');
     expect(res).toEqual({ success: true });
+  });
+});
+
+describe('submitChecklistFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.withAudit.mockImplementation(async (_actor, _entry, fn) => fn());
+    serverFnProvider.handler = submitChecklistFn_createServerFn_handler;
+  });
+
+  it('guards with checklist.edit + write rate limit, audits and notifies reviewers', async () => {
+    mocks.requirePermission.mockResolvedValue({
+      user: { id: 'u1', name: 'Alex', email: 'a@x.io' }
+    });
+    mocks.submitDailyChecklist.mockResolvedValue({
+      success: true,
+      checklist: { checklist_date: '2026-08-12' }
+    });
+    mocks.listChecklistReviewerIds.mockResolvedValue(['spv1', 'u1', 'admin1']);
+
+    const res = await submitChecklistFn({ data: { checklistId: 9 } } as never);
+
+    expect(mocks.requirePermission).toHaveBeenCalledWith('checklist', 'edit');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
+    expect(mocks.submitDailyChecklist).toHaveBeenCalledWith('u1', 9);
+    expect(mocks.withAudit).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ action: 'checklist.submit', entityId: 9 }),
+      expect.any(Function)
+    );
+    expect(mocks.addNotification).toHaveBeenCalledTimes(2);
+    expect(mocks.addNotification).toHaveBeenCalledWith(expect.objectContaining({ userId: 'spv1' }));
+    expect(mocks.addNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'admin1' })
+    );
+    expect(res).toEqual({ success: true });
+  });
+
+  it('returns problems untouched without auditing or notifying', async () => {
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.submitDailyChecklist.mockResolvedValue({
+      success: false,
+      problems: ['pendingItems']
+    });
+    const res = await submitChecklistFn({ data: { checklistId: 9 } } as never);
+    expect(res).toEqual({ success: false, problems: ['pendingItems'] });
+    expect(mocks.withAudit).not.toHaveBeenCalled();
+    expect(mocks.addNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe('reopenChecklistFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.withAudit.mockImplementation(async (_actor, _entry, fn) => fn());
+    serverFnProvider.handler = reopenChecklistFn_createServerFn_handler;
+  });
+
+  it('uses the reviewer path when the actor holds checklist.approve', async () => {
+    mocks.requirePermission
+      .mockResolvedValueOnce({ user: { id: 'spv1' } })
+      .mockResolvedValue({ user: { id: 'spv1' } });
+    mocks.reopenDailyChecklist.mockResolvedValue({ success: true });
+
+    await reopenChecklistFn({ data: { checklistId: 9 } } as never);
+
+    expect(mocks.requirePermission).toHaveBeenCalledWith('checklist', 'approve');
+    expect(mocks.reopenDailyChecklist).toHaveBeenCalledWith('spv1', 9, { asReviewer: true });
+    expect(mocks.withAudit).toHaveBeenCalledWith(
+      'spv1',
+      expect.objectContaining({ action: 'checklist.reopen' }),
+      expect.any(Function)
+    );
+  });
+
+  it('falls back to owner-only edit path without approve rights', async () => {
+    mocks.requirePermission
+      .mockRejectedValueOnce(new Error('Forbidden'))
+      .mockResolvedValue({ user: { id: 'u1' } });
+    mocks.reopenDailyChecklist.mockResolvedValue({ success: true });
+
+    await reopenChecklistFn({ data: { checklistId: 9 } } as never);
+
+    expect(mocks.requirePermission).toHaveBeenNthCalledWith(2, 'checklist', 'edit');
+    expect(mocks.reopenDailyChecklist).toHaveBeenCalledWith('u1', 9, { asReviewer: false });
   });
 });

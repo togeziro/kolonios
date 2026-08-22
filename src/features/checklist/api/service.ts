@@ -1,8 +1,13 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { withAudit } from '@/lib/audit';
 import { businessDateInTimeZone } from '@/lib/dates';
-import { updateChecklistItemSchema, setGlobalNoteSchema } from './validation';
+import {
+  updateChecklistItemSchema,
+  setGlobalNoteSchema,
+  submitChecklistSchema
+} from './validation';
 import { resolveChecklistDay, type HolidayRow } from '../utils/day';
 import type { ChecklistItem, DailyChecklist, DailyChecklistResponse } from './types';
 import type { DailyChecklistItem } from '@/lib/db/schema/checklists';
@@ -117,6 +122,77 @@ export const setGlobalNoteFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     const { setGlobalNote } = await import('@/lib/db/checklists');
     return setGlobalNote(session.user.id, data.checklistId, data.note);
+  });
+
+export const submitChecklistFn = createServerFn({ method: 'POST' })
+  .validator(submitChecklistSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('checklist', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { submitDailyChecklist, listChecklistReviewerIds } = await import('@/lib/db/checklists');
+
+    const result = await submitDailyChecklist(session.user.id, data.checklistId);
+    if (!result?.success) return result;
+
+    await withAudit(
+      session.user.id,
+      {
+        action: 'checklist.submit',
+        entityType: 'daily_checklist',
+        entityId: data.checklistId,
+        before: { status: 'draft' },
+        after: { status: 'submitted' }
+      },
+      async () => undefined
+    );
+
+    const { addNotification } = await import('@/lib/db/notifications');
+    const reviewerIds = await listChecklistReviewerIds();
+    const submitterName = session.user.name ?? session.user.email ?? 'A technician';
+    for (const reviewerId of reviewerIds) {
+      if (reviewerId === session.user.id) continue;
+      await addNotification({
+        title: 'Daily Checklist submitted',
+        body: `${submitterName} submitted the ${result.checklist.checklist_date} checklist for review.`,
+        userId: reviewerId
+      });
+    }
+
+    return { success: true as const };
+  });
+
+export const reopenChecklistFn = createServerFn({ method: 'POST' })
+  .validator(submitChecklistSchema)
+  .handler(async ({ data }) => {
+    // Reviewers (checklist.approve) may reopen anyone's rejected checklist;
+    // otherwise only the owner can.
+    let asReviewer = true;
+    let session;
+    try {
+      session = await requirePermission('checklist', 'approve');
+    } catch {
+      session = await requirePermission('checklist', 'edit');
+      asReviewer = false;
+    }
+    await checkRateLimit(`write:${session.user.id}`);
+    const { reopenDailyChecklist } = await import('@/lib/db/checklists');
+    const result = await reopenDailyChecklist(session.user.id, data.checklistId, {
+      asReviewer
+    });
+    if (!result?.success) return result;
+
+    await withAudit(
+      session.user.id,
+      {
+        action: 'checklist.reopen',
+        entityType: 'daily_checklist',
+        entityId: data.checklistId,
+        before: { status: 'rejected' },
+        after: { status: 'draft' }
+      },
+      async () => undefined
+    );
+    return { success: true as const };
   });
 
 export type { DailyChecklistResponse };

@@ -17,5 +17,9 @@ export const setGlobalNoteSchema = z.object({
   note: z.string().max(2000)
 });
 
+export const submitChecklistSchema = z.object({
+  checklistId: z.number().int().positive()
+});
+
 export type UpdateChecklistItemInput = z.infer<typeof updateChecklistItemSchema>;
 export type SetGlobalNoteInput = z.infer<typeof setGlobalNoteSchema>;

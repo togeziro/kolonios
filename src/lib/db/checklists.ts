@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { db } from './index';
 import {
   dailyChecklistItems,
@@ -7,7 +7,10 @@ import {
   type DailyChecklist,
   type DailyChecklistItem
 } from './schema/checklists';
+import { roleGroups } from './schema/role-groups';
+import { userRoleGroups } from './schema/user-role-groups';
 import { CHECKLIST_ITEM_KEYS } from '@/features/checklist/config/items';
+import { validateSubmission } from '@/features/checklist/utils/submit-readiness';
 import { mapDbError } from '../errors';
 
 export type ChecklistShiftSnapshot = {
@@ -134,5 +137,96 @@ export async function setGlobalNote(userId: string, checklistId: number, note: s
     return { success: true as const };
   } catch (e) {
     mapDbError(e, 'checklists.setGlobalNote');
+  }
+}
+
+export async function submitDailyChecklist(userId: string, checklistId: number) {
+  try {
+    const [checklist] = await db
+      .select()
+      .from(dailyChecklists)
+      .where(and(eq(dailyChecklists.id, checklistId), eq(dailyChecklists.user_id, userId)))
+      .limit(1);
+
+    if (!checklist) return { success: false as const, message: 'Checklist not found' };
+    if (checklist.status !== 'draft') {
+      return { success: false as const, message: 'Checklist is not editable' };
+    }
+
+    const items = await db
+      .select()
+      .from(dailyChecklistItems)
+      .where(eq(dailyChecklistItems.checklist_id, checklistId));
+
+    const validation = validateSubmission(
+      items.map((i) => ({ itemKey: i.item_key, outcome: i.outcome, note: i.note }))
+    );
+    if (!validation.ready) {
+      return { success: false as const, problems: validation.problems };
+    }
+
+    const [updated] = await db
+      .update(dailyChecklists)
+      .set({
+        status: 'submitted',
+        ended_at: new Date(),
+        reviewer_id: null,
+        review_note: '',
+        reviewed_at: null,
+        updated_at: new Date()
+      })
+      .where(eq(dailyChecklists.id, checklistId))
+      .returning();
+
+    return { success: true as const, checklist: updated };
+  } catch (e) {
+    mapDbError(e, 'checklists.submitDailyChecklist');
+  }
+}
+
+export async function reopenDailyChecklist(
+  actorId: string,
+  checklistId: number,
+  options: { asReviewer: boolean }
+) {
+  try {
+    const condition = options.asReviewer
+      ? eq(dailyChecklists.id, checklistId)
+      : and(eq(dailyChecklists.id, checklistId), eq(dailyChecklists.user_id, actorId));
+
+    const [checklist] = await db.select().from(dailyChecklists).where(condition).limit(1);
+
+    if (!checklist) return { success: false as const, message: 'Checklist not found' };
+    if (checklist.status !== 'rejected') {
+      return { success: false as const, message: 'Only rejected checklists can be reopened' };
+    }
+
+    const [updated] = await db
+      .update(dailyChecklists)
+      .set({ status: 'draft', ended_at: null, updated_at: new Date() })
+      .where(eq(dailyChecklists.id, checklistId))
+      .returning();
+
+    return { success: true as const, checklist: updated };
+  } catch (e) {
+    mapDbError(e, 'checklists.reopenDailyChecklist');
+  }
+}
+
+export async function listChecklistReviewerIds(): Promise<string[]> {
+  try {
+    const rows = await db
+      .select({ userId: userRoleGroups.user_id })
+      .from(userRoleGroups)
+      .innerJoin(roleGroups, eq(userRoleGroups.role_group_id, roleGroups.id))
+      .where(
+        or(
+          eq(roleGroups.is_admin, true),
+          sql`(${roleGroups.permissions} -> 'checklist' ->> 'approve')::boolean is true`
+        )
+      );
+    return [...new Set(rows.map((r) => r.userId))];
+  } catch (e) {
+    mapDbError(e, 'checklists.listChecklistReviewerIds');
   }
 }

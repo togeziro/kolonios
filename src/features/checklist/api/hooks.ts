@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { updateChecklistItemFn, setGlobalNoteFn } from './service';
+import { updateChecklistItemFn, setGlobalNoteFn, submitChecklistFn } from './service';
 import { checklistKeys } from './queries';
 import type { UpdateChecklistItemInput, SetGlobalNoteInput } from './validation';
 
@@ -35,6 +35,33 @@ export function useSetGlobalNote() {
       if (res?.success) {
         toast.success(t('checklist.noteSaved'));
         invalidate();
+      } else {
+        toast.error(res?.message ?? t('checklist.updateFailed'));
+      }
+    },
+    onError: () => toast.error(t('checklist.updateFailed'))
+  });
+}
+
+const problemToastKey: Record<string, string> = {
+  pendingItems: 'checklist.blockedPending',
+  issueWithoutNote: 'checklist.blockedIssue'
+};
+
+export function useSubmitChecklist() {
+  const invalidate = useInvalidateChecklist();
+  const { t } = useTranslation();
+  return useMutation({
+    mutationFn: (input: { checklistId: number }) => submitChecklistFn({ data: input }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('checklist.submitSuccess'));
+        invalidate();
+      } else if (res && 'problems' in res && res.problems) {
+        for (const problem of res.problems) {
+          const key = problemToastKey[problem];
+          if (key) toast.error(t(key));
+        }
       } else {
         toast.error(res?.message ?? t('checklist.updateFailed'));
       }

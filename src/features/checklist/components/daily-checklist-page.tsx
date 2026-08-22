@@ -23,7 +23,8 @@ import { formatDate } from '@/lib/format';
 import { useAppLocale } from '@/lib/locale';
 import { uploadChecklistPhoto, PHOTO_UPLOAD_FAILED } from '@/lib/storage/upload-client';
 import { checklistPhotoUrlQueryOptions, myDailyChecklistQueryOptions } from '../api/queries';
-import { useSetGlobalNote, useUpdateChecklistItem } from '../api/hooks';
+import { useSetGlobalNote, useSubmitChecklist, useUpdateChecklistItem } from '../api/hooks';
+import { validateSubmission } from '../utils/submit-readiness';
 import type { ChecklistItem, ChecklistItemOutcome } from '../api/types';
 
 const itemIcons: Record<string, typeof Router> = {
@@ -215,6 +216,7 @@ export default function DailyChecklistPage() {
   const { data, isPending, isError } = useQuery(myDailyChecklistQueryOptions());
   const updateItem = useUpdateChecklistItem();
   const setNote = useSetGlobalNote();
+  const submitChecklist = useSubmitChecklist();
   const [photoBusyId, setPhotoBusyId] = useState<number | null>(null);
   const [globalDraft, setGlobalDraft] = useState<string | null>(null);
   const fileBusyRef = useRef(false);
@@ -271,6 +273,7 @@ export default function DailyChecklistPage() {
   const checklist = data.checklist;
   const editable = checklist.status === 'draft';
   const doneCount = data.items.filter((i) => i.outcome !== 'pending').length;
+  const submission = validateSubmission(data.items);
 
   return (
     <div className='flex flex-col gap-4 pb-24'>
@@ -384,8 +387,12 @@ export default function DailyChecklistPage() {
         )
       )}
 
-      <Button disabled className='h-12 w-full rounded-xl text-sm font-semibold'>
-        {t('checklist.submitForReview')}
+      <Button
+        disabled={!editable || !submission.ready || submitChecklist.isPending}
+        onClick={() => submitChecklist.mutate({ checklistId: checklist.id })}
+        className='h-12 w-full rounded-xl text-sm font-semibold'
+      >
+        {submitChecklist.isPending ? t('common.loading') : t('checklist.submitForReview')}
       </Button>
     </div>
   );
