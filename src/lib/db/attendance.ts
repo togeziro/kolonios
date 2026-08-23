@@ -30,14 +30,14 @@ import type {
   EffectiveSchedule,
   LocationPolicy,
   AttendancePolicy
-} from '@/features/attendance/api/types';
+} from '@/lib/domain/attendance';
 import { buildPagination, buildConditions } from './utils';
 import {
   resolveAttendancePolicy as resolveAttendancePolicyUtil,
   calculateLateMinutes,
   isLocationStale,
   isAccuracyAcceptable
-} from '@/features/attendance/utils/schedule';
+} from '@/lib/attendance/schedule';
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180;
