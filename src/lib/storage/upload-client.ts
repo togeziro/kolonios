@@ -1,4 +1,4 @@
-import { getUploadUrlFn } from '@/features/storage/api/service';
+import { getUploadUrlFn } from './upload-fns';
 
 export const PHOTO_UPLOAD_FAILED = 'PHOTO_UPLOAD_FAILED';
 

@@ -1,3 +1,4 @@
+import { getEnv } from '@/lib/env';
 import type { StorageConfig, StorageProvider } from './types';
 import type { CompanySetting } from '@/lib/db/schema/masterdata';
 
@@ -62,4 +63,23 @@ export function maskSecret(secret: string): string {
   if (!secret) return '';
   if (secret.length <= 4) return '••••';
   return `••••${secret.slice(-4)}`;
+}
+
+export function applyEnvOverride(config: StorageConfig): StorageConfig {
+  // Deployment escape hatch for idrive_e2: when both env vars are set they
+  // win over the stored credentials (useful for managed deployments that keep
+  // credentials in the environment, not the DB).
+  if (config.provider !== 'idrive_e2') return config;
+  const envAccessKey = getEnv('IDRIVE_E2_ACCESS_KEY_ID');
+  const envSecret = getEnv('IDRIVE_E2_SECRET_KEY');
+  if (!envAccessKey || !envSecret) return config;
+  return { ...config, accessKeyId: envAccessKey, secretAccessKey: envSecret };
+}
+
+// Resolve the credential the S3 client actually talks with: decrypt the
+// stored secret (encrypted at rest) and apply the idrive_e2 env override.
+export async function readyConfig(config: StorageConfig): Promise<StorageConfig> {
+  const { decryptSecret } = await import('@/lib/storage/secret-crypto');
+  const withSecret = { ...config, secretAccessKey: decryptSecret(config.secretAccessKey) };
+  return applyEnvOverride(withSecret);
 }

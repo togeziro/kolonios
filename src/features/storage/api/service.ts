@@ -1,23 +1,12 @@
 import { createServerFn } from '@tanstack/react-start';
-import { requirePermission, requireSession } from '@/lib/auth/session';
+import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { DomainError } from '@/lib/errors';
-import { getEnv } from '@/lib/env';
 import { maskSecret, deriveStorageConfig } from '@/lib/storage/config';
 import type { StorageConfig } from '@/lib/storage/types';
-import {
-  storageSettingsSchema,
-  testStorageConnectionSchema,
-  getUploadUrlSchema,
-  getObjectUrlSchema
-} from './validation';
+import { storageSettingsSchema, testStorageConnectionSchema } from './validation';
 
-const FOLDER_PERMISSION = {
-  attendance: ['attendance', 'view'],
-  customers: ['customers', 'add'],
-  tickets: ['tickets', 'view'],
-  checklists: ['checklist', 'edit']
-} as const;
+export { getUploadUrlFn, getObjectUrlFn } from '@/lib/storage/upload-fns';
 
 // Masked places are shown in the UI as hints; submitting that text means
 // "keep the stored value" was misunderstood and must never overwrite a real
@@ -35,17 +24,6 @@ function assertNotMaskedPlaceholder(value: string, label: string): void {
 // value; a non-blank value replaces it.
 function resolveRoundTrip(submitted: string, stored: string | null | undefined): string {
   return submitted.trim().length > 0 ? submitted : (stored ?? '');
-}
-
-function applyEnvOverride(config: StorageConfig): StorageConfig {
-  // Deployment escape hatch for idrive_e2: when both env vars are set they
-  // win over the stored credentials (useful for managed deployments that keep
-  // credentials in the environment, not the DB).
-  if (config.provider !== 'idrive_e2') return config;
-  const envAccessKey = getEnv('IDRIVE_E2_ACCESS_KEY_ID');
-  const envSecret = getEnv('IDRIVE_E2_SECRET_KEY');
-  if (!envAccessKey || !envSecret) return config;
-  return { ...config, accessKeyId: envAccessKey, secretAccessKey: envSecret };
 }
 
 export const getStorageSettingsFn = createServerFn({ method: 'GET' }).handler(async () => {
@@ -172,99 +150,3 @@ export const testStorageConnectionFn = createServerFn({ method: 'POST' })
     });
     return result;
   });
-
-export const getUploadUrlFn = createServerFn({ method: 'POST' })
-  .validator(getUploadUrlSchema)
-  .handler(async ({ data }) => {
-    const [module, action] = FOLDER_PERMISSION[data.folder];
-    const session = await requirePermission(module, action);
-    await checkRateLimit(`write:${session.user.id}`);
-    const { getCompanySettings } = await import('@/lib/db/masterdata');
-    const result = await getCompanySettings();
-    const derived = deriveStorageConfig(result?.settings);
-    if (!derived) throw new Error('Storage is not configured');
-    const config = await readyConfig(derived);
-    const { buildStorageClient, createPresignedPutUrl } = await import('@/lib/storage/presign');
-    const { attendanceSelfieKey, customerIdCardKey, ticketPhotoKey, checklistPhotoKey } =
-      await import('@/lib/storage/keys');
-    const timestamp = Date.now();
-    let key: string;
-    if (data.folder === 'attendance') {
-      key = attendanceSelfieKey(session.user.id, timestamp);
-    } else if (data.folder === 'customers') {
-      // ownerId is the client-generated customer id (created in the form
-      // before the row exists) — never the session user's id.
-      if (!data.ownerId) throw new Error('ownerId is required for customer uploads');
-      key = customerIdCardKey(data.ownerId);
-    } else if (data.folder === 'checklists') {
-      const itemId = Number(data.ownerId) || timestamp;
-      key = checklistPhotoKey(session.user.id, itemId, timestamp);
-    } else {
-      // tickets: photoId unknown until the ticket photo row exists; the
-      // ticket feature supplies ownerId when wiring its upload UI.
-      const photoId = Number(data.ownerId) || timestamp;
-      key = ticketPhotoKey(0, photoId);
-    }
-    const url = await createPresignedPutUrl(buildStorageClient(config), {
-      bucket: config.bucket,
-      key,
-      contentType: data.contentType
-    });
-    return { url, key };
-  });
-
-export const getObjectUrlFn = createServerFn({ method: 'POST' })
-  .validator(getObjectUrlSchema)
-  .handler(async ({ data }) => {
-    const session = await requireSession();
-    const { getCompanySettings } = await import('@/lib/db/masterdata');
-    const derived = deriveStorageConfig((await getCompanySettings())?.settings);
-    if (!derived) throw new Error('Storage is not configured');
-    const config = await readyConfig(derived);
-
-    // IDOR guard: parse the folder prefix, enforce the same folder→permission
-    // map as getUploadUrlFn, then the ownership check (attendance keys are
-    // owner-scoped unless the caller has attendance.edit).
-    const { parseKeyFolder, canViewKey } = await import('./access');
-    const folder = parseKeyFolder(data.key);
-    const folderPermission = folder ? FOLDER_PERMISSION[folder] : undefined;
-    if (!folder || !folderPermission) throw new Error('Invalid object key');
-    const [folderModule, folderAction] = folderPermission;
-    await requirePermission(folderModule, folderAction);
-    let isAdmin = false;
-    let canReviewChecklists = false;
-    if (folder === 'attendance') {
-      try {
-        await requirePermission('attendance', 'edit');
-        isAdmin = true;
-      } catch {
-        isAdmin = false;
-      }
-    }
-    if (folder === 'checklists') {
-      try {
-        await requirePermission('checklist', 'approve');
-        canReviewChecklists = true;
-      } catch {
-        canReviewChecklists = false;
-      }
-    }
-    if (!canViewKey(data.key, session.user.id, isAdmin, canReviewChecklists)) {
-      throw new Error('Not allowed to view this object');
-    }
-
-    const { buildStorageClient, createPresignedGetUrl } = await import('@/lib/storage/presign');
-    const url = await createPresignedGetUrl(buildStorageClient(config), {
-      bucket: config.bucket,
-      key: data.key
-    });
-    return { url };
-  });
-
-// Resolve the credential the S3 client actually talks with: decrypt the
-// stored secret (encrypted at rest) and apply the idrive_e2 env override.
-async function readyConfig(config: StorageConfig): Promise<StorageConfig> {
-  const { decryptSecret } = await import('@/lib/storage/secret-crypto');
-  const withSecret = { ...config, secretAccessKey: decryptSecret(config.secretAccessKey) };
-  return applyEnvOverride(withSecret);
-}

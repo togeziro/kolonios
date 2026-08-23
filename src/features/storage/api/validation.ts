@@ -23,17 +23,13 @@ export const storageSettingsSchema = z.object({
 
 export const testStorageConnectionSchema = storageSettingsSchema;
 
-export const uploadFolderSchema = z.enum(['attendance', 'customers', 'tickets', 'checklists']);
+import {
+  uploadFolderSchema,
+  getUploadUrlSchema,
+  getObjectUrlSchema
+} from '@/lib/storage/upload-fns';
 
-export const getUploadUrlSchema = z.object({
-  folder: uploadFolderSchema,
-  contentType: z.string().trim().min(1).max(100),
-  ownerId: z.string().trim().min(1).max(100).optional()
-});
-
-export const getObjectUrlSchema = z.object({
-  key: z.string().trim().min(1).max(500)
-});
+export { uploadFolderSchema, getUploadUrlSchema, getObjectUrlSchema };
 
 export type StorageSettingsInput = z.infer<typeof storageSettingsSchema>;
 export type GetUploadUrlInput = z.infer<typeof getUploadUrlSchema>;
