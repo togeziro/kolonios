@@ -1,6 +1,10 @@
 version: 2
 updates:
-  - package-ecosystem: 'npm'
+  # 'bun' (not 'npm'): the npm ecosystem ignores bun.lock, producing PRs that
+  # fail CI at `bun install --frozen-lockfile`. The bun ecosystem updates both
+  # package.json and bun.lock. Trade-off: no Dependabot security updates for
+  # this ecosystem (version updates only) — alerts are unaffected.
+  - package-ecosystem: 'bun'
     directory: '/'
     schedule:
       interval: 'weekly'
