@@ -4,7 +4,7 @@ import {
   type ZodOpenApiOperationObject,
   type ZodOpenApiPathsObject
 } from 'zod-openapi';
-import { operations, openApiInfo } from '../src/lib/api/openapi';
+import { operations, openApiInfo } from './lib/openapi';
 import { z } from 'zod';
 
 function buildOperation(op: (typeof operations)[number]): ZodOpenApiOperationObject {

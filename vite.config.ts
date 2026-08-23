@@ -77,7 +77,7 @@ export default defineConfig({
     // beforeEach). Tests within a file already run sequentially.
     maxWorkers: 1,
     setupFiles: ['./vitest.setup.ts'],
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.output/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
