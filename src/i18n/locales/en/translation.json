@@ -1094,7 +1094,7 @@
     "updateFailed": "Couldn't save your change",
     "submitForReview": "Submit for review",
     "empty": {
-      "noSchedule": "No schedule assigned — no checklist today",
+      "no_schedule": "No schedule assigned — no checklist today",
       "day_off": "Today is your day off. No checklist needed.",
       "holiday": "It's a holiday. No checklist today."
     },

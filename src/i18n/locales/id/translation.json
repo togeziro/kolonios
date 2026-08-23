@@ -1097,7 +1097,7 @@
     "blockedPending": "Masih ada item yang menunggu",
     "blockedIssue": "Isu perlu catatan sebelum mengirim",
     "empty": {
-      "noSchedule": "Tidak ada jadwal — tidak ada checklist hari ini",
+      "no_schedule": "Tidak ada jadwal — tidak ada checklist hari ini",
       "day_off": "Hari ini hari libur Anda. Tidak perlu checklist.",
       "holiday": "Hari libur. Tidak ada checklist hari ini."
     },
