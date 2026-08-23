@@ -14,7 +14,7 @@
         "@fontsource-variable/jetbrains-mono": "^5.1.3",
         "@fontsource-variable/outfit": "^5.1.2",
         "@fontsource/architects-daughter": "^5.0.17",
-        "@fontsource/geist-mono": "^5.2.7",
+        "@fontsource/geist-mono": "^5.3.0",
         "@fontsource/geist-sans": "^5.2.5",
         "@fontsource/space-mono": "^5.0.20",
         "@radix-ui/react-accordion": "^1.2.12",
@@ -330,7 +330,7 @@
 
     "@fontsource/architects-daughter": ["@fontsource/architects-daughter@5.2.7", "", {}, "sha512-W7tHXduV9kRQZDTqcU4Rnc/GtSq9cYUHOnhvcRPjy87u5x/oRqKXPU2PghqbktTECOIh1N0qVZLt9rwqa+aWhg=="],
 
-    "@fontsource/geist-mono": ["@fontsource/geist-mono@5.2.7", "", {}, "sha512-xVPVFISJg/K0VVd+aQN0Y7X/sw9hUcJPyDWFJ5GpyU3bHELhoRsJkPSRSHXW32mOi0xZCUQDOaPj1sqIFJ1FGg=="],
+    "@fontsource/geist-mono": ["@fontsource/geist-mono@5.3.0", "", {}, "sha512-UtJ1BBBCVpMYdIcW7nEB45UAoAw5M53ZXs2t0ciPW+IokuAAIc56M8+kW5tXbRJCTpDw4XTtU7proT6NdQAHTg=="],
 
     "@fontsource/geist-sans": ["@fontsource/geist-sans@5.2.5", "", {}, "sha512-anllOHyJbElRs9fV15TeDRqAeb1IKm4bSknPl6ZMoyPTx1BBy7logudcUwpNjmQLkzn4Q0JGQLRCUKJYoyST6A=="],
 
