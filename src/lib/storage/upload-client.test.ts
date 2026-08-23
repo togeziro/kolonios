@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { uploadSelfie } from './upload-client';
 
-vi.mock('@/features/storage/api/service', () => ({
+vi.mock('./upload-fns', () => ({
   getUploadUrlFn: vi.fn(async ({ data }) => ({
     url: 'https://presigned/put',
     key: `attendance/u/${Date.now()}.jpg`
