@@ -7,7 +7,7 @@ import { userRoleGroups } from './schema/user-role-groups';
 import { roleGroups } from './schema/role-groups';
 import { mapRoleGroupToLegacyRole, setUserRoleGroup } from './role-groups';
 import { buildConditions, buildOrderBy, buildPagination, buildSearchCondition } from './utils';
-import type { UserFilters, UsersResponse, UserMutationPayload } from '@/features/users/api/types';
+import type { UserFilters, UsersResponse, UserMutationPayload } from '@/lib/domain/users';
 import { generateTemporaryPassword } from '../auth/password';
 
 type AdminUser = {
