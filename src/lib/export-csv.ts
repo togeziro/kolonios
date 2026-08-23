@@ -1,4 +1,4 @@
-import type { User } from '@/features/users/api/types';
+import type { User } from '@/lib/domain/users';
 
 function escapeCsv(value: string): string {
   if (/[",\n]/.test(value)) {
