@@ -3,7 +3,7 @@ import {
   type DateOverride,
   type ScheduleAssignment,
   type WeekdayScheduleRule
-} from '@/features/attendance/utils/schedule';
+} from '@/lib/attendance/schedule';
 
 export type ChecklistDayStatus = 'working' | 'no_schedule' | 'day_off' | 'holiday';
 

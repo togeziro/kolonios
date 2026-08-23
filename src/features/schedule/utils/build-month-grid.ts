@@ -3,7 +3,7 @@ import {
   type ScheduleAssignment,
   type WeekdayScheduleRule,
   type DateOverride
-} from '@/features/attendance/utils/schedule';
+} from '@/lib/attendance/schedule';
 import type { ScheduleMonthData, ScheduleWeekdayRuleRow } from '@/lib/db/attendance';
 
 export type MonthGridCell = {
