@@ -9,8 +9,7 @@ import {
 } from './schema/checklists';
 import { roleGroups } from './schema/role-groups';
 import { userRoleGroups } from './schema/user-role-groups';
-import { CHECKLIST_ITEM_KEYS } from '@/features/checklist/config/items';
-import { validateSubmission } from '@/features/checklist/utils/submit-readiness';
+import { CHECKLIST_ITEM_KEYS, validateSubmission } from '@/lib/checklists/engine';
 import { mapDbError } from '../errors';
 
 export type ChecklistShiftSnapshot = {
