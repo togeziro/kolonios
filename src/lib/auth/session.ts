@@ -1,5 +1,5 @@
 import { createMiddleware, createServerFn, createServerOnlyFn } from '@tanstack/react-start';
-import type { Permissions } from '@/features/role-groups/api/types';
+import type { Permissions } from '@/lib/db/schema/role-groups';
 import { logger } from '@/lib/logger';
 
 export type Role = 'admin' | 'hr' | 'employee' | 'technician' | 'customer' | 'user';

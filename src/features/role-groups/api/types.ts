@@ -1,6 +1,6 @@
-export type ModulePermission = Record<string, boolean>;
+import type { ModulePermissions, Permissions } from '@/lib/db/schema/role-groups';
 
-export type Permissions = Record<string, ModulePermission>;
+export type { ModulePermissions as ModulePermission, Permissions };
 
 export type RoleGroup = {
   id: string;
