@@ -9,7 +9,7 @@ import { ActiveThemeProvider } from '@/components/themes/active-theme';
 import ThemeProvider from '@/components/themes/theme-provider';
 import { DEFAULT_THEME_PRESET, THEME_PRESET_VALUES } from '@/lib/preferences/theme';
 import { I18nProvider } from '@/i18n/provider';
-import { LocaleProvider } from '@/lib/locale';
+import { LocaleProvider } from '@/features/settings/locale-provider';
 
 import '@/styles/globals.css';
 
