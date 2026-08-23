@@ -15,34 +15,34 @@ import { employees } from './schema/employees';
 import { customers } from './schema/customers';
 import { locations } from './schema/attendance';
 import { user } from './auth-schema';
+// Domain types live in lib/domain; features re-export them for UI use.
+// The DB layer must not depend on the feature layer.
 import type {
   Ticket,
   TicketDetail,
   TicketLeg,
-  TicketMaterial,
-  TicketPhoto,
-  TicketWorklog,
   TicketListFilters,
   TicketListResponse,
   TicketDetailResponse,
   TicketActionResponse,
   CreateTicketResponse,
   NewTicketInput,
-  TicketDomain,
   WorkSessionSubmitInput
-} from '@/features/tickets/api/types';
+} from '@/lib/domain/tickets';
+import {
+  MAX_ACTIVE_TICKETS,
+  FIELD_TASK_TYPES,
+  unmetRequirementReasons,
+  ticketToDomain,
+  legToDomain,
+  materialToDomain,
+  worklogToDomain,
+  type EligibilityProfile
+} from '@/lib/tickets/engine';
 
-export const MAX_ACTIVE_TICKETS = 3;
+export { MAX_ACTIVE_TICKETS };
 
-const FIELD_TASK_TYPES = ['installation', 'maintenance', 'inspection'] as const;
-
-type TicketRow = typeof tickets.$inferSelect;
 type RequirementRow = typeof taskRequirements.$inferSelect;
-type LegRow = typeof ticketLegs.$inferSelect;
-
-function domainOf(taskType: string): TicketDomain {
-  return (FIELD_TASK_TYPES as readonly string[]).includes(taskType) ? 'field' : 'backoffice';
-}
 
 async function loadRequirements(ticketId: number): Promise<RequirementRow[]> {
   return db.select().from(taskRequirements).where(eq(taskRequirements.task_id, ticketId));
@@ -76,7 +76,7 @@ async function loadLocation(locationId: number | null) {
 }
 
 async function toTicket(
-  row: TicketRow,
+  row: typeof tickets.$inferSelect,
   reqs: RequirementRow[],
   creatorName: string | null = null
 ): Promise<Ticket> {
@@ -84,46 +84,11 @@ async function toTicket(
     loadCustomer(row.customer_id),
     loadLocation(row.location_id)
   ]);
-  return {
-    id: row.id,
-    ticketCode: row.ticket_code,
-    title: row.title,
-    description: row.description,
-    channel: row.channel,
-    customer,
-    assetName: row.asset_name,
-    taskType: row.task_type,
-    domain: domainOf(row.task_type),
-    status: row.status,
-    priority: row.priority,
-    location,
-    dueAt: row.due_at ? row.due_at.toISOString() : null,
-    estimatedMinutes: row.estimated_minutes,
-    requiredSkills: reqs.map((r) => r.skill).filter((s): s is string => s != null),
-    assignedTo: row.assigned_to,
-    takenBy: row.taken_by,
-    takenAt: row.taken_at ? row.taken_at.toISOString() : null,
-    rating: row.rating ?? null,
-    reviewNote: row.review_note || null,
-    reviewedBy: row.reviewed_by,
-    completedAt: row.completed_at ? row.completed_at.toISOString() : null,
-    createdByName: creatorName,
-    createdAt: row.created_at.toISOString()
-  };
+  return ticketToDomain(row, reqs, { customer, location, creatorName });
 }
 
-function toLeg(row: LegRow): TicketLeg {
-  return {
-    id: row.id,
-    legNumber: row.leg_number,
-    name: row.name,
-    description: row.description,
-    status: row.status,
-    assigneeId: row.assignee_id,
-    takenAt: row.taken_at ? row.taken_at.toISOString() : null,
-    completedAt: row.completed_at ? row.completed_at.toISOString() : null,
-    notes: row.notes
-  };
+function toLeg(row: typeof ticketLegs.$inferSelect): TicketLeg {
+  return legToDomain(row);
 }
 
 async function loadLegs(ticketId: number): Promise<TicketLeg[]> {
@@ -135,7 +100,7 @@ async function loadLegs(ticketId: number): Promise<TicketLeg[]> {
   return rows.map(toLeg);
 }
 
-async function loadMaterials(ticketId: number): Promise<TicketMaterial[]> {
+async function loadMaterials(ticketId: number) {
   const rows = await db
     .select({
       material: ticketMaterials,
@@ -146,19 +111,10 @@ async function loadMaterials(ticketId: number): Promise<TicketMaterial[]> {
     .innerJoin(ticketLegs, eq(ticketMaterials.leg_id, ticketLegs.id))
     .where(eq(ticketLegs.ticket_id, ticketId))
     .orderBy(asc(ticketLegs.leg_number));
-  return rows.map(({ material, legName }) => ({
-    id: material.id,
-    legId: material.leg_id,
-    legName,
-    materialName: material.material_name,
-    qty: material.qty,
-    unit: material.unit,
-    source: material.source,
-    barcode: material.barcode
-  }));
+  return rows.map(({ material, legName }) => materialToDomain(material, legName));
 }
 
-async function loadPhotos(ticketId: number): Promise<TicketPhoto[]> {
+async function loadPhotos(ticketId: number): Promise<TicketDetail['photos']> {
   const rows = await db
     .select({
       id: ticketPhotos.id,
@@ -173,28 +129,17 @@ async function loadPhotos(ticketId: number): Promise<TicketPhoto[]> {
   return rows;
 }
 
-function toWorklog(row: typeof ticketWorklog.$inferSelect): TicketWorklog {
-  return {
-    id: row.id,
-    legId: row.leg_id,
-    kind: row.kind,
-    body: row.body,
-    createdAt: row.created_at.toISOString(),
-    createdBy: row.created_by
-  };
-}
-
-async function loadWorklog(ticketId: number): Promise<TicketWorklog[]> {
+async function loadWorklog(ticketId: number) {
   const rows = await db
     .select()
     .from(ticketWorklog)
     .innerJoin(ticketLegs, eq(ticketWorklog.leg_id, ticketLegs.id))
     .where(eq(ticketLegs.ticket_id, ticketId))
     .orderBy(asc(ticketWorklog.id));
-  return rows.map(({ ticket_worklog }) => toWorklog(ticket_worklog));
+  return rows.map(({ ticket_worklog }) => worklogToDomain(ticket_worklog));
 }
 
-async function getEligibilityProfile(userId: string) {
+async function getEligibilityProfile(userId: string): Promise<EligibilityProfile> {
   const [employee, skillRows] = await Promise.all([
     db.select().from(employees).where(eq(employees.id, userId)).limit(1),
     db
@@ -202,35 +147,14 @@ async function getEligibilityProfile(userId: string) {
       .from(employeeSkills)
       .where(eq(employeeSkills.user_id, userId))
   ]);
+  const row = employee[0] ?? null;
   return {
-    employee: employee[0] ?? null,
+    status: row?.status ?? null,
+    department_id: row?.department_id ?? null,
+    designation_id: row?.designation_id ?? null,
+    location_id: row?.location_id ?? null,
     skills: skillRows.map((r) => r.skill)
   };
-}
-
-function unmetReasons(
-  reqs: RequirementRow[],
-  profile: Awaited<ReturnType<typeof getEligibilityProfile>>
-): string[] {
-  const reasons: string[] = [];
-  if (profile.employee?.status !== 'active') {
-    reasons.push('Your account is not active');
-  }
-  for (const r of reqs) {
-    if (r.department_id != null && profile.employee?.department_id !== r.department_id) {
-      reasons.push('Requires a different department');
-    }
-    if (r.designation_id != null && profile.employee?.designation_id !== r.designation_id) {
-      reasons.push('Requires a different designation');
-    }
-    if (r.location_id != null && profile.employee?.location_id !== r.location_id) {
-      reasons.push('Outside your assigned location');
-    }
-    if (r.skill != null && !profile.skills.includes(r.skill)) {
-      reasons.push(`Requires skill: ${r.skill}`);
-    }
-  }
-  return [...new Set(reasons)];
 }
 
 function isMine(userId: string): ReturnType<typeof sql> {
@@ -269,7 +193,7 @@ export async function listOpenTickets(
     for (const row of rows) {
       const reqs = await loadRequirements(row.ticket.id);
       const ticket = await toTicket(row.ticket, reqs, row.creatorName ?? null);
-      const reasons = unmetReasons(reqs, profile);
+      const reasons = unmetRequirementReasons(reqs, profile);
       if (reasons.length === 0) {
         eligible.push(ticket);
       } else {
@@ -377,7 +301,7 @@ export async function takeTicket(userId: string, ticketId: number): Promise<Tick
 
       const profile = await getEligibilityProfile(userId);
       const reqs = await loadRequirements(ticketId);
-      const reasons = unmetReasons(reqs, profile);
+      const reasons = unmetRequirementReasons(reqs, profile);
       if (reasons.length > 0) {
         return { success: false, message: `Not eligible: ${reasons.join(', ')}` };
       }
