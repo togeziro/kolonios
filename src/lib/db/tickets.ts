@@ -37,6 +37,11 @@ import {
   legToDomain,
   materialToDomain,
   worklogToDomain,
+  pickSubmittableLeg,
+  resolveSubmittedNotes,
+  resolveLegAdvance,
+  formatHandoffNote,
+  formatArrivalBody,
   type EligibilityProfile
 } from '@/lib/tickets/engine';
 
@@ -423,10 +428,7 @@ export async function arriveTicket(
       .returning();
     if (!updated) return { success: false, message: 'Ticket is no longer available' };
 
-    const body =
-      location && Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
-        ? `${location.latitude},${location.longitude} ±${location.accuracy}m`
-        : 'arrived (no location fix)';
+    const body = formatArrivalBody(location);
     await db.insert(ticketWorklog).values({
       leg_id: leg.id,
       kind: 'location',
@@ -542,13 +544,9 @@ export async function submitWorkSession(
         .select()
         .from(ticketLegs)
         .where(eq(ticketLegs.ticket_id, ticketId))
-        .orderBy(
-          sql`case when ${ticketLegs.status} = 'in_progress' then 0 else 1 end`,
-          asc(ticketLegs.leg_number)
-        )
-        .limit(1);
-      const leg = legs[0];
-      if (!leg || !['open', 'assigned', 'in_progress'].includes(leg.status)) {
+        .orderBy(asc(ticketLegs.leg_number));
+      const leg = pickSubmittableLeg(legs);
+      if (!leg) {
         return { success: false, message: 'Leg is no longer submittable' };
       }
 
@@ -592,30 +590,18 @@ export async function submitWorkSession(
         .set({
           status: 'submitted',
           completed_at: new Date(),
-          notes: input.notes ? input.notes : leg.notes,
+          notes: resolveSubmittedNotes(leg.notes, input.notes),
           updated_at: new Date()
         })
         .where(eq(ticketLegs.id, leg.id));
 
-      const nextLegs = await tx
-        .select()
-        .from(ticketLegs)
-        .where(
-          and(
-            eq(ticketLegs.ticket_id, ticketId),
-            sql`${ticketLegs.leg_number} > ${leg.leg_number}`,
-            inArray(ticketLegs.status, ['open', 'assigned'])
-          )
-        )
-        .orderBy(asc(ticketLegs.leg_number))
-        .limit(1);
-      const nextLeg = nextLegs[0] ?? null;
+      const outcome = resolveLegAdvance(leg.leg_number, legs);
 
-      if (nextLeg) {
+      if (outcome.kind === 'advance') {
         await tx
           .update(ticketLegs)
           .set({ status: 'assigned', updated_at: new Date() })
-          .where(eq(ticketLegs.id, nextLeg.id));
+          .where(eq(ticketLegs.id, outcome.nextLeg.id));
       } else {
         await tx
           .update(tickets)
@@ -630,8 +616,11 @@ export async function submitWorkSession(
       return {
         success: true,
         message: 'Work session submitted',
-        nextLeg: nextLeg ? { legNumber: nextLeg.leg_number, name: nextLeg.name } : null,
-        isLastLeg: !nextLeg
+        nextLeg:
+          outcome.kind === 'advance'
+            ? { legNumber: outcome.nextLeg.legNumber, name: outcome.nextLeg.name }
+            : null,
+        isLastLeg: outcome.kind === 'complete'
       };
     });
     if (!result.success) return result;
@@ -670,7 +659,7 @@ export async function addHandoffNote(
     await db
       .update(ticketLegs)
       .set({
-        notes: leg.notes ? `${leg.notes}\nHandoff: ${note}` : `Handoff: ${note}`,
+        notes: formatHandoffNote(leg.notes, note),
         updated_at: new Date()
       })
       .where(eq(ticketLegs.id, leg.id));
