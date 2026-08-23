@@ -8,7 +8,7 @@ import type {
   EmployeesResponse,
   EmployeeByIdResponse,
   EmployeeMutationPayload
-} from '@/features/employees/api/types';
+} from '@/lib/domain/employees';
 import { buildPagination, buildOrderBy, buildSearchCondition, buildStatusCondition } from './utils';
 import { generateTemporaryPassword } from '../auth/password';
 

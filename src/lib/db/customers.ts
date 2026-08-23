@@ -7,7 +7,7 @@ import type {
   CustomersResponse,
   CustomerByIdResponse,
   CustomerMutationPayload
-} from '@/features/customers/api/types';
+} from '@/lib/domain/customers';
 import { buildPagination, buildOrderBy, buildSearchCondition, buildStatusCondition } from './utils';
 
 const sortColumnMap = {
