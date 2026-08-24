@@ -124,7 +124,7 @@ describe('JobsPage', () => {
     );
     expect(screen.getByText('T-001')).toBeTruthy();
     expect(screen.getByText('Install OLT')).toBeTruthy();
-    expect(screen.getByText('Jakarta Office')).toBeTruthy();
+    expect(screen.getAllByText('Jakarta Office').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Opened by/)).toBeTruthy();
     expect(screen.getByText('fiber')).toBeTruthy();
   });
@@ -137,7 +137,7 @@ describe('JobsPage', () => {
         <JobsPage />
       </I18nextProvider>
     );
-    expect(screen.getByText('Medium')).toBeTruthy();
+    expect(screen.getAllByText('Medium').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Backoffice').length).toBeGreaterThanOrEqual(2);
   });
 
@@ -188,6 +188,92 @@ describe('JobsPage', () => {
     );
     expect(screen.getByText('T-001')).toBeTruthy();
     expect(screen.getByText('T-002')).toBeTruthy();
+    expect(screen.getByText('Install OLT')).toBeTruthy();
+    expect(screen.getByText('Repair fiber')).toBeTruthy();
+  });
+
+  it('shows Leg badge for multi-leg relay entries and none for single-leg or missing entries', () => {
+    const multiLeg = makeTicket({ id: 7, ticketCode: 'T-007', title: 'Relay job' });
+    const singleLeg = makeTicket({ id: 8, ticketCode: 'T-008', title: 'Solo job' });
+    const noEntry = makeTicket({ id: 9, ticketCode: 'T-009', title: 'Plain job' });
+    queryMock.mockReturnValue({
+      data: { tickets: [multiLeg, singleLeg, noEntry] },
+      isLoading: false
+    });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <JobsPage
+          relayMap={{ 7: { legNumber: 2, legsTotal: 4 }, 8: { legNumber: 1, legsTotal: 1 } }}
+        />
+      </I18nextProvider>
+    );
+    expect(screen.getByText('Leg 2 of 4')).toBeTruthy();
+    expect(screen.queryByText('Leg 1 of 1')).toBeNull();
+    expect(screen.queryByText(/^Leg \d+ of \d+$/)?.textContent).toBe('Leg 2 of 4');
+  });
+
+  it('shows Leg badge from the fixture module for matching ticket ids', () => {
+    queryMock.mockReturnValue({
+      data: { tickets: [makeTicket({ id: 4101, ticketCode: 'T-101', title: 'Fixture relay' })] },
+      isLoading: false
+    });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <JobsPage />
+      </I18nextProvider>
+    );
+    expect(screen.getByText('Leg 1 of 3')).toBeTruthy();
+  });
+
+  it('toggles a priority chip to filter the visible list and clears on second tap', () => {
+    const tickets = [
+      makeTicket({ id: 1, ticketCode: 'T-001', title: 'Install OLT', priority: 'high' }),
+      makeTicket({ id: 2, ticketCode: 'T-002', title: 'Repair fiber', priority: 'medium' })
+    ];
+    queryMock.mockReturnValue({ data: { tickets }, isLoading: false });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <JobsPage />
+      </I18nextProvider>
+    );
+    expect(screen.getByText('Install OLT')).toBeTruthy();
+    expect(screen.getByText('Repair fiber')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /^High$/ }));
+    expect(screen.getByText('Install OLT')).toBeTruthy();
+    expect(screen.queryByText('Repair fiber')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /^High$/ }));
+    expect(screen.getByText('Install OLT')).toBeTruthy();
+    expect(screen.getByText('Repair fiber')).toBeTruthy();
+  });
+
+  it('toggles a location chip derived from loaded tickets to filter the visible list', () => {
+    const tickets = [
+      makeTicket({
+        id: 1,
+        ticketCode: 'T-001',
+        title: 'Install OLT',
+        location: { id: 1, name: 'Jakarta Office' }
+      }),
+      makeTicket({
+        id: 2,
+        ticketCode: 'T-002',
+        title: 'Repair fiber',
+        location: { id: 2, name: 'Bandung Site' }
+      })
+    ];
+    queryMock.mockReturnValue({ data: { tickets }, isLoading: false });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <JobsPage />
+      </I18nextProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Bandung Site' }));
+    expect(screen.getByText('Repair fiber')).toBeTruthy();
+    expect(screen.queryByText('Install OLT')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bandung Site' }));
     expect(screen.getByText('Install OLT')).toBeTruthy();
     expect(screen.getByText('Repair fiber')).toBeTruthy();
   });

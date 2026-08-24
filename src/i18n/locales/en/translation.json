@@ -1394,5 +1394,10 @@
     "mapFailed": "Map could not be loaded",
     "distanceTo": "Distance to destination",
     "findMyLocation": "Find my location"
+  },
+  "jobs": {
+    "filterLocation": "Location",
+    "filterPriority": "Priority",
+    "legBadge": "Leg {{x}} of {{y}}"
   }
 }

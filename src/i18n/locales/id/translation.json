@@ -1394,5 +1394,10 @@
     "mapFailed": "Peta tidak dapat dimuat",
     "distanceTo": "Jarak ke tujuan",
     "findMyLocation": "Temukan lokasi saya"
+  },
+  "jobs": {
+    "filterLocation": "Lokasi",
+    "filterPriority": "Prioritas",
+    "legBadge": "Leg {{x}} dari {{y}}"
   }
 }
