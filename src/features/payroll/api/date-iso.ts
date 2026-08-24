@@ -33,10 +33,3 @@ export function parseDateISO(value: string): DateISO {
 export function asDateISO(value: string): DateISO {
   return value as DateISO;
 }
-
-/**
- * Identity helper to strip the brand at edges that require a plain string.
- */
-export function toDateString(value: DateISO): string {
-  return value;
-}
