@@ -21,6 +21,7 @@ import {
   type PayrollTransaction
 } from '@/lib/db/payroll';
 import { calculatePayroll, JKK_RATES, parseDbDecimalToMoney } from '../utils/calculator';
+import { toDbDecimal } from '../utils/money';
 import type {
   AttendancePolicy,
   BpjsInput,
@@ -316,10 +317,10 @@ export async function buildPayrollRecord(
   return {
     payroll_period_id: period.id,
     employee_id: employeeId,
-    gross_salary: (totals.grossSalary / 100).toFixed(2),
-    total_allowances: (totals.allowanceTotal / 100).toFixed(2),
-    total_deductions: (totals.deductionTotal / 100).toFixed(2),
-    net_salary: (totals.netSalary / 100).toFixed(2),
+    gross_salary: toDbDecimal(totals.grossSalary),
+    total_allowances: toDbDecimal(totals.allowanceTotal),
+    total_deductions: toDbDecimal(totals.deductionTotal),
+    net_salary: toDbDecimal(totals.netSalary),
     details: {
       input: segmentInputs,
       baseSalary: totals.baseSalary,
