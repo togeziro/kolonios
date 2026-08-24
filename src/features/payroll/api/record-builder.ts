@@ -27,7 +27,6 @@ import type {
   BpjsProgram,
   BpjsRates,
   PayrollCalculationInput,
-  PayrollCalculationResult,
   Pph21Method
 } from './types';
 import {
@@ -35,7 +34,8 @@ import {
   emptyPolicy,
   mapSalaryComponent,
   payrollPeriodBoundaries,
-  previousDate
+  previousDate,
+  sumSegmentResults
 } from './shared';
 import { getScheduledDays } from './scheduled-days';
 import { mapTaxProfile } from './tax';
@@ -316,26 +316,7 @@ export async function buildPayrollRecord(
       )
     });
   }
-  const totals = segmentResults.reduce(
-    (sum, segment) => ({
-      baseSalary: sum.baseSalary + segment.result.baseSalary,
-      allowanceTotal: sum.allowanceTotal + segment.result.allowanceTotal,
-      deductionTotal: sum.deductionTotal + segment.result.deductionTotal,
-      grossSalary: sum.grossSalary + segment.result.grossSalary,
-      netSalary: sum.netSalary + segment.result.netSalary,
-      tax: sum.tax + segment.result.tax.amount,
-      lineItems: [...sum.lineItems, ...segment.result.lineItems]
-    }),
-    {
-      baseSalary: 0,
-      allowanceTotal: 0,
-      deductionTotal: 0,
-      grossSalary: 0,
-      netSalary: 0,
-      tax: 0,
-      lineItems: [] as PayrollCalculationResult['lineItems']
-    }
-  );
+  const totals = sumSegmentResults(segmentResults.map((segment) => segment.result));
   return {
     payroll_period_id: period.id,
     employee_id: employeeId,

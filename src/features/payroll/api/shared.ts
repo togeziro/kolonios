@@ -18,6 +18,29 @@ export const emptyPolicy: AttendancePolicy = {
   shortfall: { enabled: false }
 };
 
+export function sumSegmentResults(results: PayrollCalculationResult[]) {
+  return results.reduce(
+    (sum, segment) => ({
+      baseSalary: sum.baseSalary + segment.baseSalary,
+      allowanceTotal: sum.allowanceTotal + segment.allowanceTotal,
+      deductionTotal: sum.deductionTotal + segment.deductionTotal,
+      grossSalary: sum.grossSalary + segment.grossSalary,
+      netSalary: sum.netSalary + segment.netSalary,
+      tax: sum.tax + segment.tax.amount,
+      lineItems: [...sum.lineItems, ...segment.lineItems]
+    }),
+    {
+      baseSalary: 0,
+      allowanceTotal: 0,
+      deductionTotal: 0,
+      grossSalary: 0,
+      netSalary: 0,
+      tax: 0,
+      lineItems: [] as PayrollCalculationResult['lineItems']
+    }
+  );
+}
+
 export function recalculateSegmentsWithAdjustments(
   segmentInputs: PayrollCalculationInput[],
   adjustments: ManualAdjustment[],
@@ -38,26 +61,7 @@ export function recalculateSegmentsWithAdjustments(
       manualAdjustments: adjustments
     })
   );
-  const totals = results.reduce(
-    (sum, segment) => ({
-      baseSalary: sum.baseSalary + segment.baseSalary,
-      allowanceTotal: sum.allowanceTotal + segment.allowanceTotal,
-      deductionTotal: sum.deductionTotal + segment.deductionTotal,
-      grossSalary: sum.grossSalary + segment.grossSalary,
-      netSalary: sum.netSalary + segment.netSalary,
-      tax: sum.tax + segment.tax.amount,
-      lineItems: [...sum.lineItems, ...segment.lineItems]
-    }),
-    {
-      baseSalary: 0,
-      allowanceTotal: 0,
-      deductionTotal: 0,
-      grossSalary: 0,
-      netSalary: 0,
-      tax: 0,
-      lineItems: [] as PayrollCalculationResult['lineItems']
-    }
-  );
+  const totals = sumSegmentResults(results);
   return {
     ...totals,
     snapshot: {
