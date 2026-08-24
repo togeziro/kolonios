@@ -20,6 +20,11 @@ updates:
     commit-message:
       prefix: 'deps'
       include: 'scope'
+    ignore:
+      # TypeScript 7 (native compiler) is not stable yet — stay on 5.x.
+      - dependency-name: 'typescript'
+        update-types:
+          - 'version-update:semver-major'
     groups:
       tanstack:
         patterns:

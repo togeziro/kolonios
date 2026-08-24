@@ -242,7 +242,7 @@ bun run api:docs    # writes public/openapi.json + public/api-docs.html
 
 `bun run build` regenerates the docs automatically. After building, the docs
 are served at `/api-docs.html` (the spec itself at `/openapi.json`). The
-operation registry lives in `src/lib/api/openapi.ts`; each operation reuses
+operation registry lives in `scripts/lib/openapi.ts`; each operation reuses
 the actual request/response Zod schemas from `src/features/*/api/validation.ts`,
 so documentation and runtime validation never drift.
 
