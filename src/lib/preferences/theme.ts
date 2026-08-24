@@ -20,19 +20,19 @@ export const THEME_PRESET_OPTIONS = [
     }
   },
   {
-    label: 'Tangerine',
-    value: 'tangerine',
-    primary: {
-      light: 'oklch(0.64 0.17 36.44)',
-      dark: 'oklch(0.64 0.17 36.44)'
-    }
-  },
-  {
     label: 'Soft Pop',
     value: 'soft-pop',
     primary: {
       light: 'oklch(0.5106 0.2301 276.9656)',
       dark: 'oklch(0.6801 0.1583 276.9349)'
+    }
+  },
+  {
+    label: 'Tangerine',
+    value: 'tangerine',
+    primary: {
+      light: 'oklch(0.64 0.17 36.44)',
+      dark: 'oklch(0.64 0.17 36.44)'
     }
   },
   {
