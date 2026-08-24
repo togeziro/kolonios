@@ -22,6 +22,7 @@ import {
 import { employees } from './schema/employees';
 import { departments, designations } from './schema/masterdata';
 import { buildConditions, buildPagination, buildStatusCondition } from './utils';
+import { asDateISO, type DateISO } from '../domain/date-iso';
 import { auditLog } from './schema/audit-log';
 import type {
   NewEmployeeBpjsEnrollment,
@@ -34,7 +35,16 @@ import type {
   NewSalaryComponent
 } from './schema/payroll';
 
-type EffectiveRow = { id: number; effective_from: string; effective_to: string | null };
+type EffectiveRow = { id: number; effective_from: DateISO; effective_to: DateISO | null };
+type RawEffectiveRow = { id: number; effective_from: string; effective_to: string | null };
+
+function toEffectiveRows<T extends RawEffectiveRow>(rows: T[]): Array<T & EffectiveRow> {
+  return rows.map((row) => ({
+    ...row,
+    effective_from: asDateISO(row.effective_from),
+    effective_to: row.effective_to ? asDateISO(row.effective_to) : null
+  }));
+}
 export type PayrollTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const PTKP_STATUS_ANNUAL: Record<string, number> = {
@@ -119,14 +129,15 @@ export function assertEmployeeScope(employeeId: string | undefined): asserts emp
 }
 
 /** Resolve an ordered effective-dated result while making overlap ambiguity explicit. */
-export function resolveEffectiveRecord<T extends EffectiveRow>(
+export function resolveEffectiveRecord<T extends RawEffectiveRow>(
   employeeId: string,
   asOfDate: string,
   rows: T[]
-): T | null {
+): (T & EffectiveRow) | null {
   assertEffectiveDate(asOfDate);
-  const active = rows.filter(
-    (row) => row.effective_from <= asOfDate && (!row.effective_to || row.effective_to >= asOfDate)
+  const asOf = asDateISO(asOfDate);
+  const active = toEffectiveRows(rows).filter(
+    (row) => row.effective_from <= asOf && (!row.effective_to || row.effective_to >= asOf)
   );
   if (active.length > 1) {
     throw new DomainError(
@@ -137,20 +148,22 @@ export function resolveEffectiveRecord<T extends EffectiveRow>(
   return active[0] ?? null;
 }
 
-export function resolveEffectiveRecords<T extends EffectiveRow>(
+export function resolveEffectiveRecords<T extends RawEffectiveRow>(
   employeeId: string,
   periodStart: string,
   periodEnd: string,
   rows: T[]
 ) {
   assertDateRange(periodStart, periodEnd);
+  const start = asDateISO(periodStart);
+  const end = asDateISO(periodEnd);
   const points = [
-    periodStart,
-    ...rows
+    start,
+    ...toEffectiveRows(rows)
       .map((row) => row.effective_from)
-      .filter((date) => date > periodStart && date <= periodEnd)
+      .filter((date) => date > start && date <= end)
   ].toSorted();
-  const selected = new Map<number, T>();
+  const selected = new Map<number, T & EffectiveRow>();
   for (const point of points) {
     const row = resolveEffectiveRecord(employeeId, point, rows);
     if (row) selected.set(row.id, row);
@@ -160,7 +173,7 @@ export function resolveEffectiveRecords<T extends EffectiveRow>(
   );
 }
 
-export function requireEffectiveRecord<T extends EffectiveRow>(
+export function requireEffectiveRecord<T extends RawEffectiveRow>(
   employeeId: string,
   asOfDate: string,
   rows: T[]
@@ -171,7 +184,7 @@ export function requireEffectiveRecord<T extends EffectiveRow>(
       'Required payroll data is missing for this period.',
       'MISSING_PAYROLL_DATA'
     );
-  return row;
+  return row as T & EffectiveRow;
 }
 
 function effectiveWhere(
