@@ -13,7 +13,7 @@ import {
 } from '@/lib/db/payroll';
 import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
 import type { PayrollCalculationInput } from './types';
-import { assertEmployeeScope, recalculateSegmentsWithAdjustments } from './shared';
+import { assertEmployeeScope, isStaffRole, recalculateSegmentsWithAdjustments } from './shared';
 import { buildPayrollRecord } from './record-builder';
 import {
   generatePayrollSchema,
@@ -25,8 +25,7 @@ export function resolvePayrollRecordScope(
   actor: { user: { id: string; role?: string | null } },
   filters: { scope?: 'admin' | 'employee'; employeeId?: string }
 ) {
-  const staffRole = ['employee', 'technician', 'user'].includes(actor.user.role ?? '');
-  if (staffRole) {
+  if (isStaffRole(actor.user.role)) {
     if (filters.employeeId && filters.employeeId !== actor.user.id)
       assertEmployeeScope(actor, filters.employeeId);
     return { scope: 'employee' as const, employeeId: actor.user.id };

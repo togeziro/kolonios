@@ -103,11 +103,12 @@ export function recalculateSegmentsWithAdjustments(
   };
 }
 
+export function isStaffRole(role: string | null | undefined) {
+  return ['employee', 'technician', 'user'].includes(role ?? '');
+}
+
 export function assertEmployeeScope(actor: PayrollProfileActor, employeeId: string) {
-  if (
-    employeeId !== actor.user.id &&
-    ['employee', 'technician', 'user'].includes(actor.user.role ?? '')
-  ) {
+  if (employeeId !== actor.user.id && isStaffRole(actor.user.role)) {
     throw new DomainError('Forbidden: payroll employee scope required', 'FORBIDDEN');
   }
 }
@@ -170,7 +171,7 @@ export function sanitizePayrollProfileForActor<T extends Record<string, unknown>
   actor: PayrollProfileActor,
   profile: T
 ): T {
-  if (!['employee', 'technician', 'user'].includes(actor.user.role ?? '')) return profile;
+  if (!isStaffRole(actor.user.role)) return profile;
   const json = JSON.parse(JSON.stringify(profile)) as T;
   const record = json as Record<string, unknown>;
   const taxProfiles = Array.isArray(record.taxProfiles) ? record.taxProfiles : [];
