@@ -132,15 +132,15 @@ describe('PayslipTemplate', () => {
       details: {
         tax: { amount: 75_000 },
         lineItems: [
-          { name: 'Base salary', type: 'base', amount: 1_200_000 },
+          { name: 'Base salary', type: 'base', amount: 120_500_000 },
           { name: 'Transport', type: 'allowance', amount: 150_000 },
           { name: 'Insurance', type: 'deduction', amount: 50_000 }
         ]
       },
-      gross_salary: '12000.00',
+      gross_salary: '1250000.00',
       total_allowances: '1500.00',
       total_deductions: '500.00',
-      net_salary: '13000.00',
+      net_salary: '1251000.00',
       employee_code: 'EMP-0007',
       employee_name: 'Ari Pratama',
       department_name: 'Engineering',
@@ -158,17 +158,17 @@ describe('PayslipTemplate', () => {
     it('formats DB decimal strings through formatCurrency byte-for-byte', () => {
       const data = payslipFromRecord(record, company);
       expect(data).not.toBeNull();
-      expect(data!.gross).toBe('Rp\u00a012.000,00');
+      expect(data!.gross).toBe('Rp\u00a01.250.000,00');
       expect(data!.allowances).toBe('Rp\u00a01.500,00');
       expect(data!.deductions).toBe('Rp\u00a0500,00');
-      expect(data!.net).toBe('Rp\u00a013.000,00');
+      expect(data!.net).toBe('Rp\u00a01.251.000,00');
     });
 
     it('converts cents-as-number line item and tax amounts exactly', () => {
       const data = payslipFromRecord(record, company)!;
       expect(data.tax).toBe('Rp\u00a0750,00');
       expect(data.lineItems.map((item) => item.amount)).toEqual([
-        'Rp\u00a012.000,00',
+        'Rp\u00a01.205.000,00',
         'Rp\u00a01.500,00',
         'Rp\u00a0500,00'
       ]);
@@ -186,7 +186,7 @@ describe('PayslipTemplate', () => {
     it('accepts locked periods', () => {
       const data = payslipFromRecord({ ...record, period_status: 'locked' }, company);
       expect(data).not.toBeNull();
-      expect(data!.net).toBe('Rp\u00a013.000,00');
+      expect(data!.net).toBe('Rp\u00a01.251.000,00');
     });
 
     it('returns null for non-paid, non-locked periods', () => {
