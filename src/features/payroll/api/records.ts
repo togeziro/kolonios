@@ -12,6 +12,7 @@ import {
   withPayrollAuditTransaction
 } from '@/lib/db/payroll';
 import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
+import { toDbDecimal } from '../utils/money';
 import type { PayrollCalculationInput } from './types';
 import { assertEmployeeScope, isStaffRole, recalculateSegmentsWithAdjustments } from './shared';
 import { buildPayrollRecord } from './record-builder';
@@ -122,8 +123,8 @@ export const generatePayrollFn = createServerFn({ method: 'POST' })
               employee_id: record.employee_id,
               payroll_record_id: row.id,
               tax_period: period.period_start,
-              taxable_income: (taxableIncome / 100).toFixed(2),
-              tax_amount: (taxAmount / 100).toFixed(2),
+              taxable_income: toDbDecimal(taxableIncome),
+              tax_amount: toDbDecimal(taxAmount),
               source: 'calculated',
               is_overridden: false
             });
@@ -206,10 +207,10 @@ export const adjustPayrollRecordFn = createServerFn({ method: 'POST' })
         const [updated] = await tx
           .update(payrollRecords)
           .set({
-            gross_salary: (result.grossSalary / 100).toFixed(2),
-            total_allowances: (result.allowanceTotal / 100).toFixed(2),
-            total_deductions: (result.deductionTotal / 100).toFixed(2),
-            net_salary: (result.netSalary / 100).toFixed(2),
+            gross_salary: toDbDecimal(result.grossSalary),
+            total_allowances: toDbDecimal(result.allowanceTotal),
+            total_deductions: toDbDecimal(result.deductionTotal),
+            net_salary: toDbDecimal(result.netSalary),
             details: result.snapshot,
             updated_at: new Date()
           })

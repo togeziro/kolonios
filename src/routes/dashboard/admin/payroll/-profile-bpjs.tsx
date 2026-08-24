@@ -89,25 +89,30 @@ export function BpjsEnrollmentCard({
   const [removeTarget, setRemoveTarget] = useState<BpjsFamilyMember | null>(null);
 
   const bpjsEnrollments = bpjsQuery.data as { enrollments: BpjsEnrollment[] } | undefined;
-  useEffect(() => {
-    if (!bpjsEnrollments) return;
-    setBpjsDrafts(
-      Object.fromEntries(
-        bpjsEnrollments.enrollments.map((enrollment) => [
-          enrollment.id,
-          {
-            id: enrollment.id,
-            program: enrollment.program as BpjsDraft['program'],
-            registeredWage: enrollment.registered_wage,
-            isActive: enrollment.is_active,
-            effectiveFrom: enrollment.effective_from,
-            effectiveTo: enrollment.effective_to ?? '',
-            jkkCategoryOverride: enrollment.jkk_category_override ?? ''
-          }
-        ])
-      )
-    );
-  }, [bpjsEnrollments]);
+  // Re-seed drafts whenever enrollment data changes
+  // (adjust-state-during-render pattern; replaces the previous effect).
+  const [prevEnrollments, setPrevEnrollments] = useState(bpjsEnrollments);
+  if (bpjsEnrollments !== prevEnrollments) {
+    setPrevEnrollments(bpjsEnrollments);
+    if (bpjsEnrollments) {
+      setBpjsDrafts(
+        Object.fromEntries(
+          bpjsEnrollments.enrollments.map((enrollment) => [
+            enrollment.id,
+            {
+              id: enrollment.id,
+              program: enrollment.program as BpjsDraft['program'],
+              registeredWage: enrollment.registered_wage,
+              isActive: enrollment.is_active,
+              effectiveFrom: enrollment.effective_from,
+              effectiveTo: enrollment.effective_to ?? '',
+              jkkCategoryOverride: enrollment.jkk_category_override ?? ''
+            }
+          ])
+        )
+      );
+    }
+  }
 
   const bpjsDirty = useMemo(() => {
     if (!bpjsEnrollments) return false;

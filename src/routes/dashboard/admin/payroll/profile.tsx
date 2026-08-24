@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Block, createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -64,18 +64,18 @@ function ProfilePage() {
   const canEdit = canPayrollAction(permissions, isAdmin, 'edit');
   const employeesQuery = useQuery(employeesQueryOptions({ page: 1, limit: 100, status: 'active' }));
   const componentDefinitionsQuery = useQuery(salaryComponentsQueryOptions());
-  const [employeeId, setEmployeeId] = useState('');
+  const employees = employeesQuery.data?.employees;
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  // Fall back to the first employee until an explicit selection is made
+  // (derived instead of effect-synced; same stable result without the extra
+  // render pass).
+  const employeeId = selectedEmployeeId || employees?.[0]?.id || '';
   const profile = useQuery({
     ...employeePayrollProfileQueryOptions(employeeId),
     enabled: Boolean(employeeId)
   });
   const update = useUpdateEmployeePayrollProfile();
   const [pendingEmployeeId, setPendingEmployeeId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!employeeId && employeesQuery.data?.employees[0])
-      setEmployeeId(employeesQuery.data.employees[0].id);
-  }, [employeeId, employeesQuery.data?.employees]);
   const data = profile.data as ProfileData | undefined;
 
   const drafts = useProfileDrafts({
@@ -92,7 +92,7 @@ function ProfilePage() {
       setPendingEmployeeId(value);
       return;
     }
-    setEmployeeId(value);
+    setSelectedEmployeeId(value);
   };
 
   const selectedAssignmentId =
@@ -251,7 +251,7 @@ function ProfilePage() {
         description={t('payroll.discardChanges')}
         confirmLabel={t('payroll.discard')}
         onConfirm={() => {
-          if (pendingEmployeeId !== null) setEmployeeId(pendingEmployeeId);
+          if (pendingEmployeeId !== null) setSelectedEmployeeId(pendingEmployeeId);
           setPendingEmployeeId(null);
         }}
       />

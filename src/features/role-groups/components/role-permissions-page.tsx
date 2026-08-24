@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -24,12 +24,13 @@ export default function RolePermissionsPage() {
   const group = data?.role_group;
 
   const [permissions, setPermissions] = useState<Permissions>({});
-
-  useEffect(() => {
-    if (group) {
-      setPermissions(group.permissions ?? {});
-    }
-  }, [group]);
+  // Seed permissions whenever the group data changes
+  // (adjust-state-during-render pattern; replaces the previous effect).
+  const [prevGroup, setPrevGroup] = useState(group);
+  if (group !== prevGroup) {
+    setPrevGroup(group);
+    if (group) setPermissions(group.permissions ?? {});
+  }
 
   const { mutate: save, isPending } = useMutation(
     mergeMutationCallbacks(updateRoleGroupMutation, {

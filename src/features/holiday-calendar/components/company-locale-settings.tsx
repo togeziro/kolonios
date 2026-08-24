@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,9 +13,13 @@ export function CompanyLocaleSettings() {
   const { t } = useTranslation();
   const currentLocale = useAppLocale();
   const [value, setValue] = useState<AppLocale>(currentLocale);
-  useEffect(() => {
+  // Follow the saved locale whenever it changes
+  // (adjust-state-during-render pattern; replaces the previous effect).
+  const [prevLocale, setPrevLocale] = useState<AppLocale>(currentLocale);
+  if (currentLocale !== prevLocale) {
+    setPrevLocale(currentLocale);
     setValue(currentLocale);
-  }, [currentLocale]);
+  }
   const update = useUpdateAppLocale();
   const isPending = update.isPending;
 

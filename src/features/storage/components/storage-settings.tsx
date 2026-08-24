@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,9 +60,12 @@ export function StorageSettings() {
     }
   });
 
-  const [hydrated, setHydrated] = useState(false);
+  // Ref instead of state: the flag only guards a one-time external-system
+  // sync (form.reset), so no re-render is needed when it flips.
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    if (data?.configured && !hydrated) {
+    if (data?.configured && !hydratedRef.current) {
+      hydratedRef.current = true;
       // keepDefaultValues: without it, useForm's layout-effect option sync
       // (formApi.update) reverts the freshly reset values back to the
       // original defaultValues on the next render.
@@ -81,9 +84,8 @@ export function StorageSettings() {
         },
         { keepDefaultValues: true }
       );
-      setHydrated(true);
     }
-  }, [data, hydrated, form]);
+  }, [data, form]);
 
   const testConnection = useMutation({
     mutationFn: () => testStorageConnectionFn({ data: form.state.values }),

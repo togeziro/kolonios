@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -28,12 +28,17 @@ export function FaceSettings({ onSave }: FaceSettingsProps) {
   const [accuracyLevel, setAccuracyLevel] = useState<FaceAccuracyLevel>('medium');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!settings) return;
-    setShowSeconds(settings.showSeconds);
-    setValidationMode(settings.validationMode);
-    setAccuracyLevel(settings.accuracyLevel);
-  }, [settings]);
+  // Seed local state whenever settings data changes
+  // (adjust-state-during-render pattern; replaces the previous effect).
+  const [prevSettings, setPrevSettings] = useState(settings);
+  if (settings !== prevSettings) {
+    setPrevSettings(settings);
+    if (settings) {
+      setShowSeconds(settings.showSeconds);
+      setValidationMode(settings.validationMode);
+      setAccuracyLevel(settings.accuracyLevel);
+    }
+  }
 
   const handleSave = async () => {
     if (saving) return;

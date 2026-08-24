@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { TFunction } from 'i18next';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -83,16 +83,22 @@ export function AttendanceOverrideDialog({
   t: TFunction;
 }) {
   const [draft, setDraft] = useState<OverrideDraft>(EMPTY_OVERRIDE_DRAFT);
+  // Reset the draft on mount and whenever the dialog opens or the source row
+  // changes (adjust-state-during-render pattern; replaces the previous
+  // effect). `null` marks "not yet seen" so the first render also syncs.
+  const [prevOpenRow, setPrevOpenRow] = useState<{
+    open: boolean;
+    row: PayrollAttendanceOverride | null;
+  } | null>(null);
+  if (!prevOpenRow || prevOpenRow.open !== open || prevOpenRow.row !== row) {
+    setPrevOpenRow({ open, row });
+    if (open) setDraft(row ? rowToDraft(row) : EMPTY_OVERRIDE_DRAFT);
+  }
   const periodLocked = !PAYROLL_EDITABLE_STATUSES.includes(periodStatus);
   const hasInvalidNumber = FIELDS.some(([field]) => {
     const value = draft[field];
     return value.trim() !== '' && Number.isNaN(Number(value));
   });
-
-  useEffect(() => {
-    if (!open) return;
-    setDraft(row ? rowToDraft(row) : EMPTY_OVERRIDE_DRAFT);
-  }, [open, row]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

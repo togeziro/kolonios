@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/lib/format';
+import { toMajor } from '../utils/money';
 
 export interface PayslipData {
   company: { name: string; address?: string };
@@ -81,7 +82,7 @@ function snapshotLineItems(details: Record<string, unknown>) {
               line.type === 'base' || line.type === 'allowance'
                 ? ('earning' as const)
                 : ('deduction' as const),
-            amount: money(line.amount / 100)
+            amount: money(toMajor(line.amount))
           }
         ];
       })
@@ -112,7 +113,7 @@ export function payslipFromRecord(row: PayslipRecord, company: CompanyProfile): 
     allowances: money(row.total_allowances),
     deductions: money(row.total_deductions),
     net: money(row.net_salary),
-    tax: money(typeof tax.amount === 'number' ? tax.amount / 100 : 0),
+    tax: money(typeof tax.amount === 'number' ? toMajor(tax.amount) : 0),
     bankAccount: row.bank_account_number
       ? { bankName: row.bank_name, accountNumber: maskPayslipBankAccount(row.bank_account_number) }
       : undefined,
