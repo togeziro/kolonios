@@ -20,6 +20,14 @@ export const THEME_PRESET_OPTIONS = [
     }
   },
   {
+    label: 'Neo Brutalism',
+    value: 'brutalist',
+    primary: {
+      light: 'oklch(0.6489 0.237 26.9728)',
+      dark: 'oklch(0.7044 0.1872 23.1858)'
+    }
+  },
+  {
     label: 'Soft Pop',
     value: 'soft-pop',
     primary: {
@@ -33,14 +41,6 @@ export const THEME_PRESET_OPTIONS = [
     primary: {
       light: 'oklch(0.64 0.17 36.44)',
       dark: 'oklch(0.64 0.17 36.44)'
-    }
-  },
-  {
-    label: 'Neo Brutalism',
-    value: 'brutalist',
-    primary: {
-      light: 'oklch(0.6489 0.237 26.9728)',
-      dark: 'oklch(0.7044 0.1872 23.1858)'
     }
   }
 ] as const;
