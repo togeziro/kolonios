@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 import {
   dateOverrides,
   dayOffs,
@@ -6,7 +6,7 @@ import {
   shiftWeekdayRules
 } from '@/lib/db/schema/attendance';
 import type { PayrollTransaction } from '@/lib/db/payroll';
-import { dateOnly } from './shared';
+import { dateOnly, effectiveDuring } from './shared';
 
 export async function getScheduledDays(
   tx: PayrollTransaction,
@@ -20,8 +20,7 @@ export async function getScheduledDays(
     .where(
       and(
         eq(scheduleAssignments.user_id, employeeId),
-        lte(scheduleAssignments.effective_from, periodEnd),
-        sql`${scheduleAssignments.effective_to} is null or ${scheduleAssignments.effective_to} >= ${periodStart}`
+        effectiveDuring(scheduleAssignments, periodStart, periodEnd)
       )
     )) as Array<typeof scheduleAssignments.$inferSelect>;
   const rules = await tx.select().from(shiftWeekdayRules);

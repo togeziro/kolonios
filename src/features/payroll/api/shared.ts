@@ -1,3 +1,5 @@
+import { and, lte, sql } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { DomainError } from '@/lib/errors';
 import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
 import type {
@@ -17,6 +19,17 @@ export const emptyPolicy: AttendancePolicy = {
   permitHour: { enabled: false },
   shortfall: { enabled: false }
 };
+
+export function effectiveDuring(
+  table: { effective_from: AnyPgColumn; effective_to: AnyPgColumn },
+  periodStart: string,
+  periodEnd: string
+) {
+  return and(
+    lte(table.effective_from, periodEnd),
+    sql`${table.effective_to} is null or ${table.effective_to} >= ${periodStart}`
+  )!;
+}
 
 export function sumSegmentResults(results: PayrollCalculationResult[]) {
   return results.reduce(
