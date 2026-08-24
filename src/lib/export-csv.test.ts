@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { usersToCsv } from './export-csv';
-import type { User } from '@/features/users/api/types';
+import type { User } from '@/lib/domain/users';
 
 const base: User = {
   id: 'u1',
