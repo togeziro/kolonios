@@ -5,14 +5,17 @@ import { createPayslipPdf, type PayslipData, type PayslipPdfLabels } from './pay
 
 export function downloadPayslip(payslip: PayslipData, labels: PayslipPdfLabels) {
   return createPayslipPdf(payslip, labels).then(({ bytes, filename }) => {
-    const url = URL.createObjectURL(
-      new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
-    );
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = filename;
     anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    // click() resolves the blob URL synchronously and the browser keeps its
+    // own Blob reference for the pending download (File API: revocation only
+    // blocks future resolutions), so revoking on the next macrotask is safe
+    // cross-browser and deterministic — a fixed delay neither protected slow
+    // save dialogs nor guaranteed cleanup.
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
     return filename;
   });
 }

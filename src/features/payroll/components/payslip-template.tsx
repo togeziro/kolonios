@@ -37,6 +37,11 @@ export interface PayslipPdfLabels {
   bank: string;
 }
 
+export interface PayslipPdfFile {
+  bytes: Uint8Array<ArrayBuffer>;
+  filename: string;
+}
+
 export type PayslipRecord = {
   id: number;
   payroll_period_id: number;
@@ -256,7 +261,10 @@ function wrapPdfText(
   return lines;
 }
 
-export async function createPayslipPdf(payslip: PayslipData, labels: PayslipPdfLabels) {
+export async function createPayslipPdf(
+  payslip: PayslipData,
+  labels: PayslipPdfLabels
+): Promise<PayslipPdfFile> {
   const document = await PDFDocument.create();
   const font = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
@@ -305,7 +313,7 @@ export async function createPayslipPdf(payslip: PayslipData, labels: PayslipPdfL
       `${labels.bank}: ${payslip.bankAccount.bankName ?? '-'} ${maskPayslipBankAccount(payslip.bankAccount.accountNumber ?? '')}`
     );
   return {
-    bytes: await document.save(),
+    bytes: new Uint8Array(await document.save()),
     filename: `payslip-${sanitizeFilenamePart(payslip.employee.code, 'employee')}-${sanitizeFilenamePart(payslip.period.start.slice(0, 7), 'period')}.pdf`
   };
 }
