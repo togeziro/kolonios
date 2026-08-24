@@ -49,18 +49,28 @@ import {
 import {
   createEmployeeBpjsFamilyMemberFn_createServerFn_handler,
   deleteEmployeeBpjsFamilyMemberFn_createServerFn_handler,
-  generatePayrollFn_createServerFn_handler,
-  getCompanyPayrollSettingsFn_createServerFn_handler,
-  getMyPayslipsFn_createServerFn_handler,
   listEmployeeBpjsEnrollmentsFn_createServerFn_handler,
-  listPayrollRecordsFn_createServerFn_handler,
-  overrideEmployeeTaxRecordFn_createServerFn_handler,
-  updateCompanyPayrollSettingsFn_createServerFn_handler,
-  updateEmployeePayrollProfileFn_createServerFn_handler,
-  upsertAttendanceOverrideFn_createServerFn_handler,
   upsertEmployeeBpjsEnrollmentFn_createServerFn_handler
   // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
-} from './service?tss-serverfn-split';
+} from './bpjs?tss-serverfn-split';
+import {
+  generatePayrollFn_createServerFn_handler,
+  listPayrollRecordsFn_createServerFn_handler
+  // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+} from './records?tss-serverfn-split';
+import {
+  getCompanyPayrollSettingsFn_createServerFn_handler,
+  updateCompanyPayrollSettingsFn_createServerFn_handler
+  // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+} from './settings?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { getMyPayslipsFn_createServerFn_handler } from './payslips?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { overrideEmployeeTaxRecordFn_createServerFn_handler } from './tax?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { updateEmployeePayrollProfileFn_createServerFn_handler } from './employee-profile?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { upsertAttendanceOverrideFn_createServerFn_handler } from './attendance-overrides?tss-serverfn-split';
 
 const sessionUser = vi.hoisted(() => ({ id: 'payroll-boundary-a', role: 'employee' }));
 const getSessionMock = vi.hoisted(() => vi.fn(async () => ({ user: sessionUser })));
