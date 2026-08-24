@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { resolvePayrollRecordScope } from './records';
+import { serializePayrollReport } from './reports';
+import { getCompanyProfile } from './settings';
+import { mapTaxProfile } from './tax';
 import {
   assertEmployeeScope,
   assertProfileReferenceScope,
   buildAttendanceTotals,
-  getCompanyProfile,
-  mapTaxProfile,
-  mapSalaryComponent,
   closeEffectiveRecordAt,
+  mapSalaryComponent,
   payrollPeriodBoundaries,
-  resolvePayrollRecordScope,
-  sanitizePayrollProfileForActor,
-  serializePayrollReport
+  sanitizePayrollProfileForActor
 } from './service';
 
 describe('payroll service boundaries', () => {
@@ -198,7 +198,7 @@ describe('payroll service boundaries', () => {
   });
 
   it('aggregates complete payroll rows by department, tax, and display-unit components', async () => {
-    const { aggregatePayrollRows } = await import('./service');
+    const { aggregatePayrollRows } = await import('./reports');
     const result = aggregatePayrollRows([
       {
         employee_id: 'e1',
@@ -229,7 +229,7 @@ describe('payroll service boundaries', () => {
   });
 
   it('allows adjustments only while a payroll period is processing', async () => {
-    const { assertPayrollAdjustmentAllowed } = await import('./service');
+    const { assertPayrollAdjustmentAllowed } = await import('./records');
     expect(() => assertPayrollAdjustmentAllowed('processing')).not.toThrow();
     expect(() => assertPayrollAdjustmentAllowed('ready_to_pay')).toThrow(/approval/i);
   });
