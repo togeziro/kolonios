@@ -47,7 +47,6 @@ src/features/overview/components/bar-graph.tsx:75
 src/features/overview/components/bar-graph.tsx:76
 src/features/overview/components/bar-graph.tsx:82
 src/features/overview/components/bar-graph.tsx:83
-src/features/overview/components/overview.tsx:17
 src/features/overview/components/pie-graph.tsx:69
 src/features/overview/components/pie-graph.tsx:73
 src/features/overview/components/pie-graph.tsx:80
@@ -88,7 +87,6 @@ src/routes/auth/v2/sign-in/index.tsx:20
 src/routes/auth/v2/sign-up/index.tsx:20
 src/routes/dashboard/customers.tsx:156
 src/routes/dashboard/employees.tsx:169
-src/routes/dashboard/overview.tsx:61
 src/routes/dashboard/users.tsx:169
 src/routes/dashboard/users.tsx:190
 src/routes/privacy-policy.tsx:14
