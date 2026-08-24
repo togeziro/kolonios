@@ -1,4 +1,4 @@
-import { createMiddleware, createServerFn, createServerOnlyFn } from '@tanstack/react-start';
+import { createServerFn, createServerOnlyFn } from '@tanstack/react-start';
 import type { Permissions } from '@/lib/db/schema/role-groups';
 import { logger } from '@/lib/logger';
 
@@ -72,12 +72,3 @@ export const requirePermissionRpc = createServerFn({ method: 'GET' })
     const [module, action] = data.split('.');
     await requirePermission(module, action as PermissionAction);
   });
-
-export const authMiddleware = createMiddleware().server(async ({ next }) => {
-  const session = await requireSession();
-  return next({
-    context: {
-      session
-    }
-  });
-});
