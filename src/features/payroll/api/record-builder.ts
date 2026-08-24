@@ -31,6 +31,7 @@ import type {
 } from './types';
 import {
   buildAttendanceTotals,
+  effectiveDuring,
   emptyPolicy,
   mapSalaryComponent,
   payrollPeriodBoundaries,
@@ -51,8 +52,7 @@ export async function buildPayrollRecord(
     .where(
       and(
         eq(employeeSalaryAssignments.employee_id, employeeId),
-        lte(employeeSalaryAssignments.effective_from, period.period_end),
-        sql`${employeeSalaryAssignments.effective_to} is null or ${employeeSalaryAssignments.effective_to} >= ${period.period_start}`
+        effectiveDuring(employeeSalaryAssignments, period.period_start, period.period_end)
       )
     )) as Array<typeof employeeSalaryAssignments.$inferSelect>;
   const componentRows = (await getEffectiveSalaryComponents(
@@ -70,8 +70,7 @@ export async function buildPayrollRecord(
     .where(
       and(
         eq(employeeTaxProfiles.employee_id, employeeId),
-        lte(employeeTaxProfiles.effective_from, period.period_end),
-        sql`${employeeTaxProfiles.effective_to} is null or ${employeeTaxProfiles.effective_to} >= ${period.period_start}`
+        effectiveDuring(employeeTaxProfiles, period.period_start, period.period_end)
       )
     )) as Array<typeof employeeTaxProfiles.$inferSelect>;
   const attendanceRows = (await tx
@@ -108,8 +107,7 @@ export async function buildPayrollRecord(
       and(
         eq(employeeBenefitEnrollments.employee_id, employeeId),
         eq(employeeBenefitEnrollments.status, 'active'),
-        lte(employeeBenefitEnrollments.effective_from, period.period_end),
-        sql`${employeeBenefitEnrollments.effective_to} is null or ${employeeBenefitEnrollments.effective_to} >= ${period.period_start}`
+        effectiveDuring(employeeBenefitEnrollments, period.period_start, period.period_end)
       )
     )) as Array<typeof employeeBenefitEnrollments.$inferSelect>;
   const bankAccounts = (await tx
@@ -119,8 +117,7 @@ export async function buildPayrollRecord(
       and(
         eq(employeeBankAccounts.employee_id, employeeId),
         eq(employeeBankAccounts.is_primary, true),
-        lte(employeeBankAccounts.effective_from, period.period_end),
-        sql`${employeeBankAccounts.effective_to} is null or ${employeeBankAccounts.effective_to} >= ${period.period_start}`
+        effectiveDuring(employeeBankAccounts, period.period_start, period.period_end)
       )
     )) as Array<typeof employeeBankAccounts.$inferSelect>;
   const employmentEvents = (await tx
@@ -157,8 +154,7 @@ export async function buildPayrollRecord(
       and(
         eq(employeeBpjsEnrollments.employee_id, employeeId),
         eq(employeeBpjsEnrollments.is_active, true),
-        lte(employeeBpjsEnrollments.effective_from, period.period_end),
-        sql`${employeeBpjsEnrollments.effective_to} is null or ${employeeBpjsEnrollments.effective_to} >= ${period.period_start}`
+        effectiveDuring(employeeBpjsEnrollments, period.period_start, period.period_end)
       )
     )) as Array<typeof employeeBpjsEnrollments.$inferSelect>;
   const override = await getAttendanceOverride(period.id, employeeId);
