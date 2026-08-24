@@ -2,6 +2,7 @@ import { and, lte, sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { DomainError } from '@/lib/errors';
 import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
+import { asDateISO, type DateISO } from './date-iso';
 import type {
   AttendancePolicy,
   ManualAdjustment,
@@ -22,8 +23,8 @@ export const emptyPolicy: AttendancePolicy = {
 
 export function effectiveDuring(
   table: { effective_from: AnyPgColumn; effective_to: AnyPgColumn },
-  periodStart: string,
-  periodEnd: string
+  periodStart: DateISO,
+  periodEnd: DateISO
 ) {
   return and(
     lte(table.effective_from, periodEnd),
@@ -195,17 +196,17 @@ export function sanitizePayrollProfileForActor<T extends Record<string, unknown>
 }
 
 export function payrollPeriodBoundaries(
-  periodStart: string,
-  periodEnd: string,
-  effectiveDates: string[]
-) {
+  periodStart: DateISO,
+  periodEnd: DateISO,
+  effectiveDates: DateISO[]
+): DateISO[] {
   return [
     periodStart,
     ...effectiveDates.filter((date) => date > periodStart && date <= periodEnd)
   ].toSorted();
 }
 
-export function closeEffectiveRecordAt(existingFrom: string, nextFrom: string) {
+export function closeEffectiveRecordAt(existingFrom: DateISO, nextFrom: DateISO): DateISO {
   if (existingFrom >= nextFrom)
     throw new DomainError(
       'New effective payroll records must start after the record they replace.',
@@ -218,13 +219,14 @@ export function dateOnly(value: string) {
   return new Date(`${value}T00:00:00Z`);
 }
 
-export function previousDate(value: string) {
+export function previousDate(value: DateISO): DateISO {
   const date = dateOnly(value);
   date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
+  // toISOString always yields 'YYYY-MM-DD' after the slice.
+  return asDateISO(date.toISOString().slice(0, 10));
 }
 
-function overlapDays(start: string, end: string, periodStart: string, periodEnd: string) {
+function overlapDays(start: DateISO, end: DateISO, periodStart: DateISO, periodEnd: DateISO) {
   const from = dateOnly(start) > dateOnly(periodStart) ? dateOnly(start) : dateOnly(periodStart);
   const to = dateOnly(end) < dateOnly(periodEnd) ? dateOnly(end) : dateOnly(periodEnd);
   return to < from ? 0 : Math.floor((to.getTime() - from.getTime()) / 86_400_000) + 1;
@@ -232,21 +234,21 @@ function overlapDays(start: string, end: string, periodStart: string, periodEnd:
 
 export function buildAttendanceTotals(
   attendanceRows: Array<{
-    date: string;
+    date: DateISO;
     attendance_status: string;
     check_in_time: string | null;
     check_out_time: string | null;
   }>,
   leaveRows: Array<{
-    start_date: string;
-    end_date: string;
+    start_date: DateISO;
+    end_date: DateISO;
     total_days: number;
     status: string;
     is_paid?: boolean;
   }>,
   context: {
-    periodStart?: string;
-    periodEnd?: string;
+    periodStart?: DateISO;
+    periodEnd?: DateISO;
     scheduledDays: number;
     payableDays: number;
     absentDays: number;

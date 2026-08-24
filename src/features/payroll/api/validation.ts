@@ -1,6 +1,14 @@
 import { z } from 'zod';
+import { asDateISO } from './date-iso';
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
+// The regex rejects malformed input with a zod error; the transform then
+// brands the (already validated) value as DateISO for downstream lexical
+// comparisons. Wire behavior is unchanged — the output is still the same
+// string.
+const dateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
+  .transform(asDateISO);
 export const moneySchema = z
   .union([
     z.string().regex(/^\d+(?:\.\d{1,2})?$/, 'Money must be a non-negative decimal'),

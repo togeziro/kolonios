@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { asDateISO } from './date-iso';
 import { resolvePayrollRecordScope } from './records';
 import { serializePayrollReport } from './reports';
 import { getCompanyProfile } from './settings';
@@ -112,17 +113,21 @@ describe('payroll service boundaries', () => {
   });
 
   it('closes historical profile rows before inserting a later effective version', () => {
-    expect(closeEffectiveRecordAt('2026-01-01', '2026-07-01')).toBe('2026-06-30');
-    expect(() => closeEffectiveRecordAt('2026-07-01', '2026-07-01')).toThrow(/effective/i);
+    expect(closeEffectiveRecordAt(asDateISO('2026-01-01'), asDateISO('2026-07-01'))).toBe(
+      '2026-06-30'
+    );
+    expect(() => closeEffectiveRecordAt(asDateISO('2026-07-01'), asDateISO('2026-07-01'))).toThrow(
+      /effective/i
+    );
   });
 
   it('creates period segments for mid-period effective salary and tax changes', () => {
     expect(
-      payrollPeriodBoundaries('2026-07-01', '2026-07-31', [
-        '2026-01-01',
-        '2026-07-16',
-        '2026-08-01'
-      ])
+      payrollPeriodBoundaries(
+        asDateISO('2026-07-01'),
+        asDateISO('2026-07-31'),
+        ['2026-01-01', '2026-07-16', '2026-08-01'].map(asDateISO)
+      )
     ).toEqual(['2026-07-01', '2026-07-16']);
   });
 
@@ -131,13 +136,13 @@ describe('payroll service boundaries', () => {
       buildAttendanceTotals(
         [
           {
-            date: '2026-07-05',
+            date: asDateISO('2026-07-05'),
             attendance_status: 'pending',
             check_in_time: null,
             check_out_time: null
           },
           {
-            date: '2026-07-06',
+            date: asDateISO('2026-07-06'),
             attendance_status: 'present',
             check_in_time: '09:00',
             check_out_time: '17:00'
@@ -145,16 +150,16 @@ describe('payroll service boundaries', () => {
         ],
         [
           {
-            start_date: '2026-06-25',
-            end_date: '2026-07-10',
+            start_date: asDateISO('2026-06-25'),
+            end_date: asDateISO('2026-07-10'),
             total_days: 16,
             status: 'approved',
             is_paid: false
           }
         ],
         {
-          periodStart: '2026-07-01',
-          periodEnd: '2026-07-31',
+          periodStart: asDateISO('2026-07-01'),
+          periodEnd: asDateISO('2026-07-31'),
           scheduledDays: 0,
           payableDays: 0,
           absentDays: 0
@@ -169,16 +174,16 @@ describe('payroll service boundaries', () => {
         [],
         [
           {
-            start_date: '2026-07-10',
-            end_date: '2026-07-12',
+            start_date: asDateISO('2026-07-10'),
+            end_date: asDateISO('2026-07-12'),
             total_days: 3,
             status: 'approved',
             is_paid: true
           }
         ],
         {
-          periodStart: '2026-07-01',
-          periodEnd: '2026-07-31',
+          periodStart: asDateISO('2026-07-01'),
+          periodEnd: asDateISO('2026-07-31'),
           scheduledDays: 20,
           payableDays: 20,
           absentDays: 0

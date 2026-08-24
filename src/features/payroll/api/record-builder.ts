@@ -29,6 +29,7 @@ import type {
   PayrollCalculationInput,
   Pph21Method
 } from './types';
+import { asDateISO, type DateISO } from './date-iso';
 import {
   buildAttendanceTotals,
   effectiveDuring,
@@ -46,19 +47,22 @@ export async function buildPayrollRecord(
   period: { id: number; period_start: string; period_end: string },
   tx: PayrollTransaction
 ) {
+  // Postgres `date` columns always deserialize as 'YYYY-MM-DD' strings.
+  const periodStart = asDateISO(period.period_start);
+  const periodEnd = asDateISO(period.period_end);
   const assignments = (await tx
     .select()
     .from(employeeSalaryAssignments)
     .where(
       and(
         eq(employeeSalaryAssignments.employee_id, employeeId),
-        effectiveDuring(employeeSalaryAssignments, period.period_start, period.period_end)
+        effectiveDuring(employeeSalaryAssignments, periodStart, periodEnd)
       )
     )) as Array<typeof employeeSalaryAssignments.$inferSelect>;
   const componentRows = (await getEffectiveSalaryComponents(
     employeeId,
-    period.period_start,
-    period.period_end,
+    periodStart,
+    periodEnd,
     tx
   )) as Array<{
     component: typeof employeeSalaryComponents.$inferSelect;
@@ -70,20 +74,21 @@ export async function buildPayrollRecord(
     .where(
       and(
         eq(employeeTaxProfiles.employee_id, employeeId),
-        effectiveDuring(employeeTaxProfiles, period.period_start, period.period_end)
+        effectiveDuring(employeeTaxProfiles, periodStart, periodEnd)
       )
     )) as Array<typeof employeeTaxProfiles.$inferSelect>;
+  // Postgres `date` column — the `date` field is always 'YYYY-MM-DD'.
   const attendanceRows = (await tx
     .select()
     .from(employeeShifts)
     .where(
       and(
         eq(employeeShifts.user_id, employeeId),
-        gte(employeeShifts.date, period.period_start),
-        lte(employeeShifts.date, period.period_end)
+        gte(employeeShifts.date, periodStart),
+        lte(employeeShifts.date, periodEnd)
       )
-    )) as Array<typeof employeeShifts.$inferSelect>;
-  const leaveRows = await tx
+    )) as Array<Omit<typeof employeeShifts.$inferSelect, 'date'> & { date: DateISO }>;
+  const leaveRows = (await tx
     .select({
       start_date: leaves.start_date,
       end_date: leaves.end_date,
@@ -96,10 +101,16 @@ export async function buildPayrollRecord(
     .where(
       and(
         eq(leaves.user_id, employeeId),
-        lte(leaves.start_date, period.period_end),
-        gte(leaves.end_date, period.period_start)
+        lte(leaves.start_date, periodEnd),
+        gte(leaves.end_date, periodStart)
       )
-    );
+    )) as Array<{
+    start_date: DateISO;
+    end_date: DateISO;
+    total_days: number;
+    status: string;
+    is_paid: boolean;
+  }>;
   const benefits = (await tx
     .select()
     .from(employeeBenefitEnrollments)
@@ -107,7 +118,7 @@ export async function buildPayrollRecord(
       and(
         eq(employeeBenefitEnrollments.employee_id, employeeId),
         eq(employeeBenefitEnrollments.status, 'active'),
-        effectiveDuring(employeeBenefitEnrollments, period.period_start, period.period_end)
+        effectiveDuring(employeeBenefitEnrollments, periodStart, periodEnd)
       )
     )) as Array<typeof employeeBenefitEnrollments.$inferSelect>;
   const bankAccounts = (await tx
@@ -117,7 +128,7 @@ export async function buildPayrollRecord(
       and(
         eq(employeeBankAccounts.employee_id, employeeId),
         eq(employeeBankAccounts.is_primary, true),
-        effectiveDuring(employeeBankAccounts, period.period_start, period.period_end)
+        effectiveDuring(employeeBankAccounts, periodStart, periodEnd)
       )
     )) as Array<typeof employeeBankAccounts.$inferSelect>;
   const employmentEvents = (await tx
@@ -126,12 +137,15 @@ export async function buildPayrollRecord(
     .where(
       and(
         eq(employeeEmploymentEvents.employee_id, employeeId),
-        lte(employeeEmploymentEvents.effective_date, period.period_end)
+        lte(employeeEmploymentEvents.effective_date, periodEnd)
       )
     )) as Array<typeof employeeEmploymentEvents.$inferSelect>;
+  // Rows carry either effective_from or effective_date ('YYYY-MM-DD' date
+  // columns); rows missing both contributed an inert '' that the boundary
+  // filter always discarded, so skipping them here is behavior-neutral.
   const boundaries = payrollPeriodBoundaries(
-    period.period_start,
-    period.period_end,
+    periodStart,
+    periodEnd,
     [
       ...assignments,
       ...taxRows,
@@ -139,12 +153,12 @@ export async function buildPayrollRecord(
       ...benefits,
       ...bankAccounts,
       ...employmentEvents
-    ].map(
-      (row) =>
-        (row as { effective_from?: string; effective_date?: string }).effective_from ??
-        (row as { effective_date?: string }).effective_date ??
-        ''
-    )
+    ].flatMap((row) => {
+      const value =
+        (row as { effective_from?: string }).effective_from ??
+        (row as { effective_date?: string }).effective_date;
+      return value ? [asDateISO(value)] : [];
+    })
   );
   const settings = (await getCompanyPayrollSettings()) ?? null;
   const bpjsRows = (await tx
@@ -154,7 +168,7 @@ export async function buildPayrollRecord(
       and(
         eq(employeeBpjsEnrollments.employee_id, employeeId),
         eq(employeeBpjsEnrollments.is_active, true),
-        effectiveDuring(employeeBpjsEnrollments, period.period_start, period.period_end)
+        effectiveDuring(employeeBpjsEnrollments, periodStart, periodEnd)
       )
     )) as Array<typeof employeeBpjsEnrollments.$inferSelect>;
   const override = await getAttendanceOverride(period.id, employeeId);
@@ -192,9 +206,7 @@ export async function buildPayrollRecord(
   const segmentInputs: PayrollCalculationInput[] = [];
   for (let index = 0; index < boundaries.length; index += 1) {
     const segmentStart = boundaries[index]!;
-    const segmentEnd = boundaries[index + 1]
-      ? previousDate(boundaries[index + 1]!)
-      : period.period_end;
+    const segmentEnd = boundaries[index + 1] ? previousDate(boundaries[index + 1]!) : periodEnd;
     if (segmentStart > segmentEnd) continue;
     const assignment = resolveEffectiveRecord(employeeId, segmentStart, assignments);
     const tax = resolveEffectiveRecord(employeeId, segmentStart, taxRows);
