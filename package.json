@@ -11,7 +11,7 @@
     "dev": "NODE_ENV=development vite dev",
     "build": "bun run api:docs && NODE_OPTIONS='--max-old-space-size=4096' vite build",
     "start": "bun run .output/server/index.mjs",
-    "lint": "oxlint && bun run lint:i18n",
+    "lint": "oxlint && bun run lint:i18n && bun run scripts/check-layering.ts",
     "lint:fix": "oxlint --fix",
     "i18n:check": "bun run scripts/check-i18n.ts",
     "lint:i18n": "bun run i18n:check && bun run i18n:hardcoded",

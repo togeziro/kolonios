@@ -34,7 +34,7 @@ vi.mock('@/lib/logger', () => ({
 import { hasModulePermission, requirePermission, requireSession } from './session';
 import { auth } from './auth.server';
 import { logger } from '@/lib/logger';
-import type { Permissions } from '@/features/role-groups/api/types';
+import type { Permissions } from '@/lib/db/schema/role-groups';
 
 const getSessionMock = vi.mocked(auth.api.getSession);
 const loggerMock = vi.mocked(logger);
