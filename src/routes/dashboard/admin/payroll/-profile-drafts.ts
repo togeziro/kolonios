@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { validDates } from './-components';
@@ -76,8 +76,23 @@ export function useProfileDrafts(options: UseProfileDraftsOptions): UseProfileDr
   const [newComponentDraft, setNewComponentDraft] = useState<ComponentDraft | null>(null);
   const [pendingAssignment, setPendingAssignment] = useState<Assignment | null>(null);
   const [bpjsDirty, setBpjsDirty] = useState(false);
-  const baselineRef = useRef<DraftState | null>(null);
-  const [dirty, setDirty] = useState(false);
+  const [baseline, setBaseline] = useState<DraftState | null>(null);
+
+  // Reset all drafts whenever a new profile payload arrives
+  // (adjust-state-during-render pattern; replaces the previous effect).
+  const [prevData, setPrevData] = useState<ProfileData | undefined>(data);
+  if (data !== prevData) {
+    setPrevData(data);
+    if (data) {
+      const snapshot = draftSnapshotFromData(data);
+      setAssignment(snapshot.assignment);
+      setComponentDrafts(snapshot.componentDrafts);
+      setTaxDrafts(snapshot.taxDrafts);
+      setBenefitDrafts(snapshot.benefitDrafts);
+      setBankDrafts(snapshot.bankDrafts);
+      setBaseline(snapshot);
+    }
+  }
 
   const save = async (payload: ProfileMutation) => {
     try {
@@ -91,18 +106,6 @@ export function useProfileDrafts(options: UseProfileDraftsOptions): UseProfileDr
       toast.error(t('payroll.failed'));
     }
   };
-
-  useEffect(() => {
-    if (!data) return;
-    const snapshot = draftSnapshotFromData(data);
-    setAssignment(snapshot.assignment);
-    setComponentDrafts(snapshot.componentDrafts);
-    setTaxDrafts(snapshot.taxDrafts);
-    setBenefitDrafts(snapshot.benefitDrafts);
-    setBankDrafts(snapshot.bankDrafts);
-    baselineRef.current = snapshot;
-    setDirty(false);
-  }, [data]);
 
   const currentSnapshot = useMemo<DraftState>(
     () => ({
@@ -129,10 +132,8 @@ export function useProfileDrafts(options: UseProfileDraftsOptions): UseProfileDr
     ]
   );
 
-  useEffect(() => {
-    if (!baselineRef.current) return;
-    setDirty(!snapshotsEqual(currentSnapshot, baselineRef.current));
-  }, [currentSnapshot]);
+  // Derived from the current drafts vs the last saved/loaded baseline.
+  const dirty = baseline ? !snapshotsEqual(currentSnapshot, baseline) : false;
 
   const resetDrafts = (snapshot?: DraftState | null) => {
     const next = snapshot ?? (data ? draftSnapshotFromData(data) : currentSnapshot);
@@ -145,8 +146,7 @@ export function useProfileDrafts(options: UseProfileDraftsOptions): UseProfileDr
     setNewTaxDraft(null);
     setNewBenefitDraft(null);
     setNewBankDraft(null);
-    baselineRef.current = next;
-    setDirty(false);
+    setBaseline(next);
   };
 
   const revertComponent = (id: number) => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +20,13 @@ export default function WorkLog({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+  // Latest-entries ref for async appends: synced in an effect (writing refs
+  // during render is not allowed) — consumers are event handlers and promise
+  // callbacks, which always run after the effect has flushed.
   const entriesRef = useRef(entries);
-  entriesRef.current = entries;
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
   const [note, setNote] = useState('');
   const [meter, setMeter] = useState('');
   const [photoKey, setPhotoKey] = useState<string | null>(null);
