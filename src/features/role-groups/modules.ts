@@ -1,3 +1,5 @@
+import type { PermissionAction } from '@/lib/auth/session';
+
 const MODULES = [
   { key: 'overview', label: 'Dashboard', actions: ['view'] },
   { key: 'my_work', label: 'My Work', actions: ['view'] },
@@ -34,6 +36,10 @@ const MODULES = [
 ] as const;
 
 type ModuleKey = (typeof MODULES)[number]['key'];
+
+export const PERMISSION_ACTIONS: readonly PermissionAction[] = [
+  ...new Set(MODULES.flatMap((module) => module.actions))
+];
 
 export { MODULES };
 export type { ModuleKey };

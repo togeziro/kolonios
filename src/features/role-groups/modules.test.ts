@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { MODULES } from './modules';
+import { MODULES, PERMISSION_ACTIONS } from './modules';
 
 describe('role permission modules', () => {
+  it('derives the full permission action vocabulary from MODULES', () => {
+    expect([...PERMISSION_ACTIONS]).toEqual([
+      'view',
+      'add',
+      'edit',
+      'delete',
+      'approve',
+      'pay',
+      'reports'
+    ]);
+  });
+
   it('exposes all payroll workflow actions to the permission editor', () => {
     expect(MODULES.find((module) => module.key === 'payroll')?.actions).toEqual([
       'view',
