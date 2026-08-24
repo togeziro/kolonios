@@ -42,6 +42,14 @@ import {
 import { getScheduledDays } from './scheduled-days';
 import { mapTaxProfile } from './tax';
 
+type LeaveRow = {
+  start_date: DateISO;
+  end_date: DateISO;
+  total_days: number;
+  status: string;
+  is_paid: boolean;
+};
+
 export async function buildPayrollRecord(
   employeeId: string,
   period: { id: number; period_start: string; period_end: string },
@@ -104,13 +112,7 @@ export async function buildPayrollRecord(
         lte(leaves.start_date, periodEnd),
         gte(leaves.end_date, periodStart)
       )
-    )) as Array<{
-    start_date: DateISO;
-    end_date: DateISO;
-    total_days: number;
-    status: string;
-    is_paid: boolean;
-  }>;
+    )) as Array<LeaveRow>;
   const benefits = (await tx
     .select()
     .from(employeeBenefitEnrollments)

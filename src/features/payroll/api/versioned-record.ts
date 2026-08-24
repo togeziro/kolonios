@@ -46,8 +46,15 @@ export async function upsertVersionedRecord<TTable extends EffectiveVersionTable
       .limit(1)) as TTable['$inferSelect'][];
     const existing = rows[0];
     if (!existing) throw new DomainError(errors.notFound[0], errors.notFound[1]);
-    // Postgres `date` columns always deserialize as 'YYYY-MM-DD' strings.
-    const existingFrom = asDateISO(existing.effective_from as string);
+    // Postgres `date` columns always deserialize as 'YYYY-MM-DD' strings;
+    // a NULL here would silently pass the immutability guard below.
+    const rawFrom = existing.effective_from;
+    if (typeof rawFrom !== 'string')
+      throw new DomainError(
+        'Payroll record is missing its effective_from date.',
+        'INVALID_PAYROLL_DATA'
+      );
+    const existingFrom = asDateISO(rawFrom);
     if (existingFrom >= effectiveFrom)
       throw new DomainError(
         'Create a new payroll record version with a later effective date.',
