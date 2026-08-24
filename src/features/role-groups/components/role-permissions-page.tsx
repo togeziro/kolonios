@@ -9,40 +9,19 @@ import { Icons } from '@/components/icons';
 import { roleGroupByIdQueryOptions } from '../api/queries';
 import { updateRoleGroupMutation } from '../api/mutations';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
-import { MODULES } from '../modules';
+import { MODULES, PERMISSION_ACTIONS } from '../modules';
+import type { PermissionAction } from '@/lib/auth/session';
 import type { Permissions } from '../api/types';
 import { toast } from 'sonner';
 
-const ACTIONS = ['view', 'add', 'edit', 'delete', 'approve', 'pay', 'reports'] as const;
-const ACTION_LABELS = {
-  view: 'view',
-  add: 'add',
-  edit: 'edit',
-  delete: 'delete',
-  approve: 'approve',
-  pay: 'pay',
-  reports: 'reports'
-} as const;
-const moduleActions = (key: string) =>
+const moduleActions = (key: string): readonly PermissionAction[] =>
   MODULES.find((module) => module.key === key)?.actions ?? ['view'];
 
 export default function RolePermissionsPage() {
   const { t } = useTranslation();
   const { id } = useParams({ from: '/dashboard/admin/role-groups/$id' });
   const { data, isLoading } = useQuery(roleGroupByIdQueryOptions(id));
-  const group = (
-    data as
-      | {
-          role_group?: {
-            id: string;
-            name: string;
-            is_admin: boolean;
-            permissions: Permissions;
-            description: string;
-          };
-        }
-      | undefined
-  )?.role_group;
+  const group = data?.role_group;
 
   const [permissions, setPermissions] = useState<Permissions>({});
 
@@ -127,9 +106,9 @@ export default function RolePermissionsPage() {
           <thead>
             <tr className='border-b bg-muted/50'>
               <th className='px-4 py-3 text-left text-sm font-medium'>{t('roleGroups.module')}</th>
-              {ACTIONS.map((action) => (
+              {PERMISSION_ACTIONS.map((action) => (
                 <th key={action} className='px-4 py-3 text-center text-sm font-medium w-16'>
-                  {t(`roleGroups.${ACTION_LABELS[action]}`)}
+                  {t(`roleGroups.${action}`)}
                 </th>
               ))}
             </tr>
@@ -144,11 +123,11 @@ export default function RolePermissionsPage() {
                   className={`border-b hover:bg-muted/30 ${isAdmin ? 'opacity-60' : ''}`}
                 >
                   <td className='px-4 py-3 text-sm font-medium'>{mod.label}</td>
-                  {ACTIONS.map((action) => (
+                  {PERMISSION_ACTIONS.map((action) => (
                     <td key={action} className='px-4 py-3 text-center'>
                       <Checkbox
                         checked={action === 'view' ? isEnabled : (modPerm?.[action] ?? false)}
-                        disabled={isAdmin || !(mod.actions as readonly string[]).includes(action)}
+                        disabled={isAdmin || !moduleActions(mod.key).includes(action)}
                         onCheckedChange={(v) =>
                           action === 'view'
                             ? toggleModule(mod.key, !!v)
