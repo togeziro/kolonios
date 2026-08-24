@@ -162,7 +162,7 @@ export function mapSalaryComponent(
   };
 }
 
-function maskAccountNumber(value: unknown): string | null {
+export function maskAccountNumber(value: unknown): string | null {
   return typeof value === 'string' && value.length > 4 ? `******${value.slice(-4)}` : null;
 }
 
