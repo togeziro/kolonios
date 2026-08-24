@@ -90,10 +90,13 @@ function NavItemMenu({
 }) {
   const active = isItemActive(item, pathname);
   const [open, setOpen] = React.useState(active);
-
-  React.useEffect(() => {
+  // Auto-expand when the item becomes active (adjust-state-during-render
+  // pattern; replaces the previous effect).
+  const [prevActive, setPrevActive] = React.useState(active);
+  if (active !== prevActive) {
+    setPrevActive(active);
     if (active) setOpen(true);
-  }, [active]);
+  }
 
   const label = t(navTitleKeys[item.title] ?? item.title);
   const Icon =

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useTranslation } from 'react-i18next';
@@ -10,13 +10,17 @@ interface AlertModalProps {
   loading: boolean;
 }
 
+const emptySubscribe = () => () => {};
+
 export function AlertModal({ isOpen, onClose, onConfirm, loading }: AlertModalProps) {
   const { t } = useTranslation();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  // Render nothing on the server and during hydration; flip after mount so
+  // the portal-based Modal never runs its client-only logic during SSR.
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   if (!isMounted) {
     return null;

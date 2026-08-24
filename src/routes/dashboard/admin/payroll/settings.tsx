@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -117,10 +117,16 @@ function SettingsPage() {
   const { data: settings, isLoading, isError } = useQuery(companyPayrollSettingsQueryOptions());
   const update = useUpdateCompanyPayrollSettings();
   const [form, setForm] = useState<SettingsForm>(defaultForm);
+  const [prevSettings, setPrevSettings] = useState<CompanyPayrollSetting | null | undefined>(
+    settings
+  );
 
-  useEffect(() => {
+  // Seed the form whenever fresh settings arrive (adjust-state-during-render
+  // pattern; replaces the previous effect-based sync).
+  if (settings !== prevSettings) {
+    setPrevSettings(settings);
     if (settings) setForm(mapSettings(settings));
-  }, [settings]);
+  }
 
   const set = <K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) =>
     setForm((f) => ({ ...f, [key]: value }));

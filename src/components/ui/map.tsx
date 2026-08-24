@@ -25,6 +25,8 @@ export interface MapProps {
 const METERS_PER_DEG_LAT = 110540;
 const GEOFENCE_POINTS = 64;
 
+const emptySubscribe = () => () => {};
+
 /**
  * Build a GeoJSON polygon approximating a circle of `radiusMeters` around
  * `center`. MapLibre circle layers only accept pixel radii, so the fence is
@@ -76,7 +78,14 @@ export function Map({
     onChange,
     onGeoError
   });
-  const [geoUnavailable, setGeoUnavailable] = React.useState(false);
+  // Geolocation support is constant per environment, but the banner must not
+  // appear in SSR/hydration output — the server snapshot is always `false`
+  // and the client value is picked up right after mount.
+  const geoUnavailable = React.useSyncExternalStore(
+    emptySubscribe,
+    () => !(typeof navigator !== 'undefined' && !!navigator.geolocation),
+    () => false
+  );
 
   const updateGeofence = React.useCallback((map: MapLibreMap) => {
     const polygonSource = map.getSource('geofence') as GeoJSONSource | undefined;
@@ -115,7 +124,6 @@ export function Map({
     // locate button). Failures are surfaced via onGeoError.
     const geoSupported = typeof navigator !== 'undefined' && !!navigator.geolocation;
     if (geoSupported) {
-      setGeoUnavailable(false);
       navigator.geolocation.getCurrentPosition(
         (position) => {
           if (cancelled) return;
@@ -131,8 +139,6 @@ export function Map({
           onGeoError?.(error.code, error.message);
         }
       );
-    } else {
-      setGeoUnavailable(true);
     }
 
     async function init() {

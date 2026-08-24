@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,14 +77,16 @@ export function HolidayApiSettings() {
     }
   });
 
-  const [hydrated, setHydrated] = useState(false);
+  // Ref instead of state: the flag only guards a one-time external-system
+  // sync (form.reset), so no re-render is needed when it flips.
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
-    if (data && !hydrated) {
+    if (data && !hydratedRef.current) {
+      hydratedRef.current = true;
       form.reset(mapSettings(data.settings));
-      setHydrated(true);
     }
-  }, [data, hydrated, form]);
+  }, [data, form]);
 
   const isPending = updateSettings.isPending;
 

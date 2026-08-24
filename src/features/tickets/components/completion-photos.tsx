@@ -13,6 +13,24 @@ function emptySlots(count: number): PhotoSlot[] {
   return Array.from({ length: count }, () => ({ key: null, dataUrl: null }));
 }
 
+// Module scope so the impure `Date.now()` id generation never appears to run
+// during render — this only executes from the capture event flow.
+function uploadSlotPhoto(
+  index: number,
+  dataUrl: string,
+  onKey: (key: string) => void,
+  onError: () => void
+) {
+  const photoId = Date.now() + index;
+  uploadTicketPhoto(dataUrl, photoId)
+    .then(onKey)
+    .catch((e: unknown) => {
+      if (e instanceof Error && e.message === PHOTO_UPLOAD_FAILED) {
+        onError();
+      }
+    });
+}
+
 export default function CompletionPhotos({
   photos,
   onChange,
@@ -41,16 +59,12 @@ export default function CompletionPhotos({
 
   const capture = (index: number, dataUrl: string) => {
     updateSlot(index, { dataUrl });
-    const photoId = Date.now() + index;
-    uploadTicketPhoto(dataUrl, photoId)
-      .then((key) => {
-        updateSlot(index, { key });
-      })
-      .catch((e: unknown) => {
-        if (e instanceof Error && e.message === PHOTO_UPLOAD_FAILED) {
-          toast.error(t('workSession.photoUploadFailed'));
-        }
-      });
+    uploadSlotPhoto(
+      index,
+      dataUrl,
+      (key) => updateSlot(index, { key }),
+      () => toast.error(t('workSession.photoUploadFailed'))
+    );
   };
 
   const clear = (index: number) => {
