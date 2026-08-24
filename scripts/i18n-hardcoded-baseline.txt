@@ -47,8 +47,7 @@ src/features/overview/components/bar-graph.tsx:75
 src/features/overview/components/bar-graph.tsx:76
 src/features/overview/components/bar-graph.tsx:82
 src/features/overview/components/bar-graph.tsx:83
-src/features/overview/components/overview.tsx:32
-src/features/overview/components/overview.tsx:45
+src/features/overview/components/overview.tsx:17
 src/features/overview/components/pie-graph.tsx:69
 src/features/overview/components/pie-graph.tsx:73
 src/features/overview/components/pie-graph.tsx:80
