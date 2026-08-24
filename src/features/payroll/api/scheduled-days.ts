@@ -6,13 +6,14 @@ import {
   shiftWeekdayRules
 } from '@/lib/db/schema/attendance';
 import type { PayrollTransaction } from '@/lib/db/payroll';
+import type { DateISO } from './date-iso';
 import { dateOnly, effectiveDuring } from './shared';
 
 export async function getScheduledDays(
   tx: PayrollTransaction,
   employeeId: string,
-  periodStart: string,
-  periodEnd: string
+  periodStart: DateISO,
+  periodEnd: DateISO
 ) {
   const assignments = (await tx
     .select()

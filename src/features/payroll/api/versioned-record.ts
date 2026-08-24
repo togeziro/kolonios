@@ -2,6 +2,7 @@ import { and, eq, gte, lte, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn, AnyPgTable } from 'drizzle-orm/pg-core';
 import { DomainError } from '@/lib/errors';
 import type { PayrollTransaction } from '@/lib/db/payroll';
+import { asDateISO, type DateISO } from './date-iso';
 import { closeEffectiveRecordAt, previousDate } from './shared';
 
 type EffectiveVersionTable = AnyPgTable & {
@@ -15,7 +16,7 @@ type VersionedUpsertOptions<TTable extends EffectiveVersionTable> = {
   tx: PayrollTransaction;
   table: TTable;
   values: TTable['$inferInsert'];
-  effectiveFrom: string;
+  effectiveFrom: DateISO;
   id?: number;
   identityWhere: SQL<unknown> | undefined;
   existingWhere: SQL<unknown> | undefined;
@@ -45,7 +46,8 @@ export async function upsertVersionedRecord<TTable extends EffectiveVersionTable
       .limit(1)) as TTable['$inferSelect'][];
     const existing = rows[0];
     if (!existing) throw new DomainError(errors.notFound[0], errors.notFound[1]);
-    const existingFrom = existing.effective_from as string;
+    // Postgres `date` columns always deserialize as 'YYYY-MM-DD' strings.
+    const existingFrom = asDateISO(existing.effective_from as string);
     if (existingFrom >= effectiveFrom)
       throw new DomainError(
         'Create a new payroll record version with a later effective date.',
