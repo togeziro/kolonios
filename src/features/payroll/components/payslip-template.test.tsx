@@ -124,4 +124,74 @@ describe('PayslipTemplate', () => {
     expect(maskPayslipBankAccount('123')).toBe('***');
     expect(maskPayslipBankAccount('')).toBe('***');
   });
+
+  describe('payslipFromRecord amount formatting (characterization)', () => {
+    const record = {
+      id: 42,
+      payroll_period_id: 7,
+      details: {
+        tax: { amount: 75_000 },
+        lineItems: [
+          { name: 'Base salary', type: 'base', amount: 1_200_000 },
+          { name: 'Transport', type: 'allowance', amount: 150_000 },
+          { name: 'Insurance', type: 'deduction', amount: 50_000 }
+        ]
+      },
+      gross_salary: '12000.00',
+      total_allowances: '1500.00',
+      total_deductions: '500.00',
+      net_salary: '13000.00',
+      employee_code: 'EMP-0007',
+      employee_name: 'Ari Pratama',
+      department_name: 'Engineering',
+      designation_name: 'Developer',
+      period_name: 'July 2026',
+      period_start: '2026-07-01',
+      period_end: '2026-07-31',
+      period_status: 'paid',
+      bank_name: 'Bank Example',
+      bank_account_number: '1234567890'
+    } as Parameters<typeof payslipFromRecord>[0];
+
+    const company = { name: 'Kolonios Labs', address: 'Jakarta' };
+
+    it('formats DB decimal strings through formatCurrency byte-for-byte', () => {
+      const data = payslipFromRecord(record, company);
+      expect(data).not.toBeNull();
+      expect(data!.gross).toBe('Rp\u00a012.000,00');
+      expect(data!.allowances).toBe('Rp\u00a01.500,00');
+      expect(data!.deductions).toBe('Rp\u00a0500,00');
+      expect(data!.net).toBe('Rp\u00a013.000,00');
+    });
+
+    it('converts cents-as-number line item and tax amounts exactly', () => {
+      const data = payslipFromRecord(record, company)!;
+      expect(data.tax).toBe('Rp\u00a0750,00');
+      expect(data.lineItems.map((item) => item.amount)).toEqual([
+        'Rp\u00a012.000,00',
+        'Rp\u00a01.500,00',
+        'Rp\u00a0500,00'
+      ]);
+      expect(data.lineItems.map((item) => item.type)).toEqual(['earning', 'earning', 'deduction']);
+    });
+
+    it('masks the bank account from the record', () => {
+      const data = payslipFromRecord(record, company)!;
+      expect(data.bankAccount).toEqual({
+        bankName: 'Bank Example',
+        accountNumber: '******7890'
+      });
+    });
+
+    it('accepts locked periods', () => {
+      const data = payslipFromRecord({ ...record, period_status: 'locked' }, company);
+      expect(data).not.toBeNull();
+      expect(data!.net).toBe('Rp\u00a013.000,00');
+    });
+
+    it('returns null for non-paid, non-locked periods', () => {
+      expect(payslipFromRecord({ ...record, period_status: 'processing' }, company)).toBeNull();
+      expect(payslipFromRecord({ ...record, period_status: 'draft' }, company)).toBeNull();
+    });
+  });
 });
