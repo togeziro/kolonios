@@ -12,6 +12,7 @@ import type {
   TaxProfile,
   TaxResult
 } from '../api/types';
+import { toMinor } from './money';
 
 /** Money is integer minor units. Every derived amount is rounded half-up. */
 export function roundMoney(value: number): Money {
@@ -32,14 +33,7 @@ export function isMoney(value: unknown): value is Money {
 
 /** Converts a database numeric with scale 2 into integer minor units. */
 export function parseDbDecimalToMoney(value: string): Money {
-  if (!/^\d+(?:\.\d{1,2})?$/.test(value)) {
-    throw new RangeError('Database money must be a non-negative decimal with at most 2 decimals.');
-  }
-  const [whole, fraction = ''] = value.split('.');
-  const minor = BigInt(whole!) * 100n + BigInt(fraction.padEnd(2, '0') || '0');
-  const result = Number(minor);
-  if (!isMoney(result)) throw new RangeError('Database money exceeds the safe integer range.');
-  return result;
+  return toMinor(value);
 }
 
 function assertNonNegativeFinite(value: number, name: string) {

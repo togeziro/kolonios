@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requirePermission } from '@/lib/auth/session';
 import { listPayrollReportRows } from '@/lib/db/payroll';
+import { toMajor } from '../utils/money';
 import { reportFiltersSchema } from './validation';
 
 function escapeCsvValue(value: unknown): string {
@@ -65,7 +66,7 @@ export function aggregatePayrollRows(rows: PayrollReportRow[]) {
       details.tax && typeof details.tax === 'object'
         ? (details.tax as Record<string, unknown>)
         : {};
-    taxTotal += Number(tax.amount ?? 0) / 100;
+    taxTotal += toMajor(Number(tax.amount ?? 0));
     const lineItems = Array.isArray(details.lineItems) ? details.lineItems : [];
     for (const item of lineItems) {
       if (!item || typeof item !== 'object') continue;
@@ -84,7 +85,7 @@ export function aggregatePayrollRows(rows: PayrollReportRow[]) {
         type: componentType,
         amount: 0
       };
-      component.amount += Number(line.amount ?? 0) / 100;
+      component.amount += toMajor(Number(line.amount ?? 0));
       componentsByKey.set(key, component);
     }
   }

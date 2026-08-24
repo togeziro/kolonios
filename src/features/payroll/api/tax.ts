@@ -4,7 +4,7 @@ import { requirePermission } from '@/lib/auth/session';
 import { DomainError } from '@/lib/errors';
 import { employeeTaxRecords } from '@/lib/db/schema/payroll';
 import { getEffectiveTaxProfile, withPayrollAuditTransaction } from '@/lib/db/payroll';
-import { parseDbDecimalToMoney } from '../utils/calculator';
+import { toMinor } from '../utils/money';
 import type { TaxProfile } from './types';
 import { taxRecordOverrideSchema } from './validation';
 
@@ -22,7 +22,7 @@ function parseTaxMoney(value: unknown, name: string) {
   if (typeof value !== 'string' && typeof value !== 'number')
     throw new DomainError(`Invalid tax amount: ${name}`, 'INVALID_TAX_AMOUNT');
   try {
-    return parseDbDecimalToMoney(typeof value === 'number' ? value.toFixed(2) : value);
+    return toMinor(value);
   } catch {
     throw new DomainError(`Invalid tax amount: ${name}`, 'INVALID_TAX_AMOUNT');
   }
