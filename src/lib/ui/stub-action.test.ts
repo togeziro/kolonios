@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { toast } from 'sonner';
 
 const { infoMock } = vi.hoisted(() => ({ infoMock: vi.fn() }));
 
@@ -24,9 +23,11 @@ describe('stubAction', () => {
     expect(infoMock).toHaveBeenCalledWith('Coming soon');
   });
 
-  it('performs no navigation or request by construction (void return, no router deps)', () => {
-    const result = stubAction();
-    expect(result).toBeUndefined();
-    expect(infoMock).toHaveBeenCalledTimes(1);
+  it('takes no router or request dependencies — only the sonner toast fires', () => {
+    stubAction();
+    stubAction('Reject');
+    expect(infoMock).toHaveBeenCalledTimes(2);
+    expect(infoMock).toHaveBeenNthCalledWith(1, 'Coming soon');
+    expect(infoMock).toHaveBeenNthCalledWith(2, 'Reject — Coming soon');
   });
 });
