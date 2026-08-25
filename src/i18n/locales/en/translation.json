@@ -413,10 +413,13 @@
     "startVerification": "Start face verification",
     "capture": "Capture",
     "positionFace": "Position your face within the frame",
-    "cameraError": "Camera access denied",
+    "cameraError": "Could not access the camera",
+    "cameraDenied": "Camera access denied",
+    "cameraBusy": "Camera is busy — close other apps using it and try again",
     "noFace": "No face detected. Please try again.",
     "multipleFaces": "Multiple faces detected. Please keep only your face in the frame.",
     "loadingModels": "Loading face models...",
+    "captureAnother": "Capture another sample",
     "verifying": "Verifying face...",
     "spoofDetected": "Face verification rejected: possible spoof attempt.",
     "verificationFailed": "Face verification failed. Please try again."
@@ -496,6 +499,7 @@
     "dailyChecklist": "Daily Checklist",
     "settings": "Settings",
     "editProfile": "Edit Profile",
+    "faceVerification": "Face Verification",
     "changePassword": "Change Password"
   },
   "overview": {
@@ -1028,6 +1032,7 @@
     "captureSelfie": "Capture Selfie",
     "captureNow": "Capture",
     "retake": "Retake",
+    "capturedFaceAlt": "Captured face photo",
     "correctionTitle": "Request Attendance Correction",
     "correctionDescription": "Ask to correct your check-in or check-out time",
     "requestedCheckIn": "Requested Check-in Time",

@@ -27,6 +27,12 @@ export function FaceEnrollment() {
     });
   }, []);
 
+  const handleRetake = useCallback(() => {
+    // Drop only the sample being retaken; Retake is the way back to the
+    // camera for multi-sample enrollment, so earlier captures must stay.
+    setDescriptors((prev) => prev.slice(0, -1));
+  }, []);
+
   const handleEnroll = async () => {
     if (descriptors.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
@@ -69,7 +75,11 @@ export function FaceEnrollment() {
         </div>
       </div>
 
-      <FaceCapture onCapture={(descriptor) => handleCapture(descriptor)} />
+      <FaceCapture
+        onCapture={(descriptor) => handleCapture(descriptor)}
+        onRetake={handleRetake}
+        allowMultipleSamples
+      />
 
       <div className='flex gap-2'>
         <Button

@@ -32,6 +32,7 @@ interface CheckInScanProps {
     livenessScore: number | null
   ) => void;
   onCheckOut: () => void;
+  onRetake?: () => void;
 }
 
 export function CheckInScan({
@@ -43,7 +44,8 @@ export function CheckInScan({
   faceEnrolled,
   faceEnrollmentPending = false,
   onCheckIn,
-  onCheckOut
+  onCheckOut,
+  onRetake
 }: CheckInScanProps) {
   const { t } = useTranslation();
 
@@ -133,7 +135,7 @@ export function CheckInScan({
           </div>
         </CardHeader>
         <CardContent>
-          <FaceCapture onCapture={handleCapture} />
+          <FaceCapture onCapture={handleCapture} onRetake={onRetake} />
         </CardContent>
       </Card>
     </div>

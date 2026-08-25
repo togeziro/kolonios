@@ -102,6 +102,15 @@ export default function ProfilePage() {
         </Link>
         <hr />
         <Link
+          to='/dashboard/attendance/face-settings'
+          className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
+        >
+          <Icons.shield className='text-muted-foreground h-4 w-4' />
+          {t('profile.faceVerification')}
+          <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
+        </Link>
+        <hr />
+        <Link
           to='/dashboard/change-password'
           className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
         >
