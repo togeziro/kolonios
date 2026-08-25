@@ -1399,5 +1399,51 @@
     "filterLocation": "Lokasi",
     "filterPriority": "Prioritas",
     "legBadge": "Leg {{x}} dari {{y}}"
+  },
+  "changePassword": {
+    "title": "Ubah Kata Sandi",
+    "securityHint": "Kata sandi Anda minimal 8 karakter dan harus memuat angka serta simbol.",
+    "fields": {
+      "current": "Kata Sandi Saat Ini",
+      "new": "Kata Sandi Baru",
+      "confirm": "Konfirmasi Kata Sandi Baru"
+    },
+    "strength": {
+      "weak": "Lemah",
+      "fair": "Cukup",
+      "good": "Baik",
+      "strong": "Kuat"
+    },
+    "errors": {
+      "required": "Mohon isi semua kolom.",
+      "mismatch": "Kata sandi baru dan konfirmasinya tidak cocok.",
+      "weak": "Kata sandi baru terlalu lemah. Gunakan minimal 8 karakter dengan kombinasi jenis karakter.",
+      "wrongCurrent": "Kata sandi saat ini salah.",
+      "generic": "Tidak dapat mengubah kata sandi. Silakan coba lagi."
+    },
+    "showPassword": "Tampilkan kata sandi",
+    "hidePassword": "Sembunyikan kata sandi",
+    "submit": "Perbarui Kata Sandi",
+    "submitting": "Memperbarui…",
+    "successToast": "Kata sandi berhasil diperbarui"
+  },
+  "editProfile": {
+    "title": "Edit Profil",
+    "avatarAlt": "Foto profil",
+    "changePhoto": "Ubah foto profil",
+    "avatarUpdated": "Foto profil diperbarui",
+    "avatarUnavailable": "Foto profil tidak dapat diunggah saat ini — penyimpanan tidak tersedia. Inisial Anda ditampilkan sebagai gantinya.",
+    "personalInfo": "Informasi Pribadi",
+    "fullName": "Nama Lengkap",
+    "email": "Alamat Email",
+    "emailLockedHint": "Hubungi HR untuk mengubah email Anda",
+    "saving": "Menyimpan…",
+    "saveChanges": "Simpan Perubahan",
+    "profileSaved": "Profil diperbarui",
+    "saveFailed": "Tidak dapat menyimpan profil. Silakan coba lagi.",
+    "workInfo": "Informasi Pekerjaan",
+    "employeeCode": "Nomor Induk Karyawan",
+    "department": "Departemen",
+    "jobTitle": "Jabatan"
   }
 }
