@@ -26,13 +26,30 @@ import {
   exportReportSchema
 } from './validation';
 
+// A selfie/photo uploaded before the business submit failed would otherwise
+// stay in the bucket forever. Best-effort server-side cleanup; never throws.
+async function discardOrphanedUpload(photo?: string): Promise<void> {
+  if (!photo) return;
+  const { deleteStorageObject } = await import('@/lib/storage/presign');
+  await deleteStorageObject(photo);
+}
+
 export const checkInFn = createServerFn({ method: 'POST' })
   .validator(attendanceCheckInSchema)
   .handler(async ({ data }) => {
     const session = await requirePermission('attendance', 'view');
     await checkRateLimit(`write:${session.user.id}`);
     const { checkIn } = await import('@/lib/db/attendance');
-    const shift = await checkIn(session.user.id, data);
+    let shift;
+    try {
+      shift = await checkIn(session.user.id, data);
+    } catch (err) {
+      await discardOrphanedUpload(data.photo);
+      throw err;
+    }
+    if (!shift?.success) {
+      await discardOrphanedUpload(data.photo);
+    }
     await withAudit(
       session.user.id,
       {
@@ -53,7 +70,16 @@ export const checkOutFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('attendance', 'view');
     await checkRateLimit(`write:${session.user.id}`);
     const { checkOut } = await import('@/lib/db/attendance');
-    const shift = await checkOut(session.user.id, data);
+    let shift;
+    try {
+      shift = await checkOut(session.user.id, data);
+    } catch (err) {
+      await discardOrphanedUpload(data.photo);
+      throw err;
+    }
+    if (!shift?.success) {
+      await discardOrphanedUpload(data.photo);
+    }
     await withAudit(
       session.user.id,
       {

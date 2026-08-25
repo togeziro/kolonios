@@ -413,10 +413,13 @@
     "startVerification": "Mulai verifikasi wajah",
     "capture": "Tangkap",
     "positionFace": "Posisikan wajah Anda dalam bingkai",
-    "cameraError": "Akses kamera ditolak",
+    "cameraError": "Tidak dapat mengakses kamera",
+    "cameraDenied": "Akses kamera ditolak",
+    "cameraBusy": "Kamera sedang digunakan — tutup aplikasi lain yang memakainya lalu coba lagi",
     "noFace": "Wajah tidak terdeteksi. Silakan coba lagi.",
     "multipleFaces": "Terlalu banyak wajah terdeteksi. Pastikan hanya wajah Anda dalam bingkai.",
     "loadingModels": "Memuat model wajah...",
+    "captureAnother": "Ambil sampel lain",
     "verifying": "Memverifikasi wajah...",
     "spoofDetected": "Verifikasi wajah ditolak: kemungkinan percobaan spoof.",
     "verificationFailed": "Verifikasi wajah gagal. Silakan coba lagi."
@@ -496,6 +499,7 @@
     "dailyChecklist": "Checklist Harian",
     "settings": "Pengaturan",
     "editProfile": "Ubah Profil",
+    "faceVerification": "Verifikasi Wajah",
     "changePassword": "Ubah Kata Sandi"
   },
   "overview": {
@@ -1028,6 +1032,7 @@
     "captureSelfie": "Ambil Selfie",
     "captureNow": "Ambil",
     "retake": "Ulangi",
+    "capturedFaceAlt": "Foto wajah yang diambil",
     "correctionTitle": "Ajukan Koreksi Absensi",
     "correctionDescription": "Ajukan koreksi jam masuk atau jam pulang Anda",
     "requestedCheckIn": "Jam Masuk yang Diminta",

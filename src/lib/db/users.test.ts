@@ -189,6 +189,7 @@ describe('users data access (integration)', () => {
       id: 'acct-2',
       accountId: 'acct-2',
       providerId: 'credential',
+      issuer: 'local:credential',
       userId: 'usr-a'
     });
     const [a] = await db

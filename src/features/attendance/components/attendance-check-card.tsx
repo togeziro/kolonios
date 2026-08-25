@@ -10,6 +10,7 @@ import {
   shiftsQueryOptions
 } from '../api/queries';
 import { checkInFn, checkOutFn } from '../api/service';
+import { CHECKIN_ERROR_I18N_KEYS } from '../lib/checkin-error-keys';
 import { PHOTO_UPLOAD_FAILED, uploadSelfie } from '@/lib/storage/upload-client';
 import { getCurrentLocation, type DeviceLocation, type LocationResult } from '../utils/geolocation';
 import { LocationMap } from './location-map';
@@ -27,17 +28,6 @@ export function clearSelfieAfterSuccess(
   invalidate();
   return true;
 }
-
-const ERROR_I18N_KEYS: Record<string, string> = {
-  GPS_REQUIRED: 'attendanceAdmin.errGpsRequired',
-  GPS_STALE: 'attendanceAdmin.errGpsStale',
-  GPS_INACCURATE: 'attendanceAdmin.errGpsInaccurate',
-  OUTSIDE_RADIUS: 'attendanceAdmin.errOutsideRadius',
-  NO_SCHEDULE: 'attendanceAdmin.errNoSchedule',
-  SELFIE_REQUIRED: 'attendanceAdmin.errSelfieRequired',
-  NO_CHECK_IN: 'attendanceAdmin.errNoCheckIn',
-  ALREADY_CHECKED_OUT: 'attendanceAdmin.errAlreadyCheckedOut'
-};
 
 export default function AttendanceCheckCard() {
   const { t, i18n } = useTranslation();
@@ -66,7 +56,7 @@ export default function AttendanceCheckCard() {
   // server-provided message (or the generic GPS message).
   const errorMessage = (res: { code?: string; message?: string } | undefined | null): string => {
     if (!res) return t('attendanceAdmin.gpsUnavailable');
-    if (res.code && ERROR_I18N_KEYS[res.code]) return t(ERROR_I18N_KEYS[res.code]);
+    if (res.code && CHECKIN_ERROR_I18N_KEYS[res.code]) return t(CHECKIN_ERROR_I18N_KEYS[res.code]);
     return res.message ?? t('attendanceAdmin.gpsUnavailable');
   };
 

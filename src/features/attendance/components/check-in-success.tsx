@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,18 +12,6 @@ interface CheckInSuccessProps {
 
 export function CheckInSuccess({ time, locationName, onDone }: CheckInSuccessProps) {
   const { t } = useTranslation();
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    const timer = setTimeout(() => {
-      if (mountedRef.current) onDone();
-    }, 3000);
-    return () => {
-      mountedRef.current = false;
-      clearTimeout(timer);
-    };
-  }, [onDone]);
 
   return (
     <div className='flex min-h-screen flex-col items-center justify-center p-4'>

@@ -2,7 +2,8 @@ import {
   S3Client,
   HeadBucketCommand,
   PutObjectCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  DeleteObjectCommand
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { logger } from '@/lib/logger';
@@ -43,6 +44,30 @@ export async function createPresignedGetUrl(
 ): Promise<string> {
   const command = new GetObjectCommand({ Bucket: params.bucket, Key: params.key });
   return getSignedUrl(client, command, { expiresIn: params.expiresIn ?? DEFAULT_EXPIRES_IN });
+}
+
+// Best-effort cleanup for uploads whose business submit failed afterwards
+// (e.g. a selfie uploaded before OUTSIDE_RADIUS was returned). Never throws:
+// a failed cleanup must not mask the original business error, so failures are
+// logged for ops instead. Safe on unconfigured storage (no-op) and idempotent
+// server-side (S3 returns success even when the key does not exist).
+export async function deleteStorageObject(key: string): Promise<boolean> {
+  try {
+    const { getCompanySettings } = await import('@/lib/db/masterdata');
+    const { deriveStorageConfig, readyConfig } = await import('./config');
+    const derived = deriveStorageConfig((await getCompanySettings())?.settings);
+    if (!derived) {
+      logger.warn({ key }, 'storage.delete-skipped-unconfigured');
+      return false;
+    }
+    const config = await readyConfig(derived);
+    const client = buildStorageClient(config);
+    await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }));
+    return true;
+  } catch (e) {
+    logger.warn({ err: e, key }, 'storage.delete-failed');
+    return false;
+  }
 }
 
 export async function testConnection(

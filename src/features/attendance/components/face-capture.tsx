@@ -11,16 +11,47 @@ interface FaceCaptureProps {
     antiSpoofScore: number | null,
     livenessScore: number | null
   ) => void;
+  onRetake?: () => void;
   disabled?: boolean;
+  // Multi-sample flows (face enrollment): adds a "Capture another" action in
+  // the captured state that restarts the camera while the parent KEEPS the
+  // accumulated samples. Retake remains the erase-and-redo path.
+  allowMultipleSamples?: boolean;
 }
 
 type CaptureStatus = 'idle' | 'loading' | 'camera' | 'detecting' | 'capturing' | 'captured';
 
-export function FaceCapture({ onCapture, disabled }: FaceCaptureProps) {
+// Device-open races right after navigation (previous page releasing the
+// camera, settings flips) reject transiently and settle within moments.
+const RETRIABLE_CAMERA_ERRORS = new Set(['NotReadableError', 'AbortError', 'OverconstrainedError']);
+const CAMERA_RETRY_BACKOFF_MS = 400;
+
+function cameraErrorName(err: unknown): string {
+  if (err instanceof DOMException) return err.name;
+  if (err instanceof Error) return err.name === 'Error' ? '' : err.name;
+  return '';
+}
+
+function cameraErrorKey(
+  err: unknown
+): 'faceCapture.cameraDenied' | 'faceCapture.cameraBusy' | 'faceCapture.cameraError' {
+  const name = cameraErrorName(err);
+  if (name === 'NotAllowedError') return 'faceCapture.cameraDenied';
+  if (name === 'NotReadableError') return 'faceCapture.cameraBusy';
+  return 'faceCapture.cameraError';
+}
+
+export function FaceCapture({
+  onCapture,
+  onRetake,
+  disabled,
+  allowMultipleSamples
+}: FaceCaptureProps) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [faceStream, setFaceStream] = useState<FaceStream | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [status, setStatus] = useState<CaptureStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -30,26 +61,74 @@ export function FaceCapture({ onCapture, disabled }: FaceCaptureProps) {
     return () => stopCamera(faceStream);
   }, [faceStream]);
 
+  // Shared start routine: load Human models, open the camera, enter detecting.
+  const beginVerification = useCallback(async () => {
+    setError(null);
+    setStatus('loading');
+    // Pre-load Human models while the camera permission prompt is showing.
+    const { getHuman } = await import('@/lib/face/human');
+    await getHuman();
+    setStatus('camera');
+    try {
+      const stream = await startCamera(videoRef);
+      setFaceStream(stream);
+    } catch (err) {
+      if (!RETRIABLE_CAMERA_ERRORS.has(cameraErrorName(err))) throw err;
+      await new Promise((r) => setTimeout(r, CAMERA_RETRY_BACKOFF_MS));
+      const stream = await startCamera(videoRef);
+      setFaceStream(stream);
+    }
+    setStatus('detecting');
+  }, []);
+
   const handleStartCamera = useCallback(async () => {
     if (isBusy) return;
     setIsBusy(true);
     try {
-      setError(null);
-      setStatus('loading');
-      // Pre-load Human models while the camera permission prompt is showing.
-      const { getHuman } = await import('@/lib/face/human');
-      await getHuman();
-      setStatus('camera');
-      const stream = await startCamera(videoRef);
-      setFaceStream(stream);
-      setStatus('detecting');
-    } catch {
-      setError(t('faceCapture.cameraError'));
+      await beginVerification();
+    } catch (err) {
+      setError(t(cameraErrorKey(err)));
       setStatus('idle');
     } finally {
       setIsBusy(false);
     }
-  }, [isBusy, t]);
+  }, [beginVerification, isBusy, t]);
+
+  const handleRetake = useCallback(async () => {
+    if (isBusy) return;
+    setIsBusy(true);
+    try {
+      // Let parents drop their captured data before capture restarts.
+      onRetake?.();
+      stopCamera(faceStream);
+      setFaceStream(null);
+      setPreviewPhoto(null);
+      await beginVerification();
+    } catch (err) {
+      setError(t(cameraErrorKey(err)));
+      setStatus('idle');
+    } finally {
+      setIsBusy(false);
+    }
+  }, [beginVerification, faceStream, isBusy, onRetake, t]);
+
+  // Next sample for multi-sample flows: camera restarts but whatever the
+  // parent accumulated stays intact (unlike Retake, which erases).
+  const handleCaptureAnother = useCallback(async () => {
+    if (isBusy) return;
+    setIsBusy(true);
+    try {
+      stopCamera(faceStream);
+      setFaceStream(null);
+      setPreviewPhoto(null);
+      await beginVerification();
+    } catch (err) {
+      setError(t(cameraErrorKey(err)));
+      setStatus('idle');
+    } finally {
+      setIsBusy(false);
+    }
+  }, [beginVerification, faceStream, isBusy, t]);
 
   const handleCapture = useCallback(async () => {
     if (isBusy) return;
@@ -85,6 +164,7 @@ export function FaceCapture({ onCapture, disabled }: FaceCaptureProps) {
 
       stopCamera(faceStream);
       setFaceStream(null);
+      setPreviewPhoto(photo);
       setStatus('captured');
       onCapture(result.descriptor, photo, result.antiSpoofScore, result.livenessScore);
     } catch {
@@ -111,6 +191,14 @@ export function FaceCapture({ onCapture, disabled }: FaceCaptureProps) {
           <div className='absolute bottom-4 left-0 right-0 text-center'>
             <p className='text-sm text-zinc-300'>{t('faceCapture.positionFace')}</p>
           </div>
+        )}
+
+        {status === 'captured' && previewPhoto && (
+          <img
+            src={previewPhoto}
+            alt={t('attendanceAdmin.capturedFaceAlt')}
+            className='absolute inset-0 h-full w-full object-cover'
+          />
         )}
 
         {status === 'capturing' && (
@@ -140,6 +228,30 @@ export function FaceCapture({ onCapture, disabled }: FaceCaptureProps) {
           <Icons.camera className='mr-2 h-4 w-4' />
           {t('faceCapture.capture')}
         </Button>
+      )}
+
+      {status === 'captured' && (
+        <div className='flex gap-2'>
+          {allowMultipleSamples && (
+            <Button
+              className='flex-1'
+              variant='outline'
+              onClick={handleCaptureAnother}
+              disabled={disabled || isBusy}
+            >
+              <Icons.camera className='mr-2 h-4 w-4' />
+              {t('faceCapture.captureAnother')}
+            </Button>
+          )}
+          <Button
+            className={allowMultipleSamples ? '' : 'w-full'}
+            variant='outline'
+            onClick={handleRetake}
+            disabled={disabled || isBusy}
+          >
+            {t('attendanceAdmin.retake')}
+          </Button>
+        </div>
       )}
     </div>
   );
