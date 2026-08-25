@@ -27,6 +27,8 @@ export interface NavItem {
   isActive: boolean;
   shortcut?: string[];
   module: string;
+  /** Required action within `module` for nav visibility; defaults to 'view'. */
+  requiredAction?: 'view' | 'add' | 'edit' | 'delete' | 'approve' | 'pay' | 'reports';
   hiddenForAdmin?: boolean;
   items?: NavItem[];
 }

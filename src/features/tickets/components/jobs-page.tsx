@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearch, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +11,7 @@ import { dateFnsLocale } from '@/lib/format';
 import { openTicketsQueryOptions } from '../api/queries';
 import { useTakeTicket } from '../api/hooks';
 import type { Ticket, TicketPriority, TicketDomain } from '../api/types';
+import { LEG_FIXTURES, type TicketLegInfo } from './-leg-fixtures';
 
 const priorityConfig: Record<TicketPriority, { bg: string; text: string; labelKey: string }> = {
   high: { bg: 'bg-red-500/10', text: 'text-red-400', labelKey: 'ticket.high' },
@@ -26,16 +28,26 @@ function relativeTime(dateStr: string): string {
   return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: dateFnsLocale() });
 }
 
+function filterChipClass(active: boolean) {
+  return `whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-transform active:scale-95 ${
+    active
+      ? 'dark:bg-zinc-100 dark:text-zinc-900 bg-zinc-900 text-white'
+      : 'dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 border border-zinc-300 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+  }`;
+}
+
 function OpenTicketCard({
   ticket,
   onTake,
   disabled,
-  reasons
+  reasons,
+  relay
 }: {
   ticket: Ticket;
   onTake: (id: number) => void;
   disabled?: boolean;
   reasons?: string[];
+  relay?: TicketLegInfo;
 }) {
   const { t } = useTranslation();
   const p = priorityConfig[ticket.priority];
@@ -44,8 +56,13 @@ function OpenTicketCard({
     <div className='dark:bg-zinc-900 dark:border-zinc-800 flex flex-col gap-4 rounded-[1.5rem] border p-5'>
       <div className='flex items-start justify-between'>
         <div>
-          <div className='mb-1 flex items-center gap-2'>
+          <div className='mb-1 flex flex-wrap items-center gap-2'>
             <span className='dark:text-zinc-500 font-mono text-xs'>{ticket.ticketCode}</span>
+            {relay && relay.legsTotal > 1 && (
+              <span className='bg-sky-500/10 text-sky-400 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider'>
+                {t('jobs.legBadge', { x: relay.legNumber, y: relay.legsTotal })}
+              </span>
+            )}
             <span
               className={`${p.bg} ${p.text} rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider`}
             >
@@ -104,13 +121,22 @@ function OpenTicketCard({
   );
 }
 
-export default function JobsPage() {
+export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLegInfo> } = {}) {
   const { t } = useTranslation();
   const { domain } = useSearch({ from: JobsRoute.id });
   const navigate = useNavigate();
   const { isAdmin, permissions } = useRoleGroupPermissions();
   const canCreate = isAdmin || permissions.tickets?.add === true;
   const takeTicket = useTakeTicket();
+
+  // TODO(wire): leg data comes from fixtures today; the wiring pass supplies
+  // the real per-ticket map (same shape) and this merge becomes a no-op.
+  const legs: Record<number, TicketLegInfo> = { ...LEG_FIXTURES, ...legMap };
+
+  // Location/Priority filters are intentionally local state (not URL) — they
+  // narrow already-fetched tickets client-side only.
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | null>(null);
 
   const filters = domain ? { domain: domain as TicketDomain } : {};
 
@@ -134,6 +160,19 @@ export default function JobsPage() {
     { label: t('ticket.field'), value: 'field' },
     { label: t('ticket.backoffice'), value: 'backoffice' }
   ];
+
+  const locationOptions = [
+    ...new Set(
+      tickets.map((ticket) => ticket.location?.name).filter((name): name is string => Boolean(name))
+    )
+  ];
+  const priorityOptions: TicketPriority[] = ['high', 'medium', 'low'];
+
+  const matchesFilters = (ticket: Ticket) =>
+    (locationFilter === null || ticket.location?.name === locationFilter) &&
+    (priorityFilter === null || ticket.priority === priorityFilter);
+  const visibleTickets = tickets.filter(matchesFilters);
+  const visibleUnavailable = unavailable.filter(matchesFilters);
 
   return (
     <div className='flex min-h-screen flex-col'>
@@ -177,36 +216,69 @@ export default function JobsPage() {
       </header>
 
       <main className='flex-1 px-4 py-4'>
+        {!isLoading && tickets.length > 0 && (
+          <div className='no-scrollbar mb-3 flex items-center gap-2 overflow-x-auto'>
+            <span className='dark:text-zinc-500 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400'>
+              {t('jobs.filterLocation')}
+            </span>
+            {locationOptions.map((name) => (
+              <button
+                key={name}
+                onClick={() => setLocationFilter((current) => (current === name ? null : name))}
+                className={filterChipClass(locationFilter === name)}
+              >
+                {name}
+              </button>
+            ))}
+            <span className='dark:bg-zinc-800 mx-1 h-5 w-px shrink-0 bg-zinc-300' />
+            <span className='dark:text-zinc-500 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400'>
+              {t('jobs.filterPriority')}
+            </span>
+            {priorityOptions.map((priority) => (
+              <button
+                key={priority}
+                onClick={() =>
+                  setPriorityFilter((current) => (current === priority ? null : priority))
+                }
+                className={filterChipClass(priorityFilter === priority)}
+              >
+                {t(`priority.${priority}`)}
+              </button>
+            ))}
+          </div>
+        )}
         {isLoading ? (
           <div className='flex justify-center py-8'>
             <Icons.spinner className='h-6 w-6 animate-spin text-muted-foreground' />
           </div>
-        ) : tickets.length === 0 && unavailable.length === 0 ? (
+        ) : visibleTickets.length === 0 && visibleUnavailable.length === 0 ? (
           <p className='text-muted-foreground py-8 text-center text-sm'>
             {t('ticket.noOpenTickets')}
           </p>
         ) : (
           <div className='flex flex-col gap-4'>
-            {tickets.map((ticket) => (
+            {visibleTickets.map((ticket) => (
               <OpenTicketCard
                 key={ticket.id}
                 ticket={ticket}
                 onTake={handleTake}
                 disabled={takeTicket.isPending}
+                relay={legs[ticket.id]}
               />
             ))}
-            {unavailable.length > 0 && (
+            {visibleUnavailable.length > 0 && (
               <>
                 <h2 className='dark:text-zinc-500 pt-4 text-xs font-semibold uppercase tracking-wider text-zinc-400'>
                   {t('ticket.unavailable')}
                 </h2>
-                {unavailable.map((ticket) => (
+                {visibleUnavailable.map((ticket) => (
                   <div key={ticket.id} className='opacity-75'>
                     <OpenTicketCard
                       ticket={ticket}
                       onTake={() => {}}
                       disabled
                       reasons={ticket.eligibilityReasons}
+                      relay={legs[ticket.id]}
                     />
                   </div>
                 ))}

@@ -44,7 +44,8 @@ describe('nav-config', () => {
     const reviewQueue = navItems.find((item) => item.title === 'Review Queue');
     const leaveApprovals = navItems.find((item) => item.title === 'Leave Approvals');
     expect(reviewQueue).toBeDefined();
-    expect(reviewQueue!.module).toBe('spv_review');
+    expect(reviewQueue!.module).toBe('checklist');
+    expect(reviewQueue!.requiredAction).toBe('approve');
     expect(reviewQueue!.url).toBe('/dashboard/spv/review');
     expect(leaveApprovals).toBeDefined();
     expect(leaveApprovals!.module).toBe('spv_review');
@@ -157,7 +158,8 @@ describe('filterNavItemsByRole', () => {
     role_groups: { view: true },
     tickets: { view: true, add: true },
     jobs: { view: true },
-    spv_review: { view: true, edit: true }
+    spv_review: { view: true, edit: true },
+    checklist: { view: true, edit: true, approve: true }
   };
 
   it('admin sees everything except employee self-service items', () => {
@@ -189,14 +191,26 @@ describe('filterNavItemsByRole', () => {
     ]);
   });
 
-  it('SPV sees Review Queue and Leave Approvals when spv_review module is granted', () => {
+  it('SPV sees Review Queue and Leave Approvals when spv_review and checklist.approve are granted', () => {
+    const spvPerms: Permissions = {
+      ...technicianPerms,
+      spv_review: { view: true, edit: true },
+      checklist: { view: true, edit: true, approve: true }
+    };
+    const filtered = filterNavItemsByRole(navItems, spvPerms, false);
+    const titles = topLevelTitles(filtered);
+    expect(titles).toContain('Review Queue');
+    expect(titles).toContain('Leave Approvals');
+  });
+
+  it('spv_review.view without checklist.approve hides Review Queue but shows Leave Approvals', () => {
     const spvPerms: Permissions = {
       ...technicianPerms,
       spv_review: { view: true, edit: true }
     };
     const filtered = filterNavItemsByRole(navItems, spvPerms, false);
     const titles = topLevelTitles(filtered);
-    expect(titles).toContain('Review Queue');
+    expect(titles).not.toContain('Review Queue');
     expect(titles).toContain('Leave Approvals');
   });
 

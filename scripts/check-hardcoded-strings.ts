@@ -12,6 +12,7 @@ const IGNORED_ATTRS = new Set([
   'id',
   'name',
   'type',
+  'accept',
   'value',
   'href',
   'target',

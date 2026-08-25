@@ -1,8 +1,7 @@
-import { useRouter } from '@tanstack/react-router';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { useSession, signOut } from '@/lib/auth/auth-client';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useSession } from '@/lib/auth/auth-client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
@@ -13,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { data: session } = useSession();
-  const router = useRouter();
   const { data: summaryData } = useQuery(attendanceSummaryQueryOptions());
   const { data: tasksData } = useQuery(myTicketsQueryOptions());
 
@@ -21,6 +19,7 @@ export default function ProfilePage() {
   const name = user?.name ?? 'User';
   const email = user?.email ?? '';
   const role = user?.role ?? 'user';
+  const image = user?.image ?? undefined;
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -32,15 +31,11 @@ export default function ProfilePage() {
   const tasks = tasksData?.tickets ?? [];
   const inProgress = tasks.filter((t) => t.status === 'in_progress').length;
 
-  async function handleLogout() {
-    await signOut();
-    router.navigate({ to: '/' });
-  }
-
   return (
     <div className='space-y-5 p-4'>
       <div className='flex flex-col items-center gap-2 pt-4'>
         <Avatar className='border h-20 w-20'>
+          {image && <AvatarImage src={image} alt={name} />}
           <AvatarFallback className='bg-primary/10 text-primary text-xl font-semibold'>
             {initials}
           </AvatarFallback>
@@ -80,6 +75,42 @@ export default function ProfilePage() {
 
       <Card className='rounded-2xl'>
         <Link
+          to='/dashboard/daily-checklist'
+          className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
+        >
+          <Icons.checks className='text-muted-foreground h-4 w-4' />
+          {t('profile.dailyChecklist')}
+          <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
+        </Link>
+        <hr />
+        <Link
+          to='/dashboard/settings'
+          className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
+        >
+          <Icons.settings className='text-muted-foreground h-4 w-4' />
+          {t('profile.settings')}
+          <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
+        </Link>
+        <hr />
+        <Link
+          to='/dashboard/edit-profile'
+          className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
+        >
+          <Icons.userPen className='text-muted-foreground h-4 w-4' />
+          {t('profile.editProfile')}
+          <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
+        </Link>
+        <hr />
+        <Link
+          to='/dashboard/change-password'
+          className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
+        >
+          <Icons.lock className='text-muted-foreground h-4 w-4' />
+          {t('profile.changePassword')}
+          <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
+        </Link>
+        <hr />
+        <Link
           to='/dashboard/notifications'
           className='hover:bg-muted flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm'
         >
@@ -96,15 +127,6 @@ export default function ProfilePage() {
           {t('navigation.achievements')}
           <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
         </Link>
-        <hr />
-        <button
-          onClick={handleLogout}
-          className='hover:bg-muted flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left text-sm'
-        >
-          <Icons.logout className='text-muted-foreground h-4 w-4' />
-          {t('profile.signOut')}
-          <Icons.chevronRight className='text-muted-foreground ml-auto h-4 w-4' />
-        </button>
       </Card>
     </div>
   );

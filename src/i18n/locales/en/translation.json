@@ -84,7 +84,8 @@
     "custom": "Custom",
     "saved": "Saved successfully",
     "failed": "Something went wrong",
-    "importJson": "Import JSON"
+    "importJson": "Import JSON",
+    "comingSoon": "Coming soon"
   },
   "confirm": {
     "deleteTitle": "Are you sure?",
@@ -491,7 +492,11 @@
     "absent": "Absent",
     "activeTasks": "Active tasks",
     "notifications": "Notifications",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "dailyChecklist": "Daily Checklist",
+    "settings": "Settings",
+    "editProfile": "Edit Profile",
+    "changePassword": "Change Password"
   },
   "overview": {
     "totalSales": "Total Sales",
@@ -1394,5 +1399,121 @@
     "mapFailed": "Map could not be loaded",
     "distanceTo": "Distance to destination",
     "findMyLocation": "Find my location"
+  },
+  "jobs": {
+    "filterLocation": "Location",
+    "filterPriority": "Priority",
+    "legBadge": "Leg {{x}} of {{y}}"
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "securityHint": "Your password must be at least 8 characters and include a number and a symbol.",
+    "fields": {
+      "current": "Current Password",
+      "new": "New Password",
+      "confirm": "Confirm New Password"
+    },
+    "strength": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong"
+    },
+    "errors": {
+      "required": "Please fill in all fields.",
+      "mismatch": "New password and confirmation do not match.",
+      "weak": "New password is too weak. Use at least 8 characters with mixed character types.",
+      "wrongCurrent": "Current password is incorrect.",
+      "generic": "Could not change password. Please try again."
+    },
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "submit": "Update Password",
+    "submitting": "Updating…",
+    "successToast": "Password updated successfully"
+  },
+  "editProfile": {
+    "title": "Edit Profile",
+    "avatarAlt": "Profile photo",
+    "changePhoto": "Change profile photo",
+    "avatarUpdated": "Profile photo updated",
+    "avatarUnavailable": "Profile photo can't be uploaded right now — storage isn't available. Your initials are shown instead.",
+    "personalInfo": "Personal Information",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "emailLockedHint": "Contact HR to change your email",
+    "saving": "Saving…",
+    "saveChanges": "Save Changes",
+    "profileSaved": "Profile updated",
+    "saveFailed": "Could not save profile. Please try again.",
+    "workInfo": "Work Information",
+    "employeeCode": "Employee Code",
+    "department": "Department",
+    "jobTitle": "Job Title"
+  },
+  "spvReview": {
+    "title": "Review Queue",
+    "pendingSubtitle": "{{count}} pending",
+    "countPending": "Pending",
+    "countApproved": "Approved",
+    "countRejected": "Rejected",
+    "statusPending": "Pending",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "timeLog": "Time Log",
+    "checklistScore": "Checklist {{resolved}}/{{total}} OK",
+    "tasksLogged_one": "{{count}} task logged",
+    "tasksLogged_other": "{{count}} tasks logged",
+    "note": "Note",
+    "reviewedBy": "Reviewed by {{name}} on {{at}}",
+    "rejectionReason": "Reason",
+    "approve": "Approve",
+    "reject": "Reject",
+    "detailTitle": "Review Ticket",
+    "requesterValue": "Requester: {{name}} ({{initials}})",
+    "engineerLabel": "Engineer",
+    "taskProgressLabel": "Task Progress",
+    "legProgress": "{{completed}} of {{total}} legs complete",
+    "evidencePhotos": "Evidence Photos",
+    "workSummary": "Work Summary",
+    "materialsUsed": "Materials Used",
+    "sopChecklist": "Standard SOP Checklist",
+    "sopScore": "{{resolved}}/{{total}} OK",
+    "notFound": "Ticket not found.",
+    "backToQueue": "Back to queue"
+  },
+  "leaveApprovals": {
+    "title": "Leave Approvals",
+    "chipsPending": "{{count}} Pending",
+    "chipsThisMonth": "{{count}} this month",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "tabRejected": "Rejected",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "durationDays_one": "{{count}} day",
+    "durationDays_other": "{{count}} days",
+    "unpaidHint": "Unpaid — deducted from salary",
+    "typeAnnual": "Annual Leave",
+    "typeSick": "Sick Leave",
+    "typePersonal": "Personal Leave",
+    "typeEmergency": "Emergency Leave",
+    "typeMaternity": "Maternity Leave",
+    "typePaternity": "Paternity Leave",
+    "emptyTab": "No requests here.",
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "settingsPage": {
+    "title": "Settings",
+    "preferences": "Preferences",
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "account": "Account",
+    "changePassword": "Change Password",
+    "about": "About",
+    "logOut": "Log Out"
   }
 }

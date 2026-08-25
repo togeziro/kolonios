@@ -84,7 +84,8 @@
     "custom": "Kustom",
     "saved": "Berhasil disimpan",
     "failed": "Terjadi kesalahan",
-    "importJson": "Impor JSON"
+    "importJson": "Impor JSON",
+    "comingSoon": "Segera hadir"
   },
   "confirm": {
     "deleteTitle": "Apakah Anda yakin?",
@@ -491,7 +492,11 @@
     "absent": "Absen",
     "activeTasks": "Tugas aktif",
     "notifications": "Notifikasi",
-    "signOut": "Keluar"
+    "signOut": "Keluar",
+    "dailyChecklist": "Checklist Harian",
+    "settings": "Pengaturan",
+    "editProfile": "Ubah Profil",
+    "changePassword": "Ubah Kata Sandi"
   },
   "overview": {
     "totalSales": "Total Penjualan",
@@ -1394,5 +1399,121 @@
     "mapFailed": "Peta tidak dapat dimuat",
     "distanceTo": "Jarak ke tujuan",
     "findMyLocation": "Temukan lokasi saya"
+  },
+  "jobs": {
+    "filterLocation": "Lokasi",
+    "filterPriority": "Prioritas",
+    "legBadge": "Leg {{x}} dari {{y}}"
+  },
+  "changePassword": {
+    "title": "Ubah Kata Sandi",
+    "securityHint": "Kata sandi Anda minimal 8 karakter dan harus memuat angka serta simbol.",
+    "fields": {
+      "current": "Kata Sandi Saat Ini",
+      "new": "Kata Sandi Baru",
+      "confirm": "Konfirmasi Kata Sandi Baru"
+    },
+    "strength": {
+      "weak": "Lemah",
+      "fair": "Cukup",
+      "good": "Baik",
+      "strong": "Kuat"
+    },
+    "errors": {
+      "required": "Mohon isi semua kolom.",
+      "mismatch": "Kata sandi baru dan konfirmasinya tidak cocok.",
+      "weak": "Kata sandi baru terlalu lemah. Gunakan minimal 8 karakter dengan kombinasi jenis karakter.",
+      "wrongCurrent": "Kata sandi saat ini salah.",
+      "generic": "Tidak dapat mengubah kata sandi. Silakan coba lagi."
+    },
+    "showPassword": "Tampilkan kata sandi",
+    "hidePassword": "Sembunyikan kata sandi",
+    "submit": "Perbarui Kata Sandi",
+    "submitting": "Memperbarui…",
+    "successToast": "Kata sandi berhasil diperbarui"
+  },
+  "editProfile": {
+    "title": "Edit Profil",
+    "avatarAlt": "Foto profil",
+    "changePhoto": "Ubah foto profil",
+    "avatarUpdated": "Foto profil diperbarui",
+    "avatarUnavailable": "Foto profil tidak dapat diunggah saat ini — penyimpanan tidak tersedia. Inisial Anda ditampilkan sebagai gantinya.",
+    "personalInfo": "Informasi Pribadi",
+    "fullName": "Nama Lengkap",
+    "email": "Alamat Email",
+    "emailLockedHint": "Hubungi HR untuk mengubah email Anda",
+    "saving": "Menyimpan…",
+    "saveChanges": "Simpan Perubahan",
+    "profileSaved": "Profil diperbarui",
+    "saveFailed": "Tidak dapat menyimpan profil. Silakan coba lagi.",
+    "workInfo": "Informasi Pekerjaan",
+    "employeeCode": "Nomor Induk Karyawan",
+    "department": "Departemen",
+    "jobTitle": "Jabatan"
+  },
+  "spvReview": {
+    "title": "Antrean Review",
+    "pendingSubtitle": "{{count}} menunggu",
+    "countPending": "Menunggu",
+    "countApproved": "Disetujui",
+    "countRejected": "Ditolak",
+    "statusPending": "Menunggu",
+    "statusApproved": "Disetujui",
+    "statusRejected": "Ditolak",
+    "timeLog": "Log Waktu",
+    "checklistScore": "Checklist {{resolved}}/{{total}} OK",
+    "tasksLogged_one": "{{count}} tugas dicatat",
+    "tasksLogged_other": "{{count}} tugas dicatat",
+    "note": "Catatan",
+    "reviewedBy": "Direview oleh {{name}} pada {{at}}",
+    "rejectionReason": "Alasan",
+    "approve": "Setujui",
+    "reject": "Tolak",
+    "detailTitle": "Tinjauan Tiket",
+    "requesterValue": "Pemohon: {{name}} ({{initials}})",
+    "engineerLabel": "Teknisi",
+    "taskProgressLabel": "Progres Tugas",
+    "legProgress": "{{completed}} dari {{total}} legs selesai",
+    "evidencePhotos": "Foto Bukti",
+    "workSummary": "Ringkasan Pekerjaan",
+    "materialsUsed": "Material Digunakan",
+    "sopChecklist": "Checklist SOP Standar",
+    "sopScore": "{{resolved}}/{{total}} OK",
+    "notFound": "Tiket tidak ditemukan.",
+    "backToQueue": "Kembali ke antrean"
+  },
+  "leaveApprovals": {
+    "title": "Persetujuan Cuti",
+    "chipsPending": "{{count}} Menunggu",
+    "chipsThisMonth": "{{count}} bulan ini",
+    "tabPending": "Menunggu",
+    "tabApproved": "Disetujui",
+    "tabRejected": "Ditolak",
+    "paid": "Berbayar",
+    "unpaid": "Tanpa Gaji",
+    "durationDays_one": "{{count}} hari",
+    "durationDays_other": "{{count}} hari",
+    "unpaidHint": "Tanpa gaji — dipotong dari gaji",
+    "typeAnnual": "Cuti Tahunan",
+    "typeSick": "Cuti Sakit",
+    "typePersonal": "Izin Pribadi",
+    "typeEmergency": "Cuti Darurat",
+    "typeMaternity": "Cuti Melahirkan",
+    "typePaternity": "Cuti Ayah",
+    "emptyTab": "Tidak ada pengajuan di sini.",
+    "approve": "Setujui",
+    "reject": "Tolak"
+  },
+  "settingsPage": {
+    "title": "Pengaturan",
+    "preferences": "Preferensi",
+    "language": "Bahasa",
+    "theme": "Tema",
+    "light": "Terang",
+    "dark": "Gelap",
+    "account": "Akun",
+    "changePassword": "Ubah Kata Sandi",
+    "about": "Tentang",
+    "logOut": "Keluar"
   }
 }
