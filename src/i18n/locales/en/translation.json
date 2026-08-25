@@ -492,7 +492,11 @@
     "absent": "Absent",
     "activeTasks": "Active tasks",
     "notifications": "Notifications",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "dailyChecklist": "Daily Checklist",
+    "settings": "Settings",
+    "editProfile": "Edit Profile",
+    "changePassword": "Change Password"
   },
   "overview": {
     "totalSales": "Total Sales",
@@ -1499,5 +1503,17 @@
     "emptyTab": "No requests here.",
     "approve": "Approve",
     "reject": "Reject"
+  },
+  "settingsPage": {
+    "title": "Settings",
+    "preferences": "Preferences",
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "account": "Account",
+    "changePassword": "Change Password",
+    "about": "About",
+    "logOut": "Log Out"
   }
 }

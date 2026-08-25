@@ -143,7 +143,7 @@ export default function ChangePasswordPage() {
         return;
       }
       toast.success(t('changePassword.successToast'));
-      navigate({ to: '/dashboard/profile' });
+      navigate({ to: '/dashboard/settings' });
     } catch {
       setError(t('changePassword.errors.generic'));
     } finally {

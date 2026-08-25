@@ -99,7 +99,7 @@ describe('ChangePasswordPage', () => {
     await waitFor(() => {
       expect(toastMock.success).toHaveBeenCalled();
     });
-    expect(navigateMock).toHaveBeenCalledWith({ to: '/dashboard/profile' });
+    expect(navigateMock).toHaveBeenCalledWith({ to: '/dashboard/settings' });
   });
 
   it('shows an inline mismatch error and does not call changePassword', async () => {

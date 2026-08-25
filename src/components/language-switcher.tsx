@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import type { i18n as I18nInstance } from 'i18next';
 import { supportedLanguages, type SupportedLanguage } from '@/i18n/config';
+import { applyLanguage } from '@/lib/preferences/language';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,16 +21,6 @@ const languageCodes: Record<SupportedLanguage, string> = {
   id: 'ID'
 };
 
-// Module scope so the document/global mutations never appear to happen
-// during render — this only ever runs from the menu item click handler.
-function changeLanguage(i18n: Pick<I18nInstance, 'changeLanguage'>, lng: SupportedLanguage) {
-  void i18n.changeLanguage(lng);
-  document.cookie = `i18next=${lng}; path=/; max-age=31536000; SameSite=Lax; ${
-    window.location.protocol === 'https:' ? 'Secure;' : ''
-  }`;
-  document.documentElement.lang = lng;
-}
-
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
   const currentLanguage = i18n.language as SupportedLanguage;
@@ -47,7 +37,7 @@ export function LanguageSwitcher() {
         {supportedLanguages.map((lang) => (
           <DropdownMenuItem
             key={lang}
-            onClick={() => changeLanguage(i18n, lang)}
+            onClick={() => applyLanguage(i18n, lang)}
             className={cn(currentLanguage === lang && 'bg-accent font-medium')}
           >
             <span className='font-mono text-xs'>{languageCodes[lang]}</span>

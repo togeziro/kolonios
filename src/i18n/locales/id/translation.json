@@ -492,7 +492,11 @@
     "absent": "Absen",
     "activeTasks": "Tugas aktif",
     "notifications": "Notifikasi",
-    "signOut": "Keluar"
+    "signOut": "Keluar",
+    "dailyChecklist": "Checklist Harian",
+    "settings": "Pengaturan",
+    "editProfile": "Ubah Profil",
+    "changePassword": "Ubah Kata Sandi"
   },
   "overview": {
     "totalSales": "Total Penjualan",
@@ -1499,5 +1503,17 @@
     "emptyTab": "Tidak ada pengajuan di sini.",
     "approve": "Setujui",
     "reject": "Tolak"
+  },
+  "settingsPage": {
+    "title": "Pengaturan",
+    "preferences": "Preferensi",
+    "language": "Bahasa",
+    "theme": "Tema",
+    "light": "Terang",
+    "dark": "Gelap",
+    "account": "Akun",
+    "changePassword": "Ubah Kata Sandi",
+    "about": "Tentang",
+    "logOut": "Keluar"
   }
 }
