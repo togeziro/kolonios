@@ -1394,5 +1394,51 @@
     "mapFailed": "Map could not be loaded",
     "distanceTo": "Distance to destination",
     "findMyLocation": "Find my location"
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "securityHint": "Your password must be at least 8 characters and include a number and a symbol.",
+    "fields": {
+      "current": "Current Password",
+      "new": "New Password",
+      "confirm": "Confirm New Password"
+    },
+    "strength": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong"
+    },
+    "errors": {
+      "required": "Please fill in all fields.",
+      "mismatch": "New password and confirmation do not match.",
+      "weak": "New password is too weak. Use at least 8 characters with mixed character types.",
+      "wrongCurrent": "Current password is incorrect.",
+      "generic": "Could not change password. Please try again."
+    },
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "submit": "Update Password",
+    "submitting": "Updating…",
+    "successToast": "Password updated successfully"
+  },
+  "editProfile": {
+    "title": "Edit Profile",
+    "avatarAlt": "Profile photo",
+    "changePhoto": "Change profile photo",
+    "avatarUpdated": "Profile photo updated",
+    "avatarUnavailable": "Profile photo can't be uploaded right now — storage isn't available. Your initials are shown instead.",
+    "personalInfo": "Personal Information",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "emailLockedHint": "Contact HR to change your email",
+    "saving": "Saving…",
+    "saveChanges": "Save Changes",
+    "profileSaved": "Profile updated",
+    "saveFailed": "Could not save profile. Please try again.",
+    "workInfo": "Work Information",
+    "employeeCode": "Employee Code",
+    "department": "Department",
+    "jobTitle": "Job Title"
   }
 }
