@@ -11,7 +11,7 @@ import { dateFnsLocale } from '@/lib/format';
 import { openTicketsQueryOptions } from '../api/queries';
 import { useTakeTicket } from '../api/hooks';
 import type { Ticket, TicketPriority, TicketDomain } from '../api/types';
-import { LEG_FIXTURES, type TicketRelayInfo } from './-leg-fixtures';
+import { LEG_FIXTURES, type TicketLegInfo } from './-leg-fixtures';
 
 const priorityConfig: Record<TicketPriority, { bg: string; text: string; labelKey: string }> = {
   high: { bg: 'bg-red-500/10', text: 'text-red-400', labelKey: 'ticket.high' },
@@ -47,7 +47,7 @@ function OpenTicketCard({
   onTake: (id: number) => void;
   disabled?: boolean;
   reasons?: string[];
-  relay?: TicketRelayInfo;
+  relay?: TicketLegInfo;
 }) {
   const { t } = useTranslation();
   const p = priorityConfig[ticket.priority];
@@ -121,9 +121,7 @@ function OpenTicketCard({
   );
 }
 
-export default function JobsPage({
-  relayMap
-}: { relayMap?: Record<number, TicketRelayInfo> } = {}) {
+export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLegInfo> } = {}) {
   const { t } = useTranslation();
   const { domain } = useSearch({ from: JobsRoute.id });
   const navigate = useNavigate();
@@ -131,9 +129,9 @@ export default function JobsPage({
   const canCreate = isAdmin || permissions.tickets?.add === true;
   const takeTicket = useTakeTicket();
 
-  // TODO(wire): relay info comes from fixtures today; the wiring pass supplies
+  // TODO(wire): leg data comes from fixtures today; the wiring pass supplies
   // the real per-ticket map (same shape) and this merge becomes a no-op.
-  const relays: Record<number, TicketRelayInfo> = { ...LEG_FIXTURES, ...relayMap };
+  const legs: Record<number, TicketLegInfo> = { ...LEG_FIXTURES, ...legMap };
 
   // Location/Priority filters are intentionally local state (not URL) — they
   // narrow already-fetched tickets client-side only.
@@ -265,7 +263,7 @@ export default function JobsPage({
                 ticket={ticket}
                 onTake={handleTake}
                 disabled={takeTicket.isPending}
-                relay={relays[ticket.id]}
+                relay={legs[ticket.id]}
               />
             ))}
             {visibleUnavailable.length > 0 && (
@@ -280,7 +278,7 @@ export default function JobsPage({
                       onTake={() => {}}
                       disabled
                       reasons={ticket.eligibilityReasons}
-                      relay={relays[ticket.id]}
+                      relay={legs[ticket.id]}
                     />
                   </div>
                 ))}

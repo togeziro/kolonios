@@ -50,20 +50,39 @@ function CountStrip({
 function SubmissionCard({ submission }: { submission: ReviewQueueSubmission }) {
   const { t } = useTranslation();
   const decided = submission.status !== 'pending';
-  const card = (
+  // Only the identity header is a link — Approve/Reject must never live
+  // inside an anchor (nested interactive elements swallow the taps).
+  const headerLink =
+    submission.ticketId && !decided ? (
+      <Link
+        to='/dashboard/spv/review/$ticketId'
+        params={{ ticketId: String(submission.ticketId) }}
+        className='flex min-w-0 flex-1 items-center gap-3'
+      >
+        <InitialChip name={submission.technicianName} />
+        <div className='min-w-0'>
+          <p className='dark:text-zinc-100 truncate font-semibold'>{submission.technicianName}</p>
+          <p className='text-muted-foreground truncate text-xs'>{submission.scheduleWindow}</p>
+        </div>
+      </Link>
+    ) : (
+      <div className='flex min-w-0 flex-1 items-center gap-3'>
+        <InitialChip name={submission.technicianName} />
+        <div className='min-w-0'>
+          <p className='dark:text-zinc-100 truncate font-semibold'>{submission.technicianName}</p>
+          <p className='text-muted-foreground truncate text-xs'>{submission.scheduleWindow}</p>
+        </div>
+      </div>
+    );
+
+  return (
     <div
       className={`dark:border-zinc-800/50 dark:bg-zinc-900 flex flex-col gap-3 rounded-2xl border p-4 ${
         decided ? 'opacity-60' : ''
       }`}
     >
       <div className='flex items-start justify-between gap-2'>
-        <div className='flex min-w-0 items-center gap-3'>
-          <InitialChip name={submission.technicianName} />
-          <div className='min-w-0'>
-            <p className='dark:text-zinc-100 truncate font-semibold'>{submission.technicianName}</p>
-            <p className='text-muted-foreground truncate text-xs'>{submission.scheduleWindow}</p>
-          </div>
-        </div>
+        {headerLink}
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusBadgeClass[submission.status]}`}
         >
@@ -157,15 +176,6 @@ function SubmissionCard({ submission }: { submission: ReviewQueueSubmission }) {
       )}
     </div>
   );
-
-  if (submission.ticketId && !decided) {
-    return (
-      <Link to='/dashboard/spv/review/$ticketId' params={{ ticketId: String(submission.ticketId) }}>
-        {card}
-      </Link>
-    );
-  }
-  return card;
 }
 
 export default function ReviewQueuePage() {

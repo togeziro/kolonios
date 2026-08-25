@@ -2,23 +2,24 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { InitialChip } from '@/components/ui/initial-chip';
 import { Icons } from '@/components/icons';
+import type { TicketPriority } from '@/lib/domain/tickets';
 import { stubAction } from '@/lib/ui/stub-action';
 import { REVIEWABLE_TICKETS } from './review-ticket-fixtures';
 
 // Priority tone classes reused from en-route-navigation.tsx.
-const priorityTone: Record<string, string> = {
+const priorityTone: Record<TicketPriority, string> = {
   high: 'bg-red-500/15 text-red-500 dark:text-red-400',
   medium: 'bg-amber-500/15 text-amber-500 dark:text-amber-400',
   low: 'bg-zinc-500/15 text-zinc-500 dark:text-zinc-400'
 };
 
-const priorityLabelKey: Record<string, string> = {
+const priorityLabelKey: Record<TicketPriority, string> = {
   high: 'priority.high',
   medium: 'priority.medium',
   low: 'priority.low'
 };
 
-export default function ReviewTicketPage({ ticketId }: { ticketId: number }) {
+export default function ReviewTicketPage({ ticketId }: { ticketId?: number }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 

@@ -78,3 +78,13 @@ export function formatCurrency(value: number | string, locale: string = getAppLo
 export function dateFnsLocale(locale: string = getAppLocale()): Locale {
   return locale === 'id-ID' ? id : enUS;
 }
+
+export function initialsFromName(name: string): string {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .filter(Boolean)
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}

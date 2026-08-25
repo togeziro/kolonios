@@ -129,8 +129,7 @@ export default function ChangePasswordPage() {
     try {
       const { error: apiError } = await authClient.changePassword({
         currentPassword,
-        newPassword,
-        revokeOtherSessions: true
+        newPassword
       });
       if (apiError) {
         const unauthorized =

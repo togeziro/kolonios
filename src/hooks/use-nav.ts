@@ -10,7 +10,7 @@ function canAccessItem(item: NavItem, permissions?: Permissions, isAdmin?: boole
   if (!permissions) return true;
   if (!item.module) return true;
   const mod = permissions[item.module];
-  return mod?.view === true;
+  return mod?.[item.requiredAction ?? 'view'] === true;
 }
 
 export function filterNavItemsByRole(

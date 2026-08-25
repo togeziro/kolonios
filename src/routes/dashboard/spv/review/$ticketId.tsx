@@ -14,5 +14,5 @@ function ReviewTicketRoute() {
   const { ticketId } = useParams({ from: Route.id });
   const parsed = Number(ticketId);
   const valid = Number.isInteger(parsed) && parsed > 0;
-  return <ReviewTicketPage ticketId={valid ? parsed : 0} />;
+  return <ReviewTicketPage ticketId={valid ? parsed : undefined} />;
 }

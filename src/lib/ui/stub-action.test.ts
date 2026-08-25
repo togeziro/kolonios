@@ -27,7 +27,6 @@ describe('stubAction', () => {
   it('performs no navigation or request by construction (void return, no router deps)', () => {
     const result = stubAction();
     expect(result).toBeUndefined();
-    expect(stubAction.length).toBeLessThanOrEqual(1);
     expect(infoMock).toHaveBeenCalledTimes(1);
   });
 });

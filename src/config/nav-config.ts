@@ -295,7 +295,8 @@ export const navItems: NavItem[] = [
     url: '/dashboard/spv/review',
     icon: 'workspace',
     isActive: false,
-    module: 'spv_review',
+    module: 'checklist',
+    requiredAction: 'approve',
     items: []
   },
   {

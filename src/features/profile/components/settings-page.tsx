@@ -5,6 +5,7 @@ import { supportedLanguages, type SupportedLanguage } from '@/i18n/config';
 import { applyLanguage } from '@/lib/preferences/language';
 import { setShellDark, useShellDark } from '@/lib/preferences/shell-dark';
 import { APP_VERSION } from '@/lib/version';
+import { initialsFromName } from '@/lib/format';
 import { signOut, useSession } from '@/lib/auth/auth-client';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,15 +16,6 @@ const languageLabels: Record<SupportedLanguage, string> = {
   en: 'English',
   id: 'Indonesia'
 };
-
-function initialsOf(name: string) {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -43,6 +35,9 @@ export default function SettingsPage() {
   }
 
   function handleTheme(next: 'light' | 'dark') {
+    // Drive both sources: the fieldops shell store (MobileShell syncs
+    // next-themes from it via effect) and next-themes directly so the row
+    // also applies instantly inside the sidebar shell.
     setShellDark(next === 'dark');
     setTheme(next);
   }
@@ -52,7 +47,7 @@ export default function SettingsPage() {
       <Card className='flex items-center gap-3 rounded-2xl p-4 dark:border-zinc-800/50 dark:bg-zinc-900'>
         <Avatar className='border dark:border-zinc-700 h-14 w-14'>
           <AvatarFallback className='bg-primary/10 text-primary text-lg font-semibold'>
-            {initialsOf(name)}
+            {initialsFromName(name)}
           </AvatarFallback>
         </Avatar>
         <div className='min-w-0 flex-1'>

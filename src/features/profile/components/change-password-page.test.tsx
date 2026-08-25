@@ -92,8 +92,7 @@ describe('ChangePasswordPage', () => {
     await waitFor(() => {
       expect(changePasswordMock).toHaveBeenCalledWith({
         currentPassword: 'OldPass1!',
-        newPassword: 'NewPass1!',
-        revokeOtherSessions: true
+        newPassword: 'NewPass1!'
       });
     });
     await waitFor(() => {

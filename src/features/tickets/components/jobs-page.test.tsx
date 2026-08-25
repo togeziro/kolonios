@@ -203,7 +203,7 @@ describe('JobsPage', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <JobsPage
-          relayMap={{ 7: { legNumber: 2, legsTotal: 4 }, 8: { legNumber: 1, legsTotal: 1 } }}
+          legMap={{ 7: { legNumber: 2, legsTotal: 4 }, 8: { legNumber: 1, legsTotal: 1 } }}
         />
       </I18nextProvider>
     );

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { avatarUrlQueryOptions } from '../api/queries';
 import { myWorkInfoFixture } from '../lib/work-info';
+import { initialsFromName } from '@/lib/format';
 
 function readAsDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -19,18 +20,6 @@ function readAsDataURL(file: File): Promise<string> {
     reader.addEventListener('error', () => reject(reader.error));
     reader.readAsDataURL(file);
   });
-}
-
-function initialsOf(name: string): string {
-  return (
-    name
-      .split(' ')
-      .map((part) => part[0])
-      .filter(Boolean)
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '?'
-  );
 }
 
 export default function EditProfilePage() {
@@ -137,7 +126,7 @@ export default function EditProfilePage() {
               />
             ) : (
               <AvatarFallback className='bg-primary/10 text-primary text-xl font-semibold'>
-                {initialsOf(sessionName)}
+                {initialsFromName(sessionName)}
               </AvatarFallback>
             )}
           </Avatar>
