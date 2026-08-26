@@ -1,10 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { getTableName } from 'drizzle-orm';
+import { eq, getTableName } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { readFileSync } from 'node:fs';
 import { employees } from './schema/employees';
+import { auditLog } from './schema/audit-log';
 import { db } from './index';
 import { resetAllTables, seedDepartment, seedDesignation, seedUser } from '@/test-utils/db';
+import { departments, designations } from './schema/masterdata';
+import { locations } from './schema/attendance';
 import {
   employeeBankAccounts,
   employeeBenefitEnrollments,
@@ -53,6 +56,9 @@ import {
   listPayrollPeriods,
   listPayrollRecords,
   listSalaryComponents,
+  getPayQueue,
+  stampPayrollRecords,
+  stampUnstampedPayrollRecords,
   transitionPayrollPeriod,
   updatePayrollPeriod,
   updateSalaryComponent
@@ -165,6 +171,11 @@ describe('payroll schema contract', () => {
       config.indexes.some((index) => index.config.name === 'payroll_records_period_employee_unique')
     ).toBe(true);
     expect(columnNames(payrollPeriods)).toContain('status');
+  });
+
+  it('carries a nullable payment stamp on each payroll record', () => {
+    expect(columnNames(payrollRecords)).toContain('paid_at');
+    expect(columnNames(payrollRecords)).toContain('paid_by');
   });
 
   it('cascades employee-owned records when an employee is deleted', () => {
@@ -616,5 +627,330 @@ describe('payroll data access (integration)', () => {
     expect(ctx.employee.employee_code).toBe('PAY-CTX-1');
     expect(ctx.department?.code).toBe('PAY-CTX-DEPT');
     expect(ctx.events).toHaveLength(1);
+  });
+});
+
+/** Insert an employee with test-unique codes without touching the shared
+ *  seedEmployee counter (which collides across retries/processes). */
+async function seedQueueEmployee(id: string, fullName: string, departmentId?: number) {
+  await seedUser(id);
+  const department =
+    departmentId ??
+    (
+      await db
+        .insert(departments)
+        .values({ name: `${fullName} Dept`, code: `PQD-${id.toUpperCase()}` })
+        .returning()
+    )[0].id;
+  const [designation] = await db
+    .insert(designations)
+    .values({
+      name: `${fullName} Role`,
+      code: `PQG-${id.toUpperCase()}`,
+      department_id: department
+    })
+    .returning();
+  const location = (
+    await db
+      .insert(locations)
+      .values({ name: `Loc ${id}`, latitude: -6.2, longitude: 106.8, radius: 100 })
+      .returning()
+  )[0];
+  await db.insert(employees).values({
+    id,
+    employee_code: `PQ-${id.toUpperCase()}`,
+    full_name: fullName,
+    email: `${id}@test.com`,
+    birth_date: '1990-01-01',
+    department_id: department,
+    designation_id: designation.id,
+    location_id: location.id,
+    join_date: '2024-01-01'
+  });
+}
+
+describe('pay queue per-record payment', () => {
+  beforeEach(resetAllTables);
+
+  async function seedReadyPeriodWithRecords(employeeIds: string[]) {
+    await seedUser('pay-queue-admin');
+    for (const [index, id] of employeeIds.entries()) {
+      await seedQueueEmployee(id, `Employee ${index + 1}`);
+    }
+    const period = await createPayrollPeriod({
+      name: 'Periode Jul 2026',
+      period_start: '2026-07-01',
+      period_end: '2026-07-31',
+      payment_date: '2026-08-07',
+      status: 'draft',
+      created_by: 'pay-queue-admin'
+    });
+    if (!period) throw new Error('period not created');
+    await transitionPayrollPeriod(period.id, 'processing');
+    await transitionPayrollPeriod(period.id, 'ready_to_pay');
+    const records = [];
+    for (const employeeId of employeeIds) {
+      const record = await createPayrollRecord({
+        payroll_period_id: period.id,
+        employee_id: employeeId,
+        gross_salary: '5000000',
+        net_salary: '4500000'
+      });
+      if (!record) throw new Error(`record not created for ${employeeId}`);
+      records.push(record);
+    }
+    return { period, records };
+  }
+
+  it('stamps exactly the selection and flips the period only when its last unstamped record goes', async () => {
+    const { period, records } = await seedReadyPeriodWithRecords(['pq-emp-1', 'pq-emp-2']);
+    const [first, second] = records;
+
+    const partial = await stampPayrollRecords([first.id], 'pay-queue-admin');
+    expect(partial.stamped).toBe(1);
+    expect(partial.flippedPeriodIds).toEqual([]);
+    expect((await getPayrollPeriod(period.id))?.status).toBe('ready_to_pay');
+
+    // Stamping is one-way and ignores unknown or already-stamped ids.
+    const replayed = await stampPayrollRecords([first.id, 999_999], 'pay-queue-admin');
+    expect(replayed.stamped).toBe(0);
+    expect(replayed.flippedPeriodIds).toEqual([]);
+
+    const final = await stampPayrollRecords([second.id], 'pay-queue-admin');
+    expect(final.stamped).toBe(1);
+    expect(final.flippedPeriodIds).toEqual([period.id]);
+    expect((await getPayrollPeriod(period.id))?.status).toBe('paid');
+
+    const rows = await db.select().from(payrollRecords).orderBy(payrollRecords.id);
+    for (const row of rows) {
+      expect(row.paid_at).not.toBeNull();
+      expect(row.paid_by).toBe('pay-queue-admin');
+    }
+  });
+
+  it('never stamps records whose period is not ready to pay', async () => {
+    const { period, records } = await seedReadyPeriodWithRecords(['pq-emp-3']);
+    await transitionPayrollPeriod(period.id, 'paid');
+
+    const result = await stampPayrollRecords([records[0].id], 'pay-queue-admin');
+    expect(result.stamped).toBe(0);
+    expect(result.flippedPeriodIds).toEqual([]);
+  });
+
+  it('leaves an audit trail for each pay action', async () => {
+    await seedUser('pay-queue-auditor');
+    const { records } = await seedReadyPeriodWithRecords(['pq-emp-4']);
+    await stampPayrollRecords([records[0].id], 'pay-queue-auditor');
+
+    const entries = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'payroll.record.pay'));
+    expect(entries.length).toBeGreaterThanOrEqual(1);
+    expect(entries.some((entry) => entry.actorUserId === 'pay-queue-auditor')).toBe(true);
+  });
+
+  it('stamps every remaining record of a period when it is fully paid', async () => {
+    const { records } = await seedReadyPeriodWithRecords(['pq-emp-5', 'pq-emp-6']);
+    const [first] = records;
+    await stampPayrollRecords([first.id], 'pay-queue-admin');
+
+    let stampedInTx = 0;
+    await db.transaction(async (tx) => {
+      stampedInTx = await stampUnstampedPayrollRecords(
+        tx,
+        first.payroll_period_id,
+        'pay-queue-admin'
+      );
+    });
+    expect(stampedInTx).toBe(1);
+
+    await transitionPayrollPeriod(first.payroll_period_id, 'paid');
+    const rows = await db
+      .select()
+      .from(payrollRecords)
+      .where(eq(payrollRecords.payroll_period_id, first.payroll_period_id));
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.paid_at).not.toBeNull();
+      expect(row.paid_by).toBe('pay-queue-admin');
+    }
+  });
+
+  it('persists a computed audit payload for the whole-period pay action', async () => {
+    const { period } = await seedReadyPeriodWithRecords(['pq-emp-7']);
+    await withPayrollAuditTransaction(
+      'pay-queue-admin',
+      {
+        action: 'payroll.period.fully-paid',
+        entityType: 'payroll_period',
+        entityId: period.id,
+        after: (result: { stampedRecords: number }) => ({
+          stampedRecords: result.stampedRecords
+        })
+      },
+      async () => ({ stampedRecords: 1 })
+    );
+
+    const [entry] = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'payroll.period.fully-paid'));
+    expect(entry).toBeDefined();
+    expect(entry.after).toEqual({ stampedRecords: 1 });
+  });
+});
+
+describe('pay queue read model', () => {
+  beforeEach(resetAllTables);
+
+  async function seedQueueFixture() {
+    await seedUser('pay-queue-admin');
+    const operations = await seedDepartment({ name: 'Operations', code: 'PQ-OPS' });
+    const support = await seedDepartment({ name: 'Support', code: 'PQ-SUP' });
+    const ada = { employee: { id: 'pq-ada' } };
+    const budi = { employee: { id: 'pq-budi' } };
+    const cici = { employee: { id: 'pq-cici' } };
+    await seedQueueEmployee(ada.employee.id, 'Ada A', operations.id);
+    await seedQueueEmployee(budi.employee.id, 'Budi B', support.id);
+    await seedQueueEmployee(cici.employee.id, 'Cici C', support.id);
+    await db.insert(employeeBankAccounts).values([
+      {
+        employee_id: ada.employee.id,
+        bank_name: 'BCA',
+        account_name: 'Ada A',
+        account_number: '1234567890',
+        is_primary: true,
+        effective_from: '2026-01-01'
+      },
+      {
+        employee_id: budi.employee.id,
+        bank_name: 'Mandiri',
+        account_name: 'Budi B',
+        account_number: '0987654321',
+        is_primary: true,
+        effective_from: '2026-01-01'
+      }
+    ]);
+
+    const period = await createPayrollPeriod({
+      name: 'Periode Jul 2026',
+      period_start: '2026-07-01',
+      period_end: '2026-07-31',
+      payment_date: '2026-08-07',
+      status: 'draft',
+      created_by: 'pay-queue-admin'
+    });
+    if (!period) throw new Error('period not created');
+    await transitionPayrollPeriod(period.id, 'processing');
+    await transitionPayrollPeriod(period.id, 'ready_to_pay');
+
+    const processingPeriod = await createPayrollPeriod({
+      name: 'Periode Agu 2026',
+      period_start: '2026-08-01',
+      period_end: '2026-08-31',
+      payment_date: '2026-09-07',
+      status: 'draft',
+      created_by: 'pay-queue-admin'
+    });
+    if (!processingPeriod) throw new Error('processing period not created');
+    await transitionPayrollPeriod(processingPeriod.id, 'processing');
+
+    async function addRecord(periodId: number, employeeId: string, net: string) {
+      const record = await createPayrollRecord({
+        payroll_period_id: periodId,
+        employee_id: employeeId,
+        gross_salary: '6000000',
+        net_salary: net
+      });
+      if (!record) throw new Error(`record not created for ${employeeId}`);
+      return record;
+    }
+
+    const adaRecord = await addRecord(period.id, ada.employee.id, '4500000');
+    const budiRecord = await addRecord(period.id, budi.employee.id, '1000000');
+    const ciciRecord = await addRecord(period.id, cici.employee.id, '1000000');
+    await addRecord(processingPeriod.id, cici.employee.id, '990000');
+
+    return {
+      operations,
+      support,
+      ada,
+      period,
+      processingPeriod,
+      adaRecord,
+      budiRecord,
+      ciciRecord
+    };
+  }
+
+  it('lists unpaid records of ready-to-pay periods with employee, division and bank context', async () => {
+    const { period, adaRecord, budiRecord, ciciRecord } = await seedQueueFixture();
+
+    const view = await getPayQueue({});
+    expect(view.rows.map((row) => row.recordId)).toEqual([
+      adaRecord.id,
+      budiRecord.id,
+      ciciRecord.id
+    ]);
+    expect(view.rows[0]).toMatchObject({
+      employeeId: 'pq-ada',
+      employeeName: 'Ada A',
+      departmentName: 'Operations',
+      periodName: 'Periode Jul 2026',
+      paymentDate: '2026-08-07',
+      bankName: 'BCA',
+      accountNumber: '1234567890',
+      netSalary: '4500000.00'
+    });
+    expect(view.totals).toEqual({ totalNet: '6500000.00', employeeCount: 3 });
+    expect(view.periods.map((p) => p.id)).toEqual([period.id]);
+  });
+
+  it('scopes rows and totals to the division filter without changing what is payable', async () => {
+    const { support, budiRecord, ciciRecord } = await seedQueueFixture();
+
+    const view = await getPayQueue({ departmentId: support.id });
+    expect(view.rows.map((row) => row.recordId)).toEqual([budiRecord.id, ciciRecord.id]);
+    expect(view.totals).toEqual({ totalNet: '2000000.00', employeeCount: 2 });
+
+    const other = await getPayQueue({ departmentId: support.id + 999 });
+    expect(other.rows).toHaveLength(0);
+    expect(other.totals).toEqual({ totalNet: '0', employeeCount: 0 });
+  });
+
+  it('drops stamped records from the queue immediately', async () => {
+    const { adaRecord, budiRecord, ciciRecord } = await seedQueueFixture();
+    await stampPayrollRecords([adaRecord.id], 'pay-queue-admin');
+
+    const view = await getPayQueue({});
+    expect(view.rows.map((row) => row.recordId)).toEqual([budiRecord.id, ciciRecord.id]);
+    expect(view.totals.totalNet).toBe('2000000.00');
+  });
+
+  it('counts distinct employees in the summary even across multiple queued periods', async () => {
+    const { ada, period } = await seedQueueFixture();
+    const secondPeriod = await createPayrollPeriod({
+      name: 'Periode Jun 2026',
+      period_start: '2026-06-01',
+      period_end: '2026-06-30',
+      payment_date: '2026-07-07',
+      status: 'draft',
+      created_by: 'pay-queue-admin'
+    });
+    if (!secondPeriod) throw new Error('second period not created');
+    await transitionPayrollPeriod(secondPeriod.id, 'processing');
+    await transitionPayrollPeriod(secondPeriod.id, 'ready_to_pay');
+    const repeat = await createPayrollRecord({
+      payroll_period_id: secondPeriod.id,
+      employee_id: ada.employee.id,
+      gross_salary: '6000000',
+      net_salary: '500000'
+    });
+    if (!repeat) throw new Error('repeat record not created');
+
+    const view = await getPayQueue({});
+    expect(view.rows).toHaveLength(4);
+    expect(view.totals.employeeCount).toBe(3);
   });
 });

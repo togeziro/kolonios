@@ -64,7 +64,10 @@ describe('nav-config', () => {
   it('nests payroll admin pages under a Payroll dropdown', () => {
     const payroll = navItems.find((item) => item.title === 'Payroll');
     const children = payroll?.items?.map((item) => item.title) ?? [];
-    expect(children).toEqual(['Payroll', 'Payroll Profiles', 'Payroll Settings']);
+    expect(children).toEqual(['Payroll', 'Ready to Pay', 'Payroll Profiles', 'Payroll Settings']);
+    expect(payroll?.items?.map((item) => item.url)).toContain(
+      '/dashboard/admin/payroll/ready-to-pay'
+    );
   });
 
   it('nests attendance admin pages under an Attendance Management dropdown', () => {
