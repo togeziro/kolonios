@@ -197,6 +197,8 @@ bun run db:seed          # optional: force a re-seed
                          #   (tickets + attendance are re-seeded from scratch).
                          #   The local .env sets SEED_DEMO_ACHIEVEMENTS=1 so a
                          #   plain `bun run db:seed` restores it automatically.
+bun run db:reset         # nuclear option: drop + recreate the DATABASE_URL
+                         # database, apply all migrations, seed fresh demo data
 ```
 
 Run the development server:
