@@ -54,6 +54,8 @@ export interface PayrollReportRow {
   details: unknown;
   period_status: PayrollRecordFilters['status'];
   department_name?: string | null;
+  period_start?: string;
+  period_end?: string;
 }
 
 export interface PayrollReportResult {

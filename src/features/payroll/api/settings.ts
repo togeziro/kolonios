@@ -8,14 +8,20 @@ import { companyPayrollSettingsSchema } from './validation';
 export interface CompanyProfile {
   name: string;
   address?: string;
+  email?: string;
+  phone?: string;
 }
 
 export function getCompanyProfile(): CompanyProfile {
   const name = process.env.COMPANY_NAME?.trim();
   const address = process.env.COMPANY_ADDRESS?.trim();
+  const email = process.env.COMPANY_EMAIL?.trim();
+  const phone = process.env.COMPANY_PHONE?.trim();
   return {
     name: name || 'Kolonios',
-    ...(address ? { address } : {})
+    ...(address ? { address } : {}),
+    ...(email ? { email } : {}),
+    ...(phone ? { phone } : {})
   };
 }
 

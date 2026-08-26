@@ -23,6 +23,7 @@ export { overrideEmployeeTaxRecordFn } from './tax';
 export { getCompanyPayrollSettingsFn, updateCompanyPayrollSettingsFn } from './settings';
 export { getAttendanceOverrideFn, upsertAttendanceOverrideFn } from './attendance-overrides';
 export { getMyPayslipsFn } from './payslips';
+export { getPayrollPayslipPrintFn } from './payslip-print';
 export { getPayrollReportFn } from './reports';
 export {
   assertEmployeeScope,

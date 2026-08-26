@@ -1365,6 +1365,71 @@ export async function listMyPayslips(
   });
 }
 
+export async function findPayrollRecordForPrint(filters: {
+  id: number;
+  employeeId?: string;
+  statuses?: string[];
+}) {
+  try {
+    const where = buildConditions([
+      eq(payrollRecords.id, filters.id),
+      filters.employeeId ? eq(payrollRecords.employee_id, filters.employeeId) : undefined,
+      filters.statuses?.length
+        ? inArray(
+            payrollPeriods.status,
+            filters.statuses as Array<'draft' | 'processing' | 'ready_to_pay' | 'paid' | 'locked'>
+          )
+        : undefined
+    ]);
+    const [row] = await db
+      .select({
+        ...getTableColumns(payrollRecords),
+        period_status: payrollPeriods.status,
+        period_name: payrollPeriods.name,
+        period_start: payrollPeriods.period_start,
+        period_end: payrollPeriods.period_end,
+        payment_date: payrollPeriods.payment_date,
+        employee_code: employees.employee_code,
+        employee_name: employees.full_name,
+        department_name: departments.name,
+        designation_name: designations.name
+      })
+      .from(payrollRecords)
+      .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))
+      .innerJoin(employees, eq(payrollRecords.employee_id, employees.id))
+      .leftJoin(departments, eq(employees.department_id, departments.id))
+      .leftJoin(designations, eq(employees.designation_id, designations.id))
+      .where(where)
+      .limit(1);
+    if (!row) return null;
+    // The print slip shows the tax identifier and the full account number
+    // effective in the paid period; callers decide masking per audience.
+    const asOf = row.period_end;
+    const [taxProfileRows, bankAccount] = await Promise.all([
+      db
+        .select()
+        .from(employeeTaxProfiles)
+        .where(
+          and(
+            eq(employeeTaxProfiles.employee_id, row.employee_id),
+            lte(employeeTaxProfiles.effective_from, asOf)
+          )
+        )
+        .orderBy(desc(employeeTaxProfiles.effective_from), desc(employeeTaxProfiles.id)),
+      getPrimaryBankAccount(row.employee_id, asOf)
+    ]);
+    const taxProfile = resolveEffectiveRecord(row.employee_id, asOf, taxProfileRows);
+    return {
+      ...row,
+      npwp: taxProfile?.tax_identifier ?? null,
+      bank_name: bankAccount?.bank_name ?? null,
+      bank_account_number: bankAccount?.account_number ?? null
+    };
+  } catch (e) {
+    mapDbError(e, 'payroll.findPayrollRecordForPrint');
+  }
+}
+
 export async function listPayrollReportRows(
   filters: {
     payroll_period_id?: number;
