@@ -34,6 +34,7 @@ import {
   generatePayrollFn,
   getCompanyPayrollSettingsFn,
   getMyPayslipsFn,
+  getPayrollPayslipPrintFn,
   listEmployeeBpjsEnrollmentsFn,
   listPayrollRecordsFn,
   overrideEmployeeTaxRecordFn,
@@ -65,6 +66,10 @@ import {
 } from './settings?tss-serverfn-split';
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { getMyPayslipsFn_createServerFn_handler } from './payslips?tss-serverfn-split';
+import {
+  getPayrollPayslipPrintFn_createServerFn_handler
+  // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+} from './payslip-print?tss-serverfn-split';
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { overrideEmployeeTaxRecordFn_createServerFn_handler } from './tax?tss-serverfn-split';
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
@@ -801,5 +806,126 @@ describe('payroll profile versioned upserts', () => {
       .from(employeeBankAccounts)
       .where(eq(employeeBankAccounts.employee_id, 'payroll-boundary-a'));
     expect(versions).toHaveLength(2);
+  });
+});
+
+describe('getPayrollPayslipPrintFn print slip boundary', () => {
+  beforeEach(async () => {
+    await resetPayrollTables();
+    sessionUser.id = 'payroll-boundary-a';
+    sessionUser.role = 'employee';
+    getSessionMock.mockClear();
+    getRequestHeadersMock.mockClear();
+    getUserRoleGroupMock.mockClear();
+  });
+
+  afterAll(resetPayrollTables);
+
+  async function seedPrintSlipData() {
+    await seedEmployee('payroll-boundary-a');
+    await seedEmployee('payroll-boundary-b');
+    const [paidPeriod] = await db
+      .insert(payrollPeriods)
+      .values({
+        name: 'Print Paid Period',
+        period_start: '2026-07-01',
+        period_end: '2026-07-31',
+        payment_date: '2026-08-05',
+        status: 'paid'
+      })
+      .returning({ id: payrollPeriods.id });
+    const [processingPeriod] = await db
+      .insert(payrollPeriods)
+      .values({
+        name: 'Print Processing Period',
+        period_start: '2026-08-01',
+        period_end: '2026-08-31',
+        payment_date: '2026-09-05',
+        status: 'processing'
+      })
+      .returning({ id: payrollPeriods.id });
+    const [recordA] = await db
+      .insert(payrollRecords)
+      .values({
+        payroll_period_id: paidPeriod.id,
+        employee_id: 'payroll-boundary-a',
+        gross_salary: '1250000.00',
+        total_allowances: '1500.00',
+        total_deductions: '500.00',
+        net_salary: '1251000.00'
+      })
+      .returning({ id: payrollRecords.id });
+    const [recordAProcessing] = await db
+      .insert(payrollRecords)
+      .values({
+        payroll_period_id: processingPeriod.id,
+        employee_id: 'payroll-boundary-a',
+        gross_salary: '900.00',
+        net_salary: '810.00'
+      })
+      .returning({ id: payrollRecords.id });
+    const [recordB] = await db
+      .insert(payrollRecords)
+      .values({
+        payroll_period_id: paidPeriod.id,
+        employee_id: 'payroll-boundary-b',
+        gross_salary: '2000.00',
+        net_salary: '1800.00'
+      })
+      .returning({ id: payrollRecords.id });
+    await db.insert(employeeTaxProfiles).values({
+      employee_id: 'payroll-boundary-a',
+      tax_identifier: '12.345.678.9-012.345',
+      effective_from: '2026-01-01'
+    });
+    await db.insert(employeeBankAccounts).values({
+      employee_id: 'payroll-boundary-a',
+      bank_name: 'Bank Example',
+      account_name: 'Boundary A',
+      account_number: '7001223456',
+      is_primary: true,
+      effective_from: '2026-01-01'
+    });
+    return { recordA: recordA.id, recordAProcessing: recordAProcessing.id, recordB: recordB.id };
+  }
+
+  it('denies staff the unmasked slip even for their own paid record', async () => {
+    serverFnProvider.handler = getPayrollPayslipPrintFn_createServerFn_handler;
+    const ids = await seedPrintSlipData();
+
+    const result = await getPayrollPayslipPrintFn({ data: { id: ids.recordA } } as never);
+
+    expect(result?.record ?? null).toBeNull();
+    expect(result?.company.name).toBeTruthy();
+  });
+
+  it('hides other employees and unearned periods from staff', async () => {
+    serverFnProvider.handler = getPayrollPayslipPrintFn_createServerFn_handler;
+    const ids = await seedPrintSlipData();
+
+    const others = await getPayrollPayslipPrintFn({ data: { id: ids.recordB } } as never);
+    const processing = await getPayrollPayslipPrintFn({
+      data: { id: ids.recordAProcessing }
+    } as never);
+
+    expect(others?.record ?? null).toBeNull();
+    expect(processing?.record ?? null).toBeNull();
+  });
+
+  it('lets admins open records with unmasked bank data and NPWP', async () => {
+    sessionUser.role = 'admin';
+    serverFnProvider.handler = getPayrollPayslipPrintFn_createServerFn_handler;
+    const ids = await seedPrintSlipData();
+
+    const paid = await getPayrollPayslipPrintFn({ data: { id: ids.recordA } } as never);
+    const processing = await getPayrollPayslipPrintFn({
+      data: { id: ids.recordAProcessing }
+    } as never);
+
+    expect(paid?.record).not.toBeNull();
+    expect(paid?.record.employee_id).toBe('payroll-boundary-a');
+    expect(paid?.record.bank_account_number).toBe('7001223456');
+    expect(paid?.record.npwp).toBe('12.345.678.9-012.345');
+    expect(processing?.record).not.toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useTable } from '@tanstack/react-table';
 import { appFeatures } from '@/lib/table-features';
 import { useQuery } from '@tanstack/react-query';
@@ -269,6 +269,17 @@ function RecordsPage() {
                   </div>
                 ))}
               </div>
+              {(selected.period_status === 'paid' || selected.period_status === 'locked') && (
+                <Button variant='outline' asChild>
+                  <Link
+                    to='/dashboard/admin/payroll/records/$id/print'
+                    params={{ id: String(selected.id) }}
+                    search={{ start: selected.period_start, end: selected.period_end }}
+                  >
+                    {t('payroll.print')}
+                  </Link>
+                </Button>
+              )}
               <p className='text-sm text-muted-foreground'>{t('payroll.adjustmentsHint')}</p>
               {canAdjust && selected.period_status === 'processing' && (
                 <>

@@ -4,14 +4,22 @@ import { formatCurrency } from '@/lib/format';
 import { toMajor } from '../utils/money';
 
 export interface PayslipData {
-  company: { name: string; address?: string };
-  employee: { code: string; name: string; department?: string | null; designation?: string | null };
+  company: { name: string; address?: string; email?: string; phone?: string };
+  employee: {
+    code: string;
+    name: string;
+    department?: string | null;
+    designation?: string | null;
+    npwp?: string | null;
+  };
   period: { name: string; start: string; end: string; status: 'paid' | 'locked' };
   gross: string;
   allowances: string;
   deductions: string;
   net: string;
   tax: string;
+  /** Gross plus allowances; printed as "Total Earnings" on the admin slip. */
+  earningsTotal?: string;
   bankAccount?: { bankName?: string | null; accountNumber?: string | null };
   lineItems: Array<{ name: string; type: 'earning' | 'deduction'; amount: string }>;
 }
@@ -61,6 +69,7 @@ export type PayslipRecord = {
   period_status: string;
   bank_name?: string | null;
   bank_account_number?: string | null;
+  npwp?: string | null;
 };
 
 const money = (value: number | string) => formatCurrency(value);
@@ -89,19 +98,37 @@ function snapshotLineItems(details: Record<string, unknown>) {
     : [];
 }
 
-export function payslipFromRecord(row: PayslipRecord, company: CompanyProfile): PayslipData | null {
+export interface PayslipFromRecordOptions {
+  /**
+   * Admin-facing slips (print page) show the full account number; the
+   * employee-facing default keeps it masked. Masking stays the default so
+   * existing callers cannot leak digits by omission.
+   */
+  maskBankAccount?: boolean;
+}
+
+export function payslipFromRecord(
+  row: PayslipRecord,
+  company: CompanyProfile,
+  options: PayslipFromRecordOptions = {}
+): PayslipData | null {
   if (row.period_status !== 'paid' && row.period_status !== 'locked') return null;
   const details =
     row.details && typeof row.details === 'object' ? (row.details as Record<string, unknown>) : {};
   const tax =
     details.tax && typeof details.tax === 'object' ? (details.tax as Record<string, unknown>) : {};
+  const accountNumber =
+    options.maskBankAccount === false
+      ? row.bank_account_number
+      : maskPayslipBankAccount(row.bank_account_number ?? '');
   return {
     company,
     employee: {
       code: row.employee_code ?? row.employee_name ?? 'Employee',
       name: row.employee_name ?? 'Employee',
       department: row.department_name,
-      designation: row.designation_name
+      designation: row.designation_name,
+      npwp: row.npwp ?? undefined
     },
     period: {
       name: row.period_name ?? `${row.period_start} - ${row.period_end}`,
@@ -113,10 +140,9 @@ export function payslipFromRecord(row: PayslipRecord, company: CompanyProfile): 
     allowances: money(row.total_allowances),
     deductions: money(row.total_deductions),
     net: money(row.net_salary),
+    earningsTotal: money(Number(row.gross_salary) + Number(row.total_allowances)),
     tax: money(typeof tax.amount === 'number' ? toMajor(tax.amount) : 0),
-    bankAccount: row.bank_account_number
-      ? { bankName: row.bank_name, accountNumber: maskPayslipBankAccount(row.bank_account_number) }
-      : undefined,
+    bankAccount: row.bank_account_number ? { bankName: row.bank_name, accountNumber } : undefined,
     lineItems: snapshotLineItems(details)
   };
 }

@@ -3,6 +3,7 @@ import {
   getCompanyPayrollSettingsFn,
   getEmployeePayrollProfileFn,
   getMyPayslipsFn,
+  getPayrollPayslipPrintFn,
   getPayrollReportFn,
   listEmployeeBpjsEnrollmentsFn,
   listPayrollPeriodsFn,
@@ -25,6 +26,7 @@ export const payrollKeys = {
   records: (filters: unknown = {}) => [...payrollKeys.all, 'records', filters] as const,
   report: (filters: unknown = {}) => [...payrollKeys.all, 'report', filters] as const,
   payslips: (filters: unknown = {}) => [...payrollKeys.all, 'payslips', filters] as const,
+  payslipPrint: (id: number) => [...payrollKeys.all, 'payslip-print', id] as const,
   companySettings: () => [...payrollKeys.all, 'company-settings'] as const,
   bpjs: (employeeId: string) => [...payrollKeys.all, 'bpjs', employeeId] as const,
   bpjsRoot: () => [...payrollKeys.all, 'bpjs'] as const,
@@ -57,6 +59,11 @@ export const myPayslipsQueryOptions = (filters: PayrollQueryFilters = {}) =>
   queryOptions({
     queryKey: payrollKeys.payslips(filters),
     queryFn: () => getMyPayslipsFn({ data: filters })
+  });
+export const payslipPrintQueryOptions = (id: number) =>
+  queryOptions({
+    queryKey: payrollKeys.payslipPrint(id),
+    queryFn: () => getPayrollPayslipPrintFn({ data: { id } })
   });
 export const companyPayrollSettingsQueryOptions = () =>
   queryOptions({

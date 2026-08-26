@@ -194,4 +194,48 @@ describe('PayslipTemplate', () => {
       expect(payslipFromRecord({ ...record, period_status: 'draft' }, company)).toBeNull();
     });
   });
+
+  describe('admin print mapping', () => {
+    const printCompany = { name: 'Kolonios Labs', address: 'Jakarta' };
+    const printRecord = {
+      id: 42,
+      payroll_period_id: 7,
+      details: {},
+      gross_salary: '1250000.00',
+      total_allowances: '1500.00',
+      total_deductions: '500.00',
+      net_salary: '1251000.00',
+      employee_code: 'EMP-0007',
+      employee_name: 'Ari Pratama',
+      department_name: 'Engineering',
+      designation_name: 'Developer',
+      period_name: 'July 2026',
+      period_start: '2026-07-01',
+      period_end: '2026-07-31',
+      period_status: 'paid',
+      bank_name: 'Bank Example',
+      bank_account_number: '1234567890',
+      npwp: '12.345.678.9-012.345'
+    } as Parameters<typeof payslipFromRecord>[0];
+
+    it('returns the raw bank account number when masking is disabled', () => {
+      const data = payslipFromRecord(printRecord, printCompany, { maskBankAccount: false })!;
+      expect(data.bankAccount).toEqual({
+        bankName: 'Bank Example',
+        accountNumber: '1234567890'
+      });
+    });
+
+    it('maps NPWP into the employee identity', () => {
+      expect(payslipFromRecord(printRecord, printCompany)!.employee.npwp).toBe(
+        '12.345.678.9-012.345'
+      );
+    });
+
+    it('derives Total Earnings from gross plus allowances and masks by default', () => {
+      const data = payslipFromRecord(printRecord, printCompany)!;
+      expect(data.bankAccount?.accountNumber).toBe('******7890');
+      expect(data.earningsTotal).toBe('Rp\u00a01.251.500,00');
+    });
+  });
 });
