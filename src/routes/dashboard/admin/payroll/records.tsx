@@ -7,12 +7,12 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import PageContainer from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { DataTable } from '@/components/ui/table/data-table';
+import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import {
   payrollKeys,
@@ -179,81 +179,76 @@ function RecordsPage() {
   };
   return (
     <PageContainer>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('payroll.records')}</CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-4 px-0'>
-          <div className='grid gap-3 sm:grid-cols-3'>
-            <div>
-              <Label htmlFor='record-period'>{t('payroll.periods')}</Label>
-              <NativeSelect
-                id='record-period'
-                value={filters.payrollPeriodId ?? ''}
-                onChange={(e) =>
-                  updateFilter({
-                    payrollPeriodId: e.target.value ? Number(e.target.value) : undefined
-                  })
-                }
-              >
-                <option value=''>{t('common.all')}</option>
-                {periods.map((period) => (
-                  <option key={period.id} value={period.id}>
-                    {period.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-            <div>
-              <Label htmlFor='record-department'>{t('payroll.department')}</Label>
-              <NativeSelect
-                id='record-department'
-                value={filters.departmentId ?? ''}
-                onChange={(e) =>
-                  updateFilter({
-                    departmentId: e.target.value ? Number(e.target.value) : undefined
-                  })
-                }
-              >
-                <option value=''>{t('common.all')}</option>
-                {(departmentsQuery.data?.departments ?? []).map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-            <div>
-              <Label htmlFor='record-status'>{t('payroll.status')}</Label>
-              <NativeSelect
-                id='record-status'
-                value={filters.status ?? ''}
-                onChange={(e) =>
-                  updateFilter({
-                    status: (e.target.value || undefined) as PayrollRecordFilters['status']
-                  })
-                }
-              >
-                <option value=''>{t('common.all')}</option>
-                {PAYROLL_PERIOD_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {t(`payroll.statuses.${status}`)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
+      <DataTableCard title={t('payroll.records')}>
+        <div className='grid gap-3 px-4 sm:grid-cols-3'>
+          <div>
+            <Label htmlFor='record-period'>{t('payroll.periods')}</Label>
+            <NativeSelect
+              id='record-period'
+              value={filters.payrollPeriodId ?? ''}
+              onChange={(e) =>
+                updateFilter({
+                  payrollPeriodId: e.target.value ? Number(e.target.value) : undefined
+                })
+              }
+            >
+              <option value=''>{t('common.all')}</option>
+              {periods.map((period) => (
+                <option key={period.id} value={period.id}>
+                  {period.name}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
-          {recordsQuery.isLoading ? (
-            <p className='text-sm text-muted-foreground'>{t('common.loading')}</p>
-          ) : recordsQuery.isError ? (
-            <p className='text-sm text-destructive'>{t('payroll.loadFailed')}</p>
-          ) : records.length === 0 ? (
-            <p className='text-sm text-muted-foreground'>{t('payroll.noRecords')}</p>
-          ) : (
-            <DataTable table={table} />
-          )}
-        </CardContent>
-      </Card>
+          <div>
+            <Label htmlFor='record-department'>{t('payroll.department')}</Label>
+            <NativeSelect
+              id='record-department'
+              value={filters.departmentId ?? ''}
+              onChange={(e) =>
+                updateFilter({
+                  departmentId: e.target.value ? Number(e.target.value) : undefined
+                })
+              }
+            >
+              <option value=''>{t('common.all')}</option>
+              {(departmentsQuery.data?.departments ?? []).map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+          <div>
+            <Label htmlFor='record-status'>{t('payroll.status')}</Label>
+            <NativeSelect
+              id='record-status'
+              value={filters.status ?? ''}
+              onChange={(e) =>
+                updateFilter({
+                  status: (e.target.value || undefined) as PayrollRecordFilters['status']
+                })
+              }
+            >
+              <option value=''>{t('common.all')}</option>
+              {PAYROLL_PERIOD_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {t(`payroll.statuses.${status}`)}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        </div>
+        {recordsQuery.isLoading ? (
+          <p className='px-4 text-sm text-muted-foreground'>{t('common.loading')}</p>
+        ) : recordsQuery.isError ? (
+          <p className='px-4 text-sm text-destructive'>{t('payroll.loadFailed')}</p>
+        ) : records.length === 0 ? (
+          <p className='px-4 text-sm text-muted-foreground'>{t('payroll.noRecords')}</p>
+        ) : (
+          <DataTable table={table} />
+        )}
+      </DataTableCard>
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className='max-w-2xl'>
           <DialogHeader>

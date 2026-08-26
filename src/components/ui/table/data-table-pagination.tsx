@@ -41,6 +41,10 @@ export function DataTablePagination<TData extends RowData>({
   const rowCount = table.getFilteredRowModel().rows.length;
   const current = Math.min(table.state.pagination.pageIndex + 1, table.getPageCount());
   const pageCount = Math.max(table.getPageCount(), 1);
+  const currentPageSize = table.state.pagination.pageSize;
+  const options = pageSizeOptions.includes(currentPageSize)
+    ? pageSizeOptions
+    : [...pageSizeOptions, currentPageSize].toSorted((a, b) => a - b);
 
   if (rowCount === 0) return null;
 
@@ -77,7 +81,7 @@ export function DataTablePagination<TData extends RowData>({
               <SelectValue placeholder={table.state.pagination.pageSize} />
             </SelectTrigger>
             <SelectContent side='top'>
-              {pageSizeOptions.map((pageSize) => (
+              {options.map((pageSize) => (
                 <SelectItem key={pageSize} value={`${pageSize}`}>
                   {pageSize}
                 </SelectItem>
