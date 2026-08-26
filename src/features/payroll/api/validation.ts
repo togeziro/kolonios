@@ -82,14 +82,41 @@ const bankValuesSchema = effectiveDatesSchema.extend({
   accountNumber: z.string().trim().min(1).max(100),
   isPrimary: z.boolean().default(false)
 });
+const salaryDetailValuesSchema = z.object({
+  description: z.string().trim().min(1).max(200),
+  amount: moneySchema,
+  billingBasis: z.enum(['per_month', 'per_attendance']).default('per_month')
+});
+const baseSalaryValuesSchema = effectiveDatesSchema.extend({
+  id: idSchema.optional(),
+  salaryType: z.enum(['monthly', 'daily', 'hourly']),
+  amount: moneySchema,
+  departmentId: idSchema.nullish(),
+  designationId: idSchema.nullish(),
+  overtimeWageType: z.enum(['hourly', 'daily']),
+  overtimeRateWorkday: moneySchema,
+  overtimeRateSaturday: moneySchema,
+  overtimeRateSunday: moneySchema,
+  overtimeRateHoliday: moneySchema,
+  leaveHourDeduction: moneySchema,
+  shortfallHourDeduction: moneySchema,
+  absenceDeductionMode: z.enum(['automatic', 'manual']),
+  details: z.array(salaryDetailValuesSchema).max(50).default([])
+});
 export const employeePayrollProfileSchema = z.discriminatedUnion('kind', [
   profileBase.extend({ kind: z.literal('assignment'), values: assignmentValuesSchema }),
+  profileBase.extend({ kind: z.literal('base-salary'), values: baseSalaryValuesSchema }),
   profileBase.extend({ kind: z.literal('component'), values: componentValuesSchema }),
   profileBase.extend({ kind: z.literal('tax'), values: taxValuesSchema }),
   profileBase.extend({ kind: z.literal('benefit'), values: benefitValuesSchema }),
   profileBase.extend({ kind: z.literal('bank'), values: bankValuesSchema })
 ]);
 export const employeePayrollProfileReadSchema = profileBase;
+
+export const alignBaseSalarySchema = z.object({
+  sourceEmployeeId: employeeIdSchema,
+  targetEmployeeIds: z.array(employeeIdSchema).min(1).max(100)
+});
 
 export const payrollPeriodSchema = z
   .object({

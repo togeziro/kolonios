@@ -98,3 +98,110 @@ describe('payroll validation', () => {
     }
   });
 });
+
+describe('base salary profile kind', () => {
+  const validValues = {
+    salaryType: 'monthly',
+    amount: '5000000',
+    effectiveFrom: '2026-08-01',
+    overtimeWageType: 'hourly',
+    overtimeRateWorkday: '20000',
+    overtimeRateSaturday: '25000',
+    overtimeRateSunday: '30000',
+    overtimeRateHoliday: '40000',
+    leaveHourDeduction: '15000',
+    shortfallHourDeduction: '10000',
+    absenceDeductionMode: 'automatic',
+    details: [
+      { description: 'Gaji Pokok', amount: '4500000', billingBasis: 'per_month' },
+      { description: 'Transport', amount: '100000', billingBasis: 'per_attendance' }
+    ]
+  } as const;
+
+  it('accepts the full Set Base Salary payload with salary details and rates', () => {
+    const parsed = employeePayrollProfileSchema.parse({
+      employeeId: 'emp-1',
+      kind: 'base-salary',
+      values: validValues
+    });
+    if (parsed.kind !== 'base-salary') throw new Error('wrong union branch');
+    expect(parsed.values.amount).toBe('5000000.00');
+    expect(parsed.values.details[1]?.billingBasis).toBe('per_attendance');
+    expect(parsed.values.overtimeRateHoliday).toBe('40000.00');
+  });
+
+  it('details default to per-month billing and an empty details list is allowed', () => {
+    const parsed = employeePayrollProfileSchema.parse({
+      employeeId: 'emp-1',
+      kind: 'base-salary',
+      values: { ...validValues, details: [{ description: 'Gaji Pokok', amount: 1 }] }
+    });
+    if (parsed.kind !== 'base-salary') throw new Error('wrong union branch');
+    expect(parsed.values.details[0]?.billingBasis).toBe('per_month');
+    expect(
+      employeePayrollProfileSchema.parse({
+        employeeId: 'emp-1',
+        kind: 'base-salary',
+        values: { ...validValues, details: undefined }
+      }).kind
+    ).toBe('base-salary');
+  });
+
+  it('rejects unknown overtime wage types, absence modes, and detail bases', () => {
+    expect(() =>
+      employeePayrollProfileSchema.parse({
+        employeeId: 'emp-1',
+        kind: 'base-salary',
+        values: { ...validValues, overtimeWageType: 'weekly' }
+      })
+    ).toThrow();
+    expect(() =>
+      employeePayrollProfileSchema.parse({
+        employeeId: 'emp-1',
+        kind: 'base-salary',
+        values: { ...validValues, absenceDeductionMode: 'hybrid' }
+      })
+    ).toThrow();
+    expect(() =>
+      employeePayrollProfileSchema.parse({
+        employeeId: 'emp-1',
+        kind: 'base-salary',
+        values: {
+          ...validValues,
+          details: [{ description: 'X', amount: '1', billingBasis: 'per_year' }]
+        }
+      })
+    ).toThrow();
+  });
+
+  it('bounds the number of salary detail rows and rejects blank descriptions', () => {
+    const rows = Array.from({ length: 51 }, (_, index) => ({
+      description: `Row ${index}`,
+      amount: '1'
+    }));
+    expect(() =>
+      employeePayrollProfileSchema.parse({
+        employeeId: 'emp-1',
+        kind: 'base-salary',
+        values: { ...validValues, details: rows }
+      })
+    ).toThrow();
+    expect(() =>
+      employeePayrollProfileSchema.parse({
+        employeeId: 'emp-1',
+        kind: 'base-salary',
+        values: { ...validValues, details: [{ description: '   ', amount: '1' }] }
+      })
+    ).toThrow();
+  });
+
+  it('keeps rejecting assignment saves without the new fields untouched', () => {
+    expect(() =>
+      employeePayrollProfileSchema.parse({
+        employeeId: 'e1',
+        kind: 'assignment',
+        values: { salaryType: 'monthly', amount: '100.00', effectiveFrom: '2026-01-01' }
+      })
+    ).not.toThrow();
+  });
+});

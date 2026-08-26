@@ -14,16 +14,20 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { DataTable } from '@/components/ui/table/data-table';
 import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
+import { employeesQueryOptions } from '@/features/employees/api/queries';
 import {
+  employeePayrollProfileQueryOptions,
   payrollKeys,
   payrollPeriodsQueryOptions,
   payrollRecordsQueryOptions
 } from '@/features/payroll/api/queries';
 import {
   useAdjustPayrollRecord,
+  useAlignBaseSalary,
   useApprovePayroll,
   useLockPayroll,
   useMarkPayrollPaid,
+  useUpdateEmployeePayrollProfile,
   useUpsertAttendanceOverride
 } from '@/features/payroll/api/mutations';
 import { getAttendanceOverrideFn } from '@/features/payroll/api/service';
@@ -39,6 +43,7 @@ import {
   draftToOverrideValues,
   type OverrideDraft
 } from './-override-dialog';
+import { BaseSalaryDialog, draftToBaseSalaryValues } from './-base-salary-dialog';
 import { createPayrollRecordColumns } from './-records-columns';
 
 export const Route = createFileRoute('/dashboard/admin/payroll/records')({
@@ -59,9 +64,11 @@ function RecordsPage() {
   const canLock = canPayrollAction(permissions, isAdmin, 'edit');
   const canAdjust = canPayrollAction(permissions, isAdmin, 'edit');
   const canOverride = canPayrollAction(permissions, isAdmin, 'edit');
+  const canEditSalary = canPayrollAction(permissions, isAdmin, 'edit');
   const [filters, setFilters] = useState<PayrollRecordFilters>({ page: 1, limit: 25 });
   const [selected, setSelected] = useState<PayrollReportRow | null>(null);
   const [overrideTarget, setOverrideTarget] = useState<PayrollReportRow | null>(null);
+  const [salaryTarget, setSalaryTarget] = useState<PayrollReportRow | null>(null);
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [draftAdjustment, setDraftAdjustment] = useState<Adjustment>({
     name: '',
@@ -77,6 +84,8 @@ function RecordsPage() {
   const lock = useLockPayroll();
   const adjust = useAdjustPayrollRecord();
   const upsertOverride = useUpsertAttendanceOverride();
+  const updateProfile = useUpdateEmployeePayrollProfile();
+  const alignBaseSalary = useAlignBaseSalary();
   const overrideQuery = useQuery({
     queryKey: payrollKeys.attendanceOverride(
       overrideTarget?.payroll_period_id ?? 0,
@@ -91,6 +100,11 @@ function RecordsPage() {
       }),
     enabled: Boolean(overrideTarget)
   });
+  const salaryProfileQuery = useQuery({
+    ...employeePayrollProfileQueryOptions(salaryTarget?.employee_id ?? ''),
+    enabled: Boolean(salaryTarget)
+  });
+  const employeesQuery = useQuery(employeesQueryOptions({ limit: 200 }));
   const periods = periodsQuery.data?.rows ?? [];
   const records = (recordsQuery.data?.rows ?? []) as PayrollReportRow[];
   const pageCount = Math.max(1, Math.ceil((recordsQuery.data?.total ?? 0) / (filters.limit ?? 25)));
@@ -114,6 +128,7 @@ function RecordsPage() {
     canLock,
     canAdjust,
     canOverride,
+    canEditSalary,
     onApprove: (id) => void run(approve, id),
     onPay: (id) => void run(paid, id),
     onLock: (id) => void run(lock, id),
@@ -127,6 +142,9 @@ function RecordsPage() {
     onDetail: (row) => {
       setSelected(row);
       setAdjustments([]);
+    },
+    onEditSalary: (row) => {
+      setSalaryTarget(row);
     }
   });
   const table = useTable({
@@ -351,6 +369,43 @@ function RecordsPage() {
         isSaving={upsertOverride.isPending}
         onSave={saveOverride}
         onOpenChange={(open) => !open && setOverrideTarget(null)}
+        t={t}
+      />
+      <BaseSalaryDialog
+        open={Boolean(salaryTarget)}
+        employeeName={salaryTarget?.employee_name ?? undefined}
+        profile={salaryProfileQuery.data ?? null}
+        employees={(employeesQuery.data?.employees ?? [])
+          .filter((employee) => employee.id !== salaryTarget?.employee_id)
+          .map((employee) => ({ id: employee.id, full_name: employee.full_name }))}
+        isLoading={salaryProfileQuery.isLoading}
+        isError={salaryProfileQuery.isError}
+        isSaving={updateProfile.isPending || alignBaseSalary.isPending}
+        canEdit={canEditSalary}
+        onSave={async (draft) => {
+          if (!salaryTarget) return;
+          try {
+            await updateProfile.mutateAsync(
+              draftToBaseSalaryValues(draft, salaryTarget.employee_id)
+            );
+            toast.success(t('payroll.updated'));
+          } catch {
+            toast.error(t('payroll.failed'));
+          }
+        }}
+        onAlign={async (targetIds) => {
+          if (!salaryTarget) return;
+          try {
+            await alignBaseSalary.mutateAsync({
+              sourceEmployeeId: salaryTarget.employee_id,
+              targetEmployeeIds: targetIds
+            });
+            toast.success(t('payroll.updated'));
+          } catch {
+            toast.error(t('payroll.failed'));
+          }
+        }}
+        onOpenChange={(open) => !open && setSalaryTarget(null)}
         t={t}
       />
     </PageContainer>

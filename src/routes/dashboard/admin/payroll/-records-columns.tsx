@@ -26,12 +26,14 @@ export function createPayrollRecordColumns(options: {
   canLock: boolean;
   canAdjust: boolean;
   canOverride: boolean;
+  canEditSalary: boolean;
   onApprove: (id: number) => void;
   onPay: (id: number) => void;
   onLock: (id: number) => void;
   onAdjust: (row: RecordRow) => void;
   onOverride: (row: RecordRow) => void;
   onDetail: (row: RecordRow) => void;
+  onEditSalary: (row: RecordRow) => void;
 }): ColumnDef<AppFeatures, RecordRow>[] {
   const { t } = options;
   return [
@@ -107,6 +109,11 @@ export function createPayrollRecordColumns(options: {
             <Button size='sm' variant='ghost' onClick={() => options.onDetail(record)}>
               {t('common.view')}
             </Button>
+            {options.canEditSalary && (
+              <Button size='sm' variant='ghost' onClick={() => options.onEditSalary(record)}>
+                {t('payroll.editBaseSalary')}
+              </Button>
+            )}
             {options.canAdjust && record.period_status === 'processing' && (
               <Button size='sm' variant='ghost' onClick={() => options.onAdjust(record)}>
                 {t('payroll.adjust')}

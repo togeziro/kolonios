@@ -29,6 +29,12 @@ export const payrollPeriodStatusEnum = pgEnum('payroll_period_status', [
 
 export const salaryTypeEnum = pgEnum('salary_type', ['monthly', 'daily', 'hourly']);
 
+export const overtimeWageTypeEnum = pgEnum('overtime_wage_type', ['hourly', 'daily']);
+
+export const absenceDeductionModeEnum = pgEnum('absence_deduction_mode', ['automatic', 'manual']);
+
+export const salaryDetailBasisEnum = pgEnum('salary_detail_basis', ['per_month', 'per_attendance']);
+
 export const salaryComponentTypeEnum = pgEnum('salary_component_type', ['allowance', 'deduction']);
 
 export const bpjsProgramEnum = pgEnum('bpjs_program', ['jkk', 'jkm', 'jht', 'jp', 'kesehatan']);
@@ -84,6 +90,14 @@ export const employeeSalaryAssignments = pgTable(
     amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
     effective_from: date('effective_from').notNull(),
     effective_to: date('effective_to'),
+    overtime_wage_type: overtimeWageTypeEnum('overtime_wage_type'),
+    overtime_rate_workday: numeric('overtime_rate_workday', { precision: 14, scale: 2 }),
+    overtime_rate_saturday: numeric('overtime_rate_saturday', { precision: 14, scale: 2 }),
+    overtime_rate_sunday: numeric('overtime_rate_sunday', { precision: 14, scale: 2 }),
+    overtime_rate_holiday: numeric('overtime_rate_holiday', { precision: 14, scale: 2 }),
+    leave_hour_deduction: numeric('leave_hour_deduction', { precision: 14, scale: 2 }),
+    shortfall_hour_deduction: numeric('shortfall_hour_deduction', { precision: 14, scale: 2 }),
+    absence_deduction_mode: absenceDeductionModeEnum('absence_deduction_mode'),
     created_by: text('created_by').references(() => user.id),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull()
@@ -128,6 +142,22 @@ export const employeeSalaryComponents = pgTable(
     ),
     index('employee_salary_components_effective_idx').on(table.effective_from)
   ]
+);
+
+export const employeeSalaryDetails = pgTable(
+  'employee_salary_details',
+  {
+    id: serial('id').primaryKey(),
+    assignment_id: integer('assignment_id')
+      .notNull()
+      .references(() => employeeSalaryAssignments.id, { onDelete: 'cascade' }),
+    description: text('description').notNull(),
+    amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+    billing_basis: salaryDetailBasisEnum('billing_basis').notNull().default('per_month'),
+    created_at: timestamp('created_at').defaultNow().notNull(),
+    updated_at: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => [index('employee_salary_details_assignment_idx').on(table.assignment_id)]
 );
 
 export const payrollPeriods = pgTable(
@@ -507,6 +537,8 @@ export type EmployeeSalaryAssignment = typeof employeeSalaryAssignments.$inferSe
 export type NewEmployeeSalaryAssignment = typeof employeeSalaryAssignments.$inferInsert;
 export type EmployeeSalaryComponent = typeof employeeSalaryComponents.$inferSelect;
 export type NewEmployeeSalaryComponent = typeof employeeSalaryComponents.$inferInsert;
+export type EmployeeSalaryDetail = typeof employeeSalaryDetails.$inferSelect;
+export type NewEmployeeSalaryDetail = typeof employeeSalaryDetails.$inferInsert;
 export type PayrollPeriod = typeof payrollPeriods.$inferSelect;
 export type NewPayrollPeriod = typeof payrollPeriods.$inferInsert;
 export type PayrollRecord = typeof payrollRecords.$inferSelect;
