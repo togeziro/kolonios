@@ -44,6 +44,7 @@ export const navTitleKeys: Record<string, string> = {
   Payslips: 'navigation.payslips',
   'Payroll Profiles': 'navigation.payrollProfiles',
   'Payroll Settings': 'navigation.payrollSettings',
+  'Ready to Pay': 'navigation.payQueue',
   Broadcast: 'navigation.broadcast',
   Settings: 'navigation.settings',
   'Attendance Locations': 'navigation.attendanceLocations',

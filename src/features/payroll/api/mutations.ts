@@ -12,6 +12,7 @@ import {
   lockPayrollFn,
   markPayrollPaidFn,
   overrideEmployeeTaxRecordFn,
+  payPayQueueSelectionFn,
   updateCompanyPayrollSettingsFn,
   updateSalaryComponentFn,
   updateEmployeePayrollProfileFn,
@@ -30,7 +31,8 @@ export const payrollMutationKeys = {
       payrollKeys.periods(),
       payrollKeys.records(),
       payrollKeys.report(),
-      payrollKeys.payslips()
+      payrollKeys.payslips(),
+      payrollKeys.payQueue()
     ] as const
 };
 
@@ -92,6 +94,12 @@ export const useMarkPayrollPaid = () =>
       payrollKeys.report(),
       payrollKeys.payslips()
     ]
+  );
+export const usePayQueueSelection = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof payPayQueueSelectionFn>[0]['data']) =>
+      payPayQueueSelectionFn({ data }),
+    () => [payrollMutationKeys.workflow()]
   );
 export const useLockPayroll = () =>
   usePayrollMutation(

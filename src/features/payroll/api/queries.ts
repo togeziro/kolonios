@@ -1,15 +1,18 @@
 import { queryOptions } from '@tanstack/react-query';
+import { z } from 'zod';
 import {
   getCompanyPayrollSettingsFn,
   getEmployeePayrollProfileFn,
   getMyPayslipsFn,
   getPayrollPayslipPrintFn,
+  getPayQueueFn,
   getPayrollReportFn,
   listEmployeeBpjsEnrollmentsFn,
   listPayrollPeriodsFn,
   listPayrollRecordsFn,
   listSalaryComponentsFn
 } from './service';
+import { payQueueFiltersSchema } from './validation';
 import type { PayrollRecordFilters } from './types';
 
 export type PayrollQueryFilters = PayrollRecordFilters & {
@@ -27,6 +30,7 @@ export const payrollKeys = {
   report: (filters: unknown = {}) => [...payrollKeys.all, 'report', filters] as const,
   payslips: (filters: unknown = {}) => [...payrollKeys.all, 'payslips', filters] as const,
   payslipPrint: (id: number) => [...payrollKeys.all, 'payslip-print', id] as const,
+  payQueue: (filters: unknown = {}) => [...payrollKeys.all, 'pay-queue', filters] as const,
   companySettings: () => [...payrollKeys.all, 'company-settings'] as const,
   bpjs: (employeeId: string) => [...payrollKeys.all, 'bpjs', employeeId] as const,
   bpjsRoot: () => [...payrollKeys.all, 'bpjs'] as const,
@@ -44,6 +48,12 @@ export const payrollPeriodsQueryOptions = (filters: Record<string, unknown> = {}
   queryOptions({
     queryKey: payrollKeys.periods(filters),
     queryFn: () => listPayrollPeriodsFn({ data: filters })
+  });
+export type PayQueueFilters = z.infer<typeof payQueueFiltersSchema>;
+export const payQueueQueryOptions = (filters: PayQueueFilters = {}) =>
+  queryOptions({
+    queryKey: payrollKeys.payQueue(filters),
+    queryFn: () => getPayQueueFn({ data: filters })
   });
 export const payrollRecordsQueryOptions = (filters: PayrollQueryFilters = {}) =>
   queryOptions({

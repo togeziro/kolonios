@@ -34,6 +34,8 @@ export const salaryComponentSchema = z.object({
   isActive: z.boolean().optional()
 });
 export const salaryComponentIdSchema = z.object({ id: idSchema });
+export const payQueueFiltersSchema = z.object({ departmentId: idSchema.optional() });
+export const payQueueSelectionSchema = z.object({ recordIds: z.array(idSchema).min(1) });
 export const salaryComponentUpdateSchema = salaryComponentIdSchema.extend({
   values: salaryComponentSchema.partial()
 });

@@ -106,6 +106,14 @@ export const navItems: NavItem[] = [
         items: []
       },
       {
+        title: 'Ready to Pay',
+        url: '/dashboard/admin/payroll/ready-to-pay',
+        icon: 'wallet',
+        isActive: false,
+        module: 'payroll',
+        items: []
+      },
+      {
         title: 'Payroll Profiles',
         url: '/dashboard/admin/payroll/profile',
         icon: 'employee',

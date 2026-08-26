@@ -16,6 +16,7 @@ export {
   lockPayrollFn,
   markPayrollPaidFn
 } from './periods';
+export { getPayQueueFn, payPayQueueSelectionFn } from './pay-queue';
 export { adjustPayrollRecordFn, generatePayrollFn, listPayrollRecordsFn } from './records';
 export {
   createEmployeeBpjsFamilyMemberFn,

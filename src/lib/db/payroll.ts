@@ -1,4 +1,18 @@
-import { and, asc, desc, eq, gte, getTableColumns, inArray, lte, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gte,
+  getTableColumns,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql
+} from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { db } from './index';
 import { DomainError } from '../errors';
@@ -72,7 +86,13 @@ function previousDbDate(value: string): string {
 
 export async function withPayrollAuditTransaction<T>(
   actorUserId: string,
-  entry: { action: string; entityType: string; entityId?: string | number; after?: unknown },
+  entry: {
+    action: string;
+    entityType: string;
+    entityId?: string | number;
+    /** Static payload, or a function of the operation result (e.g. stamp counts). */
+    after?: unknown | ((result: T) => unknown);
+  },
   operation: (tx: PayrollTransaction) => Promise<T>
 ) {
   try {
@@ -84,7 +104,10 @@ export async function withPayrollAuditTransaction<T>(
         entityType: entry.entityType,
         entityId: entry.entityId == null ? null : String(entry.entityId),
         before: null,
-        after: entry.after,
+        after:
+          typeof entry.after === 'function'
+            ? (entry.after as (result: T) => unknown)(result)
+            : entry.after,
         requestId: null
       });
       return result;
@@ -1502,6 +1525,191 @@ export async function transitionPayrollPeriod(
 }
 
 export const setPayrollPeriodStatus = transitionPayrollPeriod;
+
+export type StampPayrollRecordsResult = {
+  stamped: number;
+  flippedPeriodIds: number[];
+};
+
+/**
+ * Stamp exactly the selected payroll records as paid (ADR-0003): one-way,
+ * conditional on `paid_at IS NULL` and the owning period being ready_to_pay.
+ * A period flips to paid inside the same transaction only when its last
+ * unstamped record goes.
+ */
+export async function stampPayrollRecords(
+  recordIds: number[],
+  actorUserId: string
+): Promise<StampPayrollRecordsResult> {
+  const uniqueIds = [...new Set(recordIds)].filter((id) => Number.isInteger(id) && id > 0);
+  if (!uniqueIds.length) return { stamped: 0, flippedPeriodIds: [] };
+  try {
+    return await db.transaction(async (tx) => {
+      const candidates = await tx
+        .select({ id: payrollRecords.id, periodId: payrollRecords.payroll_period_id })
+        .from(payrollRecords)
+        .where(inArray(payrollRecords.id, uniqueIds));
+      const candidatePeriodIds = [...new Set(candidates.map((row) => row.periodId))];
+      const readyPeriodIds: number[] = [];
+      for (const periodId of candidatePeriodIds) {
+        const period = await lockPayrollPeriod(tx, periodId);
+        if (period?.status === 'ready_to_pay') readyPeriodIds.push(periodId);
+      }
+      if (!readyPeriodIds.length) return { stamped: 0, flippedPeriodIds: [] };
+
+      const stampedRows = await tx
+        .update(payrollRecords)
+        .set({ paid_at: new Date(), paid_by: actorUserId })
+        .where(
+          and(
+            inArray(payrollRecords.id, uniqueIds),
+            isNull(payrollRecords.paid_at),
+            inArray(payrollRecords.payroll_period_id, readyPeriodIds)
+          )
+        )
+        .returning({ id: payrollRecords.id });
+      if (!stampedRows.length) return { stamped: 0, flippedPeriodIds: [] };
+
+      const flippedPeriodIds: number[] = [];
+      for (const periodId of readyPeriodIds) {
+        const [unpaid] = await tx
+          .select({ id: payrollRecords.id })
+          .from(payrollRecords)
+          .where(
+            and(eq(payrollRecords.payroll_period_id, periodId), isNull(payrollRecords.paid_at))
+          )
+          .limit(1);
+        if (unpaid) continue;
+        const [flipped] = await tx
+          .update(payrollPeriods)
+          .set({ status: 'paid', paid_at: new Date(), updated_at: new Date() })
+          .where(and(eq(payrollPeriods.id, periodId), eq(payrollPeriods.status, 'ready_to_pay')))
+          .returning({ id: payrollPeriods.id });
+        if (flipped) flippedPeriodIds.push(flipped.id);
+      }
+
+      await tx.insert(auditLog).values({
+        actorUserId,
+        action: 'payroll.record.pay',
+        entityType: 'payroll_record',
+        entityId: null,
+        before: null,
+        after: { requested: uniqueIds.length, stamped: stampedRows.length, flippedPeriodIds },
+        requestId: null
+      });
+
+      return { stamped: stampedRows.length, flippedPeriodIds };
+    });
+  } catch (e) {
+    mapDbError(e, 'payroll.stampPayrollRecords');
+  }
+}
+
+export type PayQueueRow = {
+  recordId: number;
+  payrollPeriodId: number;
+  periodName: string;
+  periodStart: string;
+  periodEnd: string;
+  paymentDate: string | null;
+  employeeId: string;
+  employeeName: string;
+  departmentId: number | null;
+  departmentName: string | null;
+  bankName: string | null;
+  accountNumber: string | null;
+  netSalary: string;
+};
+
+export type PayQueueView = {
+  rows: PayQueueRow[];
+  totals: { totalNet: string; employeeCount: number };
+  periods: { id: number; name: string }[];
+};
+
+/** Read model for the Ready-to-Pay queue: unpaid records of ready_to_pay periods. */
+export async function getPayQueue(filters: { departmentId?: number } = {}): Promise<PayQueueView> {
+  try {
+    const conditions = [eq(payrollPeriods.status, 'ready_to_pay'), isNull(payrollRecords.paid_at)];
+    if (filters.departmentId) {
+      conditions.push(eq(employees.department_id, filters.departmentId));
+    }
+    const where = and(...conditions);
+
+    const bankSubselect = (column: 'bank_name' | 'account_number') => sql<string | null>`(
+      select b.${sql.raw(column)} from employee_bank_accounts b
+      where b.employee_id = ${employees.id}
+        and (b.effective_to is null or b.effective_to >= current_date)
+      order by b.is_primary desc, b.effective_from desc
+      limit 1
+    )`;
+
+    const rows = await db
+      .select({
+        recordId: payrollRecords.id,
+        payrollPeriodId: payrollPeriods.id,
+        periodName: payrollPeriods.name,
+        periodStart: payrollPeriods.period_start,
+        periodEnd: payrollPeriods.period_end,
+        paymentDate: payrollPeriods.payment_date,
+        employeeId: employees.id,
+        employeeName: employees.full_name,
+        departmentId: departments.id,
+        departmentName: departments.name,
+        bankName: bankSubselect('bank_name'),
+        accountNumber: bankSubselect('account_number'),
+        netSalary: payrollRecords.net_salary
+      })
+      .from(payrollRecords)
+      .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))
+      .innerJoin(employees, eq(payrollRecords.employee_id, employees.id))
+      .leftJoin(departments, eq(employees.department_id, departments.id))
+      .where(where)
+      .orderBy(asc(employees.full_name), asc(payrollRecords.id));
+
+    const [totals] = await db
+      .select({
+        totalNet: sql<string>`coalesce(sum(${payrollRecords.net_salary}), 0)::text`,
+        employeeCount: countDistinct(employees.id)
+      })
+      .from(payrollRecords)
+      .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))
+      .innerJoin(employees, eq(payrollRecords.employee_id, employees.id))
+      .leftJoin(departments, eq(employees.department_id, departments.id))
+      .where(where);
+
+    const periods = await db
+      .selectDistinct({ id: payrollPeriods.id, name: payrollPeriods.name })
+      .from(payrollRecords)
+      .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))
+      .innerJoin(employees, eq(payrollRecords.employee_id, employees.id))
+      .leftJoin(departments, eq(employees.department_id, departments.id))
+      .where(where)
+      .orderBy(desc(payrollPeriods.id));
+
+    return { rows, totals, periods };
+  } catch (e) {
+    mapDbError(e, 'payroll.getPayQueue');
+  }
+}
+
+/**
+ * Stamp every unstamped record of one period (ADR-0003 whole-period pay).
+ * Transaction-scoped: call inside the period-lock transaction before flipping
+ * the period to paid, so "period paid ⟺ all records stamped" holds.
+ */
+export async function stampUnstampedPayrollRecords(
+  tx: PayrollTransaction,
+  periodId: number,
+  actorUserId: string
+): Promise<number> {
+  const stamped = await tx
+    .update(payrollRecords)
+    .set({ paid_at: new Date(), paid_by: actorUserId })
+    .where(and(eq(payrollRecords.payroll_period_id, periodId), isNull(payrollRecords.paid_at)))
+    .returning({ id: payrollRecords.id });
+  return stamped.length;
+}
 
 export async function getCompanyPayrollSettings() {
   try {

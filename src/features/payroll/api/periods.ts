@@ -8,6 +8,7 @@ import {
   assertPayrollTransition,
   listPayrollPeriods,
   lockPayrollPeriod,
+  stampUnstampedPayrollRecords,
   withPayrollAuditTransaction
 } from '@/lib/db/payroll';
 import {
@@ -58,12 +59,24 @@ async function transitionPayrollWithAudit(
 ) {
   return withPayrollAuditTransaction(
     actorUserId,
-    { action, entityType: 'payroll_period', entityId: id },
+    {
+      action,
+      entityType: 'payroll_period',
+      entityId: id,
+      // ADR-0003: the audit entry must note how many records this pay stamped.
+      after: (result: { stampedRecords: number }) => ({
+        stampedRecords: result.stampedRecords
+      })
+    },
     async (tx) => {
       const period = await lockPayrollPeriod(tx, id);
       if (!period)
         throw new DomainError('Payroll period was not found.', 'PAYROLL_PERIOD_NOT_FOUND');
       assertPayrollTransition(period.status, nextStatus);
+      // ADR-0003: paying a period stamps every remaining record first, so
+      // "period paid ⟺ all records stamped" holds on the whole-period path too.
+      const stampedRecords =
+        nextStatus === 'paid' ? await stampUnstampedPayrollRecords(tx, id, actorUserId) : 0;
       const [row] = await tx
         .update(payrollPeriods)
         .set({
@@ -79,7 +92,7 @@ async function transitionPayrollWithAudit(
           'Payroll period changed during transition.',
           'PAYROLL_PERIOD_CHANGED'
         );
-      return row;
+      return { ...row, stampedRecords };
     }
   );
 }

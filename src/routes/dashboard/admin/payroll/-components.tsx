@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +47,46 @@ export function maskBankAccount(value: string) {
 
 export function formatPayrollMoney(value: string | number | null | undefined) {
   return formatCurrency(value ?? 0);
+}
+
+/**
+ * Ready-to-Pay queue summary (Kerjoo §6.2): "Total payroll: Rp X dari N
+ * karyawan" plus a live chip for the current checkbox selection.
+ */
+export function PayQueueSummaryBar({
+  t,
+  totalNet,
+  employeeCount,
+  selectedCount,
+  selectedNet
+}: {
+  t: TFunction;
+  totalNet: string;
+  employeeCount: number;
+  selectedCount: number;
+  selectedNet: string;
+}) {
+  return (
+    <div className='flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-4 py-3'>
+      <div className='flex flex-wrap items-baseline gap-2 text-sm'>
+        <span className='text-muted-foreground'>{t('payroll.payQueue.totalPayroll')}</span>
+        <span className='text-base font-semibold'>{formatPayrollMoney(totalNet)}</span>
+        <span className='inline-flex items-baseline gap-1 text-muted-foreground'>
+          {t('payroll.payQueue.from')}
+          <span>{employeeCount}</span>
+          {t('payroll.payQueue.employees')}
+        </span>
+      </div>
+      {selectedCount > 0 && (
+        <Badge data-testid='pay-queue-selection-chip' variant='secondary'>
+          {t('payroll.payQueue.selectedChip', {
+            count: selectedCount,
+            amount: formatPayrollMoney(selectedNet)
+          })}
+        </Badge>
+      )}
+    </div>
+  );
 }
 export function SalaryComponentsPanel() {
   const { t } = useTranslation();

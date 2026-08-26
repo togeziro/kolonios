@@ -199,6 +199,8 @@ export const payrollRecords = pgTable(
       .notNull()
       .default('0'),
     net_salary: numeric('net_salary', { precision: 14, scale: 2 }).notNull(),
+    paid_at: timestamp('paid_at'),
+    paid_by: text('paid_by').references(() => user.id),
     details: jsonb('details'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull()
