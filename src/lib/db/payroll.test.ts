@@ -929,7 +929,7 @@ describe('pay queue read model', () => {
   });
 
   it('counts distinct employees in the summary even across multiple queued periods', async () => {
-    const { ada, period } = await seedQueueFixture();
+    const { ada } = await seedQueueFixture();
     const secondPeriod = await createPayrollPeriod({
       name: 'Periode Jun 2026',
       period_start: '2026-06-01',
