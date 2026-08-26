@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
+import { setResponseHeaders } from '@tanstack/react-start/server';
 import { requirePermission } from '@/lib/auth/session';
 import { findPayrollRecordForPrint } from '@/lib/db/payroll';
 import { getCompanyProfile } from './settings';
@@ -8,6 +9,9 @@ import { payrollRecordIdSchema } from './validation';
 export const getPayrollPayslipPrintFn = createServerFn({ method: 'GET' })
   .validator(payrollRecordIdSchema)
   .handler(async ({ data }) => {
+    // The slip carries NPWP and the full bank account number; never let
+    // intermediaries or the browser cache it.
+    setResponseHeaders(new Headers({ 'Cache-Control': 'no-store' }));
     const session = await requirePermission('payroll', 'view');
     // The print slip carries the NPWP and the full bank account number, so it
     // is an admin/HR document. Staff roles keep their masked self-service
