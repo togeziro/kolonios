@@ -2,13 +2,23 @@ import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
+import { DEFAULT_DEV_DB_URL, parseDbUrl } from './lib/db-url';
 
-const connection = postgres(process.env.DATABASE_URL || '');
+const { url } = parseDbUrl({ fallback: DEFAULT_DEV_DB_URL });
+const connection = postgres(url);
 const db = drizzle(connection);
 const migrationsFolder = './src/lib/db/migrations';
 
 async function isUserTableEmpty(): Promise<boolean> {
-  const rows = await db.execute<{ count: string }>('SELECT count(*)::text AS count FROM "user"');
+  // A schema without the auth tables (partial/legacy DB) counts as empty so
+  // the auto-seed path still runs instead of crashing on a missing table.
+  const exists = await connection.unsafe<{ exists: boolean }[]>(
+    `SELECT to_regclass('public."user"') IS NOT NULL AS exists`
+  );
+  if (!exists[0]?.exists) return true;
+  const rows = await connection.unsafe<{ count: string }[]>(
+    'SELECT count(*)::text AS count FROM "user"'
+  );
   return Number(rows[0]?.count ?? 0) === 0;
 }
 

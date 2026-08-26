@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import postgres from 'postgres';
+import { DEFAULT_DEV_DB_URL, parseDbUrl } from './lib/db-url';
 
-const connection = postgres(process.env.DATABASE_URL || '');
+const connection = postgres(parseDbUrl({ fallback: DEFAULT_DEV_DB_URL }).url);
 const migrationsFolder = './src/lib/db/migrations';
 
 async function main() {

@@ -30,6 +30,7 @@
     "db:baseline": "bun run scripts/baseline-migrations.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "bun run scripts/seed.ts",
+    "db:reset": "bun run scripts/reset-db.ts",
     "db:studio": "drizzle-kit studio",
     "db:test:create": "bun run scripts/create-test-db.ts",
     "postinstall": "bun run scripts/postinstall.js",
