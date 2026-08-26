@@ -124,7 +124,8 @@ vi.mock('@/lib/auth/auth.server', () => ({
 }));
 
 vi.mock('@tanstack/react-start/server', () => ({
-  getRequestHeaders: getRequestHeadersMock
+  getRequestHeaders: getRequestHeadersMock,
+  setResponseHeaders: () => {}
 }));
 
 vi.mock('@/lib/db/role-groups', () => ({
