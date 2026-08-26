@@ -3,7 +3,9 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 import { nitro } from 'nitro/vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
+import { fileURLToPath } from 'node:url';
+
+const srcDir = fileURLToPath(new URL('./src', import.meta.url));
 
 // Nitro is only needed for production builds (node/bun server output).
 // In dev, the `nitro/vite` plugin conflicts with TanStack Start's SSR
@@ -26,7 +28,11 @@ export default defineConfig({
   resolve: {
     alias: {
       Buffer: 'buffer'
-    }
+    },
+    // Vite 8 built-in: resolve `paths` from tsconfig.json (replaces the
+    // vite-tsconfig-paths plugin). Only applies to files matched by the
+    // tsconfig's include patterns.
+    tsconfigPaths: true
   },
   // maplibre-gl ships a web worker the dep optimizer cannot bundle; exclude it
   // so Vite serves the library and its worker as-is.
@@ -39,7 +45,6 @@ export default defineConfig({
     }
   },
   plugins: [
-    tsconfigPaths(),
     tailwindcss(),
     tanstackStart({
       importProtection: {
@@ -77,6 +82,12 @@ export default defineConfig({
     // beforeEach). Tests within a file already run sequentially.
     maxWorkers: 1,
     setupFiles: ['./vitest.setup.ts'],
+    // Vitest bundles its own Vite 7, which predates resolve.tsconfigPaths
+    // (a Vite 8 feature used above), so mirror the app's `@` alias here for
+    // the test pipeline only.
+    alias: {
+      '@': srcDir
+    },
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.output/**', 'e2e/**'],
     coverage: {
