@@ -1,13 +1,15 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, desc, eq, gte, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { requirePermission } from '@/lib/auth/session';
 import { DomainError } from '@/lib/errors';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { db } from '@/lib/db';
 import {
   employeeBankAccounts,
   employeeBenefitEnrollments,
   employeeSalaryAssignments,
   employeeSalaryComponents,
+  employeeSalaryDetails,
   employeeTaxProfiles,
   employeeTaxRecords,
   payrollPeriods,
@@ -18,7 +20,8 @@ import {
   getEmploymentContext,
   listEmployeePayrollProfileHistory,
   resolveEffectiveRecord,
-  withPayrollAuditTransaction
+  withPayrollAuditTransaction,
+  type PayrollTransaction
 } from '@/lib/db/payroll';
 import {
   assertEmployeeScope,
@@ -27,7 +30,72 @@ import {
   sanitizePayrollProfileForActor
 } from './shared';
 import { upsertVersionedRecord } from './versioned-record';
-import { employeePayrollProfileReadSchema, employeePayrollProfileSchema } from './validation';
+import { asDateISO, type DateISO } from './date-iso';
+import {
+  alignBaseSalarySchema,
+  employeePayrollProfileReadSchema,
+  employeePayrollProfileSchema
+} from './validation';
+
+type SalaryDetailInput = { description: string; amount: string; billingBasis: string };
+
+async function replaceSalaryDetails(
+  tx: PayrollTransaction,
+  assignmentId: number,
+  details: SalaryDetailInput[]
+) {
+  await tx
+    .delete(employeeSalaryDetails)
+    .where(eq(employeeSalaryDetails.assignment_id, assignmentId));
+  if (details.length === 0) return;
+  await tx.insert(employeeSalaryDetails).values(
+    details.map((detail) => ({
+      assignment_id: assignmentId,
+      description: detail.description,
+      amount: detail.amount,
+      billing_basis: detail.billingBasis as 'per_month' | 'per_attendance'
+    }))
+  );
+}
+
+function salaryAssignmentErrors(): {
+  notFound: [string, string];
+  versionFailed: [string, string];
+  createFailed: [string, string];
+} {
+  return {
+    notFound: ['Salary assignment was not found.', 'PAYROLL_ASSIGNMENT_NOT_FOUND'],
+    versionFailed: [
+      'Failed to create salary assignment version.',
+      'PAYROLL_ASSIGNMENT_VERSION_FAILED'
+    ],
+    createFailed: ['Failed to create salary assignment.', 'PAYROLL_ASSIGNMENT_CREATE_FAILED']
+  };
+}
+
+function baseAssignmentValues(
+  employeeId: string,
+  createdBy: string,
+  values: {
+    salaryType: 'monthly' | 'daily' | 'hourly';
+    amount: string;
+    effectiveFrom: DateISO;
+    effectiveTo?: DateISO | null;
+    departmentId?: number | null;
+    designationId?: number | null;
+  }
+) {
+  return {
+    employee_id: employeeId,
+    salary_type: values.salaryType,
+    amount: values.amount,
+    effective_from: values.effectiveFrom,
+    effective_to: values.effectiveTo ?? null,
+    department_id: values.departmentId ?? null,
+    designation_id: values.designationId ?? null,
+    created_by: createdBy
+  };
+}
 
 export const getEmployeePayrollProfileFn = createServerFn({ method: 'GET' })
   .validator(employeePayrollProfileReadSchema)
@@ -73,11 +141,19 @@ export const getEmployeePayrollProfileFn = createServerFn({ method: 'GET' })
           history.bankAccounts.filter((account) => account.is_primary)
         )
       : null;
+    const salaryDetails = assignment
+      ? await db
+          .select()
+          .from(employeeSalaryDetails)
+          .where(eq(employeeSalaryDetails.assignment_id, assignment.id))
+          .orderBy(employeeSalaryDetails.id)
+      : [];
     return JSON.parse(
       JSON.stringify(
         sanitizePayrollProfileForActor(session, {
           employment,
           assignment,
+          salaryDetails,
           components: (history?.components ?? []).map(({ component, definition }) => ({
             component,
             definition,
@@ -110,16 +186,7 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
       },
       async (tx) => {
         if (data.kind === 'assignment') {
-          const values = {
-            employee_id: data.employeeId,
-            salary_type: data.values.salaryType,
-            amount: data.values.amount,
-            effective_from: data.values.effectiveFrom,
-            effective_to: data.values.effectiveTo ?? null,
-            department_id: data.values.departmentId ?? null,
-            designation_id: data.values.designationId ?? null,
-            created_by: session.user.id
-          };
+          const values = baseAssignmentValues(data.employeeId, session.user.id, data.values);
           return upsertVersionedRecord({
             tx,
             table: employeeSalaryAssignments,
@@ -131,18 +198,36 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
               eq(employeeSalaryAssignments.id, data.values.id ?? -1),
               eq(employeeSalaryAssignments.employee_id, data.employeeId)
             ),
-            errors: {
-              notFound: ['Salary assignment was not found.', 'PAYROLL_ASSIGNMENT_NOT_FOUND'],
-              versionFailed: [
-                'Failed to create salary assignment version.',
-                'PAYROLL_ASSIGNMENT_VERSION_FAILED'
-              ],
-              createFailed: [
-                'Failed to create salary assignment.',
-                'PAYROLL_ASSIGNMENT_CREATE_FAILED'
-              ]
-            }
+            errors: salaryAssignmentErrors()
           });
+        }
+        if (data.kind === 'base-salary') {
+          const values = {
+            ...baseAssignmentValues(data.employeeId, session.user.id, data.values),
+            overtime_wage_type: data.values.overtimeWageType,
+            overtime_rate_workday: data.values.overtimeRateWorkday,
+            overtime_rate_saturday: data.values.overtimeRateSaturday,
+            overtime_rate_sunday: data.values.overtimeRateSunday,
+            overtime_rate_holiday: data.values.overtimeRateHoliday,
+            leave_hour_deduction: data.values.leaveHourDeduction,
+            shortfall_hour_deduction: data.values.shortfallHourDeduction,
+            absence_deduction_mode: data.values.absenceDeductionMode
+          };
+          const row = await upsertVersionedRecord({
+            tx,
+            table: employeeSalaryAssignments,
+            values,
+            effectiveFrom: data.values.effectiveFrom,
+            id: data.values.id,
+            identityWhere: eq(employeeSalaryAssignments.employee_id, data.employeeId),
+            existingWhere: and(
+              eq(employeeSalaryAssignments.id, data.values.id ?? -1),
+              eq(employeeSalaryAssignments.employee_id, data.employeeId)
+            ),
+            errors: salaryAssignmentErrors()
+          });
+          await replaceSalaryDetails(tx, row.id, data.values.details);
+          return row;
         }
         if (data.kind === 'component') {
           const [assignment] = await tx
@@ -333,4 +418,110 @@ export const updateEmployeePayrollProfileFn = createServerFn({ method: 'POST' })
       }
     );
     return JSON.parse(JSON.stringify(result));
+  });
+
+export const alignBaseSalaryFn = createServerFn({ method: 'POST' })
+  .validator(alignBaseSalarySchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('payroll', 'edit');
+    assertEmployeeScope(session, data.sourceEmployeeId);
+    const targets = [
+      ...new Set(data.targetEmployeeIds.filter((id) => id !== data.sourceEmployeeId))
+    ];
+    if (targets.length === 0)
+      throw new DomainError('Select at least one other employee.', 'NO_ALIGN_TARGETS');
+    for (const target of targets) assertEmployeeScope(session, target);
+    await checkRateLimit(`payroll:align-base-salary:${session.user.id}`);
+    const asOfDate = asDateISO(new Date().toISOString().slice(0, 10));
+    const alignedCount = await withPayrollAuditTransaction(
+      session.user.id,
+      {
+        action: 'payroll.profile.base-salary.align',
+        entityType: 'employee_payroll_profile',
+        entityId: data.sourceEmployeeId
+      },
+      async (tx) => {
+        const [source] = await tx
+          .select()
+          .from(employeeSalaryAssignments)
+          .where(
+            and(
+              eq(employeeSalaryAssignments.employee_id, data.sourceEmployeeId),
+              lte(employeeSalaryAssignments.effective_from, asOfDate),
+              or(
+                isNull(employeeSalaryAssignments.effective_to),
+                gte(employeeSalaryAssignments.effective_to, asOfDate)
+              )
+            )
+          )
+          .orderBy(desc(employeeSalaryAssignments.effective_from))
+          .limit(1);
+        if (!source)
+          throw new DomainError(
+            'Source employee has no active salary assignment.',
+            'PAYROLL_ASSIGNMENT_NOT_FOUND'
+          );
+        const sourceDetails = await tx
+          .select()
+          .from(employeeSalaryDetails)
+          .where(eq(employeeSalaryDetails.assignment_id, source.id));
+        for (const target of targets) {
+          const [current] = await tx
+            .select({
+              department_id: employeeSalaryAssignments.department_id,
+              designation_id: employeeSalaryAssignments.designation_id
+            })
+            .from(employeeSalaryAssignments)
+            .where(
+              and(
+                eq(employeeSalaryAssignments.employee_id, target),
+                lte(employeeSalaryAssignments.effective_from, asOfDate),
+                or(
+                  isNull(employeeSalaryAssignments.effective_to),
+                  gte(employeeSalaryAssignments.effective_to, asOfDate)
+                )
+              )
+            )
+            .orderBy(desc(employeeSalaryAssignments.effective_from))
+            .limit(1);
+          const row = await upsertVersionedRecord({
+            tx,
+            table: employeeSalaryAssignments,
+            values: {
+              employee_id: target,
+              salary_type: source.salary_type,
+              amount: source.amount,
+              effective_from: asOfDate,
+              effective_to: null,
+              department_id: current?.department_id ?? null,
+              designation_id: current?.designation_id ?? null,
+              overtime_wage_type: source.overtime_wage_type,
+              overtime_rate_workday: source.overtime_rate_workday,
+              overtime_rate_saturday: source.overtime_rate_saturday,
+              overtime_rate_sunday: source.overtime_rate_sunday,
+              overtime_rate_holiday: source.overtime_rate_holiday,
+              leave_hour_deduction: source.leave_hour_deduction,
+              shortfall_hour_deduction: source.shortfall_hour_deduction,
+              absence_deduction_mode: source.absence_deduction_mode,
+              created_by: session.user.id
+            },
+            effectiveFrom: asOfDate,
+            identityWhere: eq(employeeSalaryAssignments.employee_id, target),
+            existingWhere: eq(employeeSalaryAssignments.id, -1),
+            errors: salaryAssignmentErrors()
+          });
+          await replaceSalaryDetails(
+            tx,
+            row.id,
+            sourceDetails.map((detail) => ({
+              description: detail.description,
+              amount: detail.amount,
+              billingBasis: detail.billing_basis
+            }))
+          );
+        }
+        return targets.length;
+      }
+    );
+    return { alignedCount };
   });

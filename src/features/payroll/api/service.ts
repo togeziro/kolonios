@@ -4,7 +4,11 @@ export {
   listSalaryComponentsFn,
   updateSalaryComponentFn
 } from './salary-components';
-export { getEmployeePayrollProfileFn, updateEmployeePayrollProfileFn } from './employee-profile';
+export {
+  alignBaseSalaryFn,
+  getEmployeePayrollProfileFn,
+  updateEmployeePayrollProfileFn
+} from './employee-profile';
 export {
   approvePayrollFn,
   createPayrollPeriodFn,

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import {
+  alignBaseSalaryFn,
   approvePayrollFn,
   adjustPayrollRecordFn,
   createEmployeeBpjsFamilyMemberFn,
@@ -146,4 +147,10 @@ export const useOverrideEmployeeTaxRecord = () =>
     (data: Parameters<typeof overrideEmployeeTaxRecordFn>[0]['data']) =>
       overrideEmployeeTaxRecordFn({ data }),
     () => [['payroll', 'profile'] as const]
+  );
+export const useAlignBaseSalary = () =>
+  usePayrollMutation(
+    (data: Parameters<typeof alignBaseSalaryFn>[0]['data']) => alignBaseSalaryFn({ data }),
+    // Alignment touches many employees' profiles at once; invalidate broadly.
+    () => [payrollKeys.all]
   );

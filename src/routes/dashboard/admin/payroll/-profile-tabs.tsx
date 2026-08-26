@@ -124,7 +124,15 @@ export function SalaryAssignmentTab(ctx: TabContext) {
                 effective_from: '',
                 effective_to: null,
                 department_id: null,
-                designation_id: null
+                designation_id: null,
+                overtime_wage_type: null,
+                overtime_rate_workday: null,
+                overtime_rate_saturday: null,
+                overtime_rate_sunday: null,
+                overtime_rate_holiday: null,
+                leave_hour_deduction: null,
+                shortfall_hour_deduction: null,
+                absence_deduction_mode: null
               })
             }
           >

@@ -11,6 +11,22 @@ export type Assignment = {
   effective_to: string | null;
   department_id: number | null;
   designation_id: number | null;
+  overtime_wage_type: 'hourly' | 'daily' | null;
+  overtime_rate_workday: string | null;
+  overtime_rate_saturday: string | null;
+  overtime_rate_sunday: string | null;
+  overtime_rate_holiday: string | null;
+  leave_hour_deduction: string | null;
+  shortfall_hour_deduction: string | null;
+  absence_deduction_mode: 'automatic' | 'manual' | null;
+};
+
+export type SalaryDetail = {
+  id: number;
+  assignment_id: number;
+  description: string;
+  amount: string;
+  billing_basis: 'per_month' | 'per_attendance';
 };
 
 export type ProfileComponent = {
@@ -67,6 +83,7 @@ export type BankAccount = {
 export type ProfileData = {
   assignment: Assignment | null;
   assignments: Assignment[];
+  salaryDetails: SalaryDetail[];
   components: ProfileComponent[];
   tax: TaxProfile | null;
   taxProfiles: TaxProfile[];
