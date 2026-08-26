@@ -124,7 +124,6 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "4.3.3",
     "vaul": "^1.1.2",
-    "vite-tsconfig-paths": "^6.1.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "4.4.3"
   },
