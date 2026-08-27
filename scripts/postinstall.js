@@ -6,6 +6,7 @@
 //
 // The patch is idempotent: it no-ops if already applied.
 require('./patch-react-router-asset.js');
+require('./patch-router-ssr-query.cjs');
 
 const fs = require('fs');
 const path = require('path');
