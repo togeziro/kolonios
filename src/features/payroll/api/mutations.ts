@@ -44,7 +44,9 @@ export function usePayrollMutation<T>(
   return useMutation({
     mutationFn,
     onSuccess: (_result, data) =>
-      Promise.all(getKeys(data).map((queryKey) => queryClient.invalidateQueries({ queryKey })))
+      Promise.all(
+        getKeys(data).map((queryKey) => queryClient.invalidateQueries({ queryKey, exact: false }))
+      )
   });
 }
 export const useCreateSalaryComponent = () =>
