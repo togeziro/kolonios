@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router';
 import { useTable } from '@tanstack/react-table';
 import { appFeatures } from '@/lib/table-features';
 import { useQuery } from '@tanstack/react-query';
@@ -195,6 +195,9 @@ function RecordsPage() {
       toast.error(t('payroll.failed'));
     }
   };
+  const matches = useMatches();
+  const isPrint = matches.some((m) => m.routeId === '/dashboard/admin/payroll/records/$id/print');
+  if (isPrint) return <Outlet />;
   return (
     <PageContainer>
       <DataTableCard title={t('payroll.records')}>
@@ -289,10 +292,14 @@ function RecordsPage() {
               </div>
               {(selected.period_status === 'paid' || selected.period_status === 'locked') && (
                 <Button variant='outline' asChild>
+                  {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
                   <Link
                     to='/dashboard/admin/payroll/records/$id/print'
                     params={{ id: String(selected.id) }}
                     search={{ start: selected.period_start, end: selected.period_end }}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    onClick={() => setSelected(null)}
                   >
                     {t('payroll.print')}
                   </Link>

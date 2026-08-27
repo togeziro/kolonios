@@ -2,7 +2,13 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { AppFeatures } from '@/lib/table-features';
 import type { TFunction } from 'i18next';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Icons } from '@/components/icons';
 import type { PayrollReportRow } from '@/features/payroll/api/types';
 import { formatPayrollMoney } from './-components';
 
@@ -100,58 +106,64 @@ export function createPayrollRecordColumns(options: {
     },
     {
       id: 'actions',
-      header: t('payroll.actions'),
+      header: () => <div className='text-center'>{t('payroll.actions')}</div>,
       enablePinning: true,
+      size: 56,
+      minSize: 56,
+      maxSize: 56,
       cell: ({ row }) => {
         const record = row.original;
         return (
-          <div className='flex justify-end gap-1'>
-            <Button size='sm' variant='ghost' onClick={() => options.onDetail(record)}>
-              {t('common.view')}
-            </Button>
-            {options.canEditSalary && (
-              <Button size='sm' variant='ghost' onClick={() => options.onEditSalary(record)}>
-                {t('payroll.editBaseSalary')}
-              </Button>
-            )}
-            {options.canAdjust && record.period_status === 'processing' && (
-              <Button size='sm' variant='ghost' onClick={() => options.onAdjust(record)}>
-                {t('payroll.adjust')}
-              </Button>
-            )}
-            {options.canOverride &&
-              (record.period_status === 'draft' || record.period_status === 'processing') && (
-                <Button size='sm' variant='ghost' onClick={() => options.onOverride(record)}>
-                  {t('payroll.override')}
-                </Button>
-              )}
-            {options.canApprove && record.period_status === 'processing' && (
-              <Button
-                size='sm'
-                variant='outline'
-                onClick={() => options.onApprove(record.payroll_period_id)}
-              >
-                {t('payroll.approve')}
-              </Button>
-            )}
-            {options.canPay && record.period_status === 'ready_to_pay' && (
-              <Button
-                size='sm'
-                variant='outline'
-                onClick={() => options.onPay(record.payroll_period_id)}
-              >
-                {t('payroll.pay')}
-              </Button>
-            )}
-            {options.canLock && record.period_status === 'paid' && (
-              <Button
-                size='sm'
-                variant='outline'
-                onClick={() => options.onLock(record.payroll_period_id)}
-              >
-                {t('payroll.lock')}
-              </Button>
-            )}
+          <div className='flex justify-center'>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className='flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring'>
+                <span className='sr-only'>{t('common.openMenu')}</span>
+                <Icons.ellipsis className='h-4 w-4' />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end' className='w-48'>
+                <DropdownMenuItem onClick={() => options.onDetail(record)}>
+                  <Icons.eye className='mr-2 h-4 w-4' />
+                  {t('common.view')}
+                </DropdownMenuItem>
+                {options.canEditSalary && (
+                  <DropdownMenuItem onClick={() => options.onEditSalary(record)}>
+                    <Icons.edit className='mr-2 h-4 w-4' />
+                    {t('payroll.editBaseSalary')}
+                  </DropdownMenuItem>
+                )}
+                {options.canAdjust && record.period_status === 'processing' && (
+                  <DropdownMenuItem onClick={() => options.onAdjust(record)}>
+                    <Icons.adjustments className='mr-2 h-4 w-4' />
+                    {t('payroll.adjust')}
+                  </DropdownMenuItem>
+                )}
+                {options.canOverride &&
+                  (record.period_status === 'draft' || record.period_status === 'processing') && (
+                    <DropdownMenuItem onClick={() => options.onOverride(record)}>
+                      <Icons.clock className='mr-2 h-4 w-4' />
+                      {t('payroll.override')}
+                    </DropdownMenuItem>
+                  )}
+                {options.canApprove && record.period_status === 'processing' && (
+                  <DropdownMenuItem onClick={() => options.onApprove(record.payroll_period_id)}>
+                    <Icons.check className='mr-2 h-4 w-4' />
+                    {t('payroll.approve')}
+                  </DropdownMenuItem>
+                )}
+                {options.canPay && record.period_status === 'ready_to_pay' && (
+                  <DropdownMenuItem onClick={() => options.onPay(record.payroll_period_id)}>
+                    <Icons.creditCard className='mr-2 h-4 w-4' />
+                    {t('payroll.pay')}
+                  </DropdownMenuItem>
+                )}
+                {options.canLock && record.period_status === 'paid' && (
+                  <DropdownMenuItem onClick={() => options.onLock(record.payroll_period_id)}>
+                    <Icons.lock className='mr-2 h-4 w-4' />
+                    {t('payroll.lock')}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         );
       },
