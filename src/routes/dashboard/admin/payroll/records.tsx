@@ -396,6 +396,7 @@ function RecordsPage() {
               draftToBaseSalaryValues(draft, salaryTarget.employee_id)
             );
             toast.success(t('payroll.updated'));
+            setSalaryTarget(null);
           } catch {
             toast.error(t('payroll.failed'));
           }

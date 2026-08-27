@@ -198,8 +198,15 @@ export default function AppSidebar() {
                     <Icons.account className='size-4' />
                   </div>
                   <div className='grid flex-1 text-left text-sm leading-tight'>
-                    <span className='truncate font-medium'>{name}</span>
-                    <span className='text-muted-foreground truncate text-xs'>{email}</span>
+                    <span suppressHydrationWarning className='truncate font-medium'>
+                      {name}
+                    </span>
+                    <span
+                      suppressHydrationWarning
+                      className='text-muted-foreground truncate text-xs'
+                    >
+                      {email}
+                    </span>
                   </div>
                   <Icons.chevronsDown className='ml-auto size-4' />
                 </SidebarMenuButton>

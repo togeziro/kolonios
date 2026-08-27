@@ -9,10 +9,9 @@ import { toast } from 'sonner';
 import PageContainer from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { flexRender } from '@tanstack/react-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { NativeSelect } from '@/components/ui/native-select';
-import { DataTable } from '@/components/ui/table/data-table';
 import { PayQueueSummaryBar, formatPayrollMoney } from './-components';
 import { appFeatures, type AppFeatures } from '@/lib/table-features';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
@@ -44,19 +43,26 @@ function selectColumn(t: TFunction): ColumnDef<AppFeatures, PayQueueRow> {
       const allSelected = table.getIsAllRowsSelected();
       const someSelected = table.getIsSomeRowsSelected();
       return (
-        <Checkbox
+        <input
+          type='checkbox'
           aria-label={t('payroll.payQueue.selectAll')}
-          checked={someSelected ? 'indeterminate' : allSelected}
-          onCheckedChange={table.getToggleAllRowsSelectedHandler()}
+          checked={allSelected}
+          ref={(el) => {
+            if (el) el.indeterminate = someSelected === true;
+          }}
+          onChange={(e) => table.toggleAllRowsSelected(e.target.checked)}
+          className='size-4 rounded border'
         />
       );
     },
     cell: ({ row }) => (
-      <Checkbox
+      <input
+        type='checkbox'
         aria-label={t('payroll.payQueue.selectRow')}
         checked={row.getIsSelected()}
         disabled={!row.getCanSelect()}
-        onCheckedChange={row.getToggleSelectedHandler()}
+        onChange={(e) => row.toggleSelected(e.target.checked)}
+        className='size-4 rounded border'
       />
     )
   };
@@ -223,7 +229,48 @@ function ReadyToPayPage() {
         ) : rows.length === 0 ? (
           <p className='text-sm text-muted-foreground'>{t('payroll.payQueue.empty')}</p>
         ) : (
-          <DataTable table={table} />
+          <div className='rounded-md border'>
+            <div className='overflow-auto'>
+              <table className='w-full text-sm'>
+                <thead className='bg-muted/50 text-muted-foreground'>
+                  <tr>
+                    <th className='w-10 px-2 py-2 text-left font-normal'>
+                      <input
+                        type='checkbox'
+                        aria-label={t('payroll.payQueue.selectAll')}
+                        checked={table.getIsAllRowsSelected()}
+                        ref={(el) => {
+                          if (el) el.indeterminate = table.getIsSomeRowsSelected();
+                        }}
+                        onChange={(e) => table.toggleAllRowsSelected(e.target.checked)}
+                        className='size-4 rounded border'
+                      />
+                    </th>
+                    <th className='px-2 py-2 text-left font-normal'>{t('payroll.employee')}</th>
+                    <th className='px-2 py-2 text-left font-normal'>
+                      {t('payroll.payQueue.division')}
+                    </th>
+                    <th className='px-2 py-2 text-left font-normal'>{t('payroll.period')}</th>
+                    <th className='px-2 py-2 text-left font-normal'>
+                      {t('payroll.payQueue.bank')}
+                    </th>
+                    <th className='px-2 py-2 text-right font-normal'>{t('payroll.net')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className='border-t'>
+                      {row.getVisibleCells().map((cell) => (
+                        <td className='px-2 py-2' key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
         {!canPay && rows.length > 0 && (
