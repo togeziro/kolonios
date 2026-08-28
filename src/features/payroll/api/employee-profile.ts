@@ -119,7 +119,12 @@ export const getEmployeePayrollProfileFn = createServerFn({ method: 'GET' })
           period_end: payrollPeriods.period_end,
           payment_date: payrollPeriods.payment_date,
           net_salary: payrollRecords.net_salary,
-          period_status: payrollPeriods.status
+          period_status: payrollPeriods.status,
+          // ADR-0003: per-record stamp is the source of truth for "paid";
+          // period_status alone is not (a period may stay `ready_to_pay`
+          // after a partial bulk-pay).
+          paid_at: payrollRecords.paid_at,
+          paid_by: payrollRecords.paid_by
         })
         .from(payrollRecords)
         .innerJoin(payrollPeriods, eq(payrollRecords.payroll_period_id, payrollPeriods.id))

@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/icons';
+import { isRecordPaid } from '@/lib/domain/payroll';
 import type { PayrollReportRow } from '@/features/payroll/api/types';
 import { formatPayrollMoney } from './-components';
 
@@ -85,8 +86,7 @@ export function createPayrollRecordColumns(options: {
       accessorKey: 'period_status',
       header: t('payroll.status'),
       cell: ({ row }) => {
-        const status = row.original.period_status;
-        const paid = status === 'paid' || status === 'locked';
+        const paid = isRecordPaid(row.original);
         return (
           <Badge variant={paid ? 'default' : 'outline'}>
             {paid ? t('payroll.paidLabel') : t('payroll.unpaidLabel')}
@@ -150,12 +150,14 @@ export function createPayrollRecordColumns(options: {
                     {t('payroll.approve')}
                   </DropdownMenuItem>
                 )}
-                {options.canPay && record.period_status === 'ready_to_pay' && (
-                  <DropdownMenuItem onClick={() => options.onPay(record.payroll_period_id)}>
-                    <Icons.creditCard className='mr-2 h-4 w-4' />
-                    {t('payroll.pay')}
-                  </DropdownMenuItem>
-                )}
+                {options.canPay &&
+                  record.period_status === 'ready_to_pay' &&
+                  record.paid_at == null && (
+                    <DropdownMenuItem onClick={() => options.onPay(record.payroll_period_id)}>
+                      <Icons.creditCard className='mr-2 h-4 w-4' />
+                      {t('payroll.pay')}
+                    </DropdownMenuItem>
+                  )}
                 {options.canLock && record.period_status === 'paid' && (
                   <DropdownMenuItem onClick={() => options.onLock(record.payroll_period_id)}>
                     <Icons.lock className='mr-2 h-4 w-4' />

@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
+import { isRecordPaid } from '@/lib/domain/payroll';
 import { formatPayrollMoney } from './-components';
 
 export type PaymentHistoryRow = {
@@ -19,6 +20,13 @@ export type PaymentHistoryRow = {
   payment_date: string;
   net_salary: string;
   period_status: string;
+  /**
+   * ADR-0003: per-record payment stamp. Authoritative for the "Paid" badge —
+   * `period_status` alone is not enough because a period may stay
+   * `ready_to_pay` after a partial bulk-pay stamp.
+   */
+  paid_at: string | null;
+  paid_by: string | null;
 };
 
 export function PaymentHistoryCard({ paymentHistory }: { paymentHistory: PaymentHistoryRow[] }) {
@@ -48,7 +56,7 @@ export function PaymentHistoryCard({ paymentHistory }: { paymentHistory: Payment
                 </TableRow>
               ) : (
                 paymentHistory.map((record) => {
-                  const paid = record.period_status === 'paid' || record.period_status === 'locked';
+                  const paid = isRecordPaid(record);
                   return (
                     <TableRow key={record.id}>
                       <TableCell>{record.period_name}</TableCell>

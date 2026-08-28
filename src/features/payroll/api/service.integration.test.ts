@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { employees } from '@/lib/db/schema/employees';
+import { DomainError } from '@/lib/errors';
 import {
   resetAllTables,
   seedDepartment,
@@ -807,6 +808,41 @@ describe('payroll profile versioned upserts', () => {
       .from(employeeBankAccounts)
       .where(eq(employeeBankAccounts.employee_id, 'payroll-boundary-a'));
     expect(versions).toHaveLength(2);
+  });
+
+  it('throws DomainError HISTORICAL_RECORD_IMMUTABLE when effectiveFrom is not later than the existing version', async () => {
+    await seedEmployee('payroll-boundary-a');
+    const [existing] = await db
+      .insert(employeeTaxProfiles)
+      .values({
+        employee_id: 'payroll-boundary-a',
+        tax_identifier: 'NPWP-OLD',
+        filing_status: 'single',
+        ptkp_status: 'TK/0',
+        effective_from: '2026-01-01'
+      })
+      .returning();
+
+    serverFnProvider.handler = updateEmployeePayrollProfileFn_createServerFn_handler;
+    const rejection = updateEmployeePayrollProfileFn({
+      data: {
+        employeeId: 'payroll-boundary-a',
+        kind: 'tax',
+        values: {
+          id: existing.id,
+          taxIdentifier: 'NPWP-NEW',
+          filingStatus: 'married',
+          ptkpStatus: 'K/1',
+          effectiveFrom: '2026-01-01'
+        }
+      }
+    });
+    await expect(rejection).rejects.toBeInstanceOf(DomainError);
+    await expect(rejection).rejects.toMatchObject({
+      name: 'DomainError',
+      code: 'HISTORICAL_RECORD_IMMUTABLE',
+      message: 'Create a new payroll record version with a later effective date.'
+    });
   });
 });
 

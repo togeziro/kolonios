@@ -2,7 +2,7 @@
 // i18n:skip
 import type { TFunction } from 'i18next';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { createPayrollRecordColumns, toHoursMinutes } from './-records-columns';
 
@@ -98,5 +98,105 @@ describe('payroll record columns', () => {
 
   it('keeps large hour totals', () => {
     expect(toHoursMinutes(160)).toEqual({ whole: 160, minutes: 0 });
+  });
+});
+
+describe('payroll record per-record paid stamp (ADR-0003)', () => {
+  type RecordRow = Parameters<typeof createPayrollRecordColumns>[0] extends infer O
+    ? O extends { onDetail: (row: infer R) => void }
+      ? R
+      : never
+    : never;
+
+  function renderStatusCell(row: RecordRow, options: Record<string, unknown> = {}) {
+    const columns = createPayrollRecordColumns(
+      columnOptions({ canPay: true, ...options })
+    ) as never as Array<{
+      id?: string;
+      accessorKey?: string;
+      cell?: (context: { row: { original: RecordRow } }) => ReactNode;
+    }>;
+    const statusColumn = columns.find((column) => column.accessorKey === 'period_status');
+    const statusCell = statusColumn?.cell?.({ row: { original: row } });
+    return render(
+      <table>
+        <tbody>
+          <tr>{statusCell}</tr>
+        </tbody>
+      </table>
+    );
+  }
+
+  function renderActionsCell(row: RecordRow, options: Record<string, unknown> = {}) {
+    const columns = createPayrollRecordColumns(
+      columnOptions({ canPay: true, ...options })
+    ) as never as Array<{
+      id?: string;
+      accessorKey?: string;
+      cell?: (context: { row: { original: RecordRow } }) => ReactNode;
+    }>;
+    const actionsColumn = columns.find((column) => column.id === 'actions');
+    const actionsCell = actionsColumn?.cell?.({ row: { original: row } });
+    return render(
+      <table>
+        <tbody>
+          <tr>{actionsCell}</tr>
+        </tbody>
+      </table>
+    );
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('renders Paid when the record was stamped even if the period is still ready_to_pay', () => {
+    const stamped = '2026-08-07T10:00:00.000Z';
+    const status = renderStatusCell({
+      payroll_period_id: 1,
+      employee_id: 'emp-1',
+      period_status: 'ready_to_pay',
+      paid_at: stamped,
+      paid_by: 'admin-1'
+    } as RecordRow);
+    expect(status.getByText('payroll.paidLabel')).toBeTruthy();
+    expect(status.queryByText('payroll.unpaidLabel')).toBeNull();
+  });
+
+  it('renders Paid when the period is paid, even if the record row has no stamp (defensive: period status is sufficient when in paid/locked)', () => {
+    // ADR-0003: per-record stamp is the authoritative source for "Paid" in
+    // the bulk-pay path (period may stay ready_to_pay). But once the period
+    // itself flips to paid/locked, we trust that — an unstamped row in a paid
+    // period is a data anomaly, and silently downgrading it to "Unpaid"
+    // would be misleading.
+    const status = renderStatusCell({
+      payroll_period_id: 1,
+      employee_id: 'emp-1',
+      period_status: 'paid',
+      paid_at: null
+    } as RecordRow);
+    expect(status.getByText('payroll.paidLabel')).toBeTruthy();
+    expect(status.queryByText('payroll.unpaidLabel')).toBeNull();
+  });
+
+  it('hides the Pay menu when the record is stamped, even when the period is ready_to_pay', () => {
+    const actions = renderActionsCell({
+      payroll_period_id: 1,
+      employee_id: 'emp-1',
+      period_status: 'ready_to_pay',
+      paid_at: '2026-08-07T10:00:00.000Z',
+      paid_by: 'admin-1'
+    } as RecordRow);
+    expect(actions.queryByRole('button', { name: 'payroll.pay' })).toBeNull();
+  });
+
+  it('shows the Pay menu when the record is unstamped and the period is ready_to_pay', () => {
+    const actions = renderActionsCell({
+      payroll_period_id: 1,
+      employee_id: 'emp-1',
+      period_status: 'ready_to_pay',
+      paid_at: null
+    } as RecordRow);
+    expect(actions.getByRole('button', { name: 'payroll.pay' })).toBeTruthy();
   });
 });
