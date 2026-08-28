@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router';
 import { useTable } from '@tanstack/react-table';
 import { appFeatures } from '@/lib/table-features';
+import { isRecordPaid } from '@/lib/domain/payroll';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -290,7 +291,7 @@ function RecordsPage() {
                   </div>
                 ))}
               </div>
-              {(selected.period_status === 'paid' || selected.period_status === 'locked') && (
+              {isRecordPaid(selected) && (
                 <Button variant='outline' asChild>
                   {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
                   <Link

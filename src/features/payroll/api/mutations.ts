@@ -24,16 +24,7 @@ import { payrollKeys } from './queries';
 export const payrollMutationKeys = {
   components: () => payrollKeys.components(),
   profile: (employeeId: string) => payrollKeys.profile(employeeId),
-  periods: () => payrollKeys.periods(),
-  generation: () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()] as const,
-  workflow: () =>
-    [
-      payrollKeys.periods(),
-      payrollKeys.records(),
-      payrollKeys.report(),
-      payrollKeys.payslips(),
-      payrollKeys.payQueue()
-    ] as const
+  generation: () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()] as const
 };
 
 export function usePayrollMutation<T>(
@@ -101,7 +92,18 @@ export const usePayQueueSelection = () =>
   usePayrollMutation(
     (data: Parameters<typeof payPayQueueSelectionFn>[0]['data']) =>
       payPayQueueSelectionFn({ data }),
-    () => [payrollMutationKeys.workflow()]
+    // Flatten the workflow tuple so each entry is its own QueryKey —
+    // otherwise TanStack Query treats the whole tuple as one prefix and
+    // never matches the individual `['payroll', 'periods', ...]` etc. keys
+    // already in the cache, so the records page + payment history + queue
+    // show stale data after a bulk-pay stamp (issue #02).
+    () => [
+      payrollKeys.periods(),
+      payrollKeys.records(),
+      payrollKeys.report(),
+      payrollKeys.payslips(),
+      payrollKeys.payQueue()
+    ]
   );
 export const useLockPayroll = () =>
   usePayrollMutation(

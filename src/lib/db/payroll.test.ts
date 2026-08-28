@@ -799,6 +799,41 @@ describe('pay queue per-record payment', () => {
     expect(entry).toBeDefined();
     expect(entry.after).toEqual({ stampedRecords: 1 });
   });
+
+  it('keeps listPayrollRecords and getPayQueue consistent after a partial bulk-pay stamp (issue #02)', async () => {
+    // Reproduce the silent-failure contract: bulk-pay stamps only the selected
+    // record(s). The period stays in ready_to_pay, but the per-record paid_at
+    // must be the source of truth for every downstream surface (records list,
+    // payment history, action menu, queue filter).
+    const { period, records } = await seedReadyPeriodWithRecords(['pq-bulk-1', 'pq-bulk-2']);
+    const [selected, other] = records;
+
+    const result = await stampPayrollRecords([selected.id], 'pay-queue-admin');
+    expect(result.stamped).toBe(1);
+    expect(result.flippedPeriodIds).toEqual([]);
+
+    // Period status did NOT flip (other record is still unpaid) — ADR-0003 holds.
+    expect((await getPayrollPeriod(period.id))?.status).toBe('ready_to_pay');
+
+    // listPayrollRecords returns both rows. The stamped one MUST carry
+    // paid_at + paid_by so the records page can render "Paid" per-record.
+    const listed = await listPayrollRecords({ payroll_period_id: period.id });
+    expect(listed.rows).toHaveLength(2);
+    const stampedListed = listed.rows.find((row) => row.id === selected.id);
+    const otherListed = listed.rows.find((row) => row.id === other.id);
+    expect(stampedListed?.paid_at).not.toBeNull();
+    expect(stampedListed?.paid_by).toBe('pay-queue-admin');
+    expect(stampedListed?.period_status).toBe('ready_to_pay');
+    expect(otherListed?.paid_at).toBeNull();
+    expect(otherListed?.period_status).toBe('ready_to_pay');
+
+    // getPayQueue must exclude the stamped row (already paid) and keep the
+    // unstamped one — same period, same ready_to_pay status.
+    const queue = await getPayQueue();
+    const queueRecordIds = queue.rows.map((row) => row.recordId);
+    expect(queueRecordIds).toContain(other.id);
+    expect(queueRecordIds).not.toContain(selected.id);
+  });
 });
 
 describe('pay queue read model', () => {

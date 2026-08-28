@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 import { validDates } from './-components';
 import {
   type Assignment,
@@ -102,8 +103,9 @@ export function useProfileDrafts(options: UseProfileDraftsOptions): UseProfileDr
       if (payload.kind === 'benefit') setNewBenefitDraft(null);
       if (payload.kind === 'bank') setNewBankDraft(null);
       toast.success(t('payroll.saved'));
-    } catch {
-      toast.error(t('payroll.failed'));
+    } catch (error) {
+      const detail = getErrorMessage(error);
+      toast.error(t('payroll.failed'), detail ? { description: detail } : undefined);
     }
   };
 

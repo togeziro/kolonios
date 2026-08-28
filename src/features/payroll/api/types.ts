@@ -53,6 +53,15 @@ export interface PayrollReportRow {
   net_salary: string;
   details: unknown;
   period_status: PayrollRecordFilters['status'];
+  /**
+   * ADR-0003: per-record payment stamp. Set by `stampPayrollRecords` (bulk-pay
+   * queue) or `stampUnstampedPayrollRecords` (whole-period pay path). The
+   * authoritative source of "is this record paid?" — the period status alone
+   * is not enough because a period may stay `ready_to_pay` after a partial
+   * bulk-pay.
+   */
+  paid_at?: string | null;
+  paid_by?: string | null;
   department_name?: string | null;
   period_start?: string;
   period_end?: string;
