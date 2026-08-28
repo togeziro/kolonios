@@ -156,8 +156,7 @@
   },
   "overrides": {
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "vitest/vite": "^7.0.0"
+    "@types/react-dom": "^19.0.0"
   },
   "simple-git-hooks": {
     "pre-commit": "bun run generate:presets && git add src/lib/preferences/theme.ts && npx lint-staged && tsc --noEmit && bun run format:check && bun run i18n:check && bun run i18n:hardcoded",
