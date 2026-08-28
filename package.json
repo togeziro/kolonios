@@ -40,6 +40,7 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
+    "e2e:login": "bun run scripts/browser-harness/login.mjs",
     "lint-staged": "lint-staged"
   },
   "dependencies": {
