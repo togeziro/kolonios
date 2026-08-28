@@ -189,6 +189,19 @@ describe('PayslipTemplate', () => {
       expect(data!.net).toBe('Rp\u00a01.251.000,00');
     });
 
+    it('accepts records with per-record paid_at even when period_status is still ready_to_pay (ADR-0003, issue #04 partial pay)', () => {
+      const stampedRecord = {
+        ...record,
+        period_status: 'ready_to_pay',
+        paid_at: '2026-08-05T08:00:00.000Z',
+        paid_by: 'admin-user-id'
+      };
+      const data = payslipFromRecord(stampedRecord, company);
+      expect(data).not.toBeNull();
+      expect(data!.period.status).toBe('paid');
+      expect(data!.net).toBe('Rp\u00a01.251.000,00');
+    });
+
     it('returns null for non-paid, non-locked periods', () => {
       expect(payslipFromRecord({ ...record, period_status: 'processing' }, company)).toBeNull();
       expect(payslipFromRecord({ ...record, period_status: 'draft' }, company)).toBeNull();

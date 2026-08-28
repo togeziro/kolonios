@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/lib/format';
+import { isRecordPaid } from '@/lib/domain/payroll';
 import { toMajor } from '../utils/money';
 
 export interface PayslipData {
@@ -112,7 +113,7 @@ export function payslipFromRecord(
   company: CompanyProfile,
   options: PayslipFromRecordOptions = {}
 ): PayslipData | null {
-  if (row.period_status !== 'paid' && row.period_status !== 'locked') return null;
+  if (!isRecordPaid(row)) return null;
   const details =
     row.details && typeof row.details === 'object' ? (row.details as Record<string, unknown>) : {};
   const tax =
@@ -134,7 +135,7 @@ export function payslipFromRecord(
       name: row.period_name ?? `${row.period_start} - ${row.period_end}`,
       start: row.period_start,
       end: row.period_end,
-      status: row.period_status
+      status: row.period_status === 'locked' ? 'locked' : 'paid'
     },
     gross: money(row.gross_salary),
     allowances: money(row.total_allowances),
