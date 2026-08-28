@@ -513,7 +513,16 @@ describe('payroll data access (integration)', () => {
     });
     expect(adminRows.rows).toHaveLength(1);
     await expect(listPayrollRecords({ scope: 'employee' })).rejects.toThrow(/employee/i);
-    await transitionPayrollPeriod(period.id, 'paid');
+    // Stamp the records (also flips the period on the last stamp per ADR-0003)
+    // so the period stays consistent with the per-record paid_at invariant.
+    const allRecords = await db
+      .select({ id: payrollRecords.id })
+      .from(payrollRecords)
+      .where(eq(payrollRecords.payroll_period_id, period.id));
+    await stampPayrollRecords(
+      allRecords.map((row) => row.id),
+      'payroll-scope-a'
+    );
     const employeeRows = await listMyPayslips('payroll-scope-a');
     expect(employeeRows.rows).toHaveLength(1);
     expect(employeeRows.rows[0]?.employee_id).toBe('payroll-scope-a');
@@ -833,6 +842,30 @@ describe('pay queue per-record payment', () => {
     const queueRecordIds = queue.rows.map((row) => row.recordId);
     expect(queueRecordIds).toContain(other.id);
     expect(queueRecordIds).not.toContain(selected.id);
+  });
+
+  it('returns the stamped record from listMyPayslips even when its period is still ready_to_pay (issue #04)', async () => {
+    // Reproduce the partial-pay contract: bulk-pay stamps exactly the selected
+    // record; the period stays ready_to_pay. Per ADR-0003 the employee's own
+    // payslip view must surface the stamped record anyway — paying one row
+    // out of many must not hide that employee's payslip from them.
+    const { period, records } = await seedReadyPeriodWithRecords(['pq-self-1', 'pq-self-2']);
+    const [selected] = records;
+
+    await stampPayrollRecords([selected.id], 'pay-queue-admin');
+
+    // Sanity: period is still ready_to_pay (not flipped because the other record is unpaid).
+    expect((await getPayrollPeriod(period.id))?.status).toBe('ready_to_pay');
+
+    // The employee whose record was stamped MUST see it in their payslips.
+    const stampedEmployeePayslips = await listMyPayslips('pq-self-1');
+    expect(stampedEmployeePayslips.rows).toHaveLength(1);
+    expect(stampedEmployeePayslips.rows[0]?.id).toBe(selected.id);
+    expect(stampedEmployeePayslips.rows[0]?.paid_at).not.toBeNull();
+
+    // The other (still-unpaid) employee MUST NOT see a payslip yet.
+    const unpaidEmployeePayslips = await listMyPayslips('pq-self-2');
+    expect(unpaidEmployeePayslips.rows).toHaveLength(0);
   });
 });
 

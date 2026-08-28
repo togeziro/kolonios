@@ -7,6 +7,7 @@ import {
   gte,
   getTableColumns,
   inArray,
+  isNotNull,
   isNull,
   lte,
   or,
@@ -1269,6 +1270,7 @@ export async function listPayrollRecords(
     department_id?: number;
     status?: string;
     statuses?: string[];
+    paid_at_not_null?: boolean;
     scope?: 'admin' | 'employee';
     page?: number;
     limit?: number;
@@ -1295,7 +1297,8 @@ export async function listPayrollRecords(
             payrollPeriods.status,
             filters.statuses as Array<'draft' | 'processing' | 'ready_to_pay' | 'paid' | 'locked'>
           )
-        : undefined
+        : undefined,
+      filters.paid_at_not_null ? isNotNull(payrollRecords.paid_at) : undefined
     ]);
     const [rows, [{ count }]] = await Promise.all([
       db
@@ -1379,11 +1382,16 @@ export async function listMyPayslips(
   employeeId: string,
   filters: { payroll_period_id?: number; page?: number; limit?: number } = {}
 ) {
+  // Self-service surfaces only this employee's records. The per-record
+  // `paid_at` stamp is the source of truth for "paid" (ADR-0003); the period
+  // status is not, because a partial bulk-pay leaves the period in
+  // `ready_to_pay` while individual records are already stamped. Filtering on
+  // the period status alone would hide those employees' payslips from them.
   return listPayrollRecords({
     ...filters,
     employee_id: employeeId,
     scope: 'employee',
-    statuses: ['paid', 'locked']
+    paid_at_not_null: true
   });
 }
 

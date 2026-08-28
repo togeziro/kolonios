@@ -98,6 +98,22 @@ export async function upsertVersionedRecord<TTable extends EffectiveVersionTable
 
   await options.createGuards?.();
 
+  // Reject same-day collisions explicitly: a `(identity, effective_from)`
+  // unique index makes the INSERT below fatal, and `mapDbError` would wrap
+  // the raw violation as the generic "An internal error occurred…" toast.
+  // Detect the duplicate first so the toast carries a domain-specific
+  // message and code the client can format.
+  const sameDay = (await tx
+    .select({ id: versioned.id })
+    .from(pgTable)
+    .where(and(identityWhere, eq(versioned.effective_from, effectiveFrom)))
+    .limit(1)) as Array<{ id: number }>;
+  if (sameDay.length > 0)
+    throw new DomainError(
+      'A versioned record already exists for this effective date.',
+      'DUPLICATE_EFFECTIVE_DATE'
+    );
+
   const overlapping = (await tx
     .select()
     .from(pgTable)

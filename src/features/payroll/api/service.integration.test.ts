@@ -229,13 +229,17 @@ describe('getMyPayslipsFn authenticated boundary', () => {
         payroll_period_id: paidPeriod.id,
         employee_id: 'payroll-boundary-a',
         gross_salary: '100',
-        net_salary: '90'
+        net_salary: '90',
+        paid_at: new Date('2026-08-05T00:00:00Z'),
+        paid_by: 'payroll-boundary-a'
       },
       {
         payroll_period_id: paidPeriod.id,
         employee_id: 'payroll-boundary-b',
         gross_salary: '200',
-        net_salary: '180'
+        net_salary: '180',
+        paid_at: new Date('2026-08-05T00:00:00Z'),
+        paid_by: 'payroll-boundary-a'
       },
       {
         payroll_period_id: draftPeriod.id,
@@ -247,7 +251,9 @@ describe('getMyPayslipsFn authenticated boundary', () => {
         payroll_period_id: lockedPeriod.id,
         employee_id: 'payroll-boundary-a',
         gross_salary: '400',
-        net_salary: '360'
+        net_salary: '360',
+        paid_at: new Date('2026-07-05T00:00:00Z'),
+        paid_by: 'payroll-boundary-a'
       }
     ]);
 
@@ -608,6 +614,46 @@ describe('tax profile versioning SET clause', () => {
       .from(employeeTaxProfiles)
       .where(eq(employeeTaxProfiles.employee_id, 'payroll-boundary-a'));
     expect(versions).toHaveLength(2);
+  });
+
+  it('rejects a new tax profile version whose effective_from collides with an existing row (issue #03)', async () => {
+    // Reproduce the silent-failure contract: the client form posts a NEW tax
+    // profile (no id) with effective_from equal to an existing version. The
+    // server must surface a DomainError so the toast can carry a useful
+    // description ("…already exists for this date") instead of the generic
+    // "An internal error occurred" that comes from a wrapped unique violation.
+    await seedEmployee('payroll-boundary-a');
+    await db.insert(employeeTaxProfiles).values({
+      employee_id: 'payroll-boundary-a',
+      tax_identifier: 'NPWP-EXISTING',
+      filing_status: 'single',
+      ptkp_status: 'TK/0',
+      effective_from: '2026-01-01'
+    });
+
+    serverFnProvider.handler = updateEmployeePayrollProfileFn_createServerFn_handler;
+    await expect(
+      updateEmployeePayrollProfileFn({
+        data: {
+          employeeId: 'payroll-boundary-a',
+          kind: 'tax',
+          values: {
+            taxIdentifier: 'NPWP-DUPLICATE',
+            filingStatus: 'married',
+            ptkpStatus: 'K/1',
+            effectiveFrom: '2026-01-01'
+          }
+        }
+      })
+    ).rejects.toThrow(/effective date|already exists/i);
+
+    // Existing row untouched.
+    const rows = await db
+      .select()
+      .from(employeeTaxProfiles)
+      .where(eq(employeeTaxProfiles.employee_id, 'payroll-boundary-a'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tax_identifier).toBe('NPWP-EXISTING');
   });
 });
 
