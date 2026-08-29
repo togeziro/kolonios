@@ -13,7 +13,7 @@ export interface PayslipData {
     designation?: string | null;
     npwp?: string | null;
   };
-  period: { name: string; start: string; end: string; status: 'paid' | 'locked' };
+  period: { name: string; start: string; end: string; status: string };
   gross: string;
   allowances: string;
   deductions: string;
@@ -106,6 +106,13 @@ export interface PayslipFromRecordOptions {
    * existing callers cannot leak digits by omission.
    */
   maskBankAccount?: boolean;
+  /**
+   * When true, allow preview for draft/processing/ready_to_pay records.
+   * Kerjoo's Calculate print () works on unpaid drafts; the employee
+   * self-service payslips route must keep this false so only paid/locked
+   * are downloadable.
+   */
+  allowUnpaidPreview?: boolean;
 }
 
 export function payslipFromRecord(
@@ -113,7 +120,7 @@ export function payslipFromRecord(
   company: CompanyProfile,
   options: PayslipFromRecordOptions = {}
 ): PayslipData | null {
-  if (!isRecordPaid(row)) return null;
+  if (!options.allowUnpaidPreview && !isRecordPaid(row)) return null;
   const details =
     row.details && typeof row.details === 'object' ? (row.details as Record<string, unknown>) : {};
   const tax =
@@ -135,7 +142,11 @@ export function payslipFromRecord(
       name: row.period_name ?? `${row.period_start} - ${row.period_end}`,
       start: row.period_start,
       end: row.period_end,
-      status: row.period_status === 'locked' ? 'locked' : 'paid'
+      status: isRecordPaid(row)
+        ? row.period_status === 'locked'
+          ? 'locked'
+          : 'paid'
+        : (row.period_status ?? 'paid')
     },
     gross: money(row.gross_salary),
     allowances: money(row.total_allowances),

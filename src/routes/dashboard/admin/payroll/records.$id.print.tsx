@@ -46,7 +46,9 @@ function PayslipPrintRoute() {
   const record = payload?.record ?? null;
   const company = payload?.company;
   const payslip =
-    company && record ? payslipFromRecord(record, company, { maskBankAccount: false }) : null;
+    company && record
+      ? payslipFromRecord(record, company, { maskBankAccount: false, allowUnpaidPreview: true })
+      : null;
   const periodRange =
     search.start || search.end
       ? [search.start ?? record?.period_start, search.end ?? record?.period_end]

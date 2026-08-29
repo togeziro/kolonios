@@ -291,7 +291,7 @@ function RecordsPage() {
                   </div>
                 ))}
               </div>
-              {isRecordPaid(selected) && (
+              {selected && (
                 <Button variant='outline' asChild>
                   {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
                   <Link

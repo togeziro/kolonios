@@ -1360,16 +1360,51 @@ export async function listPayrollRecords(
     const rowsWithMeta = rows.map((row) => {
       const override = overrideByKey.get(`${row.payroll_period_id}:${row.employee_id}`);
       const details = (row.details as Record<string, unknown> | null) ?? {};
-      const input = Array.isArray(details.input)
-        ? (details.input[0] as Record<string, unknown> | undefined)
-        : undefined;
+      const inputArray = Array.isArray(details.input)
+        ? (details.input as Record<string, unknown>[])
+        : [];
+      const input = inputArray[0] as Record<string, unknown> | undefined;
       const attendance = (input?.attendance as Record<string, unknown> | undefined) ?? {};
+      // Kerjoo parity: expose bank + base salary summary from snapshot without extra queries
+      const resolvedSegments = Array.isArray(details.resolvedSegments)
+        ? (details.resolvedSegments as Array<Record<string, unknown>>)
+        : [];
+      const primaryBank = resolvedSegments.find((seg) => seg.bank && typeof seg.bank === 'object')
+        ?.bank as Record<string, unknown> | undefined;
+      const bankInfo = primaryBank
+        ? {
+            bank_name: (primaryBank.bank_name as string) ?? null,
+            account_number: (primaryBank.account_number as string) ?? null,
+            account_name: (primaryBank.account_name as string) ?? null
+          }
+        : { bank_name: null, account_number: null, account_name: null };
+      const baseSalaryCents =
+        typeof details.baseSalary === 'number'
+          ? details.baseSalary
+          : typeof details.grossSalary === 'number'
+            ? details.grossSalary
+            : null;
+      const baseSalaryRaw = baseSalaryCents != null ? (baseSalaryCents / 100).toFixed(2) : null;
+      // component count = unique salary components across all segments
+      const componentCount = inputArray.reduce((sum, seg) => {
+        const comps = (seg as { components?: unknown[] }).components;
+        return sum + (Array.isArray(comps) ? comps.length : 0);
+      }, 0);
+      const salaryType = (input?.salary as Record<string, unknown> | undefined)?.type as
+        | string
+        | undefined;
       return {
         ...row,
         worked_hours:
           override?.worked_hours ??
           (typeof attendance.workedHours === 'number' ? attendance.workedHours : null),
-        has_override: Boolean(override)
+        has_override: Boolean(override),
+        bank_name: bankInfo.bank_name,
+        account_number: bankInfo.account_number,
+        account_name: bankInfo.account_name,
+        base_salary_amount: baseSalaryRaw,
+        component_count: componentCount > 0 ? componentCount : null,
+        salary_type: salaryType ?? null
       };
     });
     return { rows: rowsWithMeta, total: count, limit, offset };
