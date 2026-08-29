@@ -290,21 +290,19 @@ function RecordsPage() {
                   </div>
                 ))}
               </div>
-              {selected && (
-                <Button variant='outline' asChild>
-                  {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-                  <Link
-                    to='/dashboard/admin/payroll/records/$id/print'
-                    params={{ id: String(selected.id) }}
-                    search={{ start: selected.period_start, end: selected.period_end }}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    onClick={() => setSelected(null)}
-                  >
-                    {t('payroll.print')}
-                  </Link>
-                </Button>
-              )}
+              <Button variant='outline' asChild>
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+                <Link
+                  to='/dashboard/admin/payroll/records/$id/print'
+                  params={{ id: String(selected.id) }}
+                  search={{ start: selected.period_start, end: selected.period_end }}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  onClick={() => setSelected(null)}
+                >
+                  {t('payroll.print')}
+                </Link>
+              </Button>
               <p className='text-sm text-muted-foreground'>{t('payroll.adjustmentsHint')}</p>
               {canAdjust && selected.period_status === 'processing' && (
                 <>
