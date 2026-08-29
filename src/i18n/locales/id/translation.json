@@ -766,6 +766,7 @@
     },
     "payQueue": {
       "title": "Siap Bayar",
+      "tab": "Siap Bayar",
       "description": "Tinjau antrean pembayaran dan bayar karyawan terpilih",
       "totalPayroll": "Total Payroll:",
       "from": "dari",
@@ -852,8 +853,28 @@
     "payslipNotAvailable": "Slip gaji hanya tersedia untuk periode berstatus dibayar atau dikunci.",
     "totalWork": "Total Kerja",
     "hoursDisplay": "{{whole}}j {{minutes}}m",
+    "calculateTab": {
+      "pageTitle": "Hitung Gaji",
+      "pageDescription": "Jalankan payroll untuk periode draf dan tinjau hasilnya.",
+      "tab": "Hitung Gaji",
+      "title": "Hitung Gaji",
+      "bulkAction": "Aksi Massal",
+      "bulkNeedPeriod": "Pilih Tanggal Mulai dan Selesai yang cocok dengan periode draf untuk mengaktifkan Aksi Massal.",
+      "startDate": "Tanggal Mulai",
+      "endDate": "Tanggal Selesai",
+      "dateRangeSeparator": "–",
+      "viewAll": "Lihat semua {{count}}",
+      "labelColon": ":"
+    },
+    "pagination": {
+      "prev": "‹",
+      "separator": "/",
+      "next": "›"
+    },
     "paidLabel": "Sudah Dibayar",
     "unpaidLabel": "Belum Dibayar",
+    "markReadyToPay": "Tandai Siap Bayar",
+    "markReadySuccess": "Gaji ditandai Siap Bayar",
     "override": "Override",
     "attendanceOverride": "Override Kehadiran",
     "overrideHint": "Biarkan kosong untuk memakai data kehadiran.",

@@ -1,11 +1,16 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { z } from 'zod';
 import PageContainer from '@/components/layout/page-container';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { CalculatePage } from './-calculate-page';
 import { SalaryComponentsPanel } from './-components';
 
+const payrollSearchSchema = z.object({
+  tab: z.enum(['calculate', 'ready']).optional()
+});
+
 export const Route = createFileRoute('/dashboard/admin/payroll/')({
+  validateSearch: (search: Record<string, unknown>) => payrollSearchSchema.parse(search),
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
     await requirePermissionRpc({ data: 'payroll.view' });
@@ -14,14 +19,12 @@ export const Route = createFileRoute('/dashboard/admin/payroll/')({
   component: PayrollOverviewPage
 });
 
-const payrollLinks = [
-  ['/dashboard/admin/payroll/periods', 'periods'],
-  ['/dashboard/admin/payroll/profile', 'profile'],
-  ['/dashboard/admin/payroll/generate', 'generate'],
-  ['/dashboard/admin/payroll/records', 'records'],
-  ['/dashboard/admin/payroll/reports', 'reports']
-] as const;
-
+/**
+ * Kerjoo-style landing page: the tabbed Calculate/Ready-to-Pay UI is the
+ * primary surface, with the salary-components CRUD as a sub-section below.
+ * Sub-routes (`/generate`, `/ready-to-pay`, `/records`, `/periods`,
+ * `/profile`, `/settings`, `/reports`) remain reachable from the sidebar.
+ */
 function PayrollOverviewPage() {
   const { t } = useTranslation();
   return (
@@ -30,20 +33,7 @@ function PayrollOverviewPage() {
       pageDescription={t('payroll.overviewDescription')}
     >
       <div className='space-y-6'>
-        <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5'>
-          {payrollLinks.map(([to, key]) => (
-            <Card key={to} className='flex h-full flex-col'>
-              <CardHeader className='pb-3'>
-                <CardTitle className='text-base'>{t(`payroll.${key}`)}</CardTitle>
-              </CardHeader>
-              <CardContent className='mt-auto pt-0'>
-                <Button asChild variant='outline' size='sm' className='w-full'>
-                  <Link to={to}>{t('common.open', { defaultValue: 'Open' })}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <CalculatePage />
         <SalaryComponentsPanel />
       </div>
     </PageContainer>

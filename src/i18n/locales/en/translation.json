@@ -766,6 +766,7 @@
     },
     "payQueue": {
       "title": "Ready to Pay",
+      "tab": "Ready to Pay",
       "description": "Review the payment queue and pay selected employees",
       "totalPayroll": "Total Payroll:",
       "from": "from",
@@ -852,8 +853,28 @@
     "payslipNotAvailable": "This payslip is only available for paid or locked periods.",
     "totalWork": "Total Work",
     "hoursDisplay": "{{whole}}h {{minutes}}m",
+    "calculateTab": {
+      "pageTitle": "Payroll Calculate",
+      "pageDescription": "Run payroll for a draft period and review the resulting records.",
+      "tab": "Calculate",
+      "title": "Payroll Calculate",
+      "bulkAction": "Bulk Action",
+      "bulkNeedPeriod": "Pick Start Date and End Date that match a draft period to enable Bulk Action.",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "dateRangeSeparator": "–",
+      "viewAll": "View all {{count}}",
+      "labelColon": ":"
+    },
+    "pagination": {
+      "prev": "‹",
+      "separator": "/",
+      "next": "›"
+    },
     "paidLabel": "Paid",
     "unpaidLabel": "Unpaid",
+    "markReadyToPay": "Mark as Ready To Pay",
+    "markReadySuccess": "Payroll marked as Ready to Pay",
     "override": "Override",
     "attendanceOverride": "Attendance Override",
     "overrideHint": "Leave blank to use live attendance data.",
