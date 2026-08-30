@@ -29,4 +29,5 @@ export type DailyChecklistResponse = {
   dayStatus: ChecklistDayStatus;
   checklist: DailyChecklist | null;
   items: ChecklistItem[];
+  completedLegsCount?: number;
 };

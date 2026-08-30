@@ -51,8 +51,10 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
   const session = await requirePermission('checklist', 'view');
   await checkRateLimit(`checklist:${session.user.id}`);
 
-  const [{ getMonthlyScheduleData }, { findDailyChecklist, createDailyChecklistWithItems }] =
-    await Promise.all([import('@/lib/db/attendance'), import('@/lib/db/checklists')]);
+  const [
+    { getMonthlyScheduleData },
+    { findDailyChecklist, createDailyChecklistWithItems, getCompletedLegsCountForDay }
+  ] = await Promise.all([import('@/lib/db/attendance'), import('@/lib/db/checklists')]);
 
   const today = businessDateInTimeZone(new Date());
   const month = today.slice(0, 7);
@@ -75,8 +77,16 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
   });
 
   if (resolution.status !== 'working' || !resolution.schedule) {
-    return { success: true, dayStatus: resolution.status, checklist: null, items: [] };
+    return {
+      success: true,
+      dayStatus: resolution.status,
+      checklist: null,
+      items: [],
+      completedLegsCount: 0
+    };
   }
+
+  const completedLegsCount = await getCompletedLegsCountForDay(session.user.id, today);
 
   const existing = await findDailyChecklist(session.user.id, today);
   if (existing) {
@@ -84,7 +94,8 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
       success: true,
       dayStatus: 'working',
       checklist: serializeChecklist(existing.checklist),
-      items: serializeItems(existing.items)
+      items: serializeItems(existing.items),
+      completedLegsCount
     };
   }
 
@@ -99,7 +110,8 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
     success: true,
     dayStatus: 'working',
     checklist: serializeChecklist(created.checklist),
-    items: serializeItems(created.items)
+    items: serializeItems(created.items),
+    completedLegsCount
   };
 });
 

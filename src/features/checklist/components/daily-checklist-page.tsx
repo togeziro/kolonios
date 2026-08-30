@@ -331,6 +331,11 @@ export default function DailyChecklistPage() {
         </span>
       </Card>
 
+      <div className='flex items-center gap-1.5 text-sm dark:text-zinc-300'>
+        <Icons.forms className='text-muted-foreground h-4 w-4' />
+        {t('spvReview.tasksLogged', { count: data.completedLegsCount ?? 0 })}
+      </div>
+
       <div className='flex flex-col gap-2'>
         <div className='flex items-center justify-between'>
           <span className='dark:text-zinc-400 text-sm font-medium'>

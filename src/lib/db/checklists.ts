@@ -7,11 +7,13 @@ import {
   type DailyChecklist,
   type DailyChecklistItem
 } from './schema/checklists';
+import { ticketLegs } from './schema/tickets';
 import { roleGroups } from './schema/role-groups';
 import { userRoleGroups } from './schema/user-role-groups';
 import { user } from './auth-schema';
 import { employeeShifts } from './schema/attendance';
 import { CHECKLIST_ITEM_KEYS, validateSubmission } from '@/lib/checklists/engine';
+import { businessDateInTimeZone } from '@/lib/dates';
 import { mapDbError } from '../errors';
 
 export type ChecklistShiftSnapshot = {
@@ -232,6 +234,59 @@ export async function listChecklistReviewerIds(): Promise<string[]> {
   }
 }
 
+function businessDateOf(completedAt: Date | null): string | null {
+  return completedAt === null ? null : businessDateInTimeZone(completedAt);
+}
+
+export async function getCompletedLegsCountForDay(
+  userId: string,
+  businessDate: string
+): Promise<number> {
+  try {
+    const rows = await db
+      .select({ completedAt: ticketLegs.completed_at })
+      .from(ticketLegs)
+      .where(and(eq(ticketLegs.assignee_id, userId), eq(ticketLegs.status, 'completed')));
+    let count = 0;
+    for (const r of rows) {
+      if (businessDateOf(r.completedAt) === businessDate) count++;
+    }
+    return count;
+  } catch (e) {
+    mapDbError(e, 'checklists.getCompletedLegsCountForDay');
+  }
+}
+
+export async function getCompletedLegsCountsForKeys(
+  keys: Array<{ userId: string; date: string }>
+): Promise<Map<string, number>> {
+  try {
+    if (keys.length === 0) return new Map();
+    const uniqueUserIds = [...new Set(keys.map((k) => k.userId))];
+    const rows = await db
+      .select({ assigneeId: ticketLegs.assignee_id, completedAt: ticketLegs.completed_at })
+      .from(ticketLegs)
+      .where(
+        and(inArray(ticketLegs.assignee_id, uniqueUserIds), eq(ticketLegs.status, 'completed'))
+      );
+    const keySet = new Set(keys.map((k) => `${k.userId}|${k.date}`));
+    const counts = new Map<string, number>();
+    for (const k of keys) counts.set(`${k.userId}|${k.date}`, 0);
+    for (const r of rows) {
+      if (!r.assigneeId) continue;
+      const d = businessDateOf(r.completedAt);
+      if (d === null) continue;
+      const mapKey = `${r.assigneeId}|${d}`;
+      if (keySet.has(mapKey)) {
+        counts.set(mapKey, (counts.get(mapKey) ?? 0) + 1);
+      }
+    }
+    return counts;
+  } catch (e) {
+    mapDbError(e, 'checklists.getCompletedLegsCountsForKeys');
+  }
+}
+
 export type ReviewSubmissionRow = DailyChecklist & {
   technicianName: string;
   itemsTotal: number;
@@ -240,6 +295,7 @@ export type ReviewSubmissionRow = DailyChecklist & {
   reviewerName: string | null;
   clockInAt: string | null;
   clockOutAt: string | null;
+  completedLegsCount: number;
 };
 
 export function serializeReviewSubmissionRow(r: ReviewSubmissionRow) {
@@ -260,7 +316,8 @@ export function serializeReviewSubmissionRow(r: ReviewSubmissionRow) {
     clockOutAt: r.clockOutAt ?? null,
     itemsResolved: r.itemsResolved,
     itemsTotal: r.itemsTotal,
-    tasksLogged: 0,
+    tasksLogged: r.completedLegsCount ?? 0,
+    completedLegsCount: r.completedLegsCount ?? 0,
     note: r.global_note,
     photos: r.photos,
     status: statusMap[r.status] ?? 'pending',
@@ -343,6 +400,12 @@ export async function listMyReviewSubmissions(userId: string): Promise<ReviewSub
       });
     }
 
+    const countKeys = submitted.map((r) => ({
+      userId: r.checklist.user_id,
+      date: r.checklist.checklist_date
+    }));
+    const countsMap = await getCompletedLegsCountsForKeys(countKeys);
+
     return submitted.map(({ checklist, technicianName }) => {
       const items = itemsByChecklist.get(checklist.id) ?? [];
       const photos = items.filter((i) => i.photo_key).map((i) => ({ id: i.id, key: i.photo_key }));
@@ -357,7 +420,8 @@ export async function listMyReviewSubmissions(userId: string): Promise<ReviewSub
           ? (reviewerNameMap.get(checklist.reviewer_id) ?? null)
           : null,
         clockInAt: shiftKey?.checkIn ?? null,
-        clockOutAt: shiftKey?.checkOut ?? null
+        clockOutAt: shiftKey?.checkOut ?? null,
+        completedLegsCount: countsMap.get(`${checklist.user_id}|${checklist.checklist_date}`) ?? 0
       } as ReviewSubmissionRow;
     });
   } catch (e) {
