@@ -1578,7 +1578,14 @@
     "reviewFailed": "Could not submit review. Please try again.",
     "ticketReviewsTitle": "Ticket Reviews",
     "ticketReviewsCount": "{{count}} awaiting review",
-    "noSubmittedTickets": "No tickets awaiting review"
+    "noSubmittedTickets": "No tickets awaiting review",
+    "emptyQueue": "No checklists awaiting review",
+    "loadFailed": "Could not load review queue",
+    "updateFailed": "Could not update checklist status",
+    "approveSuccess": "Checklist approved",
+    "rejectSuccess": "Checklist rejected",
+    "rejectDialogTitle": "Reject checklist",
+    "rejectReasonPlaceholder": "Reason for rejection (optional)"
   },
   "leaveApprovals": {
     "title": "Leave Approvals",

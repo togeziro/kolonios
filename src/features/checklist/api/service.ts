@@ -6,7 +6,8 @@ import { businessDateInTimeZone } from '@/lib/dates';
 import {
   updateChecklistItemSchema,
   setGlobalNoteSchema,
-  submitChecklistSchema
+  submitChecklistSchema,
+  updateChecklistStatusSchema
 } from './validation';
 import { resolveChecklistDay, type HolidayRow } from '../utils/day';
 import type { ChecklistItem, DailyChecklist, DailyChecklistResponse } from './types';
@@ -189,6 +190,41 @@ export const reopenChecklistFn = createServerFn({ method: 'POST' })
         entityId: data.checklistId,
         before: { status: 'rejected' },
         after: { status: 'draft' }
+      },
+      async () => undefined
+    );
+    return { success: true as const };
+  });
+
+export const getReviewSubmissionsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  const session = await requirePermission('checklist', 'approve');
+  await checkRateLimit(`checklist:${session.user.id}`);
+  const { listMyReviewSubmissions, serializeReviewSubmissionRow } =
+    await import('@/lib/db/checklists');
+  const rows = await listMyReviewSubmissions(session.user.id);
+  const submissions = rows.map(serializeReviewSubmissionRow);
+  return { success: true as const, submissions };
+});
+
+export const updateChecklistStatusFn = createServerFn({ method: 'POST' })
+  .validator(updateChecklistStatusSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('checklist', 'approve');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { updateChecklistStatus } = await import('@/lib/db/checklists');
+    const result = await updateChecklistStatus(data.checklistId, data.status, {
+      rejectedReason: data.rejectedReason,
+      reviewerId: session.user.id
+    });
+    if (!result?.success) return result;
+    await withAudit(
+      session.user.id,
+      {
+        action: `checklist.${data.status}`,
+        entityType: 'daily_checklist',
+        entityId: data.checklistId,
+        before: { status: 'submitted' },
+        after: { status: data.status }
       },
       async () => undefined
     );

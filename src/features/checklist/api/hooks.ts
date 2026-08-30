@@ -1,9 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { updateChecklistItemFn, setGlobalNoteFn, submitChecklistFn } from './service';
+import {
+  updateChecklistItemFn,
+  setGlobalNoteFn,
+  submitChecklistFn,
+  updateChecklistStatusFn
+} from './service';
 import { checklistKeys } from './queries';
-import type { UpdateChecklistItemInput, SetGlobalNoteInput } from './validation';
+import type {
+  UpdateChecklistItemInput,
+  SetGlobalNoteInput,
+  UpdateChecklistStatusInput
+} from './validation';
 
 function useInvalidateChecklist() {
   const queryClient = useQueryClient();
@@ -67,5 +76,27 @@ export function useSubmitChecklist() {
       }
     },
     onError: () => toast.error(t('checklist.updateFailed'))
+  });
+}
+
+export function useUpdateChecklistStatus() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    mutationFn: (input: UpdateChecklistStatusInput) => updateChecklistStatusFn({ data: input }),
+    onSuccess: (res, variables) => {
+      if (res?.success) {
+        toast.success(
+          variables.status === 'approved'
+            ? t('spvReview.approveSuccess')
+            : t('spvReview.rejectSuccess')
+        );
+        queryClient.invalidateQueries({ queryKey: checklistKeys.reviewQueue() });
+        queryClient.invalidateQueries({ queryKey: checklistKeys.all });
+      } else {
+        toast.error((res as { message?: string })?.message ?? t('spvReview.updateFailed'));
+      }
+    },
+    onError: () => toast.error(t('spvReview.updateFailed'))
   });
 }

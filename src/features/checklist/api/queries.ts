@@ -1,10 +1,11 @@
 import { queryOptions } from '@tanstack/react-query';
-import { getMyDailyChecklistFn } from './service';
+import { getMyDailyChecklistFn, getReviewSubmissionsFn } from './service';
 import { getObjectUrlFn } from '@/features/storage/api/service';
 
 export const checklistKeys = {
   all: ['checklist'] as const,
-  mine: () => [...checklistKeys.all, 'mine'] as const
+  mine: () => [...checklistKeys.all, 'mine'] as const,
+  reviewQueue: () => [...checklistKeys.all, 'reviewQueue'] as const
 };
 
 export const myDailyChecklistQueryOptions = () =>
@@ -18,4 +19,10 @@ export const checklistPhotoUrlQueryOptions = (key: string) =>
     queryKey: [...checklistKeys.all, 'photo', key] as const,
     queryFn: () => getObjectUrlFn({ data: { key } }),
     enabled: key.length > 0
+  });
+
+export const reviewQueueQueryOptions = () =>
+  queryOptions({
+    queryKey: checklistKeys.reviewQueue(),
+    queryFn: () => getReviewSubmissionsFn()
   });
