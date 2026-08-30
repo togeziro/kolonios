@@ -1,13 +1,45 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { InitialChip } from '@/components/ui/initial-chip';
 import { Icons } from '@/components/icons';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
-import { stubAction } from '@/lib/ui/stub-action';
-import { REVIEW_QUEUE_SUBMISSIONS, type ReviewQueueSubmission } from './review-queue-fixtures';
 import { submittedTicketsQueryOptions } from '@/features/tickets/api/queries';
+import {
+  reviewQueueQueryOptions,
+  checklistPhotoUrlQueryOptions
+} from '@/features/checklist/api/queries';
+import { useUpdateChecklistStatus } from '@/features/checklist/api/hooks';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import type { Ticket } from '@/lib/domain/tickets';
+
+export type ReviewQueueSubmission = {
+  id: number;
+  checklistId: number;
+  technicianName: string;
+  scheduleWindow: string;
+  clockInAt: string | null;
+  clockOutAt: string | null;
+  itemsResolved: number;
+  itemsTotal: number;
+  tasksLogged: number;
+  note: string;
+  photos: { id: number; key: string }[];
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  decidedBy?: string | null;
+  decidedAt?: string | null;
+  ticketId?: number;
+};
 
 const statusBadgeClass: Record<ReviewQueueSubmission['status'], string> = {
   pending: 'bg-blue-500/15 text-blue-500 dark:text-blue-400',
@@ -50,11 +82,28 @@ function CountStrip({
   );
 }
 
-function SubmissionCard({ submission }: { submission: ReviewQueueSubmission }) {
+function ChecklistPhoto({ photoKey, alt }: { photoKey: string; alt: string }) {
+  const { data } = useQuery(checklistPhotoUrlQueryOptions(photoKey));
+  const url = (data as { url?: string })?.url ?? '';
+  if (!url) return null;
+  return (
+    <img src={url} alt={alt} className='dark:border-zinc-800 h-20 w-full rounded-lg object-cover' />
+  );
+}
+
+function SubmissionCard({
+  submission,
+  onApprove,
+  onReject,
+  busy
+}: {
+  submission: ReviewQueueSubmission;
+  onApprove: () => void;
+  onReject: (reason?: string) => void;
+  busy: boolean;
+}) {
   const { t } = useTranslation();
   const decided = submission.status !== 'pending';
-  // Only the identity header is a link — Approve/Reject must never live
-  // inside an anchor (nested interactive elements swallow the taps).
   const headerLink =
     submission.ticketId && !decided ? (
       <Link
@@ -130,12 +179,7 @@ function SubmissionCard({ submission }: { submission: ReviewQueueSubmission }) {
           {submission.photos.length > 0 && (
             <div className='grid grid-cols-3 gap-2'>
               {submission.photos.map((photo) => (
-                <img
-                  key={photo.id}
-                  src={photo.url}
-                  alt={submission.note}
-                  className='dark:border-zinc-800 h-20 w-full rounded-lg object-cover'
-                />
+                <ChecklistPhoto key={photo.id} photoKey={photo.key} alt={submission.note} />
               ))}
             </div>
           )}
@@ -143,15 +187,17 @@ function SubmissionCard({ submission }: { submission: ReviewQueueSubmission }) {
           <div className='flex gap-2 pt-1'>
             <button
               type='button'
-              onClick={() => stubAction(t('spvReview.reject'))}
-              className='dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800 flex-1 rounded-full border py-2.5 text-sm font-semibold transition-colors'
+              disabled={busy}
+              onClick={() => onReject()}
+              className='dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800 flex-1 rounded-full border py-2.5 text-sm font-semibold transition-colors disabled:opacity-50'
             >
               {t('spvReview.reject')}
             </button>
             <button
               type='button'
-              onClick={() => stubAction(t('spvReview.approve'))}
-              className='flex-1 rounded-full bg-green-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-500'
+              disabled={busy}
+              onClick={onApprove}
+              className='flex-1 rounded-full bg-green-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-500 disabled:opacity-50'
             >
               {t('spvReview.approve')}
             </button>
@@ -189,6 +235,10 @@ export default function ReviewQueuePage() {
   const canSeeTickets = isAdmin || permissions.spv_review?.view === true;
   const ticketsQuery = useQuery({ ...submittedTicketsQueryOptions(), enabled: canSeeTickets });
   const submittedTickets = ticketsQuery.data?.tickets ?? [];
+  const reviewQuery = useQuery({ ...reviewQueueQueryOptions(), enabled: canReview });
+  const updateStatus = useUpdateChecklistStatus();
+  const [rejectTarget, setRejectTarget] = useState<ReviewQueueSubmission | null>(null);
+  const [rejectedReason, setRejectedReason] = useState('');
 
   if (!canReview && !canSeeTickets) {
     return (
@@ -198,7 +248,10 @@ export default function ReviewQueuePage() {
     );
   }
 
-  const submissions = REVIEW_QUEUE_SUBMISSIONS;
+  const submissions: ReviewQueueSubmission[] =
+    reviewQuery.data && 'submissions' in reviewQuery.data
+      ? (reviewQuery.data as { success: boolean; submissions: ReviewQueueSubmission[] }).submissions
+      : [];
   const pendingCount = submissions.filter((s) => s.status === 'pending').length;
   const approvedCount = submissions.filter((s) => s.status === 'approved').length;
   const rejectedCount = submissions.filter((s) => s.status === 'rejected').length;
@@ -235,9 +288,46 @@ export default function ReviewQueuePage() {
                 approved={approvedCount}
                 rejected={rejectedCount}
               />
-              {submissions.map((submission) => (
-                <SubmissionCard key={submission.id} submission={submission} />
-              ))}
+              {reviewQuery.isPending ? (
+                <div className='flex justify-center py-6'>
+                  <Icons.spinner className='text-muted-foreground h-5 w-5 animate-spin' />
+                </div>
+              ) : reviewQuery.isError ? (
+                <p className='text-muted-foreground py-6 text-center text-sm'>
+                  {t('spvReview.loadFailed')}
+                </p>
+              ) : submissions.length === 0 ? (
+                <p className='text-muted-foreground rounded-2xl border border-dashed py-6 text-center text-sm dark:border-zinc-800/60'>
+                  {t('spvReview.emptyQueue')}
+                </p>
+              ) : (
+                submissions.map((submission: ReviewQueueSubmission) => (
+                  <SubmissionCard
+                    key={submission.id}
+                    submission={submission}
+                    busy={updateStatus.isPending}
+                    onApprove={() =>
+                      updateStatus.mutate({
+                        checklistId: submission.checklistId,
+                        status: 'approved'
+                      })
+                    }
+                    onReject={(reason) => {
+                      if (reason !== undefined) {
+                        updateStatus.mutate({
+                          checklistId: submission.checklistId,
+                          status: 'rejected',
+                          rejectedReason: reason
+                        });
+                        setRejectTarget(null);
+                        setRejectedReason('');
+                      } else {
+                        setRejectTarget(submission);
+                      }
+                    }}
+                  />
+                ))
+              )}
             </>
           )}
 
@@ -246,6 +336,47 @@ export default function ReviewQueuePage() {
           )}
         </div>
       </main>
+      <Dialog
+        open={!!rejectTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectTarget(null);
+            setRejectedReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('spvReview.rejectDialogTitle')}</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder={t('spvReview.rejectReasonPlaceholder')}
+            value={rejectedReason}
+            onChange={(e) => setRejectedReason(e.target.value)}
+            className='min-h-24'
+          />
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setRejectTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              disabled={updateStatus.isPending}
+              onClick={() => {
+                if (!rejectTarget) return;
+                updateStatus.mutate({
+                  checklistId: rejectTarget.checklistId,
+                  status: 'rejected',
+                  rejectedReason: rejectedReason || undefined
+                });
+                setRejectTarget(null);
+                setRejectedReason('');
+              }}
+            >
+              {t('spvReview.reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -279,7 +410,6 @@ function TicketReviewsSection({ tickets, isLoading }: { tickets: Ticket[]; isLoa
 }
 
 function TicketReviewCard({ ticket }: { ticket: Ticket }) {
-  const { t } = useTranslation();
   const engineerName = ticket.takenByName ?? '—';
 
   return (

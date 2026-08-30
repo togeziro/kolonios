@@ -1578,7 +1578,14 @@
     "reviewFailed": "Gagal mengirim review. Silakan coba lagi.",
     "ticketReviewsTitle": "Review Tiket",
     "ticketReviewsCount": "{{count}} menunggu review",
-    "noSubmittedTickets": "Tidak ada tiket menunggu review"
+    "noSubmittedTickets": "Tidak ada tiket menunggu review",
+    "emptyQueue": "Tidak ada checklist menunggu review",
+    "loadFailed": "Gagal memuat antrean review",
+    "updateFailed": "Gagal memperbarui status checklist",
+    "approveSuccess": "Checklist disetujui",
+    "rejectSuccess": "Checklist ditolak",
+    "rejectDialogTitle": "Tolak checklist",
+    "rejectReasonPlaceholder": "Alasan penolakan (opsional)"
   },
   "leaveApprovals": {
     "title": "Persetujuan Cuti",

@@ -211,6 +211,13 @@
       "when": 1787711544717,
       "tag": "0029_classy_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788069381591,
+      "tag": "0030_add_rejected_reason_to_checklists",
+      "breakpoints": true
     }
   ]
 }

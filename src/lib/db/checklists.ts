@@ -1,4 +1,4 @@
-import { and, eq, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { db } from './index';
 import {
   dailyChecklistItems,
@@ -9,6 +9,8 @@ import {
 } from './schema/checklists';
 import { roleGroups } from './schema/role-groups';
 import { userRoleGroups } from './schema/user-role-groups';
+import { user } from './auth-schema';
+import { employeeShifts } from './schema/attendance';
 import { CHECKLIST_ITEM_KEYS, validateSubmission } from '@/lib/checklists/engine';
 import { mapDbError } from '../errors';
 
@@ -227,5 +229,178 @@ export async function listChecklistReviewerIds(): Promise<string[]> {
     return [...new Set(rows.map((r) => r.userId))];
   } catch (e) {
     mapDbError(e, 'checklists.listChecklistReviewerIds');
+  }
+}
+
+export type ReviewSubmissionRow = DailyChecklist & {
+  technicianName: string;
+  itemsTotal: number;
+  itemsResolved: number;
+  photos: { id: number; key: string }[];
+  reviewerName: string | null;
+  clockInAt: string | null;
+  clockOutAt: string | null;
+};
+
+export function serializeReviewSubmissionRow(r: ReviewSubmissionRow) {
+  const statusMap: Record<DailyChecklist['status'], 'pending' | 'approved' | 'rejected'> = {
+    draft: 'pending',
+    submitted: 'pending',
+    approved: 'approved',
+    rejected: 'rejected'
+  };
+  return {
+    id: r.id,
+    checklistId: r.id,
+    technicianId: r.user_id,
+    technicianName: r.technicianName,
+    checklistDate: r.checklist_date,
+    scheduleWindow: `${r.checklist_date} · ${r.shift_start_time || ''}${r.shift_start_time && r.shift_end_time ? ' - ' : ''}${r.shift_end_time || r.shift_name}`,
+    clockInAt: r.clockInAt ?? null,
+    clockOutAt: r.clockOutAt ?? null,
+    itemsResolved: r.itemsResolved,
+    itemsTotal: r.itemsTotal,
+    tasksLogged: 0,
+    note: r.global_note,
+    photos: r.photos,
+    status: statusMap[r.status] ?? 'pending',
+    rejectionReason: r.rejected_reason || undefined,
+    decidedBy: r.reviewerName ?? null,
+    decidedAt: r.reviewed_at ? r.reviewed_at.toISOString() : null
+  };
+}
+
+export async function listMyReviewSubmissions(userId: string): Promise<ReviewSubmissionRow[]> {
+  try {
+    const reviewerIds = await listChecklistReviewerIds();
+    if (!reviewerIds.includes(userId)) return [];
+
+    const submitted = await db
+      .select({
+        checklist: dailyChecklists,
+        technicianName: user.name
+      })
+      .from(dailyChecklists)
+      .innerJoin(user, eq(dailyChecklists.user_id, user.id))
+      .where(eq(dailyChecklists.status, 'submitted'))
+      .orderBy(desc(dailyChecklists.checklist_date), desc(dailyChecklists.id));
+
+    if (submitted.length === 0) return [];
+
+    const checklistIds = submitted.map((r) => r.checklist.id);
+
+    const allItems = await db
+      .select()
+      .from(dailyChecklistItems)
+      .where(inArray(dailyChecklistItems.checklist_id, checklistIds));
+
+    const itemsByChecklist = new Map<number, DailyChecklistItem[]>();
+    for (const item of allItems) {
+      const arr = itemsByChecklist.get(item.checklist_id) ?? [];
+      arr.push(item);
+      itemsByChecklist.set(item.checklist_id, arr);
+    }
+
+    const reviewerIdsSet = new Set<string>();
+    for (const r of submitted) {
+      if (r.checklist.reviewer_id) reviewerIdsSet.add(r.checklist.reviewer_id);
+    }
+    let reviewerNameMap = new Map<string, string>();
+    if (reviewerIdsSet.size > 0) {
+      const reviewers = await db
+        .select({ id: user.id, name: user.name })
+        .from(user)
+        .where(inArray(user.id, [...reviewerIdsSet]));
+      reviewerNameMap = new Map(reviewers.map((u) => [u.id, u.name]));
+    }
+
+    // Clock times are stored as text HH:MM on employee_shifts; fetch scoped by (user, date)
+    const shiftRows = await db
+      .select({
+        userId: employeeShifts.user_id,
+        date: employeeShifts.date,
+        checkIn: employeeShifts.check_in_time,
+        checkOut: employeeShifts.check_out_time
+      })
+      .from(employeeShifts)
+      .where(
+        and(
+          inArray(
+            employeeShifts.user_id,
+            submitted.map((r) => r.checklist.user_id)
+          ),
+          inArray(employeeShifts.date, [
+            ...new Set(submitted.map((r) => r.checklist.checklist_date))
+          ])
+        )
+      );
+
+    const shiftMap = new Map<string, { checkIn: string | null; checkOut: string | null }>();
+    for (const s of shiftRows) {
+      shiftMap.set(`${s.userId}|${s.date}`, {
+        checkIn: s.checkIn ?? null,
+        checkOut: s.checkOut ?? null
+      });
+    }
+
+    return submitted.map(({ checklist, technicianName }) => {
+      const items = itemsByChecklist.get(checklist.id) ?? [];
+      const photos = items.filter((i) => i.photo_key).map((i) => ({ id: i.id, key: i.photo_key }));
+      const shiftKey = shiftMap.get(`${checklist.user_id}|${checklist.checklist_date}`);
+      return {
+        ...checklist,
+        technicianName,
+        itemsTotal: items.length,
+        itemsResolved: items.filter((i) => i.outcome !== 'pending').length,
+        photos,
+        reviewerName: checklist.reviewer_id
+          ? (reviewerNameMap.get(checklist.reviewer_id) ?? null)
+          : null,
+        clockInAt: shiftKey?.checkIn ?? null,
+        clockOutAt: shiftKey?.checkOut ?? null
+      } as ReviewSubmissionRow;
+    });
+  } catch (e) {
+    mapDbError(e, 'checklists.listMyReviewSubmissions');
+  }
+}
+
+export async function updateChecklistStatus(
+  id: number,
+  status: 'approved' | 'rejected',
+  options: { rejectedReason?: string; reviewerId?: string } = {}
+) {
+  try {
+    const [checklist] = await db
+      .select()
+      .from(dailyChecklists)
+      .where(eq(dailyChecklists.id, id))
+      .limit(1);
+
+    if (!checklist) return { success: false as const, message: 'Checklist not found' };
+    if (checklist.status !== 'submitted') {
+      return { success: false as const, message: 'Only submitted checklists can be reviewed' };
+    }
+    if (status !== 'approved' && status !== 'rejected') {
+      return { success: false as const, message: 'Invalid status' };
+    }
+
+    const rejectedReason = status === 'rejected' ? (options.rejectedReason ?? '') : '';
+
+    const [updated] = await db
+      .update(dailyChecklists)
+      .set({
+        status,
+        rejected_reason: rejectedReason,
+        reviewer_id: options.reviewerId ?? checklist.reviewer_id,
+        reviewed_at: new Date(),
+        updated_at: new Date()
+      })
+      .where(eq(dailyChecklists.id, id))
+      .returning();
+
+    return { success: true as const, checklist: updated };
+  } catch (e) {
+    mapDbError(e, 'checklists.updateChecklistStatus');
   }
 }

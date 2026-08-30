@@ -21,5 +21,17 @@ export const submitChecklistSchema = z.object({
   checklistId: z.number().int().positive()
 });
 
+export const updateChecklistStatusSchema = z
+  .object({
+    checklistId: z.number().int().positive(),
+    status: z.enum(['approved', 'rejected']),
+    rejectedReason: z.string().trim().max(2000).optional()
+  })
+  .refine((v) => v.status !== 'approved' || !v.rejectedReason, {
+    message: 'rejectedReason only allowed when rejecting',
+    path: ['rejectedReason']
+  });
+
 export type UpdateChecklistItemInput = z.infer<typeof updateChecklistItemSchema>;
 export type SetGlobalNoteInput = z.infer<typeof setGlobalNoteSchema>;
+export type UpdateChecklistStatusInput = z.infer<typeof updateChecklistStatusSchema>;

@@ -42,6 +42,7 @@ export const dailyChecklists = pgTable(
     global_note: text('global_note').notNull().default(''),
     reviewer_id: text('reviewer_id').references(() => user.id, { onDelete: 'set null' }),
     review_note: text('review_note').notNull().default(''),
+    rejected_reason: text('rejected_reason').notNull().default(''),
     reviewed_at: timestamp('reviewed_at'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull()
