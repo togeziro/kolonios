@@ -70,6 +70,7 @@ function makeTicket(overrides: Partial<import('../api/types').Ticket> = {}) {
     requiredSkills: ['fiber'],
     assignedTo: null,
     takenBy: null,
+    takenByName: null,
     takenAt: null,
     rating: null,
     reviewNote: null,

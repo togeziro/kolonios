@@ -1572,7 +1572,13 @@
     "sopChecklist": "Checklist SOP Standar",
     "sopScore": "{{resolved}}/{{total}} OK",
     "notFound": "Tiket tidak ditemukan.",
-    "backToQueue": "Kembali ke antrean"
+    "backToQueue": "Kembali ke antrean",
+    "approved": "Tiket disetujui",
+    "rejected": "Tiket ditolak",
+    "reviewFailed": "Gagal mengirim review. Silakan coba lagi.",
+    "ticketReviewsTitle": "Review Tiket",
+    "ticketReviewsCount": "{{count}} menunggu review",
+    "noSubmittedTickets": "Tidak ada tiket menunggu review"
   },
   "leaveApprovals": {
     "title": "Persetujuan Cuti",

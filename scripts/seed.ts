@@ -904,6 +904,38 @@ async function seedAchievementsDemo() {
     }))
   );
   console.log(`Seeded 10 completed inspection tickets for achievements (4 this week, 6 earlier)`);
+
+  // --- Submitted tickets: awaiting SPV review on /dashboard/spv/review ---
+  const now = new Date();
+  const submittedAt = new Date(now.getTime() - 60 * 60 * 1000);
+  const takenAtSubmitted = new Date(submittedAt.getTime() - 3 * 60 * 60 * 1000);
+  await db.insert(tickets).values([
+    {
+      title: 'Instalasi FTTH — Budi Santoso',
+      description: 'Instalasi baru pelanggan, drop core 150m.',
+      task_type: 'installation' as const,
+      status: 'submitted' as const,
+      priority: 'high' as const,
+      assigned_to: techId,
+      taken_by: techId,
+      taken_at: takenAtSubmitted,
+      submitted_at: submittedAt,
+      created_by: adminId
+    },
+    {
+      title: 'Maintenance Server Room B',
+      description: 'Penggantian filter AC dan pengecekan suhu ruang server.',
+      task_type: 'maintenance' as const,
+      status: 'submitted' as const,
+      priority: 'medium' as const,
+      assigned_to: techId,
+      taken_by: techId,
+      taken_at: new Date(submittedAt.getTime() - 5 * 60 * 60 * 1000),
+      submitted_at: new Date(submittedAt.getTime() - 30 * 60 * 1000),
+      created_by: adminId
+    }
+  ]);
+  console.log('Seeded 2 submitted tickets awaiting SPV review');
 }
 
 async function seedRoleGroups() {

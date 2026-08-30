@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { TicketReviewDecision } from '@/lib/domain/tickets';
 
 export const ticketIdSchema = z.object({
   ticketId: z.number().int().positive()
@@ -59,6 +60,12 @@ export const workSessionLogEntrySchema = z.object({
 export const submitHandoffNoteSchema = z.object({
   legId: z.number().int().positive(),
   note: z.string().min(1).max(2000)
+});
+
+export const reviewTicketSchema = z.object({
+  ticketId: z.number().int().positive(),
+  decision: z.enum(['approved', 'rejected']) satisfies z.ZodType<TicketReviewDecision>,
+  notes: z.string().max(2000).optional()
 });
 
 export const submitWorkSessionSchema = z.object({

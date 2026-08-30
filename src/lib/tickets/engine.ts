@@ -147,6 +147,7 @@ export function ticketToDomain(
     customer: CustomerInfo | null;
     location: LocationInfo | null;
     creatorName?: string | null;
+    takenByName?: string | null;
   }
 ): Ticket {
   return {
@@ -167,6 +168,7 @@ export function ticketToDomain(
     requiredSkills: requirements.map((r) => r.skill).filter((s): s is string => s != null),
     assignedTo: row.assigned_to,
     takenBy: row.taken_by,
+    takenByName: deps.takenByName ?? null,
     takenAt: iso(row.taken_at),
     rating: row.rating ?? null,
     reviewNote: row.review_note || null,

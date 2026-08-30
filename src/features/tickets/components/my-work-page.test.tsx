@@ -22,6 +22,7 @@ function ticket(status: Ticket['status']): Ticket {
     requiredSkills: [],
     assignedTo: null,
     takenBy: null,
+    takenByName: null,
     takenAt: null,
     completedAt: null,
     createdByName: null,

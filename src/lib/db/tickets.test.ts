@@ -11,6 +11,8 @@ import {
   completeTicket,
   submitWorkSession,
   addHandoffNote,
+  reviewTicket,
+  listSubmittedTickets,
   MAX_ACTIVE_TICKETS
 } from './tickets';
 import { db } from '@/lib/db';
@@ -500,7 +502,7 @@ describe('tickets data access (integration)', () => {
 
       const detail = await getTicketDetail(USER_A, ticket.id);
       expect(detail.success).toBe(true);
-      expect(detail.ticket?.status).toBe('completed');
+      expect(detail.ticket?.status).toBe('submitted');
       expect(detail.ticket?.materials).toHaveLength(1);
       expect(detail.ticket?.materials[0]).toMatchObject({
         materialName: 'Drop cable',
@@ -596,7 +598,7 @@ describe('tickets data access (integration)', () => {
         .select({ status: tickets.status })
         .from(tickets)
         .where(eq(tickets.id, ticket.id));
-      expect(ticketRow?.status).toBe('completed');
+      expect(ticketRow?.status).toBe('submitted');
     });
 
     it('preserves pre-existing leg notes when the submitted notes are empty', async () => {
@@ -655,7 +657,7 @@ describe('tickets data access (integration)', () => {
         .select({ status: tickets.status })
         .from(tickets)
         .where(eq(tickets.id, ticket.id));
-      expect(ticketRow?.status).toBe('completed');
+      expect(ticketRow?.status).toBe('submitted');
     });
   });
 
@@ -731,7 +733,7 @@ describe('tickets data access (integration)', () => {
       expect(legs.map((l) => l.status)).toEqual(['submitted', 'assigned']);
     });
 
-    it('completes the ticket on the last leg and reports isLastLeg', async () => {
+    it('submits the ticket for review on the last leg and reports isLastLeg', async () => {
       await seedEmployee(USER_A);
       const ticket = await seedTicket({
         title: 'Last leg',
@@ -752,10 +754,11 @@ describe('tickets data access (integration)', () => {
       expect(res.nextLeg).toBeNull();
 
       const [row] = await db
-        .select({ status: tickets.status })
+        .select({ status: tickets.status, submitted_at: tickets.submitted_at })
         .from(tickets)
         .where(eq(tickets.id, ticket.id));
-      expect(row?.status).toBe('completed');
+      expect(row?.status).toBe('submitted');
+      expect(row?.submitted_at).toBeInstanceOf(Date);
     });
 
     it('blocks re-submission after a leg advance without inserting duplicates', async () => {
@@ -856,6 +859,128 @@ describe('tickets data access (integration)', () => {
       const leg = await seedTicketLeg(ticket.id, { name: 'Install', status: 'submitted' });
       const res = await addHandoffNote(USER_A, leg.id, 'Nope');
       expect(res.success).toBe(false);
+    });
+  });
+
+  describe('reviewTicket', () => {
+    it('approves a submitted ticket and records reviewer and note', async () => {
+      await seedUser(USER_A);
+      await seedUser('reviewer-1');
+      const ticket = await seedTicket({ title: 'Awaiting review', status: 'submitted' });
+
+      const res = await reviewTicket('reviewer-1', ticket.id, 'approved', 'Looks good');
+      expect(res.success).toBe(true);
+      expect(res.ticket?.status).toBe('completed');
+      expect(res.ticket?.reviewedBy).toBe('reviewer-1');
+      expect(res.ticket?.reviewNote).toBe('Looks good');
+
+      const [row] = await db
+        .select({
+          status: tickets.status,
+          reviewed_by: tickets.reviewed_by,
+          review_note: tickets.review_note,
+          completed_at: tickets.completed_at
+        })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(row?.status).toBe('completed');
+      expect(row?.reviewed_by).toBe('reviewer-1');
+      expect(row?.review_note).toBe('Looks good');
+      expect(row?.completed_at).toBeInstanceOf(Date);
+    });
+
+    it('rejects a submitted ticket with an empty note when none is given', async () => {
+      await seedUser(USER_A);
+      await seedUser('reviewer-1');
+      const ticket = await seedTicket({ title: 'Awaiting review', status: 'submitted' });
+
+      const res = await reviewTicket('reviewer-1', ticket.id, 'rejected');
+      expect(res.success).toBe(true);
+      expect(res.ticket?.status).toBe('rejected');
+      expect(res.ticket?.reviewedBy).toBe('reviewer-1');
+
+      const [row] = await db
+        .select({ review_note: tickets.review_note })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(row?.review_note).toBe('');
+    });
+
+    it('is one-way: does not change an already-approved ticket', async () => {
+      await seedUser(USER_A);
+      await seedUser('reviewer-1');
+      await seedUser('first-reviewer');
+      const ticket = await seedTicket({
+        title: 'Already approved',
+        status: 'approved',
+        reviewed_by: 'first-reviewer',
+        review_note: 'First pass'
+      });
+
+      const res = await reviewTicket('reviewer-1', ticket.id, 'rejected', 'Trying again');
+      expect(res.success).toBe(false);
+      expect(res.message).toBe('Ticket is no longer awaiting review');
+
+      const [row] = await db
+        .select({ status: tickets.status, reviewed_by: tickets.reviewed_by })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(row?.status).toBe('approved');
+      expect(row?.reviewed_by).toBe('first-reviewer');
+    });
+
+    it('is one-way: does not change a non-submitted (in_progress) ticket', async () => {
+      await seedUser(USER_A);
+      await seedUser('reviewer-1');
+      const ticket = await seedTicket({ title: 'Still in progress', status: 'in_progress' });
+
+      const res = await reviewTicket('reviewer-1', ticket.id, 'approved');
+      expect(res.success).toBe(false);
+
+      const [row] = await db
+        .select({ status: tickets.status })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(row?.status).toBe('in_progress');
+    });
+
+    it('returns failure for a nonexistent ticket', async () => {
+      await seedUser(USER_A);
+      const res = await reviewTicket('reviewer-1', 999_999, 'approved');
+      expect(res.success).toBe(false);
+      expect(res.message).toBe('Ticket is no longer awaiting review');
+    });
+  });
+
+  describe('listSubmittedTickets', () => {
+    it('returns only submitted tickets, newest submission first', async () => {
+      await seedUser(USER_A);
+      const openTicket = await seedTicket({ title: 'Still open', status: 'open' });
+      const old = await seedTicket({
+        title: 'Older submission',
+        status: 'submitted',
+        submitted_at: new Date('2026-08-01T10:00:00Z')
+      });
+      const newer = await seedTicket({
+        title: 'Newer submission',
+        status: 'submitted',
+        submitted_at: new Date('2026-08-02T10:00:00Z')
+      });
+
+      const res = await listSubmittedTickets();
+      expect(res.success).toBe(true);
+      const ids = res.tickets.map((t) => t.id);
+      expect(ids).toContain(old.id);
+      expect(ids).toContain(newer.id);
+      expect(ids).not.toContain(openTicket.id);
+      // Newest submitted_at first
+      expect(ids.indexOf(newer.id)).toBeLessThan(ids.indexOf(old.id));
+    });
+
+    it('returns an empty list when nothing is submitted', async () => {
+      const res = await listSubmittedTickets();
+      expect(res.success).toBe(true);
+      expect(res.tickets).toHaveLength(0);
     });
   });
 });

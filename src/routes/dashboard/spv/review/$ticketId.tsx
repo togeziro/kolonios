@@ -4,7 +4,7 @@ import ReviewTicketPage from '@/features/spv/components/review-ticket-page';
 export const Route = createFileRoute('/dashboard/spv/review/$ticketId')({
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
-    await requirePermissionRpc({ data: 'checklist.approve' });
+    await requirePermissionRpc({ data: 'spv_review.view' });
   },
   head: () => ({ meta: [{ title: 'Dashboard: SPV Review Ticket' }] }),
   component: ReviewTicketRoute

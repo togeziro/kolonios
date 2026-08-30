@@ -3,12 +3,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '@/i18n/config';
 
-const { permsMock, stubActionMock, navigateMock } = vi.hoisted(() => ({
+const { permsMock, stubActionMock, navigateMock, submittedTicketsFnMock } = vi.hoisted(() => ({
   permsMock: vi.fn(),
   stubActionMock: vi.fn(),
-  navigateMock: vi.fn()
+  navigateMock: vi.fn(),
+  submittedTicketsFnMock: vi.fn()
 }));
 
 vi.mock('@/hooks/use-nav', () => ({
@@ -17,6 +19,10 @@ vi.mock('@/hooks/use-nav', () => ({
 
 vi.mock('@/lib/ui/stub-action', () => ({
   stubAction: stubActionMock
+}));
+
+vi.mock('@/features/tickets/api/service', () => ({
+  listSubmittedTicketsFn: submittedTicketsFnMock
 }));
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -41,9 +47,14 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 import ReviewQueuePage from './review-queue-page';
 
 function renderPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
+  });
   return render(
     <I18nextProvider i18n={i18n}>
-      <ReviewQueuePage />
+      <QueryClientProvider client={queryClient}>
+        <ReviewQueuePage />
+      </QueryClientProvider>
     </I18nextProvider>
   );
 }
@@ -52,9 +63,14 @@ describe('ReviewQueuePage', () => {
   beforeEach(() => {
     stubActionMock.mockClear();
     navigateMock.mockClear();
+    submittedTicketsFnMock.mockReset();
+    submittedTicketsFnMock.mockResolvedValue({ success: true, tickets: [] });
     permsMock.mockReturnValue({
       isAdmin: false,
-      permissions: { checklist: { approve: true } }
+      permissions: {
+        checklist: { approve: true },
+        spv_review: { view: true, edit: true }
+      }
     });
   });
 
@@ -102,5 +118,41 @@ describe('ReviewQueuePage', () => {
     renderPage();
     expect(screen.getByText(/You do not have access to this page/i)).toBeTruthy();
     expect(screen.queryByText('Alex Kim')).toBeNull();
+  });
+
+  it('shows the Ticket Reviews section with submitted tickets and links to detail', async () => {
+    submittedTicketsFnMock.mockResolvedValue({
+      success: true,
+      tickets: [
+        {
+          id: 77,
+          ticketCode: 'T-77',
+          title: 'Ticket awaiting review',
+          takenByName: 'Dedi',
+          status: 'submitted',
+          priority: 'high'
+        }
+      ]
+    });
+    renderPage();
+    await screen.findByText('Ticket awaiting review');
+    const link = document.querySelector<HTMLAnchorElement>('a[href="/dashboard/spv/review/77"]');
+    expect(link).toBeTruthy();
+  });
+
+  it('shows the empty state when no tickets are awaiting review', async () => {
+    renderPage();
+    await screen.findByText('No tickets awaiting review');
+  });
+
+  it('hides the Ticket Reviews section without spv_review.view but keeps checklist cards', async () => {
+    permsMock.mockReturnValue({
+      isAdmin: false,
+      permissions: { checklist: { approve: true } }
+    });
+    renderPage();
+    await screen.findByText('Alex Kim');
+    expect(screen.queryByText('Ticket Reviews')).toBeNull();
+    expect(submittedTicketsFnMock).not.toHaveBeenCalled();
   });
 });
