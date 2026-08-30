@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   submitDailyChecklist: vi.fn(),
   reopenDailyChecklist: vi.fn(),
   listChecklistReviewerIds: vi.fn(),
+  getCompletedLegsCountForDay: vi.fn().mockResolvedValue(0),
+  getCompletedLegsCountsForKeys: vi.fn().mockResolvedValue(new Map()),
   addNotification: vi.fn(),
   withAudit: vi.fn()
 }));
@@ -35,7 +37,9 @@ vi.mock('@/lib/db/checklists', () => ({
   setGlobalNote: mocks.setGlobalNote,
   submitDailyChecklist: mocks.submitDailyChecklist,
   reopenDailyChecklist: mocks.reopenDailyChecklist,
-  listChecklistReviewerIds: mocks.listChecklistReviewerIds
+  listChecklistReviewerIds: mocks.listChecklistReviewerIds,
+  getCompletedLegsCountForDay: mocks.getCompletedLegsCountForDay,
+  getCompletedLegsCountsForKeys: mocks.getCompletedLegsCountsForKeys
 }));
 vi.mock('@/lib/db/notifications', () => ({ addNotification: mocks.addNotification }));
 vi.mock('@/lib/audit', () => ({ withAudit: mocks.withAudit }));
@@ -152,13 +156,15 @@ describe('getMyDailyChecklistFn', () => {
         { id: 5, checklist_id: 1, item_key: 'cekOlt', outcome: 'ok', note: '', photo_key: '' }
       ]
     });
+    mocks.getCompletedLegsCountForDay.mockResolvedValue(2);
     const res = await getMyDailyChecklistFn({} as never);
     expect(mocks.createDailyChecklistWithItems).not.toHaveBeenCalled();
     expect(res).toEqual({
       success: true,
       dayStatus: 'working',
       checklist: expect.objectContaining({ id: 1, status: 'submitted' }),
-      items: [expect.objectContaining({ itemKey: 'cekOlt', outcome: 'ok' })]
+      items: [expect.objectContaining({ itemKey: 'cekOlt', outcome: 'ok' })],
+      completedLegsCount: 2
     });
   });
 
@@ -187,7 +193,13 @@ describe('getMyDailyChecklistFn', () => {
       dayOffs: ['2026-08-12']
     });
     const res = await getMyDailyChecklistFn({} as never);
-    expect(res).toEqual({ success: true, dayStatus: 'day_off', checklist: null, items: [] });
+    expect(res).toEqual({
+      success: true,
+      dayStatus: 'day_off',
+      checklist: null,
+      items: [],
+      completedLegsCount: 0
+    });
     expect(mocks.findDailyChecklist).not.toHaveBeenCalled();
     expect(mocks.createDailyChecklistWithItems).not.toHaveBeenCalled();
   });

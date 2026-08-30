@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { getMyDailyChecklistFn, getReviewSubmissionsFn } from './service';
 import { getObjectUrlFn } from '@/features/storage/api/service';
+import type { DailyChecklistResponse } from './types';
 
 export const checklistKeys = {
   all: ['checklist'] as const,
@@ -11,7 +12,7 @@ export const checklistKeys = {
 export const myDailyChecklistQueryOptions = () =>
   queryOptions({
     queryKey: checklistKeys.mine(),
-    queryFn: () => getMyDailyChecklistFn()
+    queryFn: (): Promise<DailyChecklistResponse> => getMyDailyChecklistFn()
   });
 
 export const checklistPhotoUrlQueryOptions = (key: string) =>
