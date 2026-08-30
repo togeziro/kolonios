@@ -1,10 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { InitialChip } from '@/components/ui/initial-chip';
 import { Icons } from '@/components/icons';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { stubAction } from '@/lib/ui/stub-action';
 import { REVIEW_QUEUE_SUBMISSIONS, type ReviewQueueSubmission } from './review-queue-fixtures';
+import { submittedTicketsQueryOptions } from '@/features/tickets/api/queries';
+import type { Ticket } from '@/lib/domain/tickets';
 
 const statusBadgeClass: Record<ReviewQueueSubmission['status'], string> = {
   pending: 'bg-blue-500/15 text-blue-500 dark:text-blue-400',
@@ -183,8 +186,11 @@ export default function ReviewQueuePage() {
   const navigate = useNavigate();
   const { isAdmin, permissions } = useRoleGroupPermissions();
   const canReview = isAdmin || permissions.checklist?.approve === true;
+  const canSeeTickets = isAdmin || permissions.spv_review?.view === true;
+  const ticketsQuery = useQuery({ ...submittedTicketsQueryOptions(), enabled: canSeeTickets });
+  const submittedTickets = ticketsQuery.data?.tickets ?? [];
 
-  if (!canReview) {
+  if (!canReview && !canSeeTickets) {
     return (
       <div className='mx-auto w-full max-w-lg px-4 py-8'>
         <p className='text-muted-foreground py-8 text-center text-sm'>{t('common.noAccess')}</p>
@@ -222,12 +228,78 @@ export default function ReviewQueuePage() {
 
       <main className='mx-auto w-full max-w-lg flex-1 px-4 py-4'>
         <div className='flex flex-col gap-4'>
-          <CountStrip pending={pendingCount} approved={approvedCount} rejected={rejectedCount} />
-          {submissions.map((submission) => (
-            <SubmissionCard key={submission.id} submission={submission} />
-          ))}
+          {canReview && (
+            <>
+              <CountStrip
+                pending={pendingCount}
+                approved={approvedCount}
+                rejected={rejectedCount}
+              />
+              {submissions.map((submission) => (
+                <SubmissionCard key={submission.id} submission={submission} />
+              ))}
+            </>
+          )}
+
+          {canSeeTickets && (
+            <TicketReviewsSection tickets={submittedTickets} isLoading={ticketsQuery.isLoading} />
+          )}
         </div>
       </main>
     </div>
+  );
+}
+
+function TicketReviewsSection({ tickets, isLoading }: { tickets: Ticket[]; isLoading: boolean }) {
+  const { t } = useTranslation();
+
+  return (
+    <section className='space-y-3'>
+      <div className='flex items-center justify-between'>
+        <h2 className='dark:text-zinc-100 text-sm font-bold'>
+          {t('spvReview.ticketReviewsTitle')}
+        </h2>
+        <span className='text-muted-foreground text-xs font-medium'>
+          {t('spvReview.ticketReviewsCount', { count: tickets.length })}
+        </span>
+      </div>
+      {isLoading ? (
+        <div className='flex justify-center py-6'>
+          <Icons.spinner className='text-muted-foreground h-5 w-5 animate-spin' />
+        </div>
+      ) : tickets.length === 0 ? (
+        <p className='text-muted-foreground rounded-2xl border border-dashed py-6 text-center text-sm dark:border-zinc-800/60'>
+          {t('spvReview.noSubmittedTickets')}
+        </p>
+      ) : (
+        tickets.map((ticket) => <TicketReviewCard key={ticket.id} ticket={ticket} />)
+      )}
+    </section>
+  );
+}
+
+function TicketReviewCard({ ticket }: { ticket: Ticket }) {
+  const { t } = useTranslation();
+  const engineerName = ticket.takenByName ?? '—';
+
+  return (
+    <Link
+      to='/dashboard/spv/review/$ticketId'
+      params={{ ticketId: String(ticket.id) }}
+      className='dark:border-zinc-800/50 dark:bg-zinc-900 flex flex-col gap-2 rounded-2xl border p-4'
+    >
+      <div className='flex items-start justify-between gap-2'>
+        <div className='flex min-w-0 flex-1 items-center gap-3'>
+          <InitialChip name={engineerName} />
+          <div className='min-w-0'>
+            <p className='dark:text-zinc-100 truncate font-semibold'>{ticket.title}</p>
+            <p className='text-muted-foreground truncate text-xs'>
+              {ticket.ticketCode ?? `#${ticket.id}`}
+            </p>
+          </div>
+        </div>
+        <Icons.chevronRight className='text-muted-foreground h-4 w-4 shrink-0' />
+      </div>
+    </Link>
   );
 }

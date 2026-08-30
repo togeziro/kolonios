@@ -18,6 +18,8 @@ export type {
 
 export type TicketDomain = 'field' | 'backoffice';
 
+export type TicketReviewDecision = 'approved' | 'rejected';
+
 export type Ticket = {
   id: number;
   ticketCode: string | null;
@@ -43,6 +45,7 @@ export type Ticket = {
   requiredSkills: string[];
   assignedTo: string | null;
   takenBy: string | null;
+  takenByName: string | null;
   takenAt: string | null;
   rating: number | null;
   reviewNote: string | null;

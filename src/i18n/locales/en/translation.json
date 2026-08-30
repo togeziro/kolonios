@@ -1572,7 +1572,13 @@
     "sopChecklist": "Standard SOP Checklist",
     "sopScore": "{{resolved}}/{{total}} OK",
     "notFound": "Ticket not found.",
-    "backToQueue": "Back to queue"
+    "backToQueue": "Back to queue",
+    "approved": "Ticket approved",
+    "rejected": "Ticket rejected",
+    "reviewFailed": "Could not submit review. Please try again.",
+    "ticketReviewsTitle": "Ticket Reviews",
+    "ticketReviewsCount": "{{count}} awaiting review",
+    "noSubmittedTickets": "No tickets awaiting review"
   },
   "leaveApprovals": {
     "title": "Leave Approvals",

@@ -3,7 +3,8 @@ import {
   getMyTicketsFn,
   listOpenTicketsFn,
   getTicketDetailFn,
-  getCompletedTicketsFn
+  getCompletedTicketsFn,
+  listSubmittedTicketsFn
 } from './service';
 import { getObjectUrlFn } from '@/features/storage/api/service';
 import type { TicketListFilters } from './types';
@@ -13,7 +14,8 @@ export const ticketsKeys = {
   mine: () => [...ticketsKeys.all, 'mine'] as const,
   open: (filters: TicketListFilters) => [...ticketsKeys.all, 'open', filters] as const,
   detail: (ticketId: number) => [...ticketsKeys.all, 'detail', ticketId] as const,
-  completed: () => [...ticketsKeys.all, 'completed'] as const
+  completed: () => [...ticketsKeys.all, 'completed'] as const,
+  submitted: () => [...ticketsKeys.all, 'submitted'] as const
 };
 
 export const myTicketsQueryOptions = () =>
@@ -26,6 +28,12 @@ export const completedTicketsQueryOptions = () =>
   queryOptions({
     queryKey: ticketsKeys.completed(),
     queryFn: () => getCompletedTicketsFn()
+  });
+
+export const submittedTicketsQueryOptions = () =>
+  queryOptions({
+    queryKey: ticketsKeys.submitted(),
+    queryFn: () => listSubmittedTicketsFn()
   });
 
 export const openTicketsQueryOptions = (filters: TicketListFilters = {}) =>

@@ -83,13 +83,14 @@ async function loadLocation(locationId: number | null) {
 async function toTicket(
   row: typeof tickets.$inferSelect,
   reqs: RequirementRow[],
-  creatorName: string | null = null
+  creatorName: string | null = null,
+  takenByName: string | null = null
 ): Promise<Ticket> {
   const [customer, location] = await Promise.all([
     loadCustomer(row.customer_id),
     loadLocation(row.location_id)
   ]);
-  return ticketToDomain(row, reqs, { customer, location, creatorName });
+  return ticketToDomain(row, reqs, { customer, location, creatorName, takenByName });
 }
 
 function toLeg(row: typeof ticketLegs.$inferSelect): TicketLeg {
@@ -216,18 +217,23 @@ export async function getTicketDetail(
   ticketId: number
 ): Promise<TicketDetailResponse> {
   try {
-    const [row] = await db.select().from(tickets).where(eq(tickets.id, ticketId)).limit(1);
+    const [row] = await db
+      .select({ ticket: tickets, takenByName: user.name })
+      .from(tickets)
+      .leftJoin(user, eq(tickets.taken_by, user.id))
+      .where(eq(tickets.id, ticketId))
+      .limit(1);
     if (!row) return { success: false, message: 'Ticket not found' };
     const reqs = await loadRequirements(ticketId);
-    const ticket = await toTicket(row, reqs);
+    const ticket = await toTicket(row.ticket, reqs, null, row.takenByName ?? null);
     const detail: TicketDetail = {
       ...ticket,
       legs: await loadLegs(ticketId),
       materials: await loadMaterials(ticketId),
       photos: await loadPhotos(ticketId),
       worklog: await loadWorklog(ticketId),
-      requesterId: row.requester_id,
-      createdAt: row.created_at.toISOString()
+      requesterId: row.ticket.requester_id,
+      createdAt: row.ticket.created_at.toISOString()
     };
     return { success: true, ticket: detail };
   } catch (e) {
@@ -603,11 +609,13 @@ export async function submitWorkSession(
           .set({ status: 'assigned', updated_at: new Date() })
           .where(eq(ticketLegs.id, outcome.nextLeg.id));
       } else {
+        // Last leg: the ticket now awaits SPV review (reviewTicket advances it
+        // to completed on approval, rejected otherwise).
         await tx
           .update(tickets)
           .set({
-            status: 'completed',
-            completed_at: new Date(),
+            status: 'submitted',
+            submitted_at: new Date(),
             updated_at: new Date()
           })
           .where(eq(tickets.id, ticketId));
@@ -667,5 +675,67 @@ export async function addHandoffNote(
     return { success: true, message: 'Handoff note added' };
   } catch (e) {
     mapDbError(e, 'tickets.addHandoffNote');
+  }
+}
+
+export async function reviewTicket(
+  reviewerId: string,
+  ticketId: number,
+  decision: 'approved' | 'rejected',
+  notes?: string
+): Promise<TicketActionResponse> {
+  try {
+    const result = await db.transaction(async (tx) => {
+      // One-way guard: only a submitted ticket may transition to approved or
+      // rejected; the conditional UPDATE makes concurrent reviews race-safe.
+      const [updated] = await tx
+        .update(tickets)
+        .set(
+          decision === 'approved'
+            ? {
+                status: 'completed',
+                reviewed_by: reviewerId,
+                review_note: notes ?? '',
+                completed_at: new Date(),
+                updated_at: new Date()
+              }
+            : {
+                status: 'rejected',
+                reviewed_by: reviewerId,
+                review_note: notes ?? '',
+                updated_at: new Date()
+              }
+        )
+        .where(and(eq(tickets.id, ticketId), eq(tickets.status, 'submitted')))
+        .returning();
+      if (!updated) return { success: false, message: 'Ticket is no longer awaiting review' };
+
+      return {
+        success: true,
+        message: decision === 'approved' ? 'Ticket approved' : 'Ticket rejected',
+        ticket: await toTicket(updated, await loadRequirements(ticketId))
+      };
+    });
+    return result;
+  } catch (e) {
+    mapDbError(e, 'tickets.reviewTicket');
+  }
+}
+
+export async function listSubmittedTickets(): Promise<TicketListResponse> {
+  try {
+    const rows = await db
+      .select()
+      .from(tickets)
+      .where(eq(tickets.status, 'submitted'))
+      .orderBy(desc(tickets.submitted_at), desc(tickets.id));
+
+    const result: Ticket[] = [];
+    for (const row of rows) {
+      result.push(await toTicket(row, await loadRequirements(row.id)));
+    }
+    return { success: true, tickets: result, unavailable: [] };
+  } catch (e) {
+    mapDbError(e, 'tickets.listSubmittedTickets');
   }
 }
