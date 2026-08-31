@@ -11,6 +11,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { hasModulePermission } from '@/lib/auth/session';
+import { BrandingSection } from '@/features/branding/components/branding-section';
 
 const languageLabels: Record<SupportedLanguage, string> = {
   en: 'English',
@@ -23,6 +26,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const { setTheme } = useTheme();
   const dark = useShellDark();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canManageBranding = hasModulePermission(permissions, isAdmin, 'settings', 'edit');
 
   const user = session?.user;
   const name = user?.name ?? 'User';
@@ -44,6 +49,15 @@ export default function SettingsPage() {
 
   return (
     <div className='space-y-5'>
+      {canManageBranding && (
+        <section className='space-y-2'>
+          <p className='text-muted-foreground text-[11px] font-medium uppercase tracking-wider'>
+            {t('branding.section')}
+          </p>
+          <BrandingSection />
+        </section>
+      )}
+
       <Card className='flex items-center gap-3 rounded-2xl p-4 dark:border-zinc-800/50 dark:bg-zinc-900'>
         <Avatar className='border dark:border-zinc-700 h-14 w-14'>
           <AvatarFallback className='bg-primary/10 text-primary text-lg font-semibold'>

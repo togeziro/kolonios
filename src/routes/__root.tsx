@@ -84,7 +84,7 @@ export const Route = createRootRouteWithContext<{
         name: 'description',
         content: 'kolonios dashboard'
       },
-      { tag: 'link', rel: 'icon', href: '/favicon.ico' }
+      { tag: 'link', rel: 'icon', href: '/api/v1/branding/favicon' }
     ]
   }),
   loader: async () => {

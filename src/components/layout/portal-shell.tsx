@@ -2,6 +2,7 @@ import { Outlet, useRouter } from '@tanstack/react-router';
 import { authClient } from '@/lib/auth/auth-client';
 import { Icons } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
+import { BrandLogo } from '@/features/branding/components/brand-logo';
 
 export function PortalShell() {
   const { t } = useTranslation();
@@ -11,7 +12,7 @@ export function PortalShell() {
     <div className='mx-auto flex min-h-screen max-w-lg flex-col bg-background'>
       <header className='bg-primary text-primary-foreground flex h-14 items-center justify-between px-4'>
         <div className='flex items-center gap-2'>
-          <Icons.logo className='size-5' />
+          <BrandLogo className='size-5' />
           <span className='text-sm font-semibold'>{t('portal.title')}</span>
         </div>
         <button

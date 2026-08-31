@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requirePermission } from '@/lib/auth/session';
 import { getPrimaryBankAccount, listMyPayslips } from '@/lib/db/payroll';
-import { getCompanyProfile } from './settings';
+import { getCompanyProfile, getCompanyLogoBase64 } from './settings';
 import { maskAccountNumber } from './shared';
 import { myPayslipFiltersSchema } from './validation';
 
@@ -24,5 +24,12 @@ export const getMyPayslipsFn = createServerFn({ method: 'GET' })
         };
       })
     );
-    return JSON.parse(JSON.stringify({ ...result, company: getCompanyProfile(), rows }));
+    return JSON.parse(
+      JSON.stringify({
+        ...result,
+        company: await getCompanyProfile(),
+        companyLogo: await getCompanyLogoBase64(),
+        rows
+      })
+    );
   });

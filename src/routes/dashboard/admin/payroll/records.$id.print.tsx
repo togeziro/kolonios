@@ -32,6 +32,7 @@ export const Route = createFileRoute('/dashboard/admin/payroll/records/$id/print
 
 type PayslipPrintPayload = {
   company?: CompanyProfile;
+  companyLogo?: string;
   record?: PayslipRecord | null;
 };
 
@@ -47,7 +48,11 @@ function PayslipPrintRoute() {
   const company = payload?.company;
   const payslip =
     company && record
-      ? payslipFromRecord(record, company, { maskBankAccount: false, allowUnpaidPreview: true })
+      ? payslipFromRecord(record, company, {
+          maskBankAccount: false,
+          allowUnpaidPreview: true,
+          companyLogo: payload?.companyLogo
+        })
       : null;
   const periodRange =
     search.start || search.end

@@ -1,6 +1,8 @@
 import { IconWorld } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { BrandLogo } from '@/features/branding/components/brand-logo';
+import { usePublicBranding } from '@/features/branding/api/public-queries';
 
 interface AuthCardProps {
   title: string;
@@ -20,10 +22,17 @@ export default function AuthCard({
   children
 }: AuthCardProps) {
   const { t, i18n } = useTranslation();
+  const { data: branding } = usePublicBranding();
   return (
     <>
       <div className='mx-auto flex w-full flex-col justify-center space-y-8 sm:w-[350px]'>
         <div className='space-y-2 text-center'>
+          {branding?.name && (
+            <div className='flex items-center justify-center gap-2'>
+              {branding?.logoLight && <BrandLogo className='h-12 w-12' />}
+              <span className='text-xl font-semibold'>{branding.name}</span>
+            </div>
+          )}
           <h1 className='font-medium text-3xl'>{title}</h1>
           <p className='text-muted-foreground text-sm'>{subtitle}</p>
         </div>

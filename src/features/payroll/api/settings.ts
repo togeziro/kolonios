@@ -3,26 +3,43 @@ import { requirePermission } from '@/lib/auth/session';
 import { DomainError } from '@/lib/errors';
 import { companyPayrollSettings } from '@/lib/db/schema/payroll';
 import { getCompanyPayrollSettings, withPayrollAuditTransaction } from '@/lib/db/payroll';
+import { resolveCompanyProfile, type CompanyProfile } from '@/lib/branding/company-profile';
+import { stripPngDataUrl } from '@/lib/branding/assets';
 import { companyPayrollSettingsSchema } from './validation';
 
-export interface CompanyProfile {
-  name: string;
-  address?: string;
-  email?: string;
-  phone?: string;
+export type { CompanyProfile };
+
+const envCompanyProfile = (): CompanyProfile => resolveCompanyProfile(null);
+
+/**
+ * Company Profile for payslip documents: reads the Branding database row and
+ * falls back to the deployment's COMPANY_* env vars when unset (the agreed
+ * fallback chain in src/lib/branding/company-profile.ts).
+ */
+export async function getCompanyProfile(): Promise<CompanyProfile> {
+  try {
+    const { getCompanyBranding } = await import('@/lib/db/branding');
+    const branding = await getCompanyBranding();
+    return resolveCompanyProfile(branding.profile);
+  } catch {
+    // DB hiccup must never block a payslip render — env chain still applies.
+    return envCompanyProfile();
+  }
 }
 
-export function getCompanyProfile(): CompanyProfile {
-  const name = process.env.COMPANY_NAME?.trim();
-  const address = process.env.COMPANY_ADDRESS?.trim();
-  const email = process.env.COMPANY_EMAIL?.trim();
-  const phone = process.env.COMPANY_PHONE?.trim();
-  return {
-    name: name || 'Kolonios',
-    ...(address ? { address } : {}),
-    ...(email ? { email } : {}),
-    ...(phone ? { phone } : {})
-  };
+/**
+ * Base64 payload of the Branding light logo for embedding in payslip
+ * documents. Payslips render on white, so the light variant is always the
+ * right one. Null-safe: returns undefined when unset or on DB failure.
+ */
+export async function getCompanyLogoBase64(): Promise<string | undefined> {
+  try {
+    const { getCompanyBranding } = await import('@/lib/db/branding');
+    const { logoLight } = await getCompanyBranding();
+    return stripPngDataUrl(logoLight);
+  } catch {
+    return undefined;
+  }
 }
 
 export const getCompanyPayrollSettingsFn = createServerFn({ method: 'GET' }).handler(async () => {

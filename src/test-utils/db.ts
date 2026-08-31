@@ -21,7 +21,7 @@ import {
   shifts
 } from '@/lib/db/schema/attendance';
 import { customers } from '@/lib/db/schema/customers';
-import { departments, designations } from '@/lib/db/schema/masterdata';
+import { departments, designations, companySettings } from '@/lib/db/schema/masterdata';
 import { employees } from '@/lib/db/schema/employees';
 import { notifications } from '@/lib/db/schema/notifications';
 import {
@@ -101,6 +101,7 @@ export async function resetAllTables() {
   await db.delete(tickets);
   await db.delete(customers);
   await db.delete(employees);
+  await db.delete(companySettings);
   await db.delete(designations);
   await db.delete(departments);
   await db.delete(locations);

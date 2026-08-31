@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { toPngDataUrl } from '@/lib/branding/assets';
 import type { PayslipData } from './payslip-template';
 
 // Print isolation: hide the app shell, show only the slip. The route renders
@@ -104,6 +105,13 @@ export function PrintablePayslip({
     >
       <style>{PRINT_CSS}</style>
       <header className='border-black border-b-2 pb-4 text-center'>
+        {payslip.companyLogo && (
+          <img
+            src={toPngDataUrl(payslip.companyLogo)}
+            alt={payslip.company.name}
+            className='mx-auto mb-2 h-16 object-contain'
+          />
+        )}
         <h1 className='text-lg font-bold uppercase'>{payslip.company.name}</h1>
         {payslip.company.address && <p className='text-sm'>{payslip.company.address}</p>}
         {contactLine && <p className='text-sm'>{contactLine}</p>}

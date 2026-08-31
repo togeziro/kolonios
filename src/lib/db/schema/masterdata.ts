@@ -69,6 +69,13 @@ export const companySettings = pgTable('company_settings', {
   faceValidationMode: text('face_validation_mode').notNull().default('background'),
   faceAccuracyLevel: text('face_accuracy_level').notNull().default('medium'),
   showSeconds: boolean('show_seconds').notNull().default(false),
+  branding_logo_light: text('branding_logo_light'),
+  branding_logo_dark: text('branding_logo_dark'),
+  branding_favicon: text('branding_favicon'),
+  company_name: text('company_name'),
+  company_address: text('company_address'),
+  company_email: text('company_email'),
+  company_phone: text('company_phone'),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });
