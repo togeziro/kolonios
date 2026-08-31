@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { type ColumnFiltersState, type ColumnPinningState, useTable } from '@tanstack/react-table';
@@ -20,6 +20,7 @@ import { appFeatures } from '@/lib/table-features';
 import { listShiftsQueryOptions } from '../api/queries';
 import { deleteShiftMutation } from '../api/mutations';
 import { buildShiftColumns, type ShiftListRow } from './shift-columns';
+import { ShiftDeleteConfirmDialog } from './shift-delete-confirm-dialog';
 import { ShiftFormSheet } from './shift-form-sheet';
 
 type DeleteShiftResult = { success: boolean; mode?: 'soft' | 'hard' };
@@ -38,6 +39,7 @@ export function ShiftListing() {
 
   const [editingShiftId, setEditingShiftId] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ShiftListRow | null>(null);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const deleteMutation = useMutation(
@@ -54,15 +56,17 @@ export function ShiftListing() {
     })
   );
 
-  const onDelete = useCallback(
-    (id: number) => {
-      // Ticket 04 wraps this in a confirm-dialog. The server enforces
-      // soft-delete for any used shift, so the action stays reversible when
-      // history exists.
-      deleteMutation.mutate({ id });
-    },
-    [deleteMutation]
-  );
+  const onDelete = (id: number) => {
+    const target = shifts.find((shift) => shift.id === id);
+    if (!target) return;
+    setDeleteTarget(target);
+  };
+
+  const onConfirmDelete = () => {
+    if (!deleteTarget || deleteMutation.isPending) return;
+    deleteMutation.mutate({ id: deleteTarget.id });
+    setDeleteTarget(null);
+  };
 
   const columns = useMemo(
     () =>
@@ -158,6 +162,15 @@ export function ShiftListing() {
           shiftId={editingShiftId}
           open={editingShiftId != null}
           onOpenChange={(open) => !open && setEditingShiftId(null)}
+        />
+      )}
+      {deleteTarget && (
+        <ShiftDeleteConfirmDialog
+          shift={deleteTarget}
+          open={true}
+          onOpenChange={(open) => !open && setDeleteTarget(null)}
+          loading={deleteMutation.isPending}
+          onConfirm={onConfirmDelete}
         />
       )}
     </div>

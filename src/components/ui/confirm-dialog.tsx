@@ -18,6 +18,7 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   cancelLabel?: string;
   destructive?: boolean;
+  loading?: boolean;
   onConfirm: () => void;
 };
 
@@ -29,6 +30,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   destructive,
+  loading,
   onConfirm
 }: ConfirmDialogProps) {
   const { t } = useTranslation();
@@ -45,6 +47,7 @@ export function ConfirmDialog({
             className={
               destructive ? 'bg-destructive text-white hover:bg-destructive/90' : undefined
             }
+            disabled={loading}
             onClick={onConfirm}
           >
             {confirmLabel}

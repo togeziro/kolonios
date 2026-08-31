@@ -133,3 +133,12 @@ describe('ShiftListing — actions', () => {
     expect(actionButtons).toHaveLength(2);
   });
 });
+
+describe('ShiftListing — delete confirm flow', () => {
+  it('does not render the delete dialog body when no row is targeted (Radix skips the portal when open is false)', () => {
+    setListingLoaded();
+    renderListing();
+    expect(screen.queryByText('Delete shift?')).toBeNull();
+    expect(screen.queryByText('Deactivate shift?')).toBeNull();
+  });
+});
