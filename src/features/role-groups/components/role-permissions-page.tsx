@@ -24,9 +24,11 @@ export default function RolePermissionsPage() {
   const group = data?.role_group;
 
   const [permissions, setPermissions] = useState<Permissions>({});
-  // Seed permissions whenever the group data changes
-  // (adjust-state-during-render pattern; replaces the previous effect).
-  const [prevGroup, setPrevGroup] = useState(group);
+  // Seed permissions whenever the group data changes — starting from
+  // `undefined` so a group already present on the FIRST render (SSR /
+  // dehydrated query) still seeds. Seeding only on identity change after
+  // mount left the matrix blank in exactly that case.
+  const [prevGroup, setPrevGroup] = useState<typeof group>(undefined);
   if (group !== prevGroup) {
     setPrevGroup(group);
     if (group) setPermissions(group.permissions ?? {});
