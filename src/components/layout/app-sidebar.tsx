@@ -61,6 +61,7 @@ export const navTitleKeys: Record<string, string> = {
   'Role Groups': 'navigation.roleGroups',
   'Holiday Calendar': 'navigation.holidayCalendar',
   'Work Log Settings': 'navigation.workLogSettings',
+  Branding: 'navigation.branding',
   Tickets: 'navigation.tickets',
   'Available Jobs': 'navigation.availableJobs',
   'New Ticket': 'navigation.newTicket'

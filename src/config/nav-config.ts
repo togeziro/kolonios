@@ -295,6 +295,14 @@ export const navItems: NavItem[] = [
         isActive: false,
         module: 'settings',
         items: []
+      },
+      {
+        title: 'Branding',
+        url: '/dashboard/settings',
+        icon: 'settings',
+        isActive: false,
+        module: 'settings',
+        items: []
       }
     ]
   },
