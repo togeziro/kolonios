@@ -173,9 +173,10 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
     action: 'view'
   },
 
-  // /dashboard/payroll/payslips — currently payroll.view; ticket 04 moves this
-  // to the new `payslips.view` module.
-  { pattern: /^\/dashboard\/payroll\/payslips$/, module: 'payroll', action: 'view' },
+  // /dashboard/payroll/payslips — personal payslips page governed by the
+  // dedicated `payslips` module so admins can revoke the admin payroll shell
+  // for field roles without breaking the staff-only payslips view.
+  { pattern: /^\/dashboard\/payroll\/payslips$/, module: 'payslips', action: 'view' },
 
   // /dashboard/attendance/* — technician/employee check-in flow
   {

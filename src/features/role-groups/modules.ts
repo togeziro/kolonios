@@ -33,6 +33,11 @@ const MODULES = [
     actions: ['view', 'add', 'edit', 'delete', 'approve', 'pay', 'reports']
   },
   {
+    key: 'payslips',
+    label: 'My Payslips',
+    actions: ['view']
+  },
+  {
     key: 'tickets',
     label: 'Tickets',
     actions: ['view', 'add', 'edit']

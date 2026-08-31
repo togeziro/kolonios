@@ -8,7 +8,7 @@ import { myPayslipFiltersSchema } from './validation';
 export const getMyPayslipsFn = createServerFn({ method: 'GET' })
   .validator(myPayslipFiltersSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('payroll', 'view');
+    const session = await requirePermission('payslips', 'view');
     const result = await listMyPayslips(session.user.id, {
       payroll_period_id: data.payrollPeriodId,
       page: data.page,

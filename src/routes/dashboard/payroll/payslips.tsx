@@ -16,7 +16,7 @@ import {
 export const Route = createFileRoute('/dashboard/payroll/payslips')({
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
-    await requirePermissionRpc({ data: 'payroll.view' });
+    await requirePermissionRpc({ data: 'payslips.view' });
   },
   component: PayslipsPage
 });
