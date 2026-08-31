@@ -30,13 +30,14 @@ export async function requirePermission(module: string, action: PermissionAction
   const session = await requireSession();
   const group = await loadRoleGroup(session.user.id);
 
-  // If no role group assigned, deny access
+  // No role group → deny everywhere. Legacy shim that granted access purely
+  // on `user.role === 'admin'` is closed (ADR-0005): the only users without
+  // a role group are 10 customer accounts, which never reach the dashboard.
   if (!group) {
-    // Check if user.role is admin for backward compatibility during migration
-    if (session.user.role === 'admin') {
-      logger.warn({ userId: session.user.id }, 'User has admin role but no role group assignment');
-      return session;
-    }
+    logger.warn(
+      { userId: session.user.id, userRole: session.user.role, required: `${module}.${action}` },
+      'route-guard: dashboard request without role group denied'
+    );
     throw new Error(`Forbidden: ${module}.${action} required`);
   }
 
