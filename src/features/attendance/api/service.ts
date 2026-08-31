@@ -14,6 +14,9 @@ import {
   locationDeleteSchema,
   scheduleCreateSchema,
   scheduleUpdateSchema,
+  shiftCreateSchema,
+  shiftUpdateSchema,
+  shiftDeleteSchema,
   assignmentFiltersSchema,
   scheduleAssignmentSchema,
   bulkAssignmentSchema,
@@ -271,6 +274,84 @@ export const updateScheduleFn = createServerFn({ method: 'POST' })
           entityId: String(id),
           before: null,
           after: result
+        },
+        async () => undefined
+      );
+    }
+    return result;
+  });
+
+// --- Shift master CRUD (admin) ---
+
+export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  await requirePermission('attendance', 'edit');
+  const { listShifts } = await import('@/lib/db/attendance');
+  return listShifts();
+});
+
+export const createShiftFn = createServerFn({ method: 'POST' })
+  .validator(shiftCreateSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('attendance', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { createSchedule } = await import('@/lib/db/attendance');
+    const result = await createSchedule(data);
+    if (result.success) {
+      await withAudit(
+        session.user.id,
+        {
+          action: 'attendance.shift.create',
+          entityType: 'shift',
+          entityId: String(result.shift?.id),
+          before: null,
+          after: result.shift
+        },
+        async () => undefined
+      );
+    }
+    return result;
+  });
+
+export const updateShiftFn = createServerFn({ method: 'POST' })
+  .validator(shiftUpdateSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('attendance', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { updateSchedule } = await import('@/lib/db/attendance');
+    const { id, ...patch } = data;
+    const result = await updateSchedule(id, patch);
+    if (result.success) {
+      await withAudit(
+        session.user.id,
+        {
+          action: 'attendance.shift.update',
+          entityType: 'shift',
+          entityId: String(id),
+          before: null,
+          after: { id, ...patch }
+        },
+        async () => undefined
+      );
+    }
+    return result;
+  });
+
+export const deleteShiftFn = createServerFn({ method: 'POST' })
+  .validator(shiftDeleteSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('attendance', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { deleteShift } = await import('@/lib/db/attendance');
+    const result = await deleteShift(data.id);
+    if (result.success) {
+      await withAudit(
+        session.user.id,
+        {
+          action: 'attendance.shift.delete',
+          entityType: 'shift',
+          entityId: String(data.id),
+          before: null,
+          after: { mode: result.mode }
         },
         async () => undefined
       );

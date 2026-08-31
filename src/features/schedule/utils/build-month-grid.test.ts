@@ -15,19 +15,16 @@ function monthData(overrides: Partial<ScheduleMonthData> = {}): ScheduleMonthDat
         dayOfWeek: 1,
         isWorkingDay: true,
         startTime: '08:00',
-        endTime: '17:00',
-        lateToleranceMinutes: 10,
-        absenceCutoffMinutes: 120
+        endTime: '17:00'
       },
       {
         dayOfWeek: 6,
         isWorkingDay: false,
         startTime: null,
-        endTime: null,
-        lateToleranceMinutes: 0,
-        absenceCutoffMinutes: 120
+        endTime: null
       }
     ],
+    shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
     overrides: [],
     dayOffs: [],
     holidays: [],
