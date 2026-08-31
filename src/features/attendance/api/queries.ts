@@ -10,7 +10,8 @@ import {
   getSchedulesFn,
   getScheduleAssignmentsFn,
   getAdminAttendanceReportFn,
-  listShiftsFn
+  listShiftsFn,
+  getShiftByIdFn
 } from './service';
 import type {
   AttendanceFilters,
@@ -78,6 +79,13 @@ export const listShiftsQueryOptions = () =>
   queryOptions({
     queryKey: attendanceKeys.shiftsList(),
     queryFn: () => listShiftsFn()
+  });
+
+export const shiftByIdQueryOptions = (id: number | null) =>
+  queryOptions({
+    queryKey: [...attendanceKeys.shiftsList(), 'detail', id] as const,
+    queryFn: () => (id == null ? Promise.resolve(null) : getShiftByIdFn({ data: { id } })),
+    enabled: id != null
   });
 
 export const attendanceSummaryQueryOptions = () =>

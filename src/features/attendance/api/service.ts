@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
+import * as z from 'zod';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withAudit } from '@/lib/audit';
@@ -12,8 +13,6 @@ import {
   locationCreateSchema,
   locationUpdateSchema,
   locationDeleteSchema,
-  scheduleCreateSchema,
-  scheduleUpdateSchema,
   shiftCreateSchema,
   shiftUpdateSchema,
   shiftDeleteSchema,
@@ -234,53 +233,6 @@ export const getSchedulesFn = createServerFn({ method: 'GET' }).handler(async ()
   return getShifts();
 });
 
-export const createScheduleFn = createServerFn({ method: 'POST' })
-  .validator(scheduleCreateSchema)
-  .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
-    await checkRateLimit(`write:${session.user.id}`);
-    const { createSchedule } = await import('@/lib/db/attendance');
-    const result = await createSchedule(data);
-    if (result.success) {
-      await withAudit(
-        session.user.id,
-        {
-          action: 'attendance.schedule.create',
-          entityType: 'schedule',
-          entityId: String(result.shift?.id),
-          before: null,
-          after: result.shift
-        },
-        async () => undefined
-      );
-    }
-    return result;
-  });
-
-export const updateScheduleFn = createServerFn({ method: 'POST' })
-  .validator(scheduleUpdateSchema)
-  .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
-    await checkRateLimit(`write:${session.user.id}`);
-    const { updateSchedule } = await import('@/lib/db/attendance');
-    const { id, ...patch } = data;
-    const result = await updateSchedule(id, patch);
-    if (result.success) {
-      await withAudit(
-        session.user.id,
-        {
-          action: 'attendance.schedule.update',
-          entityType: 'schedule',
-          entityId: String(id),
-          before: null,
-          after: result
-        },
-        async () => undefined
-      );
-    }
-    return result;
-  });
-
 // --- Shift master CRUD (admin) ---
 
 export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () => {
@@ -288,6 +240,14 @@ export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () =
   const { listShifts } = await import('@/lib/db/attendance');
   return listShifts();
 });
+
+export const getShiftByIdFn = createServerFn({ method: 'GET' })
+  .validator(z.object({ id: z.number().int().positive() }))
+  .handler(async ({ data }) => {
+    await requirePermission('attendance', 'edit');
+    const { getShiftById } = await import('@/lib/db/attendance');
+    return getShiftById(data.id);
+  });
 
 export const createShiftFn = createServerFn({ method: 'POST' })
   .validator(shiftCreateSchema)

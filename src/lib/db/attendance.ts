@@ -813,6 +813,18 @@ export async function getShiftWeekdayRules(shiftId: number) {
   }
 }
 
+export async function getShiftById(shiftId: number) {
+  try {
+    const [shift] = await db.select().from(shifts).where(eq(shifts.id, shiftId)).limit(1);
+    if (!shift) return { success: false, reason: 'not_found' as const };
+    const { success: rulesSuccess, rules } = await getShiftWeekdayRules(shiftId);
+    return { success: true, shift, weekdayRules: rulesSuccess ? rules : [] };
+  } catch (e) {
+    mapDbError(e, 'attendance.getShiftById');
+    return { success: false };
+  }
+}
+
 export async function createScheduleAssignment(input: {
   userId: string;
   shiftId: number;
