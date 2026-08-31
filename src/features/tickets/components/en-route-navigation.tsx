@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -32,17 +32,14 @@ const priorityTone: Record<string, string> = {
   low: 'bg-zinc-500/15 text-zinc-500 dark:text-zinc-400'
 };
 
-type ArrivalLocation = { latitude: number; longitude: number; accuracy: number } | null;
-
 export default function EnRouteNavigationPage({ ticketId }: { ticketId: number }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, isLoading } = useQuery(ticketDetailQueryOptions(ticketId));
   const arrive = useArriveTicket();
   const [deviceLocation, setDeviceLocation] = useState<DeviceLocation | null>(null);
-  const [arrival, setArrival] = useState<ArrivalLocation>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const confirmedRef = useRef(false);
+  const [arriving, setArriving] = useState(false);
 
   // Best-effort device fix for the map preview; failures just leave the
   // marker off — arrival is not gated on GPS. `inaccurate`/`stale` results
@@ -142,23 +139,27 @@ export default function EnRouteNavigationPage({ ticketId }: { ticketId: number }
       : null;
 
   const handleArrived = async () => {
-    const loc = await getCurrentLocation();
-    if (loc.status === 'success') {
-      setArrival({
-        latitude: loc.location.latitude,
-        longitude: loc.location.longitude,
-        accuracy: loc.location.accuracy
-      });
-      confirmArrival();
-    } else {
-      setConfirmOpen(true);
+    if (arriving || arrive.isPending) return;
+    setArriving(true);
+    try {
+      const loc = await getCurrentLocation();
+      if (loc.status === 'success' || loc.status === 'stale' || loc.status === 'inaccurate') {
+        confirmArrival({
+          latitude: loc.location.latitude,
+          longitude: loc.location.longitude,
+          accuracy: loc.location.accuracy
+        });
+      } else {
+        setConfirmOpen(true);
+      }
+    } finally {
+      setArriving(false);
     }
   };
 
-  const confirmArrival = () => {
-    confirmedRef.current = true;
+  const confirmArrival = (loc?: { latitude: number; longitude: number; accuracy: number }) => {
     arrive.mutate(
-      { ticketId, ...arrival },
+      { ticketId, ...loc },
       {
         onSuccess: (res) => {
           if (res?.success) {
@@ -260,8 +261,8 @@ export default function EnRouteNavigationPage({ ticketId }: { ticketId: number }
       </Card>
 
       <div className='fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 p-3 backdrop-blur dark:border-zinc-800/50 dark:bg-zinc-950/95 max-md:bottom-[calc(5rem+env(safe-area-inset-bottom))]'>
-        <Button className='w-full' onClick={handleArrived} disabled={arrive.isPending}>
-          {arrive.isPending ? (
+        <Button className='w-full' onClick={handleArrived} disabled={arriving || arrive.isPending}>
+          {arriving || arrive.isPending ? (
             <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
           ) : (
             <Icons.check className='mr-2 h-4 w-4' />
@@ -270,13 +271,7 @@ export default function EnRouteNavigationPage({ ticketId }: { ticketId: number }
         </Button>
       </div>
 
-      <AlertDialog
-        open={confirmOpen}
-        onOpenChange={(open) => {
-          if (!open && confirmedRef.current) confirmArrival();
-          setConfirmOpen(open);
-        }}
-      >
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('enRoute.arriveConfirmTitle')}</AlertDialogTitle>
@@ -284,11 +279,7 @@ export default function EnRouteNavigationPage({ ticketId }: { ticketId: number }
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('enRoute.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                confirmedRef.current = true;
-              }}
-            >
+            <AlertDialogAction onClick={() => confirmArrival()}>
               {t('enRoute.arriveWithoutLocation')}
             </AlertDialogAction>
           </AlertDialogFooter>

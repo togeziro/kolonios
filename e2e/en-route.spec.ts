@@ -1,49 +1,115 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { loginAs } from './helpers';
+import { desc, eq } from 'drizzle-orm';
+import { db } from '../src/lib/db';
+import { tickets, ticketLegs, ticketWorklog } from '../src/lib/db/schema/tickets';
 
-const TICKET_ID = 242;
+const TICKET_TITLE = 'Fix network room 201';
+
+async function resetTicket() {
+  // The arrive transition (assigned → in_progress) is one-way; flip the demo
+  // ticket back so every run starts from the same state.
+  await db
+    .update(tickets)
+    .set({ status: 'assigned', updated_at: new Date() })
+    .where(eq(tickets.title, TICKET_TITLE));
+}
+
+async function getTicket() {
+  const [ticket] = await db
+    .select({ id: tickets.id })
+    .from(tickets)
+    .where(eq(tickets.title, TICKET_TITLE));
+  if (!ticket) throw new Error(`Seed ticket "${TICKET_TITLE}" missing — run bun run db:seed`);
+  return ticket;
+}
+
+// The assigned ticket lives in the "Up Next" section of My Work; clicking its
+// only action button ("Open") follows the assigned-status link to en-route.
+async function openTicketCard(page: Page) {
+  const heading = page.getByRole('heading', { name: TICKET_TITLE });
+  const card = page.locator('[data-slot="card"]', { has: heading });
+  await card.getByRole('button', { name: /^Open$/i }).click();
+}
 
 test.describe('en-route navigation', () => {
-  // Project-level storageState (e2e/.auth/technician.json) + geolocation is
-  // configured in playwright.config.ts.
+  // Headless Chromium has no GPS hardware: grant the permission AND feed a
+  // fake fix, otherwise getCurrentLocation fails and the page falls into the
+  // "arrive without location" path. The technician storageState comes from
+  // playwright.config.ts (technician project).
+  test.use({
+    geolocation: { latitude: -6.2, longitude: 106.8, accuracy: 10 },
+    permissions: ['geolocation']
+  });
 
-  test('renders the route map with a blue device marker, line, and distance when GPS resolves', async ({
-    page,
-    context
+  test.beforeEach(async () => {
+    await resetTicket();
+  });
+
+  test('renders the route map with device + destination markers, line, and distance', async ({
+    page
   }) => {
-    await context.grantPermissions(['geolocation'], { origin: 'http://localhost:3001' });
+    await page.goto('/dashboard/my-work');
+    await openTicketCard(page);
 
-    await page.goto(`/dashboard/en-route/${TICKET_ID}`);
-    await expect(page.getByRole('heading', { name: /Install Fiber Router/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: TICKET_TITLE })).toBeVisible({
       timeout: 15_000
     });
     await expect(page.getByRole('button', { name: /Find my location/i })).toBeVisible();
 
-    // Click "Find my location" to kick the GeolocateControl's getCurrentPosition
-    // through the (already-mounted) effect; this guarantees the fix flows into
-    // state regardless of whether the mount-time getCurrentLocation won the
-    // race against the first paint.
+    // Click "Find my location" to kick the map's getCurrentPosition through the
+    // (already-mounted) effect; this guarantees the fix flows into state
+    // regardless of whether the mount-time getCurrentLocation won the race
+    // against the first paint.
     await page.getByRole('button', { name: /Find my location/i }).click();
 
     await expect(page.getByText(/Distance to destination/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/\d+(\.\d+)?\s*(km|m)\b/)).toBeVisible();
 
-    // The React-side markers (blue device + orange destination) render as
-    // MapLibre DOM markers; the guide line lives on the WebGL canvas.
-    const markerInfo = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('.maplibregl-marker svg path')).map((p) => {
-        const fill = getComputedStyle(p).fill;
-        return { fill };
-      });
-    });
-    const fills = markerInfo.map((m) => m.fill);
-    expect(fills.some((f) => /#2563eb|rgb\(37, 99, 235\)/i.test(f))).toBe(true); // blue device
-    expect(fills.some((f) => /#f97316|rgb\(249, 115, 22\)/i.test(f))).toBe(true); // orange dest
+    // MapLibre default markers render as `.maplibregl-marker` elements; the
+    // dashed guide line lives on the WebGL canvas. Both markers (device +
+    // destination) appear only after the map's async 'load' event, which can
+    // lag the page-level distance label — retry instead of counting once.
+    await expect(page.locator('.maplibregl-marker')).toHaveCount(2, { timeout: 15_000 });
 
-    const hasMapCanvas = await page.evaluate(() => {
-      return !!document.querySelector('.maplibregl-canvas, .maplibregl-canvas-container canvas');
-    });
+    const hasMapCanvas = await page.evaluate(
+      () => !!document.querySelector('.maplibregl-canvas, .maplibregl-canvas-container canvas')
+    );
     expect(hasMapCanvas).toBe(true);
+  });
+
+  test("records the arrival via I've Arrived and lands on the work session", async ({ page }) => {
+    const ticket = await getTicket();
+    await page.goto('/dashboard/my-work');
+    await openTicketCard(page);
+
+    await expect(page.getByRole('button', { name: "I've Arrived" })).toBeVisible({
+      timeout: 15_000
+    });
+    await page.getByRole('button', { name: "I've Arrived" }).click();
+
+    // Arrival transitions the ticket assigned → in_progress and the page
+    // auto-navigates to the work session screen.
+    await expect(page).toHaveURL(/\/dashboard\/work-session\/\d+/, { timeout: 15_000 });
+
+    const [row] = await db
+      .select({ status: tickets.status })
+      .from(tickets)
+      .where(eq(tickets.title, TICKET_TITLE));
+    expect(row?.status).toBe('in_progress');
+
+    // The arrival is journaled server-side as a worklog row (kind: 'location')
+    // scoped to this ticket's leg, with a "lat,lng ±accuracy" body from
+    // formatArrivalBody — a bare "no location fix" body would mean the GPS
+    // payload was dropped, i.e. the exact stale-closure regression this spec
+    // guards against.
+    const [log] = await db
+      .select({ body: ticketWorklog.body })
+      .from(ticketWorklog)
+      .innerJoin(ticketLegs, eq(ticketLegs.id, ticketWorklog.leg_id))
+      .where(eq(ticketLegs.ticket_id, ticket.id))
+      .orderBy(desc(ticketWorklog.id))
+      .limit(1);
+    expect(log?.body).toMatch(/^-?\d+(\.\d+)?,-?\d+(\.\d+)? ±\d+m$/);
   });
 
   test('does not draw a phantom marker or distance for a Null Island fix', async ({ browser }) => {
@@ -52,20 +118,23 @@ test.describe('en-route navigation', () => {
       geolocation: { latitude: 0, longitude: 0 },
       permissions: ['geolocation']
     });
-    const page: Page = await ctx.newPage();
-    await page.goto(`/dashboard/en-route/${TICKET_ID}`);
-    await expect(page.getByRole('heading', { name: /Install Fiber Router/i })).toBeVisible({
-      timeout: 15_000
-    });
+    try {
+      const page = await ctx.newPage();
+      const ticket = await getTicket();
+      await page.goto(`/dashboard/en-route/${ticket.id}`);
 
-    // Distance label must NOT appear — the (0,0) fix is rejected by
-    // isPlausibleFix, so distanceToDestination stays null.
-    await page.waitForTimeout(4000);
-    await expect(page.getByText(/Distance to destination/i)).toHaveCount(0);
-    await ctx.close();
+      await expect(page.getByRole('heading', { name: TICKET_TITLE })).toBeVisible({
+        timeout: 15_000
+      });
+
+      // Distance label must NOT appear — the (0,0) fix is rejected by
+      // isPlausibleFix, so distanceToDestination stays null. The canvas
+      // visibility doubles as the map-readiness signal before the absence
+      // check (no arbitrary sleep).
+      await expect(page.locator('.maplibregl-canvas').first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/Distance to destination/i)).toHaveCount(0);
+    } finally {
+      await ctx.close();
+    }
   });
 });
-
-// Silence the "unused import" lint by exporting the helper so it is bundled
-// alongside the login flow used elsewhere in the suite.
-export { loginAs };
