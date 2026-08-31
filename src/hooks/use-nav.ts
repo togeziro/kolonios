@@ -18,14 +18,20 @@ export function filterNavItemsByRole(
   permissions?: Permissions,
   isAdmin?: boolean
 ): NavItem[] {
-  return items
-    .filter((item) => canAccessItem(item, permissions, isAdmin))
-    .map((item) => {
-      if (item.items && item.items.length > 0) {
-        return { ...item, items: [...item.items] };
-      }
-      return item;
-    });
+  const visible: NavItem[] = [];
+  for (const item of items) {
+    if (!canAccessItem(item, permissions, isAdmin)) continue;
+    if (item.items && item.items.length > 0) {
+      const children = filterNavItemsByRole(item.items, permissions, isAdmin);
+      // A dropdown grouping whose children are all invisible disappears too;
+      // a parent that passes its own gate and keeps any child stays visible.
+      if (children.length === 0) continue;
+      visible.push({ ...item, items: children });
+    } else {
+      visible.push(item);
+    }
+  }
+  return visible;
 }
 
 export function useFilteredNavItems(

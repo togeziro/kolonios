@@ -106,16 +106,14 @@ describe('nav-config', () => {
     expect(branding?.module).toBe('settings');
   });
 
-  it('is visible through the Settings group to any user who sees the group (children are not module-filtered)', () => {
-    // filterNavItemsByRole gates only top-level items; a Branding child rides
-    // along whenever the parent Settings group is visible (e.g. users.view).
-    // Branding itself stays server-enforced: getBrandingSettingsFn requires
-    // settings.view and updateBrandingSettingsFn requires settings.edit.
+  it('is visible through the Settings group to any user who sees the group (children are filtered by module)', () => {
+    // Sub-menu entries obey the same canAccessItem rule as top-level items:
+    // users.view alone keeps the Users child but drops Branding (settings).
     const perms: Permissions = { users: { view: true } };
     const settings = filterNavItemsByRole(navItems, perms, false).find(
       (item) => item.title === 'Settings'
     );
-    expect(settings?.items?.map((item) => item.title)).toContain('Branding');
+    expect(settings?.items?.map((item) => item.title)).toEqual(['Users']);
   });
 
   it('hides the whole Settings group (with Branding) from non-admins without users.view', () => {
@@ -269,5 +267,150 @@ describe('filterNavItemsByRole', () => {
 
   it('empty permissions hides all module-gated items', () => {
     expect(filterNavItemsByRole(navItems, {}, false)).toEqual([]);
+  });
+
+  it('filters sub-menu items with the same canAccessItem rule (HR case)', () => {
+    // HR seed grants users.view (shared by the Settings parent and its Users
+    // child) but not role_groups.view nor storage.view: those two children
+    // disappear from the sub-menu.
+    const hrPerms: Permissions = {
+      overview: { view: true },
+      employees: { view: true },
+      users: { view: true },
+      settings: { view: true, edit: true }
+    };
+    const settings = filterNavItemsByRole(navItems, hrPerms, false).find(
+      (item) => item.title === 'Settings'
+    );
+    const titles = settings?.items?.map((item) => item.title) ?? [];
+    expect(titles).toContain('Users');
+    expect(titles).not.toContain('Role Groups');
+    expect(titles).not.toContain('Storage Settings');
+  });
+
+  it('hides a parent grouping whose children are all filtered out', () => {
+    // Synthetic grouping (the real config never orphans a parent this way:
+    // every dropdown keeps at least one child sharing the parent's module).
+    // The group passes its own gate but both children belong to other modules.
+    const items: NavItem[] = [
+      {
+        title: 'Group',
+        url: '/dashboard/group',
+        icon: 'settings',
+        isActive: false,
+        module: 'users',
+        items: [
+          {
+            title: 'Child A',
+            url: '/dashboard/group/a',
+            icon: 'settings',
+            isActive: false,
+            module: 'role_groups',
+            items: []
+          },
+          {
+            title: 'Child B',
+            url: '/dashboard/group/b',
+            icon: 'settings',
+            isActive: false,
+            module: 'storage',
+            items: []
+          }
+        ]
+      }
+    ];
+    expect(filterNavItemsByRole(items, { users: { view: true } }, false)).toEqual([]);
+  });
+
+  it('keeps a parent that is itself a link even when children are filtered', () => {
+    // The Tickets parent links to /dashboard/tickets/new with module
+    // 'tickets'; with tickets.view (but no jobs.view) the parent survives
+    // and only the Available Jobs child is dropped.
+    const perms: Permissions = { tickets: { view: true } };
+    const tickets = filterNavItemsByRole(navItems, perms, false).find(
+      (item) => item.title === 'Tickets'
+    );
+    expect(tickets).toBeDefined();
+    expect(tickets?.items?.map((item) => item.title)).toEqual(['New Ticket']);
+  });
+
+  it('preserves mixed-visibility children in order', () => {
+    const perms: Permissions = {
+      users: { view: true },
+      settings: { view: true },
+      audit_log: { view: true },
+      role_groups: { view: true }
+    };
+    const settings = filterNavItemsByRole(navItems, perms, false).find(
+      (item) => item.title === 'Settings'
+    );
+    expect(settings?.items?.map((item) => item.title)).toEqual([
+      'Users',
+      'Audit Log',
+      'Role Groups',
+      'Work Log Settings',
+      'Rate Limit Settings',
+      'Branding'
+    ]);
+  });
+
+  it('applies hiddenForAdmin to sub-menu items', () => {
+    const adminNav = filterNavItemsByRole(navItems, fullPerms, true);
+    const adminSettings = adminNav.find((item) => item.title === 'Settings');
+    for (const child of adminSettings?.items ?? []) {
+      expect(child.hiddenForAdmin ?? false).toBe(false);
+    }
+  });
+
+  it('filters nested children recursively (grandchildren of sub-items)', () => {
+    // NavItem recursion: a sub-item that itself has children must also be
+    // filtered by the same rule; here the grandchild lacks jobs.view.
+    const withGrandchild: NavItem[] = [
+      {
+        title: 'Tickets',
+        url: '/dashboard/tickets/new',
+        icon: 'workspace',
+        isActive: false,
+        module: 'tickets',
+        items: [
+          {
+            title: 'Wrapper',
+            url: '/dashboard/tickets/wrapper',
+            icon: 'workspace',
+            isActive: false,
+            module: 'tickets',
+            items: [
+              {
+                title: 'Hidden Grandchild',
+                url: '/dashboard/tickets/hidden',
+                icon: 'workspace',
+                isActive: false,
+                module: 'jobs',
+                items: []
+              },
+              {
+                title: 'Visible Grandchild',
+                url: '/dashboard/tickets/visible',
+                icon: 'workspace',
+                isActive: false,
+                module: 'tickets',
+                items: []
+              }
+            ]
+          }
+        ]
+      }
+    ];
+    const filtered = filterNavItemsByRole(withGrandchild, { tickets: { view: true } }, false);
+    expect(filtered).toHaveLength(1);
+    const wrapper = filtered[0].items?.[0];
+    expect(wrapper?.items?.map((item) => item.title)).toEqual(['Visible Grandchild']);
+  });
+
+  it('does not mutate the input items (originals keep their children)', () => {
+    const perms: Permissions = { tickets: { view: true } };
+    filterNavItemsByRole(navItems, perms, false);
+    const tickets = navItems.find((item) => item.title === 'Tickets');
+    expect(tickets?.items?.map((item) => item.title)).toEqual(['Available Jobs', 'New Ticket']);
   });
 });
