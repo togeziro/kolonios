@@ -128,15 +128,17 @@ describe('requirePermission', () => {
     await expect(requirePermission('products', 'view')).rejects.toThrow('Forbidden');
   });
 
-  it('passes for legacy admin role without a role group (fallback with warning)', async () => {
+  it('rejects legacy admin role without a role group (legacy shim closed)', async () => {
     mockSessionUser.role = 'admin';
     getUserRoleGroupMock.mockResolvedValue(null);
-    await expect(requirePermission('users', 'view')).resolves.toMatchObject({
-      user: { role: 'admin' }
-    });
+    await expect(requirePermission('users', 'view')).rejects.toThrow('Forbidden');
     expect(loggerMock.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: expect.any(String) }),
-      'User has admin role but no role group assignment'
+      expect.objectContaining({
+        userId: expect.any(String),
+        userRole: 'admin',
+        required: 'users.view'
+      }),
+      'route-guard: dashboard request without role group denied'
     );
   });
 
