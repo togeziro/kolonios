@@ -2,10 +2,13 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/lib/format';
 import { isRecordPaid } from '@/lib/domain/payroll';
+import { toPngDataUrl } from '@/lib/branding/assets';
 import { toMajor } from '../utils/money';
 
 export interface PayslipData {
   company: { name: string; address?: string; email?: string; phone?: string };
+  /** Base64 payload of the Branding light logo PNG; absent when unset. */
+  companyLogo?: string;
   employee: {
     code: string;
     name: string;
@@ -108,11 +111,16 @@ export interface PayslipFromRecordOptions {
   maskBankAccount?: boolean;
   /**
    * When true, allow preview for draft/processing/ready_to_pay records.
-   * Kerjoo's Calculate print () works on unpaid drafts; the employee
+   * Kerjoo's Calculate print ( ) works on unpaid drafts; the employee
    * self-service payslips route must keep this false so only paid/locked
    * are downloadable.
    */
   allowUnpaidPreview?: boolean;
+  /**
+   * Base64 payload of the Branding light logo PNG, threaded through to the
+   * HTML template and the PDF embed.
+   */
+  companyLogo?: string;
 }
 
 export function payslipFromRecord(
@@ -131,6 +139,7 @@ export function payslipFromRecord(
       : maskPayslipBankAccount(row.bank_account_number ?? '');
   return {
     company,
+    companyLogo: options.companyLogo,
     employee: {
       code: row.employee_code ?? row.employee_name ?? 'Employee',
       name: row.employee_name ?? 'Employee',
@@ -164,11 +173,20 @@ export function PayslipTemplate({ payslip }: { payslip: PayslipData }) {
   return (
     <article className='bg-card text-card-foreground mx-auto max-w-3xl space-y-6 rounded-xl border p-6 shadow-sm print:rounded-none print:border-0 print:shadow-none'>
       <header className='flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row'>
-        <div>
-          <h2 className='text-xl font-semibold'>{payslip.company.name}</h2>
-          {payslip.company.address && (
-            <p className='text-muted-foreground text-sm'>{payslip.company.address}</p>
+        <div className='flex items-start gap-3'>
+          {payslip.companyLogo && (
+            <img
+              src={toPngDataUrl(payslip.companyLogo)}
+              alt={payslip.company.name}
+              className='h-12 w-12 object-contain'
+            />
           )}
+          <div>
+            <h2 className='text-xl font-semibold'>{payslip.company.name}</h2>
+            {payslip.company.address && (
+              <p className='text-muted-foreground text-sm'>{payslip.company.address}</p>
+            )}
+          </div>
         </div>
         <div className='text-left sm:text-right'>
           <p className='text-muted-foreground text-sm uppercase tracking-wide'>
@@ -314,6 +332,29 @@ export async function createPayslipPdf(
   const bottom = 40;
   let page = document.addPage([pageWidth, pageHeight]);
   let y = 800;
+
+  // Branding light logo, top-left above the company name; skipped when no
+  // logo is configured or the PNG is malformed (logo must never block a
+  // payslip).
+  if (payslip.companyLogo) {
+    try {
+      const png = await document.embedPng(payslip.companyLogo);
+      // 48px square aligned to the header baseline; 14 lifts the image bottom
+      // so the logo visually centers against the first text line's cap height.
+      const logoSize = 48;
+      const logoBaselineOffset = 14;
+      page.drawImage(png, {
+        x: margin,
+        y: y - logoSize + logoBaselineOffset,
+        width: logoSize,
+        height: logoSize
+      });
+      y -= logoSize + 4;
+    } catch {
+      // fall through: text-only header
+    }
+  }
+
   const draw = (text: string, size = 10, isBold = false) => {
     const selectedFont = isBold ? bold : font;
     for (const line of wrapPdfText(text, selectedFont, size, maxWidth)) {

@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { setResponseHeaders } from '@tanstack/react-start/server';
 import { requirePermission } from '@/lib/auth/session';
 import { findPayrollRecordForPrint } from '@/lib/db/payroll';
-import { getCompanyProfile } from './settings';
+import { getCompanyProfile, getCompanyLogoBase64 } from './settings';
 import { isStaffRole } from './shared';
 import { payrollRecordIdSchema } from './validation';
 
@@ -18,8 +18,20 @@ export const getPayrollPayslipPrintFn = createServerFn({ method: 'GET' })
     // payslips page; staff and non-existing lookups both resolve to a null
     // record so the endpoint cannot probe other employees' payslips.
     if (isStaffRole(session.user.role)) {
-      return JSON.parse(JSON.stringify({ company: getCompanyProfile(), record: null }));
+      return JSON.parse(
+        JSON.stringify({
+          company: await getCompanyProfile(),
+          companyLogo: await getCompanyLogoBase64(),
+          record: null
+        })
+      );
     }
     const record = await findPayrollRecordForPrint({ id: data.id });
-    return JSON.parse(JSON.stringify({ company: getCompanyProfile(), record }));
+    return JSON.parse(
+      JSON.stringify({
+        company: await getCompanyProfile(),
+        companyLogo: await getCompanyLogoBase64(),
+        record
+      })
+    );
   });

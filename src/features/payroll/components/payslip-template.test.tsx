@@ -71,6 +71,32 @@ describe('PayslipTemplate', () => {
     expect(result.bytes.slice(0, 4)).toEqual(new Uint8Array([37, 80, 68, 70]));
   });
 
+  it('embeds the Branding light logo into the PDF when provided', async () => {
+    // 1x1 transparent PNG (IHDR 1x1, color type 6).
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    const result = await createPayslipPdf({ ...payslip, companyLogo: pngBase64 }, labels);
+    expect(result.bytes.slice(0, 4)).toEqual(new Uint8Array([37, 80, 68, 70]));
+
+    // pdf-lib serializes the embedded image as an XObject with /Subtype
+    // /Image; scan the raw PDF bytes for that marker.
+    const raw = Buffer.from(result.bytes).toString('latin1');
+    expect(raw.includes('/Image')).toBe(true);
+  });
+
+  it('renders the logo image in the HTML template when provided', () => {
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    render(<PayslipTemplate payslip={{ ...payslip, companyLogo: pngBase64 }} />);
+    const img = screen.getByRole('img', { name: 'Kolonios Labs' });
+    expect(img.getAttribute('src')).toBe(`data:image/png;base64,${pngBase64}`);
+  });
+
+  it('renders no logo image when none is configured (fallback)', () => {
+    render(<PayslipTemplate payslip={payslip} />);
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
   it('wraps long Unicode line items across pages without throwing', async () => {
     const result = await createPayslipPdf(
       {

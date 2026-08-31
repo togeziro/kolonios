@@ -2,9 +2,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '@/i18n/config';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from './app-sidebar';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } }
+});
 
 beforeEach(() => {
   window.matchMedia =
@@ -62,11 +67,13 @@ describe('AppSidebar footer', () => {
     } as never);
 
     render(
-      <I18nextProvider i18n={i18n}>
-        <SidebarProvider>
-          <AppSidebar />
-        </SidebarProvider>
-      </I18nextProvider>
+      <QueryClientProvider client={queryClient}>
+        <I18nextProvider i18n={i18n}>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </I18nextProvider>
+      </QueryClientProvider>
     );
 
     expect(screen.getByText('Budi Santoso')).toBeTruthy();

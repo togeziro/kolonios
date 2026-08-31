@@ -15,8 +15,8 @@ import {
 } from './service';
 
 describe('payroll service boundaries', () => {
-  it('returns a typed configured company profile with an explicit fallback', () => {
-    expect(getCompanyProfile()).toMatchObject({ name: expect.any(String) });
+  it('returns a typed configured company profile with an explicit fallback', async () => {
+    await expect(getCompanyProfile()).resolves.toMatchObject({ name: expect.any(String) });
   });
   it('prevents staff users from reading another employee payroll profile', () => {
     expect(() =>

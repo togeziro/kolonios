@@ -10,6 +10,7 @@ import {
 import { navItems } from '@/config/nav-config';
 import { useFilteredNavItems, useRoleGroupPermissions } from '@/hooks/use-nav';
 import { authClient, useSession } from '@/lib/auth/auth-client';
+import { BrandLogo, BrandName } from '@/features/branding/components/brand-logo';
 import { Link } from '@tanstack/react-router';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import * as React from 'react';
@@ -162,11 +163,11 @@ export default function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size='lg' asChild>
               <Link to='/dashboard/overview'>
-                <div className='bg-primary text-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-md'>
-                  <Icons.logo className='size-4' />
-                </div>
+                <BrandLogo className='size-8 shrink-0 rounded-md' />
                 <div className='grid flex-1 text-left text-sm leading-tight'>
-                  <span className='truncate font-semibold'>Kolonios</span>
+                  <span className='truncate font-semibold'>
+                    <BrandName fallback='Kolonios' />
+                  </span>
                   <span className='text-muted-foreground truncate text-xs'>
                     {t('navigation.dashboard')}
                   </span>
