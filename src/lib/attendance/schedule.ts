@@ -11,8 +11,19 @@ export type WeekdayScheduleRule = {
   isWorkingDay: boolean;
   startTime: string | null; // HH:MM
   endTime: string | null; // HH:MM
+};
+
+// ADR-0004: tolerance is shift-wide; passed alongside the per-day rules.
+export type ShiftPolicy = {
+  shiftId: number;
   lateToleranceMinutes: number;
   absenceCutoffMinutes: number;
+};
+
+export const DEFAULT_SHIFT_POLICY: ShiftPolicy = {
+  shiftId: -1,
+  lateToleranceMinutes: 5,
+  absenceCutoffMinutes: 120
 };
 
 export type ScheduleAssignment = {
@@ -78,11 +89,13 @@ function dayOfWeekFromDate(dateStr: string): number {
 export function resolveEffectiveSchedule(input: {
   assignment: ScheduleAssignment | null;
   weekdayRules: WeekdayScheduleRule[];
+  shiftPolicies?: ShiftPolicy[];
   dateOverrides: DateOverride[];
   dayOffs: string[]; // dates as YYYY-MM-DD
   date: string; // YYYY-MM-DD
 }): EffectiveSchedule | null {
-  const { assignment, weekdayRules, dateOverrides, dayOffs, date } = input;
+  const { assignment, weekdayRules, shiftPolicies, dateOverrides, dayOffs, date } = input;
+  const policies = shiftPolicies ?? [];
 
   if (!assignment) return null;
 
@@ -99,12 +112,18 @@ export function resolveEffectiveSchedule(input: {
   if (!rule) return null;
   if (!rule.isWorkingDay) return null;
 
+  // Pick the shift's policy (ADR-0004). Fall back to default if missing.
+  const policy = policies.find((p) => p.shiftId === effectiveShiftId) ?? {
+    ...DEFAULT_SHIFT_POLICY,
+    shiftId: effectiveShiftId
+  };
+
   return {
     shiftId: effectiveShiftId,
     startTime: rule.startTime!,
     endTime: rule.endTime!,
-    lateToleranceMinutes: rule.lateToleranceMinutes,
-    absenceCutoffMinutes: rule.absenceCutoffMinutes,
+    lateToleranceMinutes: policy.lateToleranceMinutes,
+    absenceCutoffMinutes: policy.absenceCutoffMinutes,
     isWorkingDay: true
   };
 }

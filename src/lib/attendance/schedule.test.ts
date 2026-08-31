@@ -7,6 +7,7 @@ import {
   isLocationStale,
   isAccuracyAcceptable,
   type EffectiveSchedule,
+  type ShiftPolicy,
   type WeekdayScheduleRule
 } from './schedule';
 
@@ -20,62 +21,56 @@ describe('resolveEffectiveSchedule', () => {
     effectiveTo: null
   };
 
+  const shiftPolicies: ShiftPolicy[] = [
+    {
+      shiftId: 1,
+      lateToleranceMinutes: 10,
+      absenceCutoffMinutes: 120
+    }
+  ];
+
   const weekdayRules: WeekdayScheduleRule[] = [
     {
       dayOfWeek: 1,
       isWorkingDay: true,
       startTime: '08:00',
-      endTime: '17:00',
-      lateToleranceMinutes: 10,
-      absenceCutoffMinutes: 120
+      endTime: '17:00'
     },
     {
       dayOfWeek: 2,
       isWorkingDay: true,
       startTime: '08:00',
-      endTime: '17:00',
-      lateToleranceMinutes: 10,
-      absenceCutoffMinutes: 120
+      endTime: '17:00'
     },
     {
       dayOfWeek: 3,
       isWorkingDay: true,
       startTime: '08:00',
-      endTime: '17:00',
-      lateToleranceMinutes: 10,
-      absenceCutoffMinutes: 120
+      endTime: '17:00'
     },
     {
       dayOfWeek: 4,
       isWorkingDay: true,
       startTime: '08:00',
-      endTime: '17:00',
-      lateToleranceMinutes: 10,
-      absenceCutoffMinutes: 120
+      endTime: '17:00'
     },
     {
       dayOfWeek: 5,
       isWorkingDay: true,
       startTime: '08:00',
-      endTime: '17:00',
-      lateToleranceMinutes: 10,
-      absenceCutoffMinutes: 120
+      endTime: '17:00'
     },
     {
       dayOfWeek: 6,
       isWorkingDay: false,
       startTime: null,
-      endTime: null,
-      lateToleranceMinutes: 0,
-      absenceCutoffMinutes: 0
+      endTime: null
     },
     {
       dayOfWeek: 0,
       isWorkingDay: false,
       startTime: null,
-      endTime: null,
-      lateToleranceMinutes: 0,
-      absenceCutoffMinutes: 0
+      endTime: null
     }
   ];
 
@@ -83,6 +78,7 @@ describe('resolveEffectiveSchedule', () => {
     const result = resolveEffectiveSchedule({
       assignment: null,
       weekdayRules: weekdayRules,
+      shiftPolicies,
       dateOverrides: [],
       dayOffs: [],
       date: '2026-08-04' // Tuesday
@@ -94,6 +90,7 @@ describe('resolveEffectiveSchedule', () => {
     const result = resolveEffectiveSchedule({
       assignment: baseAssignment,
       weekdayRules,
+      shiftPolicies,
       dateOverrides: [],
       dayOffs: [],
       date: '2026-08-04' // Tuesday (dayOfWeek=2)
@@ -108,6 +105,7 @@ describe('resolveEffectiveSchedule', () => {
     const result = resolveEffectiveSchedule({
       assignment: baseAssignment,
       weekdayRules,
+      shiftPolicies,
       dateOverrides: [],
       dayOffs: [],
       date: '2026-08-08' // Saturday (dayOfWeek=6)
@@ -119,6 +117,7 @@ describe('resolveEffectiveSchedule', () => {
     const result = resolveEffectiveSchedule({
       assignment: baseAssignment,
       weekdayRules,
+      shiftPolicies,
       dateOverrides: [],
       dayOffs: ['2026-08-04'], // Tuesday marked as day-off
       date: '2026-08-04'
@@ -133,6 +132,7 @@ describe('resolveEffectiveSchedule', () => {
     const result = resolveEffectiveSchedule({
       assignment: baseAssignment,
       weekdayRules,
+      shiftPolicies,
       dateOverrides: overrides,
       dayOffs: [],
       date: '2026-08-04'
@@ -148,6 +148,7 @@ describe('resolveEffectiveSchedule', () => {
     const result = resolveEffectiveSchedule({
       assignment: baseAssignment,
       weekdayRules,
+      shiftPolicies,
       dateOverrides: overrides,
       dayOffs: ['2026-08-04'],
       date: '2026-08-04'

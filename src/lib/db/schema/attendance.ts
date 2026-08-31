@@ -67,6 +67,15 @@ export const shifts = pgTable('shifts', {
   end_time: text('end_time').notNull(),
   type: shiftTypeEnum('type').default('fixed'),
   status: shiftStatusEnum('status').default('active'),
+  // Shift-wide break window (break is a property of the shift template)
+  break_start: text('break_start'), // HH:MM, null = no break
+  break_end: text('break_end'), // HH:MM, null = no break
+  max_break_minutes: integer('max_break_minutes'),
+  color: text('color'), // hex preset, null = neutral
+  note: text('note'),
+  // Shift-wide tolerance (ADR-0004): source of truth moved from weekday rules
+  late_tolerance_minutes: integer('late_tolerance_minutes').notNull().default(5),
+  absence_cutoff_minutes: integer('absence_cutoff_minutes').notNull().default(120),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });
@@ -164,8 +173,10 @@ export const shiftWeekdayRules = pgTable(
     is_working_day: boolean('is_working_day').default(true),
     start_time: text('start_time'), // HH:MM
     end_time: text('end_time'), // HH:MM
-    late_tolerance_minutes: integer('late_tolerance_minutes').default(0),
-    absence_cutoff_minutes: integer('absence_cutoff_minutes').default(120),
+    // Deprecated (ADR-0004): tolerance lives on the shift now; columns kept
+    // inert to avoid a destructive migration.
+    late_tolerance_minutes: integer('late_tolerance_minutes'),
+    absence_cutoff_minutes: integer('absence_cutoff_minutes'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull()
   },

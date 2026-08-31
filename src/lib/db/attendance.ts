@@ -1,4 +1,5 @@
 import { and, eq, or, gte, lte, sql, desc, asc } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { businessDateInTimeZone } from '@/lib/dates';
@@ -18,6 +19,7 @@ import {
 } from './schema/attendance';
 import { employees } from './schema/employees';
 import { departments } from './schema/masterdata';
+import { dailyChecklists } from './schema/checklists';
 import type {
   AttendanceCheckInPayload,
   AttendanceCheckOutPayload,
@@ -569,11 +571,20 @@ export async function getEffectiveEmployeeSchedule(
 
     const effectiveShiftId = override ? override.shift_id : assignment.shift_id;
 
-    // Get weekday rules for the EFFECTIVE shift (post-override)
+    // Get weekday rule AND the shift's policy for the EFFECTIVE shift (post-override).
+    // Tolerance lives on the shift (ADR-0004), so we read it from `shifts` not the
+    // deprecated weekday-rule columns.
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
-    const [rule] = await db
-      .select()
+    const [row] = await db
+      .select({
+        isWorkingDay: shiftWeekdayRules.is_working_day,
+        startTime: shiftWeekdayRules.start_time,
+        endTime: shiftWeekdayRules.end_time,
+        lateToleranceMinutes: shifts.late_tolerance_minutes,
+        absenceCutoffMinutes: shifts.absence_cutoff_minutes
+      })
       .from(shiftWeekdayRules)
+      .innerJoin(shifts, eq(shiftWeekdayRules.shift_id, shifts.id))
       .where(
         and(
           eq(shiftWeekdayRules.shift_id, effectiveShiftId),
@@ -582,14 +593,14 @@ export async function getEffectiveEmployeeSchedule(
       )
       .limit(1);
 
-    if (!rule || !rule.is_working_day) return null;
+    if (!row || !row.isWorkingDay) return null;
 
     return {
       shiftId: effectiveShiftId,
-      startTime: rule.start_time!,
-      endTime: rule.end_time!,
-      lateToleranceMinutes: rule.late_tolerance_minutes ?? 0,
-      absenceCutoffMinutes: rule.absence_cutoff_minutes ?? 120,
+      startTime: row.startTime!,
+      endTime: row.endTime!,
+      lateToleranceMinutes: row.lateToleranceMinutes,
+      absenceCutoffMinutes: row.absenceCutoffMinutes,
       isWorkingDay: true
     };
   } catch (e) {
@@ -603,8 +614,6 @@ export type ScheduleWeekdayRuleRow = {
   isWorkingDay: boolean;
   startTime: string | null;
   endTime: string | null;
-  lateToleranceMinutes: number;
-  absenceCutoffMinutes: number;
 };
 
 export type ScheduleMonthData = {
@@ -615,6 +624,7 @@ export type ScheduleMonthData = {
     shiftName: string | null;
   } | null;
   weekdayRules: ScheduleWeekdayRuleRow[];
+  shiftPolicies: { shiftId: number; lateToleranceMinutes: number; absenceCutoffMinutes: number }[];
   overrides: { date: string; shiftId: number }[];
   dayOffs: string[];
   holidays: { date: string; name: string; isRecurring: boolean }[];
@@ -649,16 +659,39 @@ export async function getMonthlyScheduleData(
     .limit(1);
 
   let weekdayRules: ScheduleWeekdayRuleRow[] = [];
+  let shiftPolicies:
+    | { shiftId: number; lateToleranceMinutes: number; absenceCutoffMinutes: number }[]
+    | [] = [];
   if (assignment) {
-    const result = await getShiftWeekdayRules(assignment.shiftId);
-    weekdayRules = (result.success ? result.rules : []).map((r) => ({
-      dayOfWeek: r.day_of_week,
-      isWorkingDay: r.is_working_day ?? true,
-      startTime: r.start_time,
-      endTime: r.end_time,
-      lateToleranceMinutes: r.late_tolerance_minutes ?? 0,
-      absenceCutoffMinutes: r.absence_cutoff_minutes ?? 120
-    }));
+    const [ruleResult, policyRow] = await Promise.all([
+      getShiftWeekdayRules(assignment.shiftId),
+      db
+        .select({
+          shiftId: shifts.id,
+          lateToleranceMinutes: shifts.late_tolerance_minutes,
+          absenceCutoffMinutes: shifts.absence_cutoff_minutes
+        })
+        .from(shifts)
+        .where(eq(shifts.id, assignment.shiftId))
+        .limit(1)
+    ]);
+    weekdayRules = ruleResult.success
+      ? ruleResult.rules.map((r) => ({
+          dayOfWeek: r.day_of_week,
+          isWorkingDay: r.is_working_day ?? true,
+          startTime: r.start_time,
+          endTime: r.end_time
+        }))
+      : [];
+    if (policyRow[0]) {
+      shiftPolicies = [
+        {
+          shiftId: policyRow[0].shiftId,
+          lateToleranceMinutes: policyRow[0].lateToleranceMinutes,
+          absenceCutoffMinutes: policyRow[0].absenceCutoffMinutes
+        }
+      ];
+    }
   }
 
   const overrides = await db
@@ -706,6 +739,7 @@ export async function getMonthlyScheduleData(
         }
       : null,
     weekdayRules,
+    shiftPolicies,
     overrides,
     dayOffs: dayOffRows.map((r) => r.date),
     holidays: holidayRows.map((r) => ({
@@ -923,13 +957,19 @@ export async function createSchedule(input: {
   startTime: string;
   endTime: string;
   type?: string;
+  breakStart?: string | null;
+  breakEnd?: string | null;
+  maxBreakMinutes?: number | null;
+  color?: string | null;
+  note?: string | null;
+  lateToleranceMinutes?: number;
+  absenceCutoffMinutes?: number;
+  status?: 'active' | 'inactive';
   weekdayRules?: Array<{
     dayOfWeek: number;
     isWorkingDay?: boolean;
     startTime?: string | null;
     endTime?: string | null;
-    lateToleranceMinutes?: number;
-    absenceCutoffMinutes?: number;
   }>;
 }) {
   try {
@@ -939,23 +979,39 @@ export async function createSchedule(input: {
         name: input.name,
         start_time: input.startTime,
         end_time: input.endTime,
-        type: (input.type ?? 'fixed') as 'fixed' | 'flexible'
+        type: (input.type ?? 'fixed') as 'fixed' | 'flexible',
+        break_start: input.breakStart ?? null,
+        break_end: input.breakEnd ?? null,
+        max_break_minutes: input.maxBreakMinutes ?? null,
+        color: input.color ?? null,
+        note: input.note ?? null,
+        // Tolerance is shift-wide (ADR-0004); defaults match ADR's "5 and 120"
+        late_tolerance_minutes: input.lateToleranceMinutes ?? 5,
+        absence_cutoff_minutes: input.absenceCutoffMinutes ?? 120,
+        status: input.status ?? 'active'
       })
       .returning();
 
-    if (input.weekdayRules && input.weekdayRules.length > 0) {
-      await db.insert(shiftWeekdayRules).values(
-        input.weekdayRules.map((r) => ({
-          shift_id: shift.id,
-          day_of_week: r.dayOfWeek,
-          is_working_day: r.isWorkingDay ?? true,
-          start_time: r.startTime ?? input.startTime,
-          end_time: r.endTime ?? input.endTime,
-          late_tolerance_minutes: r.lateToleranceMinutes ?? 0,
-          absence_cutoff_minutes: r.absenceCutoffMinutes ?? 120
-        }))
-      );
-    }
+    const rules =
+      input.weekdayRules && input.weekdayRules.length > 0
+        ? input.weekdayRules
+        : // Default: Mon-Fri working, Sat-Sun off, all using shift start/end times.
+          [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+            dayOfWeek,
+            isWorkingDay: dayOfWeek >= 1 && dayOfWeek <= 5,
+            startTime: input.startTime,
+            endTime: input.endTime
+          }));
+
+    await db.insert(shiftWeekdayRules).values(
+      rules.map((r) => ({
+        shift_id: shift.id,
+        day_of_week: r.dayOfWeek,
+        is_working_day: r.isWorkingDay ?? true,
+        start_time: r.startTime ?? input.startTime,
+        end_time: r.endTime ?? input.endTime
+      }))
+    );
 
     return { success: true, shift };
   } catch (e) {
@@ -971,52 +1027,157 @@ export async function updateSchedule(
     startTime?: string;
     endTime?: string;
     type?: string;
+    breakStart?: string | null;
+    breakEnd?: string | null;
+    maxBreakMinutes?: number | null;
+    color?: string | null;
+    note?: string | null;
+    lateToleranceMinutes?: number;
+    absenceCutoffMinutes?: number;
+    status?: 'active' | 'inactive';
     weekdayRules?: Array<{
       dayOfWeek: number;
       isWorkingDay?: boolean;
       startTime?: string | null;
       endTime?: string | null;
-      lateToleranceMinutes?: number;
-      absenceCutoffMinutes?: number;
     }>;
   }
 ) {
   try {
-    const patch: Record<string, unknown> = {};
-    if (input.name) patch.name = input.name;
-    if (input.startTime) patch.start_time = input.startTime;
-    if (input.endTime) patch.end_time = input.endTime;
-    if (input.type) patch.type = input.type;
+    await db.transaction(async (tx) => {
+      const patch: Record<string, unknown> = {};
+      if (input.name !== undefined) patch.name = input.name;
+      if (input.startTime !== undefined) patch.start_time = input.startTime;
+      if (input.endTime !== undefined) patch.end_time = input.endTime;
+      if (input.type !== undefined) patch.type = input.type;
+      if (input.breakStart !== undefined) patch.break_start = input.breakStart;
+      if (input.breakEnd !== undefined) patch.break_end = input.breakEnd;
+      if (input.maxBreakMinutes !== undefined) patch.max_break_minutes = input.maxBreakMinutes;
+      if (input.color !== undefined) patch.color = input.color;
+      if (input.note !== undefined) patch.note = input.note;
+      if (input.lateToleranceMinutes !== undefined)
+        patch.late_tolerance_minutes = input.lateToleranceMinutes;
+      if (input.absenceCutoffMinutes !== undefined)
+        patch.absence_cutoff_minutes = input.absenceCutoffMinutes;
+      if (input.status !== undefined) patch.status = input.status;
 
-    if (Object.keys(patch).length > 0) {
-      await db
-        .update(shifts)
-        .set({ ...patch, updated_at: new Date() })
-        .where(eq(shifts.id, id));
-    }
-
-    if (input.weekdayRules) {
-      await db.delete(shiftWeekdayRules).where(eq(shiftWeekdayRules.shift_id, id));
-      if (input.weekdayRules.length > 0) {
-        await db.insert(shiftWeekdayRules).values(
-          input.weekdayRules.map((r) => ({
-            shift_id: id,
-            day_of_week: r.dayOfWeek,
-            is_working_day: r.isWorkingDay ?? true,
-            start_time: r.startTime ?? input.startTime ?? null,
-            end_time: r.endTime ?? input.endTime ?? null,
-            late_tolerance_minutes: r.lateToleranceMinutes ?? 0,
-            absence_cutoff_minutes: r.absenceCutoffMinutes ?? 120
-          }))
-        );
+      if (Object.keys(patch).length > 0) {
+        await tx
+          .update(shifts)
+          .set({ ...patch, updated_at: new Date() })
+          .where(eq(shifts.id, id));
       }
-    }
+
+      if (input.weekdayRules) {
+        await tx.delete(shiftWeekdayRules).where(eq(shiftWeekdayRules.shift_id, id));
+        if (input.weekdayRules.length > 0) {
+          await tx.insert(shiftWeekdayRules).values(
+            input.weekdayRules.map((r) => ({
+              shift_id: id,
+              day_of_week: r.dayOfWeek,
+              is_working_day: r.isWorkingDay ?? true,
+              start_time: r.startTime ?? input.startTime ?? null,
+              end_time: r.endTime ?? input.endTime ?? null
+            }))
+          );
+        }
+      }
+    });
 
     return { success: true };
   } catch (e) {
     mapDbError(e, 'attendance.updateSchedule');
     return { success: false };
   }
+}
+
+export type ShiftListItem = Awaited<ReturnType<typeof listShifts>>['shifts'][number];
+
+export async function listShifts() {
+  try {
+    const rows = await db.select().from(shifts).orderBy(desc(shifts.created_at));
+    if (rows.length === 0) return { success: true, shifts: [] };
+
+    const shiftIds = rows.map((r) => r.id);
+
+    const [assignments, employeeShiftUses, checklistUses] = await Promise.all([
+      db
+        .select({ shift_id: scheduleAssignments.shift_id })
+        .from(scheduleAssignments)
+        .where(inArray(scheduleAssignments.shift_id, shiftIds)),
+      db
+        .select({ shift_id: employeeShifts.shift_id })
+        .from(employeeShifts)
+        .where(inArray(employeeShifts.shift_id, shiftIds)),
+      db
+        .select({ shift_id: dailyChecklists.shift_id })
+        .from(dailyChecklists)
+        .where(inArray(dailyChecklists.shift_id, shiftIds))
+    ]);
+
+    const usedIds = new Set<number>();
+    for (const row of [...assignments, ...employeeShiftUses, ...checklistUses]) {
+      if (row.shift_id != null) usedIds.add(row.shift_id);
+    }
+
+    return {
+      success: true,
+      shifts: rows.map((r) => ({ ...r, used: usedIds.has(r.id) }))
+    };
+  } catch (e) {
+    mapDbError(e, 'attendance.listShifts');
+    return { success: false, shifts: [] };
+  }
+}
+
+export async function deleteShift(id: number) {
+  try {
+    const [shift] = await db.select().from(shifts).where(eq(shifts.id, id)).limit(1);
+    if (!shift) {
+      return { success: false, reason: 'not_found' as const };
+    }
+
+    const usedRow = await isShiftUsed(id);
+    if (usedRow) {
+      // Soft delete: mark inactive, preserve history.
+      await db
+        .update(shifts)
+        .set({ status: 'inactive', updated_at: new Date() })
+        .where(eq(shifts.id, id));
+      return { success: true, mode: 'soft' as const, shiftId: id };
+    }
+
+    // Hard delete: no references — drop weekday rules then the shift.
+    await db.transaction(async (tx) => {
+      await tx.delete(shiftWeekdayRules).where(eq(shiftWeekdayRules.shift_id, id));
+      await tx.delete(shifts).where(eq(shifts.id, id));
+    });
+    return { success: true, mode: 'hard' as const, shiftId: id };
+  } catch (e) {
+    mapDbError(e, 'attendance.deleteShift');
+    return { success: false, reason: 'error' as const };
+  }
+}
+
+async function isShiftUsed(shiftId: number): Promise<boolean> {
+  const [assignment] = await db
+    .select({ id: scheduleAssignments.id })
+    .from(scheduleAssignments)
+    .where(eq(scheduleAssignments.shift_id, shiftId))
+    .limit(1);
+  if (assignment) return true;
+  const [employeeShift] = await db
+    .select({ id: employeeShifts.id })
+    .from(employeeShifts)
+    .where(eq(employeeShifts.shift_id, shiftId))
+    .limit(1);
+  if (employeeShift) return true;
+  const [checklist] = await db
+    .select({ id: dailyChecklists.id })
+    .from(dailyChecklists)
+    .where(eq(dailyChecklists.shift_id, shiftId))
+    .limit(1);
+  return Boolean(checklist);
 }
 
 export async function listScheduleAssignments(filters: {
