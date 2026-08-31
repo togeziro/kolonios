@@ -702,6 +702,11 @@ async function seedTickets() {
     .orderBy(customers.customer_code);
   const custWithCoords = custs.find((c) => c.latitude !== 0)?.id;
   const custNoCoords = custs.find((c) => c.latitude === 0)?.id;
+  if (!custWithCoords || !custNoCoords) {
+    throw new Error(
+      'Customers with/without coordinates missing for tickets seed — check seedCustomers()'
+    );
+  }
 
   await db.insert(employeeSkills).values([
     { user_id: techId, skill: 'Fiber Optic' },
@@ -721,10 +726,13 @@ async function seedTickets() {
         task_type: 'maintenance',
         status: 'assigned',
         priority: 'high',
+        customer_id: custWithCoords,
         location_id: locMap.get('Head Office') ?? null,
         due_at: due(1),
         estimated_minutes: 120,
         assigned_to: techId,
+        taken_by: techId,
+        taken_at: new Date(),
         created_by: adminId
       },
       {
