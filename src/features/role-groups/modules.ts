@@ -6,6 +6,14 @@ const MODULES = [
   { key: 'customers', label: 'Customers', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'employees', label: 'Employees', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'attendance', label: 'Attendance', actions: ['view'] },
+  {
+    key: 'attendance_admin',
+    label: 'Attendance Management',
+    actions: ['view', 'edit']
+  },
+  { key: 'checklist', label: 'Daily Checklist', actions: ['view', 'edit', 'approve'] },
+  { key: 'schedule', label: 'Schedule', actions: ['view'] },
+  { key: 'achievements', label: 'Achievements', actions: ['view'] },
   { key: 'leave', label: 'Leave', actions: ['view'] },
   { key: 'users', label: 'Users', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'departments', label: 'Departments', actions: ['view', 'add', 'edit', 'delete'] },
@@ -13,6 +21,7 @@ const MODULES = [
   { key: 'audit_log', label: 'Audit Log', actions: ['view'] },
   { key: 'role_groups', label: 'Role Groups', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'notifications', label: 'Notifications', actions: ['view'] },
+  { key: 'broadcast', label: 'Broadcast', actions: ['view'] },
   { key: 'holiday', label: 'Holiday Calendar', actions: ['view', 'add', 'edit', 'delete'] },
   { key: 'storage', label: 'Storage', actions: ['view', 'edit'] },
   { key: 'settings', label: 'Settings', actions: ['view', 'edit'] },
