@@ -248,29 +248,8 @@ export const locationDeleteSchema = z.object({
 });
 
 // --- Schedule management ---
-
-export const scheduleCreateSchema = z.object({
-  name: z.string().min(1).max(200),
-  startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
-  type: z.enum(['fixed', 'flexible']).optional(),
-  weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
-});
-
-export const scheduleUpdateSchema = z.object({
-  id: z.number().int().positive(),
-  name: z.string().min(1).max(200).optional(),
-  startTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
-    .optional(),
-  endTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
-    .optional(),
-  type: z.enum(['fixed', 'flexible']).optional(),
-  weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
-});
+// Replaced by shiftCreateSchema / shiftUpdateSchema / shiftDeleteSchema
+// (admin shift master CRUD, see top of file).
 
 // --- Assignments ---
 

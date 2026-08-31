@@ -10,7 +10,6 @@ import {
   leaveStatusSchema,
   locationCreateSchema,
   locationUpdateSchema,
-  scheduleCreateSchema,
   bulkAssignmentSchema,
   correctionRequestSchema,
   correctionReviewSchema,
@@ -230,33 +229,6 @@ describe('locationUpdateSchema', () => {
       locationUpdateSchema.safeParse({ id: 1, gpsValidationEnabled: false, selfieRequired: true })
         .success
     ).toBe(true);
-  });
-});
-
-describe('scheduleCreateSchema', () => {
-  it('requires name and time format', () => {
-    expect(
-      scheduleCreateSchema.safeParse({ name: 'Shift A', startTime: '08:00', endTime: '17:00' })
-        .success
-    ).toBe(true);
-    expect(scheduleCreateSchema.safeParse({ name: 'Shift A' }).success).toBe(false);
-    expect(
-      scheduleCreateSchema.safeParse({ name: 'Shift A', startTime: '8am', endTime: '17:00' })
-        .success
-    ).toBe(false);
-  });
-
-  it('validates weekday rules array', () => {
-    const base = { name: 'Shift A', startTime: '08:00', endTime: '17:00' };
-    expect(
-      scheduleCreateSchema.safeParse({
-        ...base,
-        weekdayRules: [{ dayOfWeek: 1, isWorkingDay: true, startTime: '08:00', endTime: '17:00' }]
-      }).success
-    ).toBe(true);
-    expect(
-      scheduleCreateSchema.safeParse({ ...base, weekdayRules: [{ dayOfWeek: 8 }] }).success
-    ).toBe(false);
   });
 });
 
