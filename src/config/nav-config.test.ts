@@ -98,6 +98,35 @@ describe('nav-config', () => {
     expect(workLog?.module).toBe('settings');
   });
 
+  it('nests Branding under a Settings dropdown gated by settings module', () => {
+    const settings = navItems.find((item) => item.title === 'Settings');
+    const branding = settings?.items?.find((item) => item.title === 'Branding');
+    expect(branding).toBeDefined();
+    expect(branding?.url).toBe('/dashboard/settings');
+    expect(branding?.module).toBe('settings');
+  });
+
+  it('is visible through the Settings group to any user who sees the group (children are not module-filtered)', () => {
+    // filterNavItemsByRole gates only top-level items; a Branding child rides
+    // along whenever the parent Settings group is visible (e.g. users.view).
+    // Branding itself stays server-enforced: getBrandingSettingsFn requires
+    // settings.view and updateBrandingSettingsFn requires settings.edit.
+    const perms: Permissions = { users: { view: true } };
+    const settings = filterNavItemsByRole(navItems, perms, false).find(
+      (item) => item.title === 'Settings'
+    );
+    expect(settings?.items?.map((item) => item.title)).toContain('Branding');
+  });
+
+  it('hides the whole Settings group (with Branding) from non-admins without users.view', () => {
+    const settings = filterNavItemsByRole(
+      navItems,
+      { settings: { view: true, edit: true } },
+      false
+    ).find((item) => item.title === 'Settings');
+    expect(settings).toBeUndefined();
+  });
+
   it('gates dropdown parents by their module so children inherit access', () => {
     const payroll = navItems.find((item) => item.title === 'Payroll');
     const attendance = navItems.find((item) => item.title === 'Attendance Management');
