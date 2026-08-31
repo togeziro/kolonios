@@ -19,7 +19,8 @@
     "pnpm-lock.yaml",
     "CHANGELOG.md",
     "src/lib/db/migrations/**",
-    "public/models/**"
+    "public/models/**",
+    ".playwright-mcp/**"
   ],
   "overrides": [
     {
