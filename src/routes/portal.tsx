@@ -11,7 +11,7 @@ export const Route = createFileRoute('/portal')({
       throw redirect({ to: '/auth/v2/sign-in' });
     }
     if (!portal.ok && portal.reason === 'not_customer') {
-      throw redirect({ to: '/dashboard/overview' });
+      throw redirect({ to: '/dashboard/overview', search: { denied: undefined } });
     }
     return { portal };
   },

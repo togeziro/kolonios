@@ -163,7 +163,7 @@ export default function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size='lg' asChild>
-              <Link to='/dashboard/overview'>
+              <Link to='/dashboard/overview' search={{ denied: undefined }}>
                 <BrandLogo className='size-8 shrink-0 rounded-md' />
                 <div className='grid flex-1 text-left text-sm leading-tight'>
                   <span className='truncate font-semibold'>

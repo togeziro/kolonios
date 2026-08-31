@@ -2,6 +2,7 @@ import {
   resolveEffectiveSchedule,
   type DateOverride,
   type ScheduleAssignment,
+  type ShiftPolicy,
   type WeekdayScheduleRule
 } from '@/lib/attendance/schedule';
 
@@ -19,6 +20,7 @@ export type ChecklistDayInput = {
   date: string; // YYYY-MM-DD business date
   assignment: Pick<ScheduleAssignment, 'shiftId' | 'effectiveFrom' | 'effectiveTo'> | null;
   weekdayRules: WeekdayScheduleRule[];
+  shiftPolicies: ShiftPolicy[];
   overrides: DateOverride[];
   dayOffs: string[];
   holidays: HolidayRow[];
@@ -60,6 +62,7 @@ export function resolveChecklistDay(input: ChecklistDayInput): ChecklistDayResol
         }
       : null,
     weekdayRules: input.weekdayRules,
+    shiftPolicies: input.shiftPolicies,
     dateOverrides: input.overrides,
     dayOffs: input.dayOffs,
     date

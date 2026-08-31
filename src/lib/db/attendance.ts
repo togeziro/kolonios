@@ -568,28 +568,39 @@ export async function getEffectiveEmployeeSchedule(
       .limit(1);
 
     const effectiveShiftId = override ? override.shift_id : assignment.shift_id;
-
-    // Get weekday rules for the EFFECTIVE shift (post-override)
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
-    const [rule] = await db
-      .select()
-      .from(shiftWeekdayRules)
-      .where(
-        and(
-          eq(shiftWeekdayRules.shift_id, effectiveShiftId),
-          eq(shiftWeekdayRules.day_of_week, dayOfWeek)
-        )
-      )
-      .limit(1);
 
-    if (!rule || !rule.is_working_day) return null;
+    // Shift-wide policy (ADR-0004) + weekday rule for the effective shift, in one round-trip
+    const [shiftRows, ruleRows] = await Promise.all([
+      db
+        .select({
+          lateToleranceMinutes: shifts.late_tolerance_minutes,
+          absenceCutoffMinutes: shifts.absence_cutoff_minutes
+        })
+        .from(shifts)
+        .where(eq(shifts.id, effectiveShiftId))
+        .limit(1),
+      db
+        .select()
+        .from(shiftWeekdayRules)
+        .where(
+          and(
+            eq(shiftWeekdayRules.shift_id, effectiveShiftId),
+            eq(shiftWeekdayRules.day_of_week, dayOfWeek)
+          )
+        )
+        .limit(1)
+    ]);
+    const shiftRow = shiftRows[0];
+    const rule = ruleRows[0];
+    if (!shiftRow || !rule || !rule.is_working_day) return null;
 
     return {
       shiftId: effectiveShiftId,
       startTime: rule.start_time!,
       endTime: rule.end_time!,
-      lateToleranceMinutes: rule.late_tolerance_minutes ?? 0,
-      absenceCutoffMinutes: rule.absence_cutoff_minutes ?? 120,
+      lateToleranceMinutes: shiftRow.lateToleranceMinutes,
+      absenceCutoffMinutes: shiftRow.absenceCutoffMinutes,
       isWorkingDay: true
     };
   } catch (e) {
@@ -598,14 +609,12 @@ export async function getEffectiveEmployeeSchedule(
   }
 }
 
-export type ScheduleWeekdayRuleRow = {
-  dayOfWeek: number;
-  isWorkingDay: boolean;
-  startTime: string | null;
-  endTime: string | null;
-  lateToleranceMinutes: number;
-  absenceCutoffMinutes: number;
-};
+import type { ShiftPolicy, WeekdayScheduleRule } from '@/lib/attendance/schedule';
+
+export type ScheduleWeekdayRuleRow = Pick<
+  WeekdayScheduleRule,
+  'dayOfWeek' | 'isWorkingDay' | 'startTime' | 'endTime'
+>;
 
 export type ScheduleMonthData = {
   assignment: {
@@ -615,6 +624,7 @@ export type ScheduleMonthData = {
     shiftName: string | null;
   } | null;
   weekdayRules: ScheduleWeekdayRuleRow[];
+  shiftPolicies: ShiftPolicy[];
   overrides: { date: string; shiftId: number }[];
   dayOffs: string[];
   holidays: { date: string; name: string; isRecurring: boolean }[];
@@ -649,15 +659,45 @@ export async function getMonthlyScheduleData(
     .limit(1);
 
   let weekdayRules: ScheduleWeekdayRuleRow[] = [];
+  let shiftPolicies: ScheduleMonthData['shiftPolicies'] = [];
   if (assignment) {
     const result = await getShiftWeekdayRules(assignment.shiftId);
     weekdayRules = (result.success ? result.rules : []).map((r) => ({
       dayOfWeek: r.day_of_week,
       isWorkingDay: r.is_working_day ?? true,
       startTime: r.start_time,
-      endTime: r.end_time,
-      lateToleranceMinutes: r.late_tolerance_minutes ?? 0,
-      absenceCutoffMinutes: r.absence_cutoff_minutes ?? 120
+      endTime: r.end_time
+    }));
+
+    // Shift-wide policy (ADR-0004): resolve from the assignment's shift row,
+    // or the override shift when the month's dates use overrides — the engine
+    // picks per-date via shiftPolicies keyed by shiftId.
+    const policyShiftIds = new Set<number>([assignment.shiftId]);
+    const monthOverrides = await db
+      .select({ shiftId: dateOverrides.shift_id })
+      .from(dateOverrides)
+      .where(
+        and(
+          eq(dateOverrides.user_id, userId),
+          gte(dateOverrides.date, monthStart),
+          lte(dateOverrides.date, monthEnd)
+        )
+      );
+    for (const o of monthOverrides) policyShiftIds.add(o.shiftId);
+
+    const policyRows = await db
+      .select({
+        shiftId: shifts.id,
+        lateToleranceMinutes: shifts.late_tolerance_minutes,
+        absenceCutoffMinutes: shifts.absence_cutoff_minutes
+      })
+      .from(shifts)
+      .where(or(...[...policyShiftIds].map((id) => eq(shifts.id, id))));
+
+    shiftPolicies = policyRows.map((r) => ({
+      shiftId: r.shiftId,
+      lateToleranceMinutes: r.lateToleranceMinutes,
+      absenceCutoffMinutes: r.absenceCutoffMinutes
     }));
   }
 
@@ -706,6 +746,7 @@ export async function getMonthlyScheduleData(
         }
       : null,
     weekdayRules,
+    shiftPolicies,
     overrides,
     dayOffs: dayOffRows.map((r) => r.date),
     holidays: holidayRows.map((r) => ({
@@ -923,13 +964,13 @@ export async function createSchedule(input: {
   startTime: string;
   endTime: string;
   type?: string;
+  lateToleranceMinutes?: number;
+  absenceCutoffMinutes?: number;
   weekdayRules?: Array<{
     dayOfWeek: number;
     isWorkingDay?: boolean;
     startTime?: string | null;
     endTime?: string | null;
-    lateToleranceMinutes?: number;
-    absenceCutoffMinutes?: number;
   }>;
 }) {
   try {
@@ -939,7 +980,10 @@ export async function createSchedule(input: {
         name: input.name,
         start_time: input.startTime,
         end_time: input.endTime,
-        type: (input.type ?? 'fixed') as 'fixed' | 'flexible'
+        type: (input.type ?? 'fixed') as 'fixed' | 'flexible',
+        // Tolerance is shift-wide (ADR-0004); defaults match ADR's "5 and 120"
+        late_tolerance_minutes: input.lateToleranceMinutes ?? 5,
+        absence_cutoff_minutes: input.absenceCutoffMinutes ?? 120
       })
       .returning();
 
@@ -950,9 +994,7 @@ export async function createSchedule(input: {
           day_of_week: r.dayOfWeek,
           is_working_day: r.isWorkingDay ?? true,
           start_time: r.startTime ?? input.startTime,
-          end_time: r.endTime ?? input.endTime,
-          late_tolerance_minutes: r.lateToleranceMinutes ?? 0,
-          absence_cutoff_minutes: r.absenceCutoffMinutes ?? 120
+          end_time: r.endTime ?? input.endTime
         }))
       );
     }
@@ -971,13 +1013,13 @@ export async function updateSchedule(
     startTime?: string;
     endTime?: string;
     type?: string;
+    lateToleranceMinutes?: number;
+    absenceCutoffMinutes?: number;
     weekdayRules?: Array<{
       dayOfWeek: number;
       isWorkingDay?: boolean;
       startTime?: string | null;
       endTime?: string | null;
-      lateToleranceMinutes?: number;
-      absenceCutoffMinutes?: number;
     }>;
   }
 ) {
@@ -987,6 +1029,10 @@ export async function updateSchedule(
     if (input.startTime) patch.start_time = input.startTime;
     if (input.endTime) patch.end_time = input.endTime;
     if (input.type) patch.type = input.type;
+    if (input.lateToleranceMinutes !== undefined)
+      patch.late_tolerance_minutes = input.lateToleranceMinutes;
+    if (input.absenceCutoffMinutes !== undefined)
+      patch.absence_cutoff_minutes = input.absenceCutoffMinutes;
 
     if (Object.keys(patch).length > 0) {
       await db
@@ -1004,9 +1050,7 @@ export async function updateSchedule(
             day_of_week: r.dayOfWeek,
             is_working_day: r.isWorkingDay ?? true,
             start_time: r.startTime ?? input.startTime ?? null,
-            end_time: r.endTime ?? input.endTime ?? null,
-            late_tolerance_minutes: r.lateToleranceMinutes ?? 0,
-            absence_cutoff_minutes: r.absenceCutoffMinutes ?? 120
+            end_time: r.endTime ?? input.endTime ?? null
           }))
         );
       }

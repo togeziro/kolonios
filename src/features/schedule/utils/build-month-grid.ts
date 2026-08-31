@@ -44,9 +44,7 @@ export function buildMonthGrid(month: string, data: ScheduleMonthData): MonthGri
       dayOfWeek: r.dayOfWeek,
       isWorkingDay: r.isWorkingDay,
       startTime: r.startTime,
-      endTime: r.endTime,
-      lateToleranceMinutes: r.lateToleranceMinutes,
-      absenceCutoffMinutes: r.absenceCutoffMinutes
+      endTime: r.endTime
     })
   );
 
@@ -60,6 +58,7 @@ export function buildMonthGrid(month: string, data: ScheduleMonthData): MonthGri
     const resolved = resolveEffectiveSchedule({
       assignment,
       weekdayRules,
+      shiftPolicies: data.shiftPolicies,
       dateOverrides: override ? [override] : [],
       dayOffs: dayOffSet.has(date) ? [date] : [],
       date

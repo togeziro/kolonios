@@ -5,16 +5,8 @@ function base(overrides: Partial<ChecklistDayInput> = {}): ChecklistDayInput {
   return {
     date: '2026-08-12', // Wednesday
     assignment: { shiftId: 1, effectiveFrom: '2026-01-01', effectiveTo: null },
-    weekdayRules: [
-      {
-        dayOfWeek: 3,
-        isWorkingDay: true,
-        startTime: '08:00',
-        endTime: '17:00',
-        lateToleranceMinutes: 10,
-        absenceCutoffMinutes: 120
-      }
-    ],
+    weekdayRules: [{ dayOfWeek: 3, isWorkingDay: true, startTime: '08:00', endTime: '17:00' }],
+    shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
     overrides: [],
     dayOffs: [],
     holidays: [],

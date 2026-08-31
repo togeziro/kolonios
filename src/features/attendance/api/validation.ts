@@ -75,9 +75,7 @@ export const weekdayScheduleRuleSchema = z.object({
     .string()
     .regex(/^\d{2}:\d{2}(:\d{2})?$/)
     .nullable()
-    .optional(),
-  lateToleranceMinutes: z.number().int().min(0).optional(),
-  absenceCutoffMinutes: z.number().int().min(0).optional()
+    .optional()
 });
 
 export const scheduleAssignmentSchema = z.object({
@@ -157,6 +155,9 @@ export const scheduleCreateSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   type: z.enum(['fixed', 'flexible']).optional(),
+  // Shift-wide tolerance (ADR-0004)
+  lateToleranceMinutes: z.number().int().min(0).optional(),
+  absenceCutoffMinutes: z.number().int().min(0).optional(),
   weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
 });
 
@@ -172,6 +173,9 @@ export const scheduleUpdateSchema = z.object({
     .regex(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional(),
   type: z.enum(['fixed', 'flexible']).optional(),
+  // Shift-wide tolerance (ADR-0004)
+  lateToleranceMinutes: z.number().int().min(0).optional(),
+  absenceCutoffMinutes: z.number().int().min(0).optional(),
   weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
 });
 

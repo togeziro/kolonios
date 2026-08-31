@@ -175,7 +175,15 @@ export async function seedLocation(overrides: Partial<typeof locations.$inferIns
 export async function seedShift(overrides: Partial<typeof shifts.$inferInsert> = {}) {
   const [s] = await db
     .insert(shifts)
-    .values({ name: 'Morning', start_time: '09:00', end_time: '17:00', ...overrides })
+    .values({
+      name: 'Morning',
+      start_time: '09:00',
+      end_time: '17:00',
+      // Shift-wide tolerance (ADR-0004) — weekday rules no longer carry it
+      late_tolerance_minutes: 0,
+      absence_cutoff_minutes: 120,
+      ...overrides
+    })
     .returning();
   return s;
 }
@@ -319,8 +327,6 @@ export async function seedShiftWeekdayRule(
       is_working_day: true,
       start_time: '09:00',
       end_time: '17:00',
-      late_tolerance_minutes: 0,
-      absence_cutoff_minutes: 120,
       ...overrides
     })
     .returning();

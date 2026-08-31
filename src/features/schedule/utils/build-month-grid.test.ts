@@ -11,23 +11,10 @@ function monthData(overrides: Partial<ScheduleMonthData> = {}): ScheduleMonthDat
       shiftName: 'Morning'
     },
     weekdayRules: [
-      {
-        dayOfWeek: 1,
-        isWorkingDay: true,
-        startTime: '08:00',
-        endTime: '17:00',
-        lateToleranceMinutes: 10,
-        absenceCutoffMinutes: 120
-      },
-      {
-        dayOfWeek: 6,
-        isWorkingDay: false,
-        startTime: null,
-        endTime: null,
-        lateToleranceMinutes: 0,
-        absenceCutoffMinutes: 120
-      }
+      { dayOfWeek: 1, isWorkingDay: true, startTime: '08:00', endTime: '17:00' },
+      { dayOfWeek: 6, isWorkingDay: false, startTime: null, endTime: null }
     ],
+    shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
     overrides: [],
     dayOffs: [],
     holidays: [],
@@ -80,12 +67,29 @@ describe('buildMonthGrid', () => {
   it('keeps the day resolvable when a date override targets the same weekday rule', () => {
     const cells = buildMonthGrid(
       '2026-08',
-      monthData({ overrides: [{ date: '2026-08-03', shiftId: 2 }] })
+      monthData({
+        overrides: [{ date: '2026-08-03', shiftId: 2 }],
+        shiftPolicies: [
+          { shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 },
+          { shiftId: 2, lateToleranceMinutes: 5, absenceCutoffMinutes: 60 }
+        ]
+      })
     );
     const monday = cells.find((c) => c.date === '2026-08-03');
     // resolveEffectiveSchedule picks the weekday rule by dayOfWeek (first match),
     // so hours come from the single Monday rule regardless of the override.
     expect(monday?.isWorkingDay).toBe(true);
     expect(monday?.startTime).toBe('08:00');
+    // Tolerance comes from the override shift's policy (ADR-0004)
+    expect(monday?.lateToleranceMinutes).toBe(5);
+  });
+
+  it('falls back to zero tolerance when the override shift has no policy', () => {
+    const cells = buildMonthGrid(
+      '2026-08',
+      monthData({ overrides: [{ date: '2026-08-03', shiftId: 2 }] })
+    );
+    const monday = cells.find((c) => c.date === '2026-08-03');
+    expect(monday?.lateToleranceMinutes).toBe(0);
   });
 });

@@ -179,21 +179,27 @@ async function seedMasterdata() {
       start_time: '08:00',
       end_time: '17:00',
       type: 'fixed' as const,
-      status: 'active' as const
+      status: 'active' as const,
+      late_tolerance_minutes: 10,
+      absence_cutoff_minutes: 120
     },
     {
       name: 'Afternoon Shift',
       start_time: '13:00',
       end_time: '22:00',
       type: 'fixed' as const,
-      status: 'active' as const
+      status: 'active' as const,
+      late_tolerance_minutes: 10,
+      absence_cutoff_minutes: 120
     },
     {
       name: 'Night Shift',
       start_time: '22:00',
       end_time: '06:00',
       type: 'fixed' as const,
-      status: 'active' as const
+      status: 'active' as const,
+      late_tolerance_minutes: 10,
+      absence_cutoff_minutes: 120
     }
   ] satisfies NewShift[];
 
@@ -1091,14 +1097,18 @@ async function seedAttendanceSchedules() {
   const morning = shiftsRows.find((s) => s.name === 'Morning Shift');
   if (!morning) throw new Error('Morning Shift not found for schedule seed');
 
+  // Shift-wide tolerance (ADR-0004) — update the shift row itself
+  await db
+    .update(shifts)
+    .set({ late_tolerance_minutes: 10, absence_cutoff_minutes: 120, updated_at: new Date() })
+    .where(eq(shifts.id, morning.id));
+
   const weekdayRules = [1, 2, 3, 4, 5].map((day) => ({
     shift_id: morning.id,
     day_of_week: day,
     is_working_day: true,
     start_time: '08:00',
-    end_time: '17:00',
-    late_tolerance_minutes: 10,
-    absence_cutoff_minutes: 120
+    end_time: '17:00'
   }));
   await db.insert(shiftWeekdayRules).values(weekdayRules);
   console.log(`Seeded ${weekdayRules.length} weekday rules for Morning Shift`);

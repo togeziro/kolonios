@@ -11,6 +11,14 @@ export type WeekdayScheduleRule = {
   isWorkingDay: boolean;
   startTime: string | null; // HH:MM
   endTime: string | null; // HH:MM
+};
+
+/**
+ * Shift-wide attendance policy (ADR-0004): late tolerance and absence cutoff
+ * belong to the Shift, not to an individual weekday.
+ */
+export type ShiftPolicy = {
+  shiftId: number;
   lateToleranceMinutes: number;
   absenceCutoffMinutes: number;
 };
@@ -78,11 +86,12 @@ function dayOfWeekFromDate(dateStr: string): number {
 export function resolveEffectiveSchedule(input: {
   assignment: ScheduleAssignment | null;
   weekdayRules: WeekdayScheduleRule[];
+  shiftPolicies: ShiftPolicy[];
   dateOverrides: DateOverride[];
   dayOffs: string[]; // dates as YYYY-MM-DD
   date: string; // YYYY-MM-DD
 }): EffectiveSchedule | null {
-  const { assignment, weekdayRules, dateOverrides, dayOffs, date } = input;
+  const { assignment, weekdayRules, shiftPolicies, dateOverrides, dayOffs, date } = input;
 
   if (!assignment) return null;
 
@@ -99,12 +108,16 @@ export function resolveEffectiveSchedule(input: {
   if (!rule) return null;
   if (!rule.isWorkingDay) return null;
 
+  // Tolerance is a property of the effective shift (ADR-0004)
+  const policy = shiftPolicies.find((p) => p.shiftId === effectiveShiftId);
+  if (!policy) return null;
+
   return {
     shiftId: effectiveShiftId,
     startTime: rule.startTime!,
     endTime: rule.endTime!,
-    lateToleranceMinutes: rule.lateToleranceMinutes,
-    absenceCutoffMinutes: rule.absenceCutoffMinutes,
+    lateToleranceMinutes: policy.lateToleranceMinutes,
+    absenceCutoffMinutes: policy.absenceCutoffMinutes,
     isWorkingDay: true
   };
 }

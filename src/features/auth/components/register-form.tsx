@@ -53,7 +53,7 @@ export default function RegisterForm() {
           toast.error(error.message || 'Registration failed');
         } else {
           await queryClient.invalidateQueries({ queryKey: ['settings', 'locale'] });
-          router.navigate({ to: '/dashboard/overview' });
+          router.navigate({ to: '/dashboard/overview', search: { denied: undefined } });
         }
       });
     }

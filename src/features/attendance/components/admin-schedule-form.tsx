@@ -13,14 +13,15 @@ export interface WeekdayRuleForm {
   isWorkingDay: boolean;
   startTime: string;
   endTime: string;
-  lateToleranceMinutes: number;
-  absenceCutoffMinutes: number;
 }
 
 export interface ScheduleFormState {
   name: string;
   startTime: string;
   endTime: string;
+  // Shift-wide tolerance (ADR-0004); per-day tolerance is deprecated.
+  lateToleranceMinutes: number;
+  absenceCutoffMinutes: number;
   weekdayRules: WeekdayRuleForm[];
 }
 
@@ -28,13 +29,13 @@ const emptyForm: ScheduleFormState = {
   name: '',
   startTime: '08:00',
   endTime: '17:00',
+  lateToleranceMinutes: 5,
+  absenceCutoffMinutes: 120,
   weekdayRules: [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
     dayOfWeek,
     isWorkingDay: dayOfWeek >= 1 && dayOfWeek <= 5,
     startTime: '08:00',
-    endTime: '17:00',
-    lateToleranceMinutes: 10,
-    absenceCutoffMinutes: 120
+    endTime: '17:00'
   }))
 };
 
@@ -69,6 +70,8 @@ export function ScheduleForm() {
           name: form.name,
           startTime: form.startTime,
           endTime: form.endTime,
+          lateToleranceMinutes: form.lateToleranceMinutes,
+          absenceCutoffMinutes: form.absenceCutoffMinutes,
           weekdayRules: form.weekdayRules
         }
       }),
@@ -125,6 +128,29 @@ export function ScheduleForm() {
           </div>
         </div>
 
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <div className='space-y-2'>
+            <Label htmlFor='sch-tol-late'>{t('attendanceAdmin.lateTolerance')}</Label>
+            <Input
+              id='sch-tol-late'
+              type='number'
+              min={0}
+              value={form.lateToleranceMinutes}
+              onChange={(e) => set('lateToleranceMinutes', Number(e.target.value))}
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='sch-tol-cutoff'>{t('attendanceAdmin.absenceCutoff')}</Label>
+            <Input
+              id='sch-tol-cutoff'
+              type='number'
+              min={0}
+              value={form.absenceCutoffMinutes}
+              onChange={(e) => set('absenceCutoffMinutes', Number(e.target.value))}
+            />
+          </div>
+        </div>
+
         <div className='space-y-2'>
           <Label>{t('attendanceAdmin.workingDay')}</Label>
           {form.weekdayRules.map((rule, i) => (
@@ -152,24 +178,6 @@ export function ScheduleForm() {
                 value={rule.endTime}
                 onChange={(e) => setRule(i, { endTime: e.target.value })}
                 className='rounded-md border px-2 py-1 text-sm'
-                disabled={!rule.isWorkingDay}
-              />
-              <input
-                type='number'
-                min={0}
-                value={rule.lateToleranceMinutes}
-                onChange={(e) => setRule(i, { lateToleranceMinutes: Number(e.target.value) })}
-                className='w-24 rounded-md border px-2 py-1 text-sm'
-                placeholder={t('attendanceAdmin.lateTolerance')}
-                disabled={!rule.isWorkingDay}
-              />
-              <input
-                type='number'
-                min={0}
-                value={rule.absenceCutoffMinutes}
-                onChange={(e) => setRule(i, { absenceCutoffMinutes: Number(e.target.value) })}
-                className='w-24 rounded-md border px-2 py-1 text-sm'
-                placeholder={t('attendanceAdmin.absenceCutoff')}
                 disabled={!rule.isWorkingDay}
               />
             </div>
