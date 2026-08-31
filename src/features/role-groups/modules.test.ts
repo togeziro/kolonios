@@ -54,4 +54,8 @@ describe('role permission modules', () => {
       expect(MODULES.find((m) => m.key === key)?.actions).toEqual(['view']);
     }
   });
+
+  it('exposes the personal payslips module as view-only', () => {
+    expect(MODULES.find((m) => m.key === 'payslips')?.actions).toEqual(['view']);
+  });
 });

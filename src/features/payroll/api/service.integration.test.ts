@@ -82,7 +82,10 @@ const sessionUser = vi.hoisted(() => ({ id: 'payroll-boundary-a', role: 'employe
 const getSessionMock = vi.hoisted(() => vi.fn(async () => ({ user: sessionUser })));
 const getRequestHeadersMock = vi.hoisted(() => vi.fn(() => new Headers()));
 const getUserRoleGroupMock = vi.hoisted(() =>
-  vi.fn(async () => ({ is_admin: false, permissions: { payroll: { view: true, edit: true } } }))
+  vi.fn(async () => ({
+    is_admin: false,
+    permissions: { payroll: { view: true, edit: true }, payslips: { view: true } }
+  }))
 );
 const serverFnProvider = vi.hoisted(() => ({
   handler: undefined as ((options: { data: unknown }) => unknown) | undefined
@@ -166,6 +169,28 @@ describe('getMyPayslipsFn authenticated boundary', () => {
   });
 
   afterAll(resetPayrollTables);
+
+  it('denies a user with only payroll.view (no payslips.view)', async () => {
+    getUserRoleGroupMock.mockResolvedValueOnce({
+      is_admin: false,
+      permissions: { payroll: { view: true } }
+    } as never);
+    await expect(
+      getMyPayslipsFn({ data: { payrollPeriodId: undefined, page: 1, limit: 50 } })
+    ).rejects.toThrow();
+    expect(getUserRoleGroupMock).toHaveBeenCalled();
+  });
+
+  it('allows a user with payslips.view (no payroll.view)', async () => {
+    getUserRoleGroupMock.mockResolvedValueOnce({
+      is_admin: false,
+      permissions: { payslips: { view: true } }
+    } as never);
+    const result = await getMyPayslipsFn({
+      data: { payrollPeriodId: undefined, page: 1, limit: 50 }
+    });
+    expect(result).toBeDefined();
+  });
 
   it('returns only employee A paid/locked payslips when the request attempts employee B scope', async () => {
     const department = await seedDepartment({ code: 'PAY-BOUNDARY-DEPT' });
