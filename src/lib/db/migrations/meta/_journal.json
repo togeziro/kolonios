@@ -232,6 +232,13 @@
       "when": 1788500000000,
       "tag": "0032_payslips_module_split",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788212813032,
+      "tag": "0033_legal_cardiac",
+      "breakpoints": true
     }
   ]
 }
