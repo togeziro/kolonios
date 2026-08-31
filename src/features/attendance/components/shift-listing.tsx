@@ -157,10 +157,10 @@ export function ShiftListing() {
       </DataTableCard>
 
       <ShiftFormSheet open={addOpen} onOpenChange={setAddOpen} />
-      {editingShiftId !== undefined && (
+      {editingShiftId !== null && (
         <ShiftFormSheet
           shiftId={editingShiftId}
-          open={editingShiftId !== undefined}
+          open={editingShiftId !== null}
           onOpenChange={(open) => !open && setEditingShiftId(null)}
         />
       )}
