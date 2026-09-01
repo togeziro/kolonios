@@ -94,6 +94,11 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
     action: 'edit'
   },
   {
+    pattern: /^\/dashboard\/admin\/attendance\/schedule-grid$/,
+    module: 'attendance_admin',
+    action: 'edit'
+  },
+  {
     pattern: /^\/dashboard\/admin\/attendance\/locations$/,
     module: 'attendance_admin',
     action: 'edit'
