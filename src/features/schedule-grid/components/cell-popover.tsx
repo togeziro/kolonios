@@ -24,7 +24,6 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -40,11 +39,9 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { businessDateInTimeZone } from '@/lib/dates';
-import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { cn } from '@/lib/utils';
 
 import type { ScheduleGridCell as GridCellData } from '../api/types';
-import { WEEKEND_DAYS } from '../utils/constants';
 import { addDays, dayOfWeek } from '../utils/date-utils';
 import {
   useApplyToWholeWeek,
@@ -53,15 +50,6 @@ import {
   useSetCellShift
 } from '../api/write-mutations';
 import { useEligibleShiftsForDay } from '../api/shifts-queries';
-
-export type DayShiftOption = {
-  shiftId: number;
-  shiftName: string;
-  startTime: string;
-  endTime: string;
-  lateToleranceMinutes: number;
-  absenceCutoffMinutes: number;
-};
 
 export type CellPopoverProps = {
   employeeId: string;
@@ -75,9 +63,7 @@ export type CellPopoverProps = {
  * `attendance.weekXxx` translations for the weekday name.
  */
 function formatDateHeading(date: string, t: (key: string) => string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  const utc = new Date(Date.UTC(y, m - 1, d));
-  const dow = utc.getUTCDay();
+  const dow = dayOfWeek(date);
   const weekdayKeys = [
     'attendance.weekSun',
     'attendance.weekMon',
@@ -87,23 +73,11 @@ function formatDateHeading(date: string, t: (key: string) => string): string {
     'attendance.weekFri',
     'attendance.weekSat'
   ];
-  const weekday = t(weekdayKeys[dow] ?? 'attendance.weekSun');
-  return `${weekday} · ${date}`;
+  return `${t(weekdayKeys[dow]!)} · ${date}`;
 }
 
-/** Returns the cell payload after a write in a way the popover can cache. */
-type CellWriteReturn = {
-  success: boolean;
-  cell?: GridCellData;
-  affectedUserId?: string;
-  affectedDates?: string[];
-  error?: string;
-  daysApplied?: number;
-  partialFailures?: Array<{ date: string; error: string }>;
-};
-
 export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [shiftId, setShiftId] = useState<string>(
     cell.shiftId != null ? String(cell.shiftId) : ''
@@ -111,9 +85,6 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   const [isDayOffToggle, setIsDayOffToggle] = useState<boolean>(cell.isDayOff);
   const [dayOffReason, setDayOffReason] = useState<string>(cell.dayOffReason ?? '');
   const [applyToWeek, setApplyToWeek] = useState<boolean>(false);
-
-  // Mutations — composed via `mergeMutationCallbacks` (per repo convention).
-  const queryClient = useQueryClient();
 
   const today = businessDateInTimeZone(new Date());
   const isPastDate = cell.date < today;
@@ -130,21 +101,14 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   const weekDates: string[] = [];
   for (let i = 0; i < 7; i += 1) weekDates.push(addDays(cell.date, -dayOfWeek(cell.date) + i));
 
-  // Which of the 7 days the chosen shift has a weekday rule for.
-  const shiftEligibleDays = (() => {
-    if (!shiftId) return new Set<number>();
-    // We rely on the server's `dayShifts` (filtered to the cell's day-of-week).
-    // For bulk apply we approximate by checking which of the 7 days have at
-    // least one shift option available — this is the same conservative gate
-    // ticket-02's acceptance criteria asks for.
-    return new Set([dayOfWeek(cell.date)]);
-  })();
-  const applyToWeekEligible =
-    !shiftId || weekDates.every((d) => shiftEligibleDays.has(dayOfWeek(d)));
+  // Apply-to-week is gated server-side by `applyToWholeWeekFn` (which
+  // deletes any existing override/day-off per day and skips weekends per
+  // `WEEKEND_DAYS`). The client only disables the toggle when no shift is
+  // selected.
+  const applyToWeekEligible = isDayOffToggle || !!shiftId;
 
   const isConflict = cell.isDayOff;
   const hasOverrideOrDayOff = cell.isDayOff || cell.shiftId != null;
-  const hasOrphanDayOff = cell.isDayOff; // current shape: cell.isDayOff true == day_off row exists
 
   // Past-date toast helper — fires on any successful save.
   const firePastDateToast = () => {
@@ -154,23 +118,23 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   const handleSaveShift = async () => {
     if (!shiftId) return;
     if (applyToWeek) {
-      const res = (await applyWeekMut.mutateAsync({
+      const res = await applyWeekMut.mutateAsync({
         userId: employeeId,
         weekStart: weekDates[0]!,
         mode: 'shift',
         shiftId: Number(shiftId),
         includeWeekend: true
-      })) as CellWriteReturn;
+      });
       if (res.success) {
-        if (res.partialFailures && res.partialFailures.length > 0) {
+        if (res.partialFailures.length > 0) {
           toast.warning(
             t('scheduleGrid.popover.bulkPartial', {
-              count: res.partialFailures.length,
-              total: res.daysApplied ?? 0
+              count: res.daysApplied,
+              total: res.partialFailures.length
             })
           );
         } else {
-          toast.success(t('scheduleGrid.popover.bulkSuccess', { count: res.daysApplied ?? 0 }));
+          toast.success(t('scheduleGrid.popover.bulkSuccess', { count: res.daysApplied }));
         }
         firePastDateToast();
         setOpen(false);
@@ -179,11 +143,11 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
       }
       return;
     }
-    const res = (await setShiftMut.mutateAsync({
+    const res = await setShiftMut.mutateAsync({
       userId: employeeId,
       date: cell.date,
       shiftId: Number(shiftId)
-    })) as CellWriteReturn;
+    });
     if (res.success) {
       toast.success(t('scheduleGrid.popover.shiftSaved'));
       firePastDateToast();
@@ -194,23 +158,25 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   };
 
   const handleSaveDayOff = async () => {
+    const trimmedReason = dayOffReason.trim();
     if (applyToWeek) {
-      const res = (await applyWeekMut.mutateAsync({
+      const res = await applyWeekMut.mutateAsync({
         userId: employeeId,
         weekStart: weekDates[0]!,
         mode: 'dayOff',
+        reason: trimmedReason.length > 0 ? trimmedReason : undefined,
         includeWeekend: true
-      })) as CellWriteReturn;
+      });
       if (res.success) {
-        if (res.partialFailures && res.partialFailures.length > 0) {
+        if (res.partialFailures.length > 0) {
           toast.warning(
             t('scheduleGrid.popover.bulkPartial', {
-              count: res.partialFailures.length,
-              total: res.daysApplied ?? 0
+              count: res.daysApplied,
+              total: res.partialFailures.length
             })
           );
         } else {
-          toast.success(t('scheduleGrid.popover.bulkSuccess', { count: res.daysApplied ?? 0 }));
+          toast.success(t('scheduleGrid.popover.bulkSuccess', { count: res.daysApplied }));
         }
         firePastDateToast();
         setOpen(false);
@@ -219,10 +185,11 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
       }
       return;
     }
-    const res = (await setDayOffMut.mutateAsync({
+    const res = await setDayOffMut.mutateAsync({
       userId: employeeId,
-      date: cell.date
-    })) as CellWriteReturn;
+      date: cell.date,
+      reason: trimmedReason.length > 0 ? trimmedReason : undefined
+    });
     if (res.success) {
       toast.success(t('scheduleGrid.popover.dayOffSaved'));
       firePastDateToast();
@@ -233,10 +200,10 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   };
 
   const handleClear = async () => {
-    const res = (await clearMut.mutateAsync({
+    const res = await clearMut.mutateAsync({
       userId: employeeId,
       date: cell.date
-    })) as CellWriteReturn;
+    });
     if (res.success) {
       toast.success(t('scheduleGrid.popover.cleared'));
       firePastDateToast();
@@ -245,13 +212,6 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
       toast.error(t('scheduleGrid.popover.saveFailed'));
     }
   };
-
-  // Compose the existing mutations with the rollback/invalidate behavior
-  // described in the spec. (Left as a no-op shell — the write-mutations
-  // module already calls `invalidateScheduleGridCaches` in `onSettled`.)
-  void mergeMutationCallbacks;
-  void queryClient;
-  void i18n;
 
   const isPending =
     setShiftMut.isPending ||
@@ -308,16 +268,16 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
               className='mt-2'
               onClick={handleClear}
               disabled={isPending}
-              data-testid='clear-day-off-button'
+              data-testid='clear-cell-button'
             >
-              {t('scheduleGrid.popover.clearDayOff')}
+              {t('scheduleGrid.popover.clear')}
             </Button>
           </div>
         ) : null}
 
         {/* Orphan Day-Off note — visible whenever a day_offs row exists */}
-        {hasOrphanDayOff ? (
-          <p className='text-[11px] italic text-muted-foreground' data-testid='orphan-day-off-note'>
+        {isConflict ? (
+          <p className='text-[11px] italic text-muted-foreground' data-testid='conflict-day-off-note'>
             {t('scheduleGrid.popover.orphanDayOffNote')}
           </p>
         ) : null}
@@ -412,8 +372,9 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
           </p>
         ) : null}
 
-        {/* Clear button — only when there's something to clear */}
-        {hasOverrideOrDayOff && !applyToWeek ? (
+        {/* Clear button — only when there's something to clear AND the
+            cell is not in the day-off conflict UX (that has its own button). */}
+        {hasOverrideOrDayOff && !applyToWeek && !isConflict ? (
           <Button
             type='button'
             variant='outline'
@@ -421,7 +382,7 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
             onClick={handleClear}
             disabled={isPending}
             className={cn('w-full')}
-            data-testid='clear-cell-button'
+            data-testid='clear-cell-footer-button'
           >
             {t('scheduleGrid.popover.clear')}
           </Button>
@@ -453,5 +414,3 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   );
 }
 
-// We import `useQueryClient` lazily to avoid pulling it into the type
-// signature surface; the file uses it once inside the mutations.

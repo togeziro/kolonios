@@ -61,19 +61,6 @@ const setDayOffMock = useSetCellDayOff as unknown as ReturnType<typeof vi.fn>;
 const clearMock = useClearCell as unknown as ReturnType<typeof vi.fn>;
 const applyWeekMock = useApplyToWholeWeek as unknown as ReturnType<typeof vi.fn>;
 
-function mutationStub() {
-  return {
-    mutate: vi.fn(),
-    mutateAsync: vi.fn().mockResolvedValue({ success: true, cell: makeCell(), affectedUserId: 'u1', affectedDates: ['2026-08-05'] }),
-    isPending: false,
-    isError: false,
-    isSuccess: false,
-    data: undefined,
-    error: null,
-    reset: vi.fn()
-  };
-}
-
 beforeEach(() => {
   shiftsMock.mockReturnValue({
     data: [
@@ -199,7 +186,7 @@ describe('CellPopover', () => {
     fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('orphan-day-off-note')).toBeTruthy();
+      expect(screen.getByTestId('conflict-day-off-note')).toBeTruthy();
     });
   });
 
@@ -232,5 +219,91 @@ describe('CellPopover', () => {
       date: '2026-08-05',
       shiftId: 1
     });
+  });
+
+  it('threads the day-off reason to setCellDayOffFn when saving', async () => {
+    const mut = mutStub();
+    setDayOffMock.mockReturnValue(mut);
+
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          cell: makeCell({ isDayOff: false, shiftId: null }),
+          children: createElement('span', null, '—')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('day-off-switch')).toBeTruthy();
+    });
+
+    // Toggle the day-off switch and type a reason.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('day-off-switch'));
+    });
+
+    const reasonInput = screen.getByTestId('day-off-reason-input') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(reasonInput, { target: { value: 'Family event' } });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('popover-save-button'));
+    });
+
+    expect(mut.mutateAsync).toHaveBeenCalledWith({
+      userId: 'u1',
+      date: '2026-08-05',
+      reason: 'Family event'
+    });
+  });
+
+  it('shows the bulk-partial toast when apply-to-week has partial failures', async () => {
+    const mut = mutStub();
+    mut.mutateAsync.mockResolvedValue({
+      success: true,
+      daysApplied: 4,
+      partialFailures: [
+        { date: '2026-08-08', error: 'internal' },
+        { date: '2026-08-09', error: 'internal' }
+      ],
+      affectedUserId: 'u1',
+      affectedDates: ['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06']
+    });
+    applyWeekMock.mockReturnValue(mut);
+
+    const { toast } = await import('sonner');
+
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          cell: makeCell(),
+          children: createElement('span', null, 'Morning')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('apply-to-week-switch')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('apply-to-week-switch'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('popover-save-button'));
+    });
+
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.stringMatching(/Applied to 4 days.*2 failed/i)
+    );
   });
 });

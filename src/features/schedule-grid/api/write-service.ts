@@ -8,7 +8,8 @@
  *                           is documented in the spec — resolver precedence
  *                           hides the override until the day-off is cleared).
  *  - `setCellDayOffFn`    — delete any `date_overrides` row for (user, date)
- *                           then insert a `day_offs` row. Idempotent.
+ *                           then insert a `day_offs` row (with optional
+ *                           reason from the popover input). Idempotent.
  *  - `clearCellFn`        — delete both `date_overrides` and `day_offs`
  *                           rows for (user, date).
  *  - `applyToWholeWeekFn` — iterate 7 dates starting at `weekStart`; for
@@ -30,7 +31,7 @@
  */
 
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import * as z from 'zod';
 
 import { requirePermission } from '@/lib/auth/session';
@@ -58,6 +59,8 @@ import type { ScheduleGridCell } from './types';
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
 
+const dayOffReasonSchema = z.string().trim().min(1).max(500).optional();
+
 const setCellShiftSchema = z.object({
   userId: z.string().min(1),
   date: ymd,
@@ -66,7 +69,8 @@ const setCellShiftSchema = z.object({
 
 const setCellDayOffSchema = z.object({
   userId: z.string().min(1),
-  date: ymd
+  date: ymd,
+  reason: dayOffReasonSchema
 });
 
 const clearCellSchema = z.object({
@@ -79,14 +83,17 @@ const applyToWholeWeekSchema = z.object({
   weekStart: ymd,
   mode: z.enum(['shift', 'dayOff']),
   shiftId: z.number().int().positive().optional(),
+  reason: dayOffReasonSchema,
   includeWeekend: z.boolean()
 });
 
+const ERROR_INTERNAL = 'internal' as const;
+const ERROR_SHIFT_ID_REQUIRED = 'shiftIdRequired' as const;
+
 /**
- * Tuple returned by every write fn. `cell` is the post-write state of the
- * affected cell, re-resolved via `resolveEffectiveSchedule` so the popover
- * can update its React Query cache directly. `affectedDates` covers the
- * batch so the client can invalidate once per write (vs. once per cell).
+ * Tuple returned by every single-cell write fn. `cell` is the post-write
+ * state of the affected cell, re-resolved via `resolveEffectiveSchedule`
+ * so the popover can update its React Query cache directly.
  */
 export type CellWriteResult =
   | {
@@ -100,7 +107,7 @@ export type CellWriteResult =
       error: string;
     };
 
-type BulkResult =
+export type BulkResult =
   | {
       success: true;
       daysApplied: number;
@@ -121,7 +128,6 @@ type BulkResult =
 async function resolveSingleCell(input: {
   userId: string;
   date: string;
-  createdByFallback: string;
 }): Promise<ScheduleGridCell> {
   const { userId, date } = input;
 
@@ -172,35 +178,33 @@ async function resolveSingleCell(input: {
   if (assignment) shiftIds.add(assignment.shiftId);
   if (overrideRow) shiftIds.add(overrideRow.shift_id);
 
-  let weekdayRules: WeekdayScheduleRule[] = [];
+  const weekdayRules: WeekdayScheduleRule[] = [];
   const policiesByShift = new Map<number, ShiftPolicy>();
   const shiftById = new Map<number, { id: number; name: string }>();
 
   if (shiftIds.size > 0) {
     const [ruleRows, shiftRows] = await Promise.all([
       db.select().from(shiftWeekdayRules).where(inArray(shiftWeekdayRules.shift_id, [...shiftIds])),
-      db.select({ id: shifts.id, name: shifts.name }).from(shifts).where(inArray(shifts.id, [...shiftIds]))
+      db
+        .select({
+          id: shifts.id,
+          name: shifts.name,
+          late_tolerance_minutes: shifts.late_tolerance_minutes,
+          absence_cutoff_minutes: shifts.absence_cutoff_minutes
+        })
+        .from(shifts)
+        .where(inArray(shifts.id, [...shiftIds]))
     ]);
-    weekdayRules = ruleRows.map((r) => ({
-      dayOfWeek: r.day_of_week,
-      isWorkingDay: r.is_working_day ?? true,
-      startTime: r.start_time,
-      endTime: r.end_time
-    }));
-    for (const s of shiftRows) shiftById.set(s.id, s);
-  }
-
-  // Re-fetch shifts with their policy columns for `policiesByShift`.
-  if (shiftIds.size > 0) {
-    const policyRows = await db
-      .select({
-        id: shifts.id,
-        late_tolerance_minutes: shifts.late_tolerance_minutes,
-        absence_cutoff_minutes: shifts.absence_cutoff_minutes
-      })
-      .from(shifts)
-      .where(inArray(shifts.id, [...shiftIds]));
-    for (const s of policyRows) {
+    for (const r of ruleRows) {
+      weekdayRules.push({
+        dayOfWeek: r.day_of_week,
+        isWorkingDay: r.is_working_day ?? true,
+        startTime: r.start_time,
+        endTime: r.end_time
+      });
+    }
+    for (const s of shiftRows) {
+      shiftById.set(s.id, { id: s.id, name: s.name });
       policiesByShift.set(s.id, {
         shiftId: s.id,
         lateToleranceMinutes: s.late_tolerance_minutes,
@@ -235,8 +239,6 @@ async function resolveSingleCell(input: {
     }
   }
 
-  // `isHoliday` covers the date itself; recurring holidays already mapped
-  // inside `getHolidaysInRange`'s SQL filter.
   const holidayName = holiday?.name ?? null;
 
   return {
@@ -276,11 +278,7 @@ export const setCellShiftFn = createServerFn({ method: 'POST' })
           created_by: session.user.id
         });
       });
-      const cell = await resolveSingleCell({
-        userId: data.userId,
-        date: data.date,
-        createdByFallback: session.user.id
-      });
+      const cell = await resolveSingleCell({ userId: data.userId, date: data.date });
       return {
         success: true,
         cell,
@@ -289,7 +287,7 @@ export const setCellShiftFn = createServerFn({ method: 'POST' })
       };
     } catch (e) {
       mapDbError(e, 'scheduleGrid.setCellShift');
-      return { success: false, error: 'internal' };
+      return { success: false, error: ERROR_INTERNAL };
     }
   });
 
@@ -311,15 +309,11 @@ export const setCellDayOffFn = createServerFn({ method: 'POST' })
         await tx.insert(dayOffs).values({
           user_id: data.userId,
           date: data.date,
-          reason: null,
+          reason: data.reason ?? null,
           created_by: session.user.id
         });
       });
-      const cell = await resolveSingleCell({
-        userId: data.userId,
-        date: data.date,
-        createdByFallback: session.user.id
-      });
+      const cell = await resolveSingleCell({ userId: data.userId, date: data.date });
       return {
         success: true,
         cell,
@@ -328,7 +322,7 @@ export const setCellDayOffFn = createServerFn({ method: 'POST' })
       };
     } catch (e) {
       mapDbError(e, 'scheduleGrid.setCellDayOff');
-      return { success: false, error: 'internal' };
+      return { success: false, error: ERROR_INTERNAL };
     }
   });
 
@@ -348,11 +342,7 @@ export const clearCellFn = createServerFn({ method: 'POST' })
           .delete(dayOffs)
           .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
       });
-      const cell = await resolveSingleCell({
-        userId: data.userId,
-        date: data.date,
-        createdByFallback: session.user.id
-      });
+      const cell = await resolveSingleCell({ userId: data.userId, date: data.date });
       return {
         success: true,
         cell,
@@ -361,7 +351,7 @@ export const clearCellFn = createServerFn({ method: 'POST' })
       };
     } catch (e) {
       mapDbError(e, 'scheduleGrid.clearCell');
-      return { success: false, error: 'internal' };
+      return { success: false, error: ERROR_INTERNAL };
     }
   });
 
@@ -373,7 +363,7 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     if (data.mode === 'shift' && data.shiftId == null) {
-      return { success: false, error: 'shiftIdRequired' };
+      return { success: false, error: ERROR_SHIFT_ID_REQUIRED };
     }
 
     const dates: string[] = [];
@@ -414,7 +404,7 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
             await tx.insert(dayOffs).values({
               user_id: data.userId,
               date,
-              reason: null,
+              reason: data.reason ?? null,
               created_by: session.user.id
             });
           });
@@ -423,7 +413,7 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
         affectedDates.push(date);
       } catch (e) {
         mapDbError(e, `scheduleGrid.applyToWeek.${date}`);
-        partialFailures.push({ date, error: 'internal' });
+        partialFailures.push({ date, error: ERROR_INTERNAL });
       }
     }
 
@@ -435,8 +425,3 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
       affectedDates
     };
   });
-
-// Touch asc to keep the import-side-effect analyzer happy; it is used
-// in `resolveSingleCell`'s ORDER BY via `desc(...)` already. asc is also
-// commonly used in nearby queries, so keep it for tree-shake stability.
-void asc;

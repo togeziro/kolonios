@@ -3,11 +3,17 @@
  *
  * The popover composes `setCellShiftMutation`, `setCellDayOffMutation`,
  * `clearCellMutation`, and `applyToWholeWeekMutation`. Each wraps the
- * corresponding server fn in a `useMutation` hook with the repo-standard
- * `mergeMutationCallbacks` pattern (`src/lib/mutation-options.ts:8-34`)
- * for cache invalidation across the `scheduleGridKeys` namespace AND the
- * cross-feature `attendanceKeys.effectiveSchedule` / `attendanceKeys.assignments`
- * keys (imported per ADR-0001's cross-feature allowance).
+ * corresponding server fn in a `useMutation` hook. Cache invalidation
+ * crosses the `scheduleGridKeys` namespace AND the cross-feature
+ * `attendanceKeys.effectiveSchedule` / `attendanceKeys.assignments` keys
+ * (imported per ADR-0001's cross-feature allowance).
+ *
+ * The hook-level `useMutation` does NOT compose with `mergeMutationCallbacks`
+ * — the cross-feature invalidation lives in `onSettled` so the server's
+ * `setCellDayOffFn` / `applyToWholeWeekFn` route is the single source of
+ * truth for what gets refreshed. Callers can wrap the returned `mutateAsync`
+ * with their own `onSuccess`/`onError` handlers if they want toast side
+ * effects.
  */
 
 import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/react-query';
@@ -32,6 +38,7 @@ export type SetCellShiftInput = {
 export type SetCellDayOffInput = {
   userId: string;
   date: string;
+  reason?: string;
 };
 
 export type ClearCellInput = {
@@ -44,6 +51,7 @@ export type ApplyToWholeWeekInput = {
   weekStart: string;
   mode: 'shift' | 'dayOff';
   shiftId?: number;
+  reason?: string;
   includeWeekend: boolean;
 };
 
@@ -68,7 +76,7 @@ export type ApplyToWholeWeekResult =
 function invalidateScheduleGridCaches(queryClient: ReturnType<typeof useQueryClient>): void {
   queryClient.invalidateQueries({ queryKey: scheduleGridKeys.all });
   queryClient.invalidateQueries({ queryKey: attendanceKeys.effectiveSchedule() });
-  queryClient.invalidateQueries({ queryKey: attendanceKeys.assignments({} as never) });
+  queryClient.invalidateQueries({ queryKey: attendanceKeys.assignments({}) });
   queryClient.invalidateQueries({ queryKey: attendanceKeys.dayOffs() });
 }
 
@@ -108,8 +116,6 @@ export function applyToWholeWeekMutation(
   };
 }
 
-// Re-export the typed hook factories — the popover imports these and
-// composes with `mergeMutationCallbacks` per repo convention.
 export function useSetCellShift() {
   const queryClient = useQueryClient();
   return useMutation(setCellShiftMutation(queryClient));
