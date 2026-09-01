@@ -636,6 +636,49 @@ export type ScheduleMonthData = {
   holidays: { date: string; name: string; isRecurring: boolean }[];
 };
 
+/**
+ * Range scan over `national_holidays` matching both:
+ *  - non-recurring holidays with `date` in [start, end]
+ *  - recurring holidays whose MM is in either `start`'s month or `end`'s
+ *    month (covers a 7-day grid that may straddle two months while keeping
+ *    the single-month semantics used by `getMonthlyScheduleData`)
+ *
+ * Used by `getMonthlyScheduleData` (My Schedule) and the admin schedule
+ * grid (`getScheduleGridFn`). Extracted from the inline OR clause so both
+ * callers share one definition of "what overlaps".
+ */
+export async function getHolidaysInRange(
+  start: string,
+  end: string
+): Promise<{ date: string; name: string; isRecurring: boolean }[]> {
+  try {
+    const rows = await db
+      .select({
+        date: nationalHolidays.date,
+        name: nationalHolidays.name,
+        isRecurring: nationalHolidays.is_recurring
+      })
+      .from(nationalHolidays)
+      .where(
+        or(
+          and(gte(nationalHolidays.date, start), lte(nationalHolidays.date, end)),
+          and(
+            eq(nationalHolidays.is_recurring, true),
+            sql`substr(${nationalHolidays.date}, 6, 2) IN (substr(${start}, 6, 2), substr(${end}, 6, 2))`
+          )
+        )
+      );
+    return rows.map((r) => ({
+      date: r.date,
+      name: r.name,
+      isRecurring: r.isRecurring ?? false
+    }));
+  } catch (e) {
+    mapDbError(e, 'attendance.getHolidaysInRange');
+    return [];
+  }
+}
+
 export async function getMonthlyScheduleData(
   userId: string,
   month: string
@@ -718,22 +761,7 @@ export async function getMonthlyScheduleData(
       and(eq(dayOffs.user_id, userId), gte(dayOffs.date, monthStart), lte(dayOffs.date, monthEnd))
     );
 
-  const holidayRows = await db
-    .select({
-      date: nationalHolidays.date,
-      name: nationalHolidays.name,
-      isRecurring: nationalHolidays.is_recurring
-    })
-    .from(nationalHolidays)
-    .where(
-      or(
-        and(gte(nationalHolidays.date, monthStart), lte(nationalHolidays.date, monthEnd)),
-        and(
-          eq(nationalHolidays.is_recurring, true),
-          sql`substr(${nationalHolidays.date}, 6, 2) = substr(${monthStart}, 6, 2)`
-        )
-      )
-    );
+  const holidayRows = await getHolidaysInRange(monthStart, monthEnd);
 
   return {
     assignment: assignment
