@@ -10,6 +10,11 @@ export type ScheduleGridProps = {
   response: ScheduleGridResponse;
   /** Optional minimum loading height to avoid layout shifts. */
   skeleton?: boolean;
+  /**
+   * Ticket 03: invoked when a row-header "+ Assign Shift" CTA is clicked.
+   * Only rows with `row.hasAssignment === false` will surface the CTA.
+   */
+  onAssignShift?: (row: GridRow) => void;
 };
 
 /**
@@ -21,7 +26,7 @@ export type ScheduleGridProps = {
  * national holiday (or a recurring holiday whose MM-DD falls on that
  * date within the current year).
  */
-export function ScheduleGrid({ response, skeleton = false }: ScheduleGridProps) {
+export function ScheduleGrid({ response, skeleton = false, onAssignShift }: ScheduleGridProps) {
   const { t } = useTranslation();
   const days = weekDays(response.weekStart);
 
@@ -32,7 +37,13 @@ export function ScheduleGrid({ response, skeleton = false }: ScheduleGridProps) 
         {response.rows.length === 0
           ? null
           : response.rows.map((row) => (
-              <ScheduleGridBodyRow key={row.userId} row={row} days={days} skeleton={skeleton} />
+              <ScheduleGridBodyRow
+                key={row.userId}
+                row={row}
+                days={days}
+                skeleton={skeleton}
+                onAssignShift={onAssignShift}
+              />
             ))}
       </div>
     </div>
@@ -95,16 +106,18 @@ function ScheduleGridHeader({
 function ScheduleGridBodyRow({
   row,
   days,
-  skeleton
+  skeleton,
+  onAssignShift
 }: {
   row: GridRow;
   days: string[];
   skeleton: boolean;
+  onAssignShift?: (row: GridRow) => void;
 }) {
   const { t } = useTranslation();
   return (
     <div role='row' className='grid border-b last:border-b-0' style={gridColsStyle}>
-      <GridRowHeader row={row} />
+      <GridRowHeader row={row} onAssignShift={onAssignShift} />
       {days.map((date) => {
         const cell = row.cells.find((c) => c.date === date);
         if (!cell) {

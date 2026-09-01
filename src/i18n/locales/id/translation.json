@@ -1693,6 +1693,25 @@
     "rowHeader": {
       "noAssignment": "Belum ada assignment aktif"
     },
+    "row": {
+      "unassigned": "Belum di-assign",
+      "assignCta": "+ Assign Shift"
+    },
+    "assignDialog": {
+      "title": "Assign Shift",
+      "description": "Buat assignment jadwal baru untuk {{name}}.",
+      "shift": "Shift",
+      "shiftPlaceholder": "Pilih shift",
+      "fromDate": "Tanggal mulai",
+      "toDate": "Tanggal selesai (opsional)",
+      "toDateHint": "Kosongkan untuk assignment tanpa batas waktu.",
+      "submit": "Simpan assignment",
+      "closingNote": "Menutup assignment tanpa batas sebelumnya untuk {{name}} (dimulai {{effectiveFrom}}).",
+      "success": "Shift berhasil di-assign",
+      "policyWarning": "Shift disimpan tapi row bisa tampil kosong sampai policy diisi di Shift Master.",
+      "errorEffectiveToBeforeFrom": "Tanggal selesai harus setelah tanggal mulai.",
+      "errorGeneric": "Gagal meng-assign shift. Silakan coba lagi."
+    },
     "cell": {
       "dayOff": "Hari Libur",
       "empty": "Tanpa assignment",

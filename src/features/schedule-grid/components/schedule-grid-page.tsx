@@ -7,7 +7,8 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { businessDateInTimeZone } from '@/lib/dates';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import { scheduleGridQueryOptions } from '../api/queries';
-import type { ScheduleGridFilters } from '../api/types';
+import type { ScheduleGridFilters, ScheduleGridRow } from '../api/types';
+import { AssignShiftDialog } from './assign-shift-dialog';
 import { FilterBar } from './filter-bar';
 import { ScheduleGrid } from './schedule-grid';
 import { WeekNav } from './week-nav';
@@ -37,6 +38,7 @@ export function ScheduleGridPage() {
   const [pendingSearch, setPendingSearch] = useState<string>('');
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(25);
+  const [assignTarget, setAssignTarget] = useState<ScheduleGridRow | null>(null);
 
   // Re-anchor the displayed week when the preference flips — but never
   // re-anchor on every render (that would freeze the user's nav).
@@ -169,7 +171,7 @@ export function ScheduleGridPage() {
               }}
             />
           ) : data ? (
-            <ScheduleGrid response={data} />
+            <ScheduleGrid response={data} onAssignShift={setAssignTarget} />
           ) : null}
 
           {data ? (
@@ -177,6 +179,15 @@ export function ScheduleGridPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <AssignShiftDialog
+        open={assignTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setAssignTarget(null);
+        }}
+        userId={assignTarget?.userId ?? null}
+        userName={assignTarget?.fullName}
+      />
     </div>
   );
 }

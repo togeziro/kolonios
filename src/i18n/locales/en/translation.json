@@ -1693,6 +1693,25 @@
     "rowHeader": {
       "noAssignment": "No active assignment"
     },
+    "row": {
+      "unassigned": "Not yet assigned",
+      "assignCta": "+ Assign Shift"
+    },
+    "assignDialog": {
+      "title": "Assign Shift",
+      "description": "Create a new schedule assignment for {{name}}.",
+      "shift": "Shift",
+      "shiftPlaceholder": "Select a shift",
+      "fromDate": "From date",
+      "toDate": "To date (optional)",
+      "toDateHint": "Leave blank for an open-ended assignment.",
+      "submit": "Save assignment",
+      "closingNote": "Closing previous open-ended assignment for {{name}} (started {{effectiveFrom}}).",
+      "success": "Shift assigned",
+      "policyWarning": "Shift saved but the row may render blank until the policy is filled in Shift Master.",
+      "errorEffectiveToBeforeFrom": "To date must be after From date.",
+      "errorGeneric": "Couldn't assign the shift. Please try again."
+    },
     "cell": {
       "dayOff": "Day Off",
       "empty": "No assignment",

@@ -1,5 +1,6 @@
 src/features/attendance/components/attendance-history.tsx:148
 src/features/attendance/components/leave-history.tsx:150
+src/features/attendance/components/shift-listing.tsx:142
 src/features/audit/components/audit-log-page.tsx:64
 src/features/customers/components/customer-tables/columns.tsx:103
 src/features/customers/components/customer-tables/columns.tsx:119
@@ -61,6 +62,8 @@ src/features/role-groups/components/role-group-columns.tsx:130
 src/features/role-groups/components/role-group-columns.tsx:84
 src/features/role-groups/components/role-group-listing.tsx:115
 src/features/role-groups/components/role-group-listing.tsx:57
+src/features/schedule-grid/components/assign-shift-dialog.tsx:204
+src/features/schedule-grid/components/assign-shift-dialog.tsx:254
 src/features/schedule/components/my-schedule-page.tsx:29
 src/features/schedule/components/my-schedule-page.tsx:31
 src/features/schedule/components/today-shift-card.tsx:82
@@ -117,4 +120,3 @@ src/routes/terms-of-service.tsx:62
 src/routes/terms-of-service.tsx:69
 src/routes/terms-of-service.tsx:71
 src/routes/terms-of-service.tsx:79
-src/features/attendance/components/shift-listing.tsx:142
