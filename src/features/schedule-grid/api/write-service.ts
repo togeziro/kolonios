@@ -139,7 +139,10 @@ async function resolveSingleCell(input: {
       and(
         eq(scheduleAssignments.user_id, userId),
         lte(scheduleAssignments.effective_from, date),
-        or(sql`${scheduleAssignments.effective_to} IS NULL`, gte(scheduleAssignments.effective_to, date))
+        or(
+          sql`${scheduleAssignments.effective_to} IS NULL`,
+          gte(scheduleAssignments.effective_to, date)
+        )
       )
     )
     .orderBy(desc(scheduleAssignments.effective_from))
@@ -184,7 +187,10 @@ async function resolveSingleCell(input: {
 
   if (shiftIds.size > 0) {
     const [ruleRows, shiftRows] = await Promise.all([
-      db.select().from(shiftWeekdayRules).where(inArray(shiftWeekdayRules.shift_id, [...shiftIds])),
+      db
+        .select()
+        .from(shiftWeekdayRules)
+        .where(inArray(shiftWeekdayRules.shift_id, [...shiftIds])),
       db
         .select({
           id: shifts.id,
@@ -369,7 +375,10 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
     const dates: string[] = [];
     for (let i = 0; i < 7; i += 1) {
       const date = addDays(data.weekStart, i);
-      if (!data.includeWeekend && WEEKEND_DAYS.includes(dayOfWeek(date) as (typeof WEEKEND_DAYS)[number])) {
+      if (
+        !data.includeWeekend &&
+        WEEKEND_DAYS.includes(dayOfWeek(date) as (typeof WEEKEND_DAYS)[number])
+      ) {
         continue;
       }
       dates.push(date);

@@ -18,13 +18,7 @@ import { CellPopover } from './cell-popover';
  * for the employee, the cell content is wrapped in `CellPopover` so a
  * click opens the per-cell write popover.
  */
-export function GridCell({
-  employeeId,
-  cell
-}: {
-  employeeId: string;
-  cell: GridCellData;
-}) {
+export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridCellData }) {
   const { t } = useTranslation();
 
   const isWeekend = WEEKEND_DAYS.includes(dayOfWeek(cell.date) as (typeof WEEKEND_DAYS)[number]);

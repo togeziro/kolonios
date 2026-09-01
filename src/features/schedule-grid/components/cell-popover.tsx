@@ -79,9 +79,7 @@ function formatDateHeading(date: string, t: (key: string) => string): string {
 export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [shiftId, setShiftId] = useState<string>(
-    cell.shiftId != null ? String(cell.shiftId) : ''
-  );
+  const [shiftId, setShiftId] = useState<string>(cell.shiftId != null ? String(cell.shiftId) : '');
   const [isDayOffToggle, setIsDayOffToggle] = useState<boolean>(cell.isDayOff);
   const [dayOffReason, setDayOffReason] = useState<string>(cell.dayOffReason ?? '');
   const [applyToWeek, setApplyToWeek] = useState<boolean>(false);
@@ -214,10 +212,7 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   };
 
   const isPending =
-    setShiftMut.isPending ||
-    setDayOffMut.isPending ||
-    clearMut.isPending ||
-    applyWeekMut.isPending;
+    setShiftMut.isPending || setDayOffMut.isPending || clearMut.isPending || applyWeekMut.isPending;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -277,14 +272,19 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
 
         {/* Orphan Day-Off note — visible whenever a day_offs row exists */}
         {isConflict ? (
-          <p className='text-[11px] italic text-muted-foreground' data-testid='conflict-day-off-note'>
+          <p
+            className='text-[11px] italic text-muted-foreground'
+            data-testid='conflict-day-off-note'
+          >
             {t('scheduleGrid.popover.orphanDayOffNote')}
           </p>
         ) : null}
 
         {/* Shift selector */}
         <div className='space-y-1'>
-          <Label htmlFor={`shift-${employeeId}-${cell.date}`}>{t('scheduleGrid.popover.shift')}</Label>
+          <Label htmlFor={`shift-${employeeId}-${cell.date}`}>
+            {t('scheduleGrid.popover.shift')}
+          </Label>
           <Select value={shiftId} onValueChange={setShiftId} disabled={isConflict}>
             <SelectTrigger
               id={`shift-${employeeId}-${cell.date}`}
@@ -321,7 +321,10 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
 
         {/* Weekend override note — when the cell's day has no weekday rule */}
         {shiftId && !dayShifts.some((s) => String(s.shiftId) === shiftId) ? (
-          <p className='text-[11px] italic text-muted-foreground' data-testid='weekend-override-note'>
+          <p
+            className='text-[11px] italic text-muted-foreground'
+            data-testid='weekend-override-note'
+          >
             {t('scheduleGrid.popover.weekendOverrideNote')}
           </p>
         ) : null}
@@ -413,4 +416,3 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
     </Popover>
   );
 }
-
