@@ -14,6 +14,7 @@ import {
   getEffectiveEmployeeSchedule,
   getAttendancePolicy,
   getMonthlyScheduleData,
+  getHolidaysInRange,
   getShiftWeekdayRules,
   createScheduleAssignment,
   createDayOff,
@@ -1279,6 +1280,89 @@ describe('national holidays', () => {
     await resetAllTables();
   });
 
+  describe('getHolidaysInRange', () => {
+    it('returns an empty array when the range overlaps no holidays', async () => {
+      const res = await getHolidaysInRange('2026-08-01', '2026-08-07');
+      expect(res).toEqual([]);
+    });
+
+    it('returns the single holiday that falls on the exact day', async () => {
+      await db.insert(nationalHolidays).values({
+        date: '2026-08-17',
+        name: 'Independence Day',
+        is_recurring: false,
+        year: 2026,
+        source: 'manual' as const
+      });
+
+      const res = await getHolidaysInRange('2026-08-17', '2026-08-17');
+      expect(res).toEqual([{ date: '2026-08-17', name: 'Independence Day', isRecurring: false }]);
+    });
+
+    it('returns holidays whose date is inside the inclusive range bounds', async () => {
+      await db.insert(nationalHolidays).values([
+        {
+          date: '2026-08-03',
+          name: 'A',
+          is_recurring: false,
+          year: 2026,
+          source: 'manual' as const
+        },
+        {
+          date: '2026-08-05',
+          name: 'B',
+          is_recurring: false,
+          year: 2026,
+          source: 'manual' as const
+        },
+        {
+          date: '2026-08-09',
+          name: 'C',
+          is_recurring: false,
+          year: 2026,
+          source: 'manual' as const
+        }
+      ]);
+
+      const res = await getHolidaysInRange('2026-08-04', '2026-08-08');
+      expect(res).toEqual([{ date: '2026-08-05', name: 'B', isRecurring: false }]);
+    });
+
+    it('includes recurring holidays from either the start or end month in a cross-month range', async () => {
+      await db.insert(nationalHolidays).values([
+        {
+          date: '1999-08-21',
+          name: 'Aug 21',
+          is_recurring: true,
+          year: null,
+          source: 'manual' as const
+        },
+        {
+          date: '1999-09-02',
+          name: 'Sep 2',
+          is_recurring: true,
+          year: null,
+          source: 'manual' as const
+        },
+        {
+          date: '1999-10-15',
+          name: 'Oct 15',
+          is_recurring: true,
+          year: null,
+          source: 'manual' as const
+        }
+      ]);
+
+      const res = await getHolidaysInRange('2026-08-28', '2026-09-03');
+      expect(res).toEqual(
+        expect.arrayContaining([
+          { date: '1999-08-21', name: 'Aug 21', isRecurring: true },
+          { date: '1999-09-02', name: 'Sep 2', isRecurring: true }
+        ])
+      );
+      expect(res).not.toEqual(expect.arrayContaining([{ date: '1999-10-15' }]));
+    });
+  });
   it('creates a national holiday record', async () => {
     const holiday = {
       date: '2026-01-01',
