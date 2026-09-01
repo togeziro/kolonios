@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -36,6 +37,11 @@ const TODAY_ARIA = 'date' as const;
  * behind a `<NativeSelect>` wrapper — keeps the bundle small, accessible
  * by default, and free of Popover/Calendar dependencies that ticket 02/03
  * may want to upgrade later (e.g. shadcn Calendar).
+ *
+ * Ticket 04: keyboard shortcuts wired on the toolbar's `onKeyDown`.
+ * `←` jumps to the previous week, `→` to the next week, `T` (or `t`)
+ * snaps to the current week. Shortcuts only fire when focus is on the
+ * toolbar or a descendant, so they don't clash with typing in inputs.
  */
 export function WeekNav({
   weekStart,
@@ -58,13 +64,43 @@ export function WeekNav({
   // that month so onPickDate can snap to the right week.
   const pickerMonth = month;
 
+  const handleToolbarKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    // Don't hijack typing inside form controls (search, select, etc.).
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA')
+    ) {
+      return;
+    }
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      onPrev();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      onNext();
+    } else if (event.key === 't' || event.key === 'T') {
+      event.preventDefault();
+      onToday();
+    }
+  };
+
   return (
     <div
       className={cn('flex flex-wrap items-center gap-2')}
       role='toolbar'
       aria-label={t('scheduleGrid.nav.toolbarLabel')}
+      aria-keyshortcuts='ArrowLeft ArrowRight T'
+      tabIndex={0}
+      onKeyDown={handleToolbarKeyDown}
     >
-      <Button variant='outline' size='sm' onClick={onPrev} aria-label={t('scheduleGrid.nav.prev')}>
+      <Button
+        variant='outline'
+        size='sm'
+        onClick={onPrev}
+        aria-label={t('scheduleGrid.nav.prev')}
+        aria-keyshortcuts='ArrowLeft'
+      >
         <ChevronLeft className='size-4' />
       </Button>
       <Button
@@ -73,10 +109,17 @@ export function WeekNav({
         onClick={onToday}
         aria-current={isCurrentWeek ? TODAY_ARIA : undefined}
         aria-label={t('scheduleGrid.nav.today')}
+        aria-keyshortcuts='T'
       >
         {t('scheduleGrid.nav.today')}
       </Button>
-      <Button variant='outline' size='sm' onClick={onNext} aria-label={t('scheduleGrid.nav.next')}>
+      <Button
+        variant='outline'
+        size='sm'
+        onClick={onNext}
+        aria-label={t('scheduleGrid.nav.next')}
+        aria-keyshortcuts='ArrowRight'
+      >
         <ChevronRight className='size-4' />
       </Button>
 

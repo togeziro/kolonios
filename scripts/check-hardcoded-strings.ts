@@ -32,7 +32,11 @@ const IGNORED_ATTRS = new Set([
   'htmlFor',
   'mode',
   'align',
-  'rel'
+  'rel',
+  // WAI-ARIA machine tokens — per https://www.w3.org/TR/wai-aria-1.2/#aria-keyshortcuts
+  // these are not user-facing text, so they bypass the i18n check.
+  'aria-keyshortcuts',
+  'aria-current'
 ]);
 const SKIP_DIRECTIVE = '// i18n:skip';
 const BASELINE = join(process.cwd(), 'scripts/i18n-hardcoded-baseline.txt');

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { ScheduleGridResponse, ScheduleGridRow as GridRow } from '../api/types';
+import { buildRowHeaderAriaLabel } from '../utils/aria';
 import { WEEKEND_DAYS } from '../utils/constants';
 import { dayOfWeek, weekDays } from '../utils/date-utils';
 import { GridCell } from './grid-cell';
@@ -115,8 +116,14 @@ function ScheduleGridBodyRow({
   onAssignShift?: (row: GridRow) => void;
 }) {
   const { t } = useTranslation();
+  const rowAriaLabel = buildRowHeaderAriaLabel(row);
   return (
-    <div role='row' className='grid border-b last:border-b-0' style={gridColsStyle}>
+    <div
+      role='row'
+      aria-label={rowAriaLabel}
+      className='grid border-b last:border-b-0'
+      style={gridColsStyle}
+    >
       <GridRowHeader row={row} onAssignShift={onAssignShift} />
       {days.map((date) => {
         const cell = row.cells.find((c) => c.date === date);
