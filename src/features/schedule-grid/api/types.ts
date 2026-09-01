@@ -35,6 +35,12 @@ export type ScheduleGridRow = {
    * (or null when the employee has no active assignment). Used by the row
    * header for the small "shift name" pill. */
   activeShiftName: string | null;
+  /** True when at least one cell in the visible week resolves against an
+   * active `schedule_assignments` row for the employee. Drives ticket 03's
+   * "+ Assign Shift" row-header CTA: visible only when `false`. Computed
+   * server-side so the grid never has to re-derive assignment presence
+   * from `cells[]`. */
+  hasAssignment: boolean;
 };
 
 export type ScheduleGridWeekHolidays = {
