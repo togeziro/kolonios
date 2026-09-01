@@ -28,7 +28,7 @@ import {
 } from './validation';
 import type { ScheduleGridCell, ScheduleGridResponse, ScheduleGridRow } from './types';
 import type { ScheduleGridFiltersInput, AssignShiftInlineInput } from './validation';
-import { addDays } from '../utils/date-utils';
+import { addDays, dayOfWeek } from '../utils/date-utils';
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -324,7 +324,23 @@ export const getScheduleGridFn = createServerFn({ method: 'GET' })
           isHoliday,
           holidayName,
           holidayOverUnassigned: !hasAssignment && isHoliday,
-          dayOffReason
+          dayOffReason,
+          // Engine delta (PR #109): resolveEffectiveSchedule now returns null
+          // when the effective shift has no `shift_policies` row (no
+          // DEFAULT_SHIFT_POLICY fallback). Surface that as `policyMissing`
+          // so the ticket-02 popover can warn the admin before any write.
+          policyMissing: (() => {
+            if (!hasAssignment || isDayOff || resolved != null) return false;
+            // `effectiveShiftId` mirrors the engine's precedence: date
+            // override > assignment.
+            const override = overrideDates.find((o) => o.date === date);
+            const effectiveShiftId = override?.shiftId ?? assignment!.shiftId;
+            const rule = (rulesByShift.get(effectiveShiftId) ?? []).find(
+              (r) => r.dayOfWeek === dayOfWeek(date)
+            );
+            if (!rule || !rule.isWorkingDay) return false;
+            return policiesByShift.get(effectiveShiftId) == null;
+          })()
         });
       }
 
