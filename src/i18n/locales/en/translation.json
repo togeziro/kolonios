@@ -1681,5 +1681,55 @@
     "changePassword": "Change Password",
     "about": "About",
     "logOut": "Log Out"
+  },
+  "scheduleGrid": {
+    "title": "Weekly Schedule Grid",
+    "description": "Per-employee weekly view of shifts, day offs and holidays.",
+    "loadError": "Couldn't load the schedule grid",
+    "gridAria": "Schedule grid",
+    "grid": {
+      "employee": "Employee"
+    },
+    "rowHeader": {
+      "noAssignment": "No active assignment"
+    },
+    "cell": {
+      "dayOff": "Day Off",
+      "empty": "No assignment",
+      "placeholder": "—",
+      "timeSeparator": "–"
+    },
+    "holiday": {
+      "flag": "🇮🇩"
+    },
+    "nav": {
+      "toolbarLabel": "Week navigation",
+      "prev": "Previous week",
+      "today": "Today",
+      "next": "Next week",
+      "monthPickerLabel": "Jump to month",
+      "pageSeparator": "/"
+    },
+    "filter": {
+      "searchLabel": "Search by employee name",
+      "searchPlaceholder": "Search employee…",
+      "divisionLabel": "Filter by division",
+      "divisionAll": "All divisions"
+    },
+    "weekStart": {
+      "label": "Week starts on",
+      "monday": "Mon",
+      "sunday": "Sun"
+    },
+    "empty": {
+      "message": "No employees match the current filter.",
+      "reset": "Reset filters"
+    },
+    "pagination": {
+      "total": "{{count}} employee",
+      "total_other": "{{count}} employees",
+      "prev": "Prev",
+      "next": "Next"
+    }
   }
 }

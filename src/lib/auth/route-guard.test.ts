@@ -55,6 +55,7 @@ describe('resolveRouteGuard', () => {
     const adminAttendancePaths = [
       '/dashboard/admin/attendance/assignments',
       '/dashboard/admin/attendance/schedules',
+      '/dashboard/admin/attendance/schedule-grid',
       '/dashboard/admin/attendance/locations',
       '/dashboard/admin/attendance/reports',
       '/dashboard/admin/attendance/face-settings'
@@ -193,6 +194,7 @@ describe('resolveRouteGuard', () => {
       '/dashboard/admin/holiday-calendar/settings',
       '/dashboard/admin/attendance/assignments',
       '/dashboard/admin/attendance/schedules',
+      '/dashboard/admin/attendance/schedule-grid',
       '/dashboard/admin/attendance/locations',
       '/dashboard/admin/attendance/reports',
       '/dashboard/admin/attendance/face-settings',

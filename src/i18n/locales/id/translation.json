@@ -1681,5 +1681,55 @@
     "changePassword": "Ubah Kata Sandi",
     "about": "Tentang",
     "logOut": "Keluar"
+  },
+  "scheduleGrid": {
+    "title": "Grid Jadwal Mingguan",
+    "description": "Tampilan mingguan per karyawan berisi shift, hari libur, dan libur nasional.",
+    "loadError": "Gagal memuat grid jadwal",
+    "gridAria": "Grid jadwal",
+    "grid": {
+      "employee": "Karyawan"
+    },
+    "rowHeader": {
+      "noAssignment": "Belum ada assignment aktif"
+    },
+    "cell": {
+      "dayOff": "Hari Libur",
+      "empty": "Tanpa assignment",
+      "placeholder": "—",
+      "timeSeparator": "–"
+    },
+    "holiday": {
+      "flag": "🇮🇩"
+    },
+    "nav": {
+      "toolbarLabel": "Navigasi minggu",
+      "prev": "Minggu sebelumnya",
+      "today": "Hari ini",
+      "next": "Minggu berikutnya",
+      "monthPickerLabel": "Loncat ke bulan",
+      "pageSeparator": "/"
+    },
+    "filter": {
+      "searchLabel": "Cari berdasarkan nama karyawan",
+      "searchPlaceholder": "Cari karyawan…",
+      "divisionLabel": "Filter divisi",
+      "divisionAll": "Semua divisi"
+    },
+    "weekStart": {
+      "label": "Awal minggu",
+      "monday": "Sen",
+      "sunday": "Min"
+    },
+    "empty": {
+      "message": "Tidak ada karyawan yang cocok dengan filter saat ini.",
+      "reset": "Reset filter"
+    },
+    "pagination": {
+      "total": "{{count}} karyawan",
+      "total_other": "{{count}} karyawan",
+      "prev": "Sebelumnya",
+      "next": "Berikutnya"
+    }
   }
 }

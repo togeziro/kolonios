@@ -1,0 +1,244 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDebounce } from '@/hooks/use-debounce';
+import { businessDateInTimeZone } from '@/lib/dates';
+import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
+import { scheduleGridQueryOptions } from '../api/queries';
+import type { ScheduleGridFilters } from '../api/types';
+import { FilterBar } from './filter-bar';
+import { ScheduleGrid } from './schedule-grid';
+import { WeekNav } from './week-nav';
+import { WeekStartToggle } from './week-start-toggle';
+import { useWeekStartPreference } from './use-week-start';
+import { SEARCH_DEBOUNCE_MS } from '../utils/constants';
+import { addDays, monthOfDate, startOfWeek } from '../utils/date-utils';
+
+const EMPTY_FILTERS = {
+  month: '',
+  weekStart: ''
+} as ScheduleGridFilters;
+
+export function ScheduleGridPage() {
+  const { t } = useTranslation();
+  const [weekStartPref] = useWeekStartPreference();
+
+  // The week-start URL state is owned by the page (not pushed to the route
+  // search schema — this is an internal nav state). Filters that are
+  // shareable stay in the search schema in a future ticket.
+  const today = businessDateInTimeZone(new Date());
+  const initialWeekStart = useMemo(() => startOfWeek(today, weekStartPref), [today, weekStartPref]);
+
+  const [weekStart, setWeekStart] = useState<string>(initialWeekStart);
+  const [divisionId, setDivisionId] = useState<string | null>(null);
+  const [search, setSearch] = useState<string>('');
+  const [pendingSearch, setPendingSearch] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
+  const [pageSize] = useState<number>(25);
+
+  // Re-anchor the displayed week when the preference flips — but never
+  // re-anchor on every render (that would freeze the user's nav).
+  useEffect(() => {
+    setWeekStart((current) => startOfWeek(current, weekStartPref));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStartPref]);
+
+  // Debounce the search input → committed `search` state used by the
+  // query key. Reuses the repo's standard `useDebounce` hook (debounce the
+  // local string, sync to the query key once the user stops typing).
+  const debouncedPendingSearch = useDebounce(pendingSearch, SEARCH_DEBOUNCE_MS);
+  useEffect(() => {
+    if (debouncedPendingSearch !== search) {
+      setSearch(debouncedPendingSearch);
+      setPage(1);
+    }
+  }, [debouncedPendingSearch, search]);
+
+  const filters: ScheduleGridFilters = {
+    month: monthOfDate(weekStart),
+    weekStart,
+    divisionId,
+    query: search.length > 0 ? search : null,
+    page,
+    pageSize
+  };
+
+  const { data: divisionsResult } = useQuery(departmentsQueryOptions());
+  const divisions = useMemo(() => {
+    const rows = divisionsResult?.departments ?? [];
+    return rows.filter((d) => d.is_active !== false).map((d) => ({ id: d.id, name: d.name }));
+  }, [divisionsResult]);
+
+  const { data, isPending, isError } = useQuery({
+    ...scheduleGridQueryOptions(filters),
+    placeholderData: (previous) => previous
+  });
+
+  const handlePrev = useCallback(() => {
+    setWeekStart((current) => addDays(current, -7));
+    setPage(1);
+  }, []);
+
+  const handleNext = useCallback(() => {
+    setWeekStart((current) => addDays(current, 7));
+    setPage(1);
+  }, []);
+
+  const handleToday = useCallback(() => {
+    setWeekStart(startOfWeek(today, weekStartPref));
+    setPage(1);
+  }, [today, weekStartPref]);
+
+  const handlePickDate = useCallback(
+    (date: string) => {
+      setWeekStart(startOfWeek(date, weekStartPref));
+      setPage(1);
+    },
+    [weekStartPref]
+  );
+
+  const handleDivisionChange = useCallback((next: string | null) => {
+    setDivisionId(next);
+    setPage(1);
+  }, []);
+
+  const weekEnd = data?.weekEnd ?? addDays(weekStart, 6);
+  const isCurrentWeek = today >= weekStart && today <= weekEnd;
+  const rowCount = data?.rows.length ?? 0;
+  const total = data?.total ?? 0;
+
+  return (
+    <div className='space-y-4'>
+      <Card>
+        <CardHeader>
+          <div className='flex flex-wrap items-start justify-between gap-3'>
+            <div>
+              <CardTitle>{t('scheduleGrid.title')}</CardTitle>
+              <CardDescription>{t('scheduleGrid.description')}</CardDescription>
+            </div>
+            <WeekStartToggle />
+          </div>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <WeekNav
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+            month={monthOfDate(weekStart)}
+            onPrev={handlePrev}
+            onToday={handleToday}
+            onNext={handleNext}
+            onPickDate={handlePickDate}
+            isCurrentWeek={isCurrentWeek}
+          />
+          <FilterBar
+            divisions={divisions}
+            divisionId={divisionId}
+            onDivisionChange={handleDivisionChange}
+            search={search}
+            pendingSearch={pendingSearch}
+            onPendingSearchChange={setPendingSearch}
+            isPending={isPending}
+          />
+
+          {isError ? (
+            <p className='text-sm text-muted-foreground'>{t('scheduleGrid.loadError')}</p>
+          ) : isPending && !data ? (
+            <ScheduleGrid
+              response={{
+                ...EMPTY_FILTERS,
+                month: filters.month,
+                weekStart: filters.weekStart,
+                weekEnd: addDays(filters.weekStart, 6),
+                rows: [],
+                total: 0,
+                page: filters.page ?? 1,
+                pageSize,
+                holidays: { byDate: {} }
+              }}
+              skeleton
+            />
+          ) : data && rowCount === 0 ? (
+            <EmptyState
+              onResetFilters={() => {
+                setDivisionId(null);
+                setSearch('');
+                setPendingSearch('');
+                setPage(1);
+              }}
+            />
+          ) : data ? (
+            <ScheduleGrid response={data} />
+          ) : null}
+
+          {data ? (
+            <Pagination total={total} page={page} pageSize={pageSize} onPageChange={setPage} />
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function EmptyState({ onResetFilters }: { onResetFilters: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className='flex flex-col items-center justify-center gap-14 rounded-md border border-dashed p-8 text-center'>
+      <p className='text-sm text-muted-foreground'>{t('scheduleGrid.empty.message')}</p>
+      <Button variant='outline' size='sm' onClick={onResetFilters}>
+        {t('scheduleGrid.empty.reset')}
+      </Button>
+    </div>
+  );
+}
+
+function Pagination({
+  total,
+  page,
+  pageSize,
+  onPageChange
+}: {
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (next: number) => void;
+}) {
+  const { t } = useTranslation();
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  if (pageCount <= 1) {
+    return (
+      <div className='flex justify-end text-xs text-muted-foreground'>
+        {t('scheduleGrid.pagination.total', { count: total })}
+      </div>
+    );
+  }
+  return (
+    <div className='flex items-center justify-between gap-2 text-xs'>
+      <span className='text-muted-foreground'>
+        {t('scheduleGrid.pagination.total', { count: total })}
+      </span>
+      <div className='flex items-center gap-1'>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page <= 1}
+        >
+          {t('scheduleGrid.pagination.prev')}
+        </Button>
+        <span className='px-2 tabular-nums text-muted-foreground'>
+          {page} {t('scheduleGrid.nav.pageSeparator')} {pageCount}
+        </span>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => onPageChange(Math.min(pageCount, page + 1))}
+          disabled={page >= pageCount}
+        >
+          {t('scheduleGrid.pagination.next')}
+        </Button>
+      </div>
+    </div>
+  );
+}
