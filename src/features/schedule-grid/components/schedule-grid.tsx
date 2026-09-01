@@ -136,7 +136,7 @@ function ScheduleGridBodyRow({
         }
         return (
           <div key={date} role='gridcell' className='border-r p-1'>
-            <GridCell cell={cell} />
+            <GridCell employeeId={row.userId} cell={cell} />
           </div>
         );
       })}

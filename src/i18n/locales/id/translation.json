@@ -1749,6 +1749,32 @@
       "total_other": "{{count}} karyawan",
       "prev": "Sebelumnya",
       "next": "Berikutnya"
+    },
+    "popover": {
+      "title": "Edit sel",
+      "openAria": "Buka editor sel untuk {{date}}",
+      "shift": "Shift",
+      "shiftPickerEmpty": "Tidak ada shift untuk hari ini",
+      "shiftOptionLabel": "{{name}} · {{start}}–{{end}} · toleransi {{tolerance}}m · cutoff {{cutoff}}m",
+      "dayOff": "Hari Libur",
+      "dayOffReason": "Alasan (opsional)",
+      "dayOffReasonPlaceholder": "cth. Acara keluarga",
+      "clear": "Hapus",
+      "clearDayOff": "Hapus Day Off",
+      "applyToWeek": "Terapkan ke 7 hari minggu ini",
+      "applyToWeekDisabled": "Shift ini tidak punya weekday rule untuk beberapa hari — tidak bisa diterapkan ke seminggu penuh.",
+      "weekendOverrideNote": "Override: lembur weekend — date_override memprioritaskan weekday rule.",
+      "dayOffConflictWarning": "Sel ini sudah Day Off. Hapus dulu untuk ganti shift.",
+      "policyMissingWarning": "Shift ini belum dikonfigurasi policy — sel akan tampil kosong sampai policy diisi.",
+      "orphanDayOffNote": "Override berlaku setelah Day Off dihapus",
+      "pastDateNotice": "Past-date tersimpan — mempengaruhi recalculation absensi.",
+      "shiftSaved": "Shift tersimpan",
+      "dayOffSaved": "Day Off tersimpan",
+      "cleared": "Sel dihapus",
+      "saveFailed": "Gagal menyimpan sel",
+      "save": "Simpan",
+      "bulkSuccess": "Diterapkan ke {{count}} hari",
+      "bulkPartial": "Berhasil di {{count}} hari, {{total}} gagal"
     }
   }
 }

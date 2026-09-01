@@ -1749,6 +1749,32 @@
       "total_other": "{{count}} employees",
       "prev": "Prev",
       "next": "Next"
+    },
+    "popover": {
+      "title": "Edit cell",
+      "openAria": "Open cell editor for {{date}}",
+      "shift": "Shift",
+      "shiftPickerEmpty": "No shifts available for this day",
+      "shiftOptionLabel": "{{name}} · {{start}}–{{end}} · tardiness {{tolerance}}m · cutoff {{cutoff}}m",
+      "dayOff": "Day Off",
+      "dayOffReason": "Reason (optional)",
+      "dayOffReasonPlaceholder": "e.g. Family event",
+      "clear": "Clear",
+      "clearDayOff": "Clear Day Off",
+      "applyToWeek": "Apply to all 7 days this week",
+      "applyToWeekDisabled": "This shift has no weekday rule for some days — cannot apply to whole week.",
+      "weekendOverrideNote": "Override: lembur weekend — date_override prioritizes the weekday rule.",
+      "dayOffConflictWarning": "This cell is already a Day Off. Clear it first to assign a shift.",
+      "policyMissingWarning": "Shift ini belum dikonfigurasi policy — sel akan tampil kosong sampai policy diisi.",
+      "orphanDayOffNote": "Override berlaku setelah Day Off dihapus",
+      "pastDateNotice": "Past-date change saved — affects attendance recalculation.",
+      "shiftSaved": "Shift saved",
+      "dayOffSaved": "Day Off saved",
+      "cleared": "Cell cleared",
+      "saveFailed": "Couldn't save the cell",
+      "save": "Save",
+      "bulkSuccess": "Applied to {{count}} days",
+      "bulkPartial": "Applied to {{count}} days, {{total}} failed"
     }
   }
 }
