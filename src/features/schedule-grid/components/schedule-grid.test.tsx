@@ -62,7 +62,8 @@ describe('ScheduleGrid', () => {
               isHoliday: false,
               holidayName: null,
               holidayOverUnassigned: false,
-              dayOffReason: null
+              dayOffReason: null,
+              policyMissing: false
             },
             {
               date: '2026-08-04',
@@ -77,7 +78,8 @@ describe('ScheduleGrid', () => {
               isHoliday: false,
               holidayName: null,
               holidayOverUnassigned: false,
-              dayOffReason: 'Family event'
+              dayOffReason: 'Family event',
+              policyMissing: false
             },
             ...Array.from({ length: 5 }, () => ({
               date: '2026-08-05',
@@ -92,7 +94,8 @@ describe('ScheduleGrid', () => {
               isHoliday: false,
               holidayName: null,
               holidayOverUnassigned: false,
-              dayOffReason: null
+              dayOffReason: null,
+              policyMissing: false
             }))
           ]
         }
