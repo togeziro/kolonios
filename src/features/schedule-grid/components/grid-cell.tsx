@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { ScheduleGridCell as GridCellData } from '../api/types';
+import { buildCellAriaLabel } from '../utils/aria';
 import { WEEKEND_DAYS } from '../utils/constants';
 import { dayOfWeek } from '../utils/date-utils';
 import { CellPopover } from './cell-popover';
@@ -17,11 +18,16 @@ import { CellPopover } from './cell-popover';
  * For ticket 02, when the cell has an active `schedule_assignments` row
  * for the employee, the cell content is wrapped in `CellPopover` so a
  * click opens the per-cell write popover.
+ *
+ * Ticket 04: every cell renders an `aria-label` derived from the cell
+ * fields directly via `buildCellAriaLabel` (the locked "date + cell state"
+ * rule). The label is locale-independent — see `utils/aria.ts`.
  */
 export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridCellData }) {
   const { t } = useTranslation();
 
   const isWeekend = WEEKEND_DAYS.includes(dayOfWeek(cell.date) as (typeof WEEKEND_DAYS)[number]);
+  const cellAriaLabel = buildCellAriaLabel(cell);
 
   const inner = (() => {
     if (cell.isDayOff) {
@@ -32,6 +38,7 @@ export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridC
             isWeekend && 'border-dashed'
           )}
           title={cell.dayOffReason ?? t('scheduleGrid.cell.dayOff')}
+          aria-label={cellAriaLabel}
         >
           <span className='text-xs font-medium text-muted-foreground'>
             {t('scheduleGrid.cell.dayOff')}
@@ -52,6 +59,7 @@ export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridC
             'flex h-full min-h-[3.25rem] flex-col items-center justify-center rounded-md border bg-primary/5 px-2 py-1 text-center',
             isWeekend && 'border-dashed'
           )}
+          aria-label={cellAriaLabel}
         >
           <span className='line-clamp-1 text-xs font-medium'>{cell.shiftName}</span>
           <span className='mt-0.5 tabular-nums text-[10px] text-muted-foreground'>
@@ -68,7 +76,7 @@ export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridC
         className={cn(
           'flex h-full min-h-[3.25rem] items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground'
         )}
-        aria-label={t('scheduleGrid.cell.empty')}
+        aria-label={cellAriaLabel}
       >
         {t('scheduleGrid.cell.placeholder')}
       </div>

@@ -42,6 +42,7 @@ import { businessDateInTimeZone } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 
 import type { ScheduleGridCell as GridCellData } from '../api/types';
+import { buildCellAriaLabel } from '../utils/aria';
 import { addDays, dayOfWeek } from '../utils/date-utils';
 import {
   useApplyToWholeWeek,
@@ -219,7 +220,11 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
       <PopoverTrigger asChild>
         <button
           type='button'
-          aria-label={t('scheduleGrid.popover.openAria', { date: cell.date })}
+          // Per ticket 04 / spec rule "date + cell state": the trigger's
+          // aria-label is bound to the cell fields directly, NOT to a
+          // translated phrase. Radix Enter/Space handling opens the popover
+          // natively because the trigger is a real <button>.
+          aria-label={buildCellAriaLabel(cell)}
           data-testid={`schedule-grid-cell-trigger-${employeeId}-${cell.date}`}
           className='block h-full w-full cursor-pointer text-left'
         >

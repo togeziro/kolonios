@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import type { ScheduleGridRow as GridRow } from '../api/types';
+import { buildRowHeaderAriaLabel } from '../utils/aria';
 
 export type GridRowHeaderProps = {
   row: GridRow;
@@ -20,12 +21,18 @@ export type GridRowHeaderProps = {
  * Employee identity column for one row. Sticky on the left so the rest
  * of the row can scroll horizontally on narrow screens while the name
  * stays visible.
+ *
+ * Ticket 04: `role="rowheader"` + `aria-label` follow the spec rule that
+ * the employee column announces name + code + division to screen readers.
  */
 export function GridRowHeader({ row, sticky = true, onAssignShift }: GridRowHeaderProps) {
   const { t } = useTranslation();
   const showAssignCta = row.hasAssignment === false && typeof onAssignShift === 'function';
+  const rowHeaderAriaLabel = buildRowHeaderAriaLabel(row);
   return (
     <div
+      role='rowheader'
+      aria-label={rowHeaderAriaLabel}
       className={cn(
         'flex min-h-[3.25rem] items-center gap-2 border-r bg-background px-3 py-2',
         sticky && 'sticky left-0 z-10'
