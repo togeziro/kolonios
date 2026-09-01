@@ -9,8 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listEligibleShiftsForDayFn, type EligibleShift } from './shifts-helper';
 
 export const scheduleGridShiftsKeys = {
-  eligibleForDay: (dayOfWeek: number) =>
-    ['schedule-grid', 'eligible-shifts', dayOfWeek] as const
+  eligibleForDay: (dayOfWeek: number) => ['schedule-grid', 'eligible-shifts', dayOfWeek] as const
 };
 
 export function eligibleShiftsForDayQueryOptions(dayOfWeek: number) {
