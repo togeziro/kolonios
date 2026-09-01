@@ -1,6 +1,6 @@
 {
-  "id": "fd9e267f-68eb-4bdf-b77d-ad775a30092a",
-  "prevId": "5e99dff9-fd3d-47fd-c899-5e4f4f666eea",
+  "id": "5e99dff9-fd3d-47fd-c899-5e4f4f666eea",
+  "prevId": "4c77bee7-eb1b-45fc-b699-3c2e2d444fce",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1283,14 +1283,14 @@
           "name": "late_tolerance_minutes",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": 5
+          "notNull": false,
+          "default": 0
         },
         "absence_cutoff_minutes": {
           "name": "absence_cutoff_minutes",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": 120
         },
         "created_at": {

@@ -571,36 +571,42 @@ export async function getEffectiveEmployeeSchedule(
 
     const effectiveShiftId = override ? override.shift_id : assignment.shift_id;
 
-    // Get weekday rule AND the shift's policy for the EFFECTIVE shift (post-override).
-    // Tolerance lives on the shift (ADR-0004), so we read it from `shifts` not the
-    // deprecated weekday-rule columns.
+    // Shift-wide policy (ADR-0004) + weekday rule for the effective shift, in one round-trip.
+    // The shift's tolerance belongs to the SHIFT (not the weekday rule), so we read it from
+    // `shifts` separately. If a future override targets a different shiftId mid-month, the
+    // caller must pass that shift's policy via `shiftPolicies` (see getMonthlyScheduleData).
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
-    const [row] = await db
-      .select({
-        isWorkingDay: shiftWeekdayRules.is_working_day,
-        startTime: shiftWeekdayRules.start_time,
-        endTime: shiftWeekdayRules.end_time,
-        lateToleranceMinutes: shifts.late_tolerance_minutes,
-        absenceCutoffMinutes: shifts.absence_cutoff_minutes
-      })
-      .from(shiftWeekdayRules)
-      .innerJoin(shifts, eq(shiftWeekdayRules.shift_id, shifts.id))
-      .where(
-        and(
-          eq(shiftWeekdayRules.shift_id, effectiveShiftId),
-          eq(shiftWeekdayRules.day_of_week, dayOfWeek)
-        )
-      )
-      .limit(1);
 
-    if (!row || !row.isWorkingDay) return null;
+    const [shiftRows, ruleRows] = await Promise.all([
+      db
+        .select({
+          lateToleranceMinutes: shifts.late_tolerance_minutes,
+          absenceCutoffMinutes: shifts.absence_cutoff_minutes
+        })
+        .from(shifts)
+        .where(eq(shifts.id, effectiveShiftId))
+        .limit(1),
+      db
+        .select()
+        .from(shiftWeekdayRules)
+        .where(
+          and(
+            eq(shiftWeekdayRules.shift_id, effectiveShiftId),
+            eq(shiftWeekdayRules.day_of_week, dayOfWeek)
+          )
+        )
+        .limit(1)
+    ]);
+    const shiftRow = shiftRows[0];
+    const rule = ruleRows[0];
+    if (!shiftRow || !rule || !rule.is_working_day) return null;
 
     return {
       shiftId: effectiveShiftId,
-      startTime: row.startTime!,
-      endTime: row.endTime!,
-      lateToleranceMinutes: row.lateToleranceMinutes,
-      absenceCutoffMinutes: row.absenceCutoffMinutes,
+      startTime: rule.start_time!,
+      endTime: rule.end_time!,
+      lateToleranceMinutes: shiftRow.lateToleranceMinutes,
+      absenceCutoffMinutes: shiftRow.absenceCutoffMinutes,
       isWorkingDay: true
     };
   } catch (e) {
@@ -639,71 +645,71 @@ export async function getMonthlyScheduleData(
   const lastDay = new Date(y, m, 0).getDate();
   const monthEnd = `${month}-${String(lastDay).padStart(2, '0')}`;
 
-  const [assignment] = await db
-    .select({
-      shiftId: scheduleAssignments.shift_id,
-      effectiveFrom: scheduleAssignments.effective_from,
-      effectiveTo: scheduleAssignments.effective_to,
-      shiftName: shifts.name
-    })
-    .from(scheduleAssignments)
-    .leftJoin(shifts, eq(scheduleAssignments.shift_id, shifts.id))
-    .where(
-      and(
-        eq(scheduleAssignments.user_id, userId),
-        sql`${scheduleAssignments.effective_from} <= ${monthEnd}`,
-        sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${monthStart})`
+  const [assignmentRows, overrides] = await Promise.all([
+    db
+      .select({
+        shiftId: scheduleAssignments.shift_id,
+        effectiveFrom: scheduleAssignments.effective_from,
+        effectiveTo: scheduleAssignments.effective_to,
+        shiftName: shifts.name
+      })
+      .from(scheduleAssignments)
+      .leftJoin(shifts, eq(scheduleAssignments.shift_id, shifts.id))
+      .where(
+        and(
+          eq(scheduleAssignments.user_id, userId),
+          sql`${scheduleAssignments.effective_from} <= ${monthEnd}`,
+          sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${monthStart})`
+        )
       )
-    )
-    .orderBy(desc(scheduleAssignments.effective_from))
-    .limit(1);
+      .orderBy(desc(scheduleAssignments.effective_from))
+      .limit(1),
+    db
+      .select({ date: dateOverrides.date, shiftId: dateOverrides.shift_id })
+      .from(dateOverrides)
+      .where(
+        and(
+          eq(dateOverrides.user_id, userId),
+          gte(dateOverrides.date, monthStart),
+          lte(dateOverrides.date, monthEnd)
+        )
+      )
+  ]);
+
+  const assignment = assignmentRows[0];
 
   let weekdayRules: ScheduleWeekdayRuleRow[] = [];
-  let shiftPolicies:
-    | { shiftId: number; lateToleranceMinutes: number; absenceCutoffMinutes: number }[]
-    | [] = [];
+  let shiftPolicies: ScheduleMonthData['shiftPolicies'] = [];
   if (assignment) {
-    const [ruleResult, policyRow] = await Promise.all([
-      getShiftWeekdayRules(assignment.shiftId),
-      db
-        .select({
-          shiftId: shifts.id,
-          lateToleranceMinutes: shifts.late_tolerance_minutes,
-          absenceCutoffMinutes: shifts.absence_cutoff_minutes
-        })
-        .from(shifts)
-        .where(eq(shifts.id, assignment.shiftId))
-        .limit(1)
-    ]);
-    weekdayRules = ruleResult.success
-      ? ruleResult.rules.map((r) => ({
-          dayOfWeek: r.day_of_week,
-          isWorkingDay: r.is_working_day ?? true,
-          startTime: r.start_time,
-          endTime: r.end_time
-        }))
-      : [];
-    if (policyRow[0]) {
-      shiftPolicies = [
-        {
-          shiftId: policyRow[0].shiftId,
-          lateToleranceMinutes: policyRow[0].lateToleranceMinutes,
-          absenceCutoffMinutes: policyRow[0].absenceCutoffMinutes
-        }
-      ];
-    }
-  }
+    const result = await getShiftWeekdayRules(assignment.shiftId);
+    weekdayRules = (result.success ? result.rules : []).map((r) => ({
+      dayOfWeek: r.day_of_week,
+      isWorkingDay: r.is_working_day ?? true,
+      startTime: r.start_time,
+      endTime: r.end_time
+    }));
 
-  const overrides = await db
-    .select({ date: dateOverrides.date, shiftId: dateOverrides.shift_id })
-    .from(dateOverrides)
-    .where(
-      and(
-        eq(dateOverrides.user_id, userId),
-        gte(dateOverrides.date, monthStart),
-        lte(dateOverrides.date, monthEnd)
-      )
-    );
+    // Shift-wide policy (ADR-0004): resolve from the assignment's shift row
+    // plus every override shift referenced this month — the engine picks per-date
+    // via shiftPolicies keyed by shiftId. Reuses the `overrides` fetch above.
+    const policyShiftIds = new Set<number>([assignment.shiftId]);
+    for (const o of overrides) policyShiftIds.add(o.shiftId);
+
+    const policyRows = await db
+      .select({
+        shiftId: shifts.id,
+        lateToleranceMinutes: shifts.late_tolerance_minutes,
+        absenceCutoffMinutes: shifts.absence_cutoff_minutes
+      })
+      .from(shifts)
+      .where(or(...[...policyShiftIds].map((id) => eq(shifts.id, id))));
+
+    shiftPolicies = policyRows.map((r) => ({
+      shiftId: r.shiftId,
+      lateToleranceMinutes: r.lateToleranceMinutes,
+      absenceCutoffMinutes: r.absenceCutoffMinutes
+    }));
+  }
 
   const dayOffRows = await db
     .select({ date: dayOffs.date })

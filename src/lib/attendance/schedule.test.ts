@@ -21,57 +21,19 @@ describe('resolveEffectiveSchedule', () => {
     effectiveTo: null
   };
 
-  const shiftPolicies: ShiftPolicy[] = [
-    {
-      shiftId: 1,
-      lateToleranceMinutes: 10,
-      absenceCutoffMinutes: 120
-    }
+  const shiftPolicies = [
+    { shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 },
+    { shiftId: 2, lateToleranceMinutes: 5, absenceCutoffMinutes: 60 }
   ];
 
   const weekdayRules: WeekdayScheduleRule[] = [
-    {
-      dayOfWeek: 1,
-      isWorkingDay: true,
-      startTime: '08:00',
-      endTime: '17:00'
-    },
-    {
-      dayOfWeek: 2,
-      isWorkingDay: true,
-      startTime: '08:00',
-      endTime: '17:00'
-    },
-    {
-      dayOfWeek: 3,
-      isWorkingDay: true,
-      startTime: '08:00',
-      endTime: '17:00'
-    },
-    {
-      dayOfWeek: 4,
-      isWorkingDay: true,
-      startTime: '08:00',
-      endTime: '17:00'
-    },
-    {
-      dayOfWeek: 5,
-      isWorkingDay: true,
-      startTime: '08:00',
-      endTime: '17:00'
-    },
-    {
-      dayOfWeek: 6,
-      isWorkingDay: false,
-      startTime: null,
-      endTime: null
-    },
-    {
-      dayOfWeek: 0,
-      isWorkingDay: false,
-      startTime: null,
-      endTime: null
-    }
+    { dayOfWeek: 1, isWorkingDay: true, startTime: '08:00', endTime: '17:00' },
+    { dayOfWeek: 2, isWorkingDay: true, startTime: '08:00', endTime: '17:00' },
+    { dayOfWeek: 3, isWorkingDay: true, startTime: '08:00', endTime: '17:00' },
+    { dayOfWeek: 4, isWorkingDay: true, startTime: '08:00', endTime: '17:00' },
+    { dayOfWeek: 5, isWorkingDay: true, startTime: '08:00', endTime: '17:00' },
+    { dayOfWeek: 6, isWorkingDay: false, startTime: null, endTime: null },
+    { dayOfWeek: 0, isWorkingDay: false, startTime: null, endTime: null }
   ];
 
   it('returns null when no assignment exists', () => {
@@ -99,6 +61,31 @@ describe('resolveEffectiveSchedule', () => {
     expect(result!.startTime).toBe('08:00');
     expect(result!.endTime).toBe('17:00');
     expect(result!.isWorkingDay).toBe(true);
+  });
+
+  it('resolves tolerance from the assigned shift, not the weekday rule', () => {
+    const result = resolveEffectiveSchedule({
+      assignment: baseAssignment,
+      weekdayRules,
+      shiftPolicies,
+      dateOverrides: [],
+      dayOffs: [],
+      date: '2026-08-04' // Tuesday
+    });
+    expect(result!.lateToleranceMinutes).toBe(10);
+    expect(result!.absenceCutoffMinutes).toBe(120);
+  });
+
+  it('returns null when the effective shift has no policy', () => {
+    const result = resolveEffectiveSchedule({
+      assignment: baseAssignment,
+      weekdayRules,
+      shiftPolicies: [{ shiftId: 99, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
+      dateOverrides: [],
+      dayOffs: [],
+      date: '2026-08-04'
+    });
+    expect(result).toBeNull();
   });
 
   it('returns null for a non-working weekday (Saturday) with assignment', () => {
@@ -141,6 +128,21 @@ describe('resolveEffectiveSchedule', () => {
     // The override should use shiftId 2's rules (we assume weekdayRules are looked up by override shiftId)
     // For this test, we just verify it resolves to a working day
     expect(result!.isWorkingDay).toBe(true);
+  });
+
+  it('uses the override shift policy for tolerance on an override date', () => {
+    const overrides = [{ date: '2026-08-04', shiftId: 2 }];
+    const result = resolveEffectiveSchedule({
+      assignment: baseAssignment,
+      weekdayRules,
+      shiftPolicies,
+      dateOverrides: overrides,
+      dayOffs: [],
+      date: '2026-08-04'
+    });
+    expect(result!.shiftId).toBe(2);
+    expect(result!.lateToleranceMinutes).toBe(5);
+    expect(result!.absenceCutoffMinutes).toBe(60);
   });
 
   it('day-off takes precedence over date-specific shift override', () => {

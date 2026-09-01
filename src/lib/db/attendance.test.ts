@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import {
   calculateDistance,
   validateGpsLocation,
@@ -441,8 +441,37 @@ describe('attendance data access (integration)', () => {
       expect(res!.shiftId).toBe(shift.id);
       expect(res!.startTime).toBe('08:00');
       expect(res!.endTime).toBe('17:00');
+      // Tolerance comes from the shift row (ADR-0004), not the weekday rule
       expect(res!.lateToleranceMinutes).toBe(10);
       expect(res!.absenceCutoffMinutes).toBe(120);
+    });
+
+    it('date override uses the override shift policy for tolerance', async () => {
+      const morning = await seedShift({ name: 'Morning', late_tolerance_minutes: 10 });
+      const night = await seedShift({
+        name: 'Night',
+        start_time: '20:00',
+        end_time: '04:00',
+        late_tolerance_minutes: 25
+      });
+      await seedShiftWeekdayRule(morning.id, {
+        day_of_week: 1,
+        start_time: '08:00',
+        end_time: '17:00'
+      });
+      await seedShiftWeekdayRule(night.id, {
+        day_of_week: 1,
+        start_time: '20:00',
+        end_time: '04:00'
+      });
+      await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: morning.id });
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-08-03', shift_id: night.id });
+
+      const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
+      expect(res).not.toBeNull();
+      expect(res!.shiftId).toBe(night.id);
+      expect(res!.startTime).toBe('20:00');
+      expect(res!.lateToleranceMinutes).toBe(25);
     });
 
     it('returns null for a non-working weekday (Saturday)', async () => {
@@ -513,6 +542,76 @@ describe('attendance data access (integration)', () => {
       const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
       expect(res).toBeNull();
     });
+
+    it('migration backfill (0032): shift tolerance = MAX of weekday-rule tolerances', async () => {
+      // Pre-migration state: a shift with weekday rules carrying varied per-day
+      // tolerance. The migration's UPDATE-from-MAX must promote those into the
+      // shift row. This test exercises the EXACT statements in 0032 by reading
+      // the migration file and executing it — if the SQL drifts, the test
+      // drifts with it.
+      const { shifts, shiftWeekdayRules } = await import('./schema/attendance');
+      const [shift] = await db
+        .insert(shifts)
+        .values({ name: 'Backfill subject', start_time: '08:00', end_time: '17:00' })
+        .returning();
+      await db.insert(shiftWeekdayRules).values([
+        {
+          shift_id: shift.id,
+          day_of_week: 1,
+          is_working_day: true,
+          start_time: '08:00',
+          end_time: '17:00',
+          late_tolerance_minutes: 5,
+          absence_cutoff_minutes: 60
+        },
+        {
+          shift_id: shift.id,
+          day_of_week: 2,
+          is_working_day: true,
+          start_time: '08:00',
+          end_time: '17:00',
+          late_tolerance_minutes: 12,
+          absence_cutoff_minutes: 180
+        },
+        {
+          shift_id: shift.id,
+          day_of_week: 6,
+          is_working_day: false,
+          start_time: null,
+          end_time: null,
+          late_tolerance_minutes: 0,
+          absence_cutoff_minutes: 0
+        }
+      ]);
+
+      const { readFile } = await import('node:fs/promises');
+      const { fileURLToPath } = await import('node:url');
+      const { resolve } = await import('node:path');
+      const migrationPath = fileURLToPath(
+        new URL('./migrations/0032_gorgeous_mother_askani.sql', import.meta.url)
+      );
+      const raw = await readFile(migrationPath, 'utf8');
+
+      // Run the migration's ADD-COLUMN + UPDATE statements against this test's
+      // shift only. ADD COLUMN is idempotent (column already exists from prior
+      // migrations in the test DB); the UPDATE statements are the contract.
+      const statements = raw
+        .split(/-->\s*statement-breakpoint/g)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      for (const stmt of statements) {
+        // The test DB already has the migration's schema applied, so we only
+        // need to re-run the UPDATE statements that this test exercises.
+        // (ADD COLUMN would fail; ALTER COLUMN DROP DEFAULT is a no-op.)
+        if (stmt.startsWith('UPDATE "shifts"')) {
+          await db.execute(sql.raw(stmt));
+        }
+      }
+
+      const [after] = await db.select().from(shifts).where(eq(shifts.id, shift.id));
+      expect(after.late_tolerance_minutes).toBe(12); // max(5, 12, 0)
+      expect(after.absence_cutoff_minutes).toBe(180); // max(60, 180, 0)
+    });
   });
 
   describe('monthly schedule data', () => {
@@ -525,14 +624,16 @@ describe('attendance data access (integration)', () => {
       expect(res.holidays).toEqual([]);
     });
 
-    it('returns assignment, rules, overrides and day offs within the month', async () => {
-      const shift = await seedShift({ name: 'Morning' });
+    it('returns assignment, rules, shift policies, overrides and day offs within the month', async () => {
+      const shift = await seedShift({
+        name: 'Morning',
+        late_tolerance_minutes: 10,
+        absence_cutoff_minutes: 120
+      });
       await seedShiftWeekdayRule(shift.id, {
         day_of_week: 1,
         start_time: '08:00',
-        end_time: '17:00',
-        late_tolerance_minutes: 10,
-        absence_cutoff_minutes: 120
+        end_time: '17:00'
       });
       await seedShiftWeekdayRule(shift.id, {
         day_of_week: 6,
@@ -550,6 +651,10 @@ describe('attendance data access (integration)', () => {
       expect(res.weekdayRules).toHaveLength(2);
       expect(res.weekdayRules.find((r) => r.dayOfWeek === 1)?.startTime).toBe('08:00');
       expect(res.weekdayRules.find((r) => r.dayOfWeek === 6)?.isWorkingDay).toBe(false);
+      // Shift-wide policy comes from the shift row (ADR-0004)
+      expect(res.shiftPolicies).toEqual([
+        { shiftId: shift.id, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }
+      ]);
       expect(res.overrides).toEqual([{ date: '2026-08-04', shiftId: shift.id }]);
       expect(res.dayOffs).toEqual(['2026-08-05']);
     });
@@ -731,9 +836,7 @@ describe('check-in validation with schedules and policies', () => {
       day_of_week: new Date(businessDateInTimeZone(new Date())).getDay(),
       is_working_day: true,
       start_time: '00:00',
-      end_time: '23:59',
-      late_tolerance_minutes: 0,
-      absence_cutoff_minutes: 120
+      end_time: '23:59'
     });
     await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: shift.id });
     return shift;

@@ -205,7 +205,6 @@ describe('resolveRouteGuard', () => {
       '/dashboard/admin/payroll/generate',
       '/dashboard/admin/payroll/settings',
       '/dashboard/admin/payroll/reports',
-      '/dashboard/payroll/payslips',
       '/dashboard/attendance',
       '/dashboard/attendance/check-in',
       '/dashboard/attendance/face-settings',
