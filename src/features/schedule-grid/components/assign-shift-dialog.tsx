@@ -296,11 +296,11 @@ function AssignShiftDialogBody({
           <Button type='button' variant='outline' onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
-            {([canSubmit, isSubmitting]) => (
+          <form.Subscribe selector={(state) => [state.isSubmitting] as const}>
+            {([isSubmitting]) => (
               <Button
                 type='submit'
-                disabled={!canSubmit || isSubmitting}
+                disabled={isSubmitting}
                 data-testid='assign-dialog-submit'
               >
                 {isSubmitting ? (
