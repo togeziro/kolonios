@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import {
@@ -34,18 +33,20 @@ import type { ShiftListItem } from '@/lib/db/attendance';
 const POLICY_REQUIRED_FIELDS = ['late_tolerance_minutes', 'absence_cutoff_minutes'] as const;
 
 function isPolicyMissing(shift: ShiftListItem): boolean {
+  // Defensive check: post-#109 migrations guarantee these columns are
+  // NOT NULL on every shift row, but legacy rows in pre-#109 databases can
+  // still come back with nulls. The warning is locked into the spec for
+  // ticket 03 (see spec.md "Engine delta from PR #109").
   return POLICY_REQUIRED_FIELDS.some(
     (key) => (shift as unknown as Record<string, unknown>)[key] == null
   );
 }
 
-const assignShiftFormSchema = z.object({
-  shiftId: z.string().min(1, 'Shift is required'),
-  effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD'),
-  effectiveTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional()
-});
-
-type AssignShiftFormValues = z.infer<typeof assignShiftFormSchema>;
+type AssignShiftFormValues = {
+  shiftId: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+};
 
 export type AssignShiftDialogProps = {
   open: boolean;
@@ -128,14 +129,24 @@ function AssignShiftDialogBody({
     defaultValues,
     onSubmit: async ({ value }) => {
       const shiftId = Number(value.shiftId);
-      const result = await createAssignmentInlineFn({
-        data: {
-          userId,
-          shiftId,
-          effectiveFrom: value.effectiveFrom,
-          effectiveTo: value.effectiveTo ?? null
-        }
-      });
+      let result: Awaited<ReturnType<typeof createAssignmentInlineFn>>;
+      try {
+        result = await createAssignmentInlineFn({
+          data: {
+            userId,
+            shiftId,
+            effectiveFrom: value.effectiveFrom,
+            effectiveTo: value.effectiveTo ?? null
+          }
+        });
+      } catch {
+        // `mapDbError` always throws DomainError; the server fn does not
+        // surface internal failures as a tuple. Treat the thrown error as
+        // a generic failure so the user gets a toast and the dialog stays
+        // open instead of stranding them on a disabled submit button.
+        toast.error(t('scheduleGrid.assignDialog.errorGeneric'));
+        return;
+      }
       if (!result.success) {
         if (result.error === 'effectiveToBeforeFrom') {
           toast.error(t('scheduleGrid.assignDialog.errorEffectiveToBeforeFrom'));
@@ -146,10 +157,7 @@ function AssignShiftDialogBody({
       }
       // Invalidate the grid + cross-feature attendance caches.
       queryClient.invalidateQueries({ queryKey: scheduleGridKeys.all });
-      queryClient.invalidateQueries({ queryKey: attendanceKeys.assignments({} as never) });
-      queryClient.invalidateQueries({
-        queryKey: attendanceKeys.effectiveSchedule(undefined)
-      });
+      queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
 
       // Compose the success message — append the policy warning when the
       // chosen shift has no policy, and the closing-note when the previous
@@ -298,11 +306,7 @@ function AssignShiftDialogBody({
           </Button>
           <form.Subscribe selector={(state) => [state.isSubmitting] as const}>
             {([isSubmitting]) => (
-              <Button
-                type='submit'
-                disabled={isSubmitting}
-                data-testid='assign-dialog-submit'
-              >
+              <Button type='submit' disabled={isSubmitting} data-testid='assign-dialog-submit'>
                 {isSubmitting ? (
                   <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
                 ) : (

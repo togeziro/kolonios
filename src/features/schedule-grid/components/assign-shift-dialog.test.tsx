@@ -33,8 +33,8 @@ vi.mock('../api/service', () => ({
 vi.mock('@/features/attendance/api/queries', () => ({
   attendanceKeys: {
     all: ['attendance'],
-    assignments: () => [...['attendance'], 'assignments'],
-    effectiveSchedule: () => [...['attendance'], 'effective-schedule']
+    assignments: () => ['attendance', 'assignments'],
+    effectiveSchedule: () => ['attendance', 'effective-schedule']
   },
   listShiftsQueryOptions: () => ({
     queryKey: ['attendance', 'shifts-list'],
@@ -153,13 +153,13 @@ describe('AssignShiftDialog', () => {
     await waitFor(() => screen.getByText('Assign Shift'));
 
     // Pick shift id=1 via the mocked Select trigger.
-    const trigger = (await screen.findByTestId(
-      'assign-dialog-shift-trigger'
-    )) as HTMLButtonElement;
+    const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
     await act(async () => {
       fireEvent.click(trigger);
     });
-    const option = (await screen.findByRole('option', { name: 'Morning' })) as HTMLElement;
+    const option = (await screen.findByRole('option', {
+      name: 'Morning'
+    })) as HTMLElement;
     await act(async () => {
       fireEvent.click(option);
     });
@@ -190,13 +190,13 @@ describe('AssignShiftDialog', () => {
     const { onOpenChange } = renderDialog({ open: true });
     await waitFor(() => screen.getByText('Assign Shift'));
 
-    const trigger = (await screen.findByTestId(
-      'assign-dialog-shift-trigger'
-    )) as HTMLButtonElement;
+    const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
     await act(async () => {
       fireEvent.click(trigger);
     });
-    const option = (await screen.findByRole('option', { name: 'Morning' })) as HTMLElement;
+    const option = (await screen.findByRole('option', {
+      name: 'Morning'
+    })) as HTMLElement;
     await act(async () => {
       fireEvent.click(option);
     });
@@ -231,9 +231,7 @@ describe('AssignShiftDialog', () => {
     await waitFor(() => screen.getByText('Assign Shift'));
 
     // Choose shift id=2 (no policy) so both warnings fire.
-    const trigger = (await screen.findByTestId(
-      'assign-dialog-shift-trigger'
-    )) as HTMLButtonElement;
+    const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
     await act(async () => {
       fireEvent.click(trigger);
     });
@@ -268,8 +266,14 @@ describe('AssignShiftDialog', () => {
     await i18n.changeLanguage('id');
     renderDialog({ open: true });
     await waitFor(() => {
-      expect(screen.getByText('Assign Shift')).toBeTruthy();
+      // "Tanggal mulai" is the Indonesian-only label for the From date
+      // picker — distinct from the English "From date". Both `en` and
+      // `id` happen to use "Assign Shift" as the dialog title, so we
+      // assert on a translation that is unique to the id locale.
+      expect(screen.getByText('Tanggal mulai')).toBeTruthy();
     });
+    // Submit button should also be in Indonesian.
+    expect(screen.getByTestId('assign-dialog-submit').textContent).toMatch(/Simpan/);
     // The description interpolation should keep the user name.
     expect(screen.getByText(/Aldi Pranata/)).toBeTruthy();
   });
