@@ -22,6 +22,14 @@ export type ScheduleGridCell = {
    * UI reads it — included now to keep the wire shape stable for 02/03. */
   holidayOverUnassigned: boolean;
   dayOffReason: string | null;
+  /** True when the cell has an assignment + a date_override / weekday rule
+   * pointing at a shift, but `resolveEffectiveSchedule` returned null because
+   * the effective shift has no `shift_policies` row (PR #109 made the policy
+   * required and dropped the DEFAULT_SHIFT_POLICY fallback). The grid
+   * currently renders such cells as the "—" placeholder. The popover reads
+   * this flag to surface a "shift ini belum dikonfigurasi policy" warning
+   * before any write — admin is GOD MODE and may still proceed. */
+  policyMissing: boolean;
 };
 
 export type ScheduleGridRow = {
