@@ -47,6 +47,7 @@ describe('ScheduleGrid', () => {
           divisionId: 2,
           divisionName: 'Engineering',
           activeShiftName: 'Morning',
+          hasAssignment: true,
           cells: [
             {
               date: '2026-08-03',

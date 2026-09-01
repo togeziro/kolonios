@@ -1,6 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { requirePermission } from '@/lib/auth/session';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { mapDbError } from '@/lib/errors';
 import { db } from '@/lib/db';
 import { getHolidaysInRange } from '@/lib/db/attendance';
 import { departments } from '@/lib/db/schema/masterdata';
@@ -19,9 +21,13 @@ import {
   type ShiftPolicy,
   type WeekdayScheduleRule
 } from '@/lib/attendance/schedule';
-import { SCHEDULE_GRID_MAX_PAGE_SIZE, scheduleGridFiltersSchema } from './validation';
+import {
+  SCHEDULE_GRID_MAX_PAGE_SIZE,
+  scheduleGridFiltersSchema,
+  assignShiftInlineSchema
+} from './validation';
 import type { ScheduleGridCell, ScheduleGridResponse, ScheduleGridRow } from './types';
-import type { ScheduleGridFiltersInput } from './validation';
+import type { ScheduleGridFiltersInput, AssignShiftInlineInput } from './validation';
 import { addDays } from '../utils/date-utils';
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -330,7 +336,11 @@ export const getScheduleGridFn = createServerFn({ method: 'GET' })
         divisionName:
           employee.departmentId != null ? (deptNameById.get(employee.departmentId) ?? '') : '',
         cells,
-        activeShiftName
+        activeShiftName,
+        // Ticket 03: row-level flag drives the "+ Assign Shift" CTA in the
+        // row header. True when at least one cell resolves against an
+        // active `schedule_assignments` row.
+        hasAssignment: cells.some((c) => c.hasAssignment)
       };
     });
 
@@ -350,4 +360,86 @@ export const getScheduleGridFn = createServerFn({ method: 'GET' })
     // without a breaking cache-key change).
     void month;
     return response;
+  });
+
+/**
+ * Inline "Assign Shift" server fn for the row-header CTA in the schedule
+ * grid (ticket 03). Creates a `schedule_assignments` row for an employee
+ * who currently has none, so the row's "—" cells can start resolving to
+ * real shift data.
+ *
+ * Behavior:
+ *   - Auto-closes any pre-existing open-ended assignment
+ *     (`effective_to IS NULL`) for the same user by setting
+ *     `effective_to = effectiveFrom - 1 day` (admin is GOD MODE — no 422).
+ *   - Wraps the close + insert in a single DB transaction so a partial
+ *     state can never be observed.
+ *   - Cross-field rule `effectiveTo > effectiveFrom` is enforced here
+ *     (NOT in the zod schema) so the dialog can keep field-level
+ *     `required` markers per repo convention.
+ *   - Returns `{ success, assignment, closedAssignment? }` per the
+ *     `src/lib/db/attendance.ts` tuple convention. Errors are folded via
+ *     `mapDbError` rather than thrown.
+ */
+export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
+  .validator(assignShiftInlineSchema)
+  .handler(async ({ data }: { data: AssignShiftInlineInput }) => {
+    const session = await requirePermission('attendance_admin', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+
+    if (data.effectiveTo && data.effectiveTo <= data.effectiveFrom) {
+      return {
+        success: false as const,
+        error: 'effectiveToBeforeFrom' as const
+      };
+    }
+
+    try {
+      const result = await db.transaction(async (tx) => {
+        const openEnded = await tx
+          .select()
+          .from(scheduleAssignments)
+          .where(
+            and(
+              eq(scheduleAssignments.user_id, data.userId),
+              isNull(scheduleAssignments.effective_to)
+            )
+          )
+          .orderBy(desc(scheduleAssignments.effective_from))
+          .limit(1);
+
+        let closedAssignment: typeof scheduleAssignments.$inferSelect | null = null;
+        if (openEnded[0]) {
+          const closingDate = addDays(data.effectiveFrom, -1);
+          const [updated] = await tx
+            .update(scheduleAssignments)
+            .set({ effective_to: closingDate, updated_at: new Date() })
+            .where(eq(scheduleAssignments.id, openEnded[0].id))
+            .returning();
+          closedAssignment = updated ?? null;
+        }
+
+        const [assignment] = await tx
+          .insert(scheduleAssignments)
+          .values({
+            user_id: data.userId,
+            shift_id: data.shiftId,
+            effective_from: data.effectiveFrom,
+            effective_to: data.effectiveTo ?? null,
+            created_by: session.user.id
+          })
+          .returning();
+
+        return { assignment, closedAssignment };
+      });
+
+      return {
+        success: true as const,
+        assignment: result.assignment,
+        ...(result.closedAssignment ? { closedAssignment: result.closedAssignment } : {})
+      };
+    } catch (e) {
+      mapDbError(e, 'scheduleGrid.createAssignmentInline');
+      return { success: false as const, error: 'internal' as const };
+    }
   });
