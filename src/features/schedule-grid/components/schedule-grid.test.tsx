@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n/config';
 import { ScheduleGrid } from './schedule-grid';
 import type { ScheduleGridResponse } from '../api/types';
@@ -27,9 +28,14 @@ function makeResponse(overrides: Partial<ScheduleGridResponse> = {}): ScheduleGr
   };
 }
 
+function withQueryClient(node: React.ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return createElement(QueryClientProvider, { client }, node);
+}
+
 describe('ScheduleGrid', () => {
   it('renders the employee column header and seven day columns', () => {
-    render(createElement(ScheduleGrid, { response: makeResponse() }));
+    render(withQueryClient(createElement(ScheduleGrid, { response: makeResponse() })));
     expect(screen.getByText(/employee/i)).toBeTruthy();
     // Seven day numbers — for 2026-08-03..2026-08-09 we expect 03..09.
     for (const day of ['03', '04', '05', '06', '07', '08', '09']) {
@@ -102,7 +108,7 @@ describe('ScheduleGrid', () => {
       ]
     });
 
-    render(createElement(ScheduleGrid, { response }));
+    render(withQueryClient(createElement(ScheduleGrid, { response })));
 
     expect(screen.getByText('Aldi Pranata')).toBeTruthy();
     expect(screen.getByText(/EMP-0001 · Engineering/)).toBeTruthy();
@@ -117,7 +123,7 @@ describe('ScheduleGrid', () => {
       holidays: { byDate: { '2026-08-03': 'Independence Day' } }
     });
 
-    render(createElement(ScheduleGrid, { response }));
+    render(withQueryClient(createElement(ScheduleGrid, { response })));
     // The 🇮🇩 character is the convention copied from MySchedulePage.
     expect(screen.getByText('🇮🇩')).toBeTruthy();
     expect(screen.getByText('Independence Day')).toBeTruthy();
