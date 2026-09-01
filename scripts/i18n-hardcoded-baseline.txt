@@ -62,8 +62,8 @@ src/features/role-groups/components/role-group-columns.tsx:130
 src/features/role-groups/components/role-group-columns.tsx:84
 src/features/role-groups/components/role-group-listing.tsx:115
 src/features/role-groups/components/role-group-listing.tsx:57
-src/features/schedule-grid/components/assign-shift-dialog.tsx:204
-src/features/schedule-grid/components/assign-shift-dialog.tsx:254
+src/features/schedule-grid/components/assign-shift-dialog.tsx:212
+src/features/schedule-grid/components/assign-shift-dialog.tsx:262
 src/features/schedule/components/my-schedule-page.tsx:29
 src/features/schedule/components/my-schedule-page.tsx:31
 src/features/schedule/components/today-shift-card.tsx:82

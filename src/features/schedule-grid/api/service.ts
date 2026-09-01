@@ -439,7 +439,9 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
         ...(result.closedAssignment ? { closedAssignment: result.closedAssignment } : {})
       };
     } catch (e) {
+      // mapDbError logs + throws a DomainError; the client wraps the call
+      // in try/catch and surfaces errorGeneric. We don't return a tuple
+      // here because `mapDbError`'s return type is `never`.
       mapDbError(e, 'scheduleGrid.createAssignmentInline');
-      return { success: false as const, error: 'internal' as const };
     }
   });
