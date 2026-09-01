@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { ScheduleGridCell as GridCellData } from '../api/types';
+import { getCellIdentityKey } from '../utils/cell-identity';
 import { buildCellAriaLabel } from '../utils/aria';
 import { WEEKEND_DAYS } from '../utils/constants';
 import { dayOfWeek } from '../utils/date-utils';
@@ -90,8 +91,16 @@ export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridC
     return inner;
   }
 
+  // Reset `CellPopover`'s local `useState` whenever the cell's write-tracked
+  // identity changes (PRs #112/113 split the integration test because state
+  // outlived a save-then-reopen cycle; this `key` makes the popover mount
+  // fresh, so a "Clear Day Off" → re-open round-trip shows a clean shift
+  // dropdown instead of the prior `isDayOffToggle=true` value). Volatile
+  // fields (holiday flags, `policyMissing`) are intentionally excluded so
+  // unrelated refetches don't reset mid-edit input.
+  // See `.scratch/shift-scheduler/EPIC_SUMMARY.md` § Follow-ups #4.
   return (
-    <CellPopover employeeId={employeeId} cell={cell}>
+    <CellPopover key={getCellIdentityKey(cell)} employeeId={employeeId} cell={cell}>
       {inner}
     </CellPopover>
   );
