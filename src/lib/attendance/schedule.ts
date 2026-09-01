@@ -13,10 +13,7 @@ export type WeekdayScheduleRule = {
   endTime: string | null; // HH:MM
 };
 
-/**
- * Shift-wide attendance policy (ADR-0004): late tolerance and absence cutoff
- * belong to the Shift, not to an individual weekday.
- */
+// ADR-0004: tolerance is shift-wide; passed alongside the per-day rules.
 export type ShiftPolicy = {
   shiftId: number;
   lateToleranceMinutes: number;
@@ -108,10 +105,10 @@ export function resolveEffectiveSchedule(input: {
   if (!rule) return null;
   if (!rule.isWorkingDay) return null;
 
-  // Tolerance is a property of the effective shift (ADR-0004)
+  // Tolerance is a property of the effective shift (ADR-0004); null when missing
+  // (caller is responsible for surfacing that the shift has no policy configured).
   const policy = shiftPolicies.find((p) => p.shiftId === effectiveShiftId);
   if (!policy) return null;
-
   return {
     shiftId: effectiveShiftId,
     startTime: rule.startTime!,

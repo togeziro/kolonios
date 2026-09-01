@@ -63,19 +63,118 @@ export const leaveFiltersSchema = z.object({
 
 // --- Schedule and policy validation schemas ---
 
+const timeString = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:MM format');
+
 export const weekdayScheduleRuleSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6),
   isWorkingDay: z.boolean().optional(),
-  startTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
-    .nullable()
-    .optional(),
-  endTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
-    .nullable()
-    .optional()
+  startTime: timeString.nullable().optional(),
+  endTime: timeString.nullable().optional()
+});
+
+// Shared shape of a shift for both create and update. Create makes every
+// field required; update makes them optional and adds `id` + `status`.
+const hexColor = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, 'Use hex #RRGGBB')
+  .nullable()
+  .optional();
+
+const breakWindow = {
+  breakStart: timeString.nullable().optional(),
+  breakEnd: timeString.nullable().optional(),
+  maxBreakMinutes: z.number().int().nonnegative().nullable().optional()
+};
+
+const toleranceFields = {
+  lateToleranceMinutes: z.number().int().nonnegative().optional(),
+  absenceCutoffMinutes: z.number().int().nonnegative().optional()
+};
+
+const baseShiftFields = {
+  name: z.string().min(1).max(200),
+  startTime: timeString,
+  endTime: timeString,
+  type: z.enum(['fixed', 'flexible']).optional(),
+  color: hexColor,
+  note: z.string().max(MAX_TEXT_LENGTH).nullable().optional(),
+  ...breakWindow,
+  ...toleranceFields,
+  weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
+};
+
+function validateShiftShape(
+  v: {
+    breakStart?: string | null;
+    breakEnd?: string | null;
+    maxBreakMinutes?: number | null;
+    weekdayRules?: Array<{
+      dayOfWeek: number;
+      isWorkingDay?: boolean;
+      startTime?: string | null;
+      endTime?: string | null;
+    }>;
+    startTime?: string;
+    endTime?: string;
+  },
+  ctx: z.RefinementCtx,
+  requireMaxBreak: boolean
+) {
+  const hasBreakStart = v.breakStart != null && v.breakStart !== '';
+  const hasBreakEnd = v.breakEnd != null && v.breakEnd !== '';
+  if (hasBreakStart !== hasBreakEnd) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'breakStart and breakEnd must both be set or both be empty',
+      path: ['breakStart']
+    });
+  }
+  if (requireMaxBreak && hasBreakStart && hasBreakEnd && v.maxBreakMinutes == null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'maxBreakMinutes is required when a break window is set',
+      path: ['maxBreakMinutes']
+    });
+  }
+  if (v.weekdayRules) {
+    v.weekdayRules.forEach((r, i) => {
+      if (r.isWorkingDay) {
+        const start = r.startTime ?? v.startTime;
+        const end = r.endTime ?? v.endTime;
+        if (!start || !end) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Working days require startTime and endTime',
+            path: ['weekdayRules', i]
+          });
+        }
+      }
+    });
+  }
+}
+
+export const shiftCreateSchema = z
+  .object(baseShiftFields)
+  .superRefine((v, ctx) => validateShiftShape(v, ctx, true));
+
+export const shiftUpdateSchema = z
+  .object({
+    id: z.number().int().positive(),
+    name: z.string().min(1).max(200).optional(),
+    startTime: timeString.optional(),
+    endTime: timeString.optional(),
+    type: z.enum(['fixed', 'flexible']).optional(),
+    color: hexColor,
+    note: z.string().max(MAX_TEXT_LENGTH).nullable().optional(),
+    ...breakWindow,
+    ...toleranceFields,
+    status: z.enum(['active', 'inactive']).optional(),
+    weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
+  })
+  .superRefine((v, ctx) => validateShiftShape(v, ctx, false));
+
+export const shiftDeleteSchema = z.object({
+  id: z.number().int().positive()
 });
 
 export const scheduleAssignmentSchema = z.object({
@@ -149,35 +248,8 @@ export const locationDeleteSchema = z.object({
 });
 
 // --- Schedule management ---
-
-export const scheduleCreateSchema = z.object({
-  name: z.string().min(1).max(200),
-  startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
-  type: z.enum(['fixed', 'flexible']).optional(),
-  // Shift-wide tolerance (ADR-0004)
-  lateToleranceMinutes: z.number().int().min(0).optional(),
-  absenceCutoffMinutes: z.number().int().min(0).optional(),
-  weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
-});
-
-export const scheduleUpdateSchema = z.object({
-  id: z.number().int().positive(),
-  name: z.string().min(1).max(200).optional(),
-  startTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
-    .optional(),
-  endTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
-    .optional(),
-  type: z.enum(['fixed', 'flexible']).optional(),
-  // Shift-wide tolerance (ADR-0004)
-  lateToleranceMinutes: z.number().int().min(0).optional(),
-  absenceCutoffMinutes: z.number().int().min(0).optional(),
-  weekdayRules: z.array(weekdayScheduleRuleSchema).optional()
-});
+// Replaced by shiftCreateSchema / shiftUpdateSchema / shiftDeleteSchema
+// (admin shift master CRUD, see top of file).
 
 // --- Assignments ---
 

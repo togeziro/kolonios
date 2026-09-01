@@ -9,7 +9,9 @@ import {
   getAttendanceSummaryFn,
   getSchedulesFn,
   getScheduleAssignmentsFn,
-  getAdminAttendanceReportFn
+  getAdminAttendanceReportFn,
+  listShiftsFn,
+  getShiftByIdFn
 } from './service';
 import type {
   AttendanceFilters,
@@ -26,6 +28,7 @@ export const attendanceKeys = {
   performance: () => [...attendanceKeys.all, 'performance'] as const,
   locations: () => [...attendanceKeys.all, 'locations'] as const,
   shifts: () => [...attendanceKeys.all, 'shifts'] as const,
+  shiftsList: () => [...attendanceKeys.all, 'shifts-list'] as const,
   schedules: () => [...attendanceKeys.all, 'schedules'] as const,
   assignments: (filters: AssignmentFilters) =>
     [...attendanceKeys.all, 'assignments', filters] as const,
@@ -70,6 +73,19 @@ export const shiftsQueryOptions = () =>
   queryOptions({
     queryKey: attendanceKeys.shifts(),
     queryFn: () => getShiftsFn()
+  });
+
+export const listShiftsQueryOptions = () =>
+  queryOptions({
+    queryKey: attendanceKeys.shiftsList(),
+    queryFn: () => listShiftsFn()
+  });
+
+export const shiftByIdQueryOptions = (id: number | null) =>
+  queryOptions({
+    queryKey: [...attendanceKeys.shiftsList(), 'detail', id] as const,
+    queryFn: () => (id == null ? Promise.resolve(null) : getShiftByIdFn({ data: { id } })),
+    enabled: id != null
   });
 
 export const attendanceSummaryQueryOptions = () =>

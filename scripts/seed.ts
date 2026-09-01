@@ -964,7 +964,8 @@ async function seedRoleGroups() {
     my_work: { view: true },
     attendance: { view: true },
     leave: { view: true },
-    profile: { view: true }
+    profile: { view: true },
+    payslips: { view: true }
   };
 
   await db.delete(userRoleGroups);
@@ -1014,8 +1015,7 @@ async function seedRoleGroups() {
           ...coreModules,
           jobs: { view: true },
           tickets: { view: true },
-          notifications: { view: true },
-          payroll: { view: true }
+          notifications: { view: true }
         },
         is_admin: false
       },
@@ -1031,8 +1031,7 @@ async function seedRoleGroups() {
           notifications: { view: true },
           schedule: { view: true },
           achievements: { view: true },
-          checklist: { view: true, edit: true },
-          payroll: { view: true }
+          checklist: { view: true, edit: true }
         },
         is_admin: false
       },
@@ -1049,7 +1048,6 @@ async function seedRoleGroups() {
           schedule: { view: true },
           achievements: { view: true },
           checklist: { view: true, edit: true, approve: true },
-          payroll: { view: true },
           leave: { view: true, edit: true },
           spv_review: { view: true, edit: true }
         },

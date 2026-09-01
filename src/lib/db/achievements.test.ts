@@ -1,19 +1,29 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAchievementData } from './achievements';
 import { db } from '@/lib/db';
 import { employeeShifts } from './schema/attendance';
 import { seedUser, resetAllTables, seedTicket } from '@/test-utils/db';
 import { businessDateInTimeZone } from '@/lib/dates';
+import * as datesModule from '@/lib/dates';
 
 const TEST_USER_ID = 'test-user-att-123';
 
+// Pin "today" to mid-month so tests that insert records on day 01/02/03
+// of the current month aren't excluded by the 90-day `lte(today)` window
+// when the suite runs on day 01 of a fresh month. Without this, the
+// "this month" assertions would return one fewer record than expected on
+// the first day of any month (real failure: count 1 vs expected 2).
+const FIXED_BUSINESS_TODAY = '2026-08-15';
+
 describe('getAchievementData', () => {
   beforeEach(async () => {
+    vi.spyOn(datesModule, 'businessDateInTimeZone').mockImplementation(() => FIXED_BUSINESS_TODAY);
     await resetAllTables();
     await seedUser(TEST_USER_ID);
   });
 
   afterAll(async () => {
+    vi.restoreAllMocks();
     await resetAllTables();
   });
 

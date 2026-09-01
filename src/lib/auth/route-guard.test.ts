@@ -121,7 +121,7 @@ describe('resolveRouteGuard', () => {
       ['/dashboard/edit-profile', 'profile'],
       ['/dashboard/change-password', 'profile'],
       ['/dashboard/notifications', 'notifications'],
-      ['/dashboard/payroll/payslips', 'payroll']
+      ['/dashboard/payroll/payslips', 'payslips']
     ];
     for (const [path, module] of expectations) {
       expect(resolveRouteGuard(path), `${path} should map to ${module}`).toEqual({
@@ -205,7 +205,6 @@ describe('resolveRouteGuard', () => {
       '/dashboard/admin/payroll/generate',
       '/dashboard/admin/payroll/settings',
       '/dashboard/admin/payroll/reports',
-      '/dashboard/payroll/payslips',
       '/dashboard/attendance',
       '/dashboard/attendance/check-in',
       '/dashboard/attendance/face-settings',

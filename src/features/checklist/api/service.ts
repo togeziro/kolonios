@@ -69,7 +69,7 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
       startTime: r.startTime,
       endTime: r.endTime
     })),
-    shiftPolicies: scheduleData.shiftPolicies,
+    shiftPolicies: scheduleData.shiftPolicies ?? [],
     overrides: scheduleData.overrides,
     dayOffs: scheduleData.dayOffs,
     holidays: scheduleData.holidays as HolidayRow[]

@@ -58,7 +58,7 @@ export function buildMonthGrid(month: string, data: ScheduleMonthData): MonthGri
     const resolved = resolveEffectiveSchedule({
       assignment,
       weekdayRules,
-      shiftPolicies: data.shiftPolicies,
+      shiftPolicies: data.shiftPolicies ?? [],
       dateOverrides: override ? [override] : [],
       dayOffs: dayOffSet.has(date) ? [date] : [],
       date

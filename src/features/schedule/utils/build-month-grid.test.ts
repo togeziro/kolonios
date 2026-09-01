@@ -11,8 +11,18 @@ function monthData(overrides: Partial<ScheduleMonthData> = {}): ScheduleMonthDat
       shiftName: 'Morning'
     },
     weekdayRules: [
-      { dayOfWeek: 1, isWorkingDay: true, startTime: '08:00', endTime: '17:00' },
-      { dayOfWeek: 6, isWorkingDay: false, startTime: null, endTime: null }
+      {
+        dayOfWeek: 1,
+        isWorkingDay: true,
+        startTime: '08:00',
+        endTime: '17:00'
+      },
+      {
+        dayOfWeek: 6,
+        isWorkingDay: false,
+        startTime: null,
+        endTime: null
+      }
     ],
     shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
     overrides: [],

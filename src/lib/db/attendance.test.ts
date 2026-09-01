@@ -27,7 +27,11 @@ import {
   getNationalHoliday,
   createNationalHoliday,
   updateNationalHoliday,
-  deleteNationalHoliday
+  deleteNationalHoliday,
+  createSchedule,
+  updateSchedule,
+  deleteShift,
+  listShifts
 } from './attendance';
 import {
   resetAllTables,
@@ -1523,5 +1527,313 @@ describe('national holidays CRUD functions', () => {
 
     const checkRes = await getNationalHoliday(holiday.id);
     expect(checkRes.success).toBe(false);
+  });
+});
+
+describe('shift master CRUD (integration)', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  it('createSchedule writes the shift with shift-wide fields and defaults tolerance to 5/120', async () => {
+    const res = await createSchedule({
+      name: 'Morning',
+      startTime: '08:00',
+      endTime: '17:00',
+      color: '#ff0000',
+      breakStart: '12:00',
+      breakEnd: '13:00',
+      maxBreakMinutes: 60,
+      note: 'with break'
+    });
+
+    expect(res.success).toBe(true);
+    if (!res.success || !res.shift) throw new Error('createSchedule failed');
+    expect(res.shift).toMatchObject({
+      name: 'Morning',
+      late_tolerance_minutes: 5,
+      absence_cutoff_minutes: 120,
+      color: '#ff0000',
+      break_start: '12:00',
+      break_end: '13:00',
+      max_break_minutes: 60,
+      note: 'with break',
+      status: 'active'
+    });
+  });
+
+  it('createSchedule auto-generates Mon-Fri weekday rules when none supplied', async () => {
+    const res = await createSchedule({
+      name: 'Auto',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
+    if (!res.success || !res.shift) throw new Error('createSchedule failed');
+
+    const rulesRes = await getShiftWeekdayRules(res.shift.id);
+    expect(rulesRes.rules).toHaveLength(7);
+    const workingDays = rulesRes.rules
+      .filter((r) => r.is_working_day)
+      .map((r) => r.day_of_week)
+      .sort();
+    expect(workingDays).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('createSchedule accepts explicit weekdayRules and respects isWorkingDay=false', async () => {
+    const res = await createSchedule({
+      name: 'Custom',
+      startTime: '08:00',
+      endTime: '16:00',
+      weekdayRules: [
+        { dayOfWeek: 0, isWorkingDay: false },
+        { dayOfWeek: 6, isWorkingDay: false }
+      ]
+    });
+    if (!res.success || !res.shift) throw new Error('createSchedule failed');
+    const rulesRes = await getShiftWeekdayRules(res.shift.id);
+    const offDays = rulesRes.rules
+      .filter((r) => !r.is_working_day)
+      .map((r) => r.day_of_week)
+      .sort();
+    expect(offDays).toEqual([0, 6]);
+  });
+
+  it('updateSchedule replaces weekday rules atomically with the new ones', async () => {
+    const created = await createSchedule({
+      name: 'Update me',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+
+    const newRules = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+      dayOfWeek,
+      isWorkingDay: dayOfWeek >= 1 && dayOfWeek <= 6,
+      startTime: '09:00',
+      endTime: '18:00'
+    }));
+
+    const res = await updateSchedule(created.shift.id, {
+      name: 'Updated',
+      color: '#00ff00',
+      weekdayRules: newRules
+    });
+    expect(res.success).toBe(true);
+
+    const { shifts } = await import('./schema/attendance');
+    const [after] = await db.select().from(shifts).where(eq(shifts.id, created.shift.id));
+    expect(after.name).toBe('Updated');
+    expect(after.color).toBe('#00ff00');
+
+    const rulesRes = await getShiftWeekdayRules(created.shift.id);
+    expect(rulesRes.rules).toHaveLength(7);
+    expect(rulesRes.rules.find((r) => r.day_of_week === 6)?.is_working_day).toBe(true);
+    expect(rulesRes.rules.every((r) => r.start_time === '09:00')).toBe(true);
+  });
+
+  it('updateSchedule writes shift-level tolerance overrides and accepts status toggle', async () => {
+    const created = await createSchedule({
+      name: 'Policy',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+
+    const res = await updateSchedule(created.shift.id, {
+      lateToleranceMinutes: 10,
+      absenceCutoffMinutes: 90,
+      status: 'inactive'
+    });
+    expect(res.success).toBe(true);
+
+    const { shifts } = await import('./schema/attendance');
+    const [after] = await db.select().from(shifts).where(eq(shifts.id, created.shift.id));
+    expect(after.late_tolerance_minutes).toBe(10);
+    expect(after.absence_cutoff_minutes).toBe(90);
+    expect(after.status).toBe('inactive');
+  });
+
+  it('listShifts returns all shifts (incl inactive) with used=false when unused', async () => {
+    await createSchedule({ name: 'S1', startTime: '08:00', endTime: '17:00' });
+    await createSchedule({ name: 'S2', startTime: '09:00', endTime: '18:00' });
+    const created = await createSchedule({
+      name: 'Inactive',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    await updateSchedule(created.shift.id, { status: 'inactive' });
+
+    const res = await listShifts();
+    expect(res.success).toBe(true);
+    if (!res.success) throw new Error('list failed');
+    expect(res.shifts.map((s) => s.name).sort()).toEqual(['Inactive', 'S1', 'S2']);
+    expect(res.shifts.every((s) => s.used === false)).toBe(true);
+  });
+
+  it('listShifts marks used=true when referenced by schedule_assignments', async () => {
+    const created = await createSchedule({ name: 'Used', startTime: '08:00', endTime: '17:00' });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    await seedScheduleAssignment({
+      user_id: TEST_USER_ID,
+      shift_id: created.shift.id,
+      effective_from: '2026-01-01'
+    });
+
+    const res = await listShifts();
+    if (!res.success) throw new Error('list failed');
+    const used = res.shifts.find((s) => s.id === created.shift.id);
+    expect(used?.used).toBe(true);
+  });
+
+  it('listShifts marks used=true when referenced by employee_shifts (attendance)', async () => {
+    const created = await createSchedule({
+      name: 'AttendanceRef',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    await seedEmployee(TEST_USER_ID);
+    await db.insert(employeeShifts).values({
+      user_id: TEST_USER_ID,
+      shift_id: created.shift.id,
+      date: '2026-01-15',
+      attendance_status: 'pending'
+    });
+
+    const res = await listShifts();
+    if (!res.success) throw new Error('list failed');
+    const used = res.shifts.find((s) => s.id === created.shift.id);
+    expect(used?.used).toBe(true);
+  });
+
+  it('listShifts marks used=true when referenced by daily_checklists (snapshot)', async () => {
+    const created = await createSchedule({
+      name: 'ChecklistRef',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    const { seedUser } = await import('@/test-utils/db');
+    await seedUser(TEST_USER_ID);
+    const { dailyChecklists } = await import('./schema/checklists');
+    await db.insert(dailyChecklists).values({
+      user_id: TEST_USER_ID,
+      checklist_date: '2026-08-03',
+      shift_id: created.shift.id
+    });
+
+    const res = await listShifts();
+    if (!res.success) throw new Error('list failed');
+    const used = res.shifts.find((s) => s.id === created.shift.id);
+    expect(used?.used).toBe(true);
+  });
+
+  it('deleteShift hard-deletes a shift that has no references', async () => {
+    const created = await createSchedule({ name: 'Orphan', startTime: '08:00', endTime: '17:00' });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+
+    const res = await deleteShift(created.shift.id);
+    expect(res).toMatchObject({ success: true, mode: 'hard', shiftId: created.shift.id });
+
+    const { shifts } = await import('./schema/attendance');
+    const rows = await db.select().from(shifts).where(eq(shifts.id, created.shift.id));
+    expect(rows).toHaveLength(0);
+
+    const rulesRes = await getShiftWeekdayRules(created.shift.id);
+    expect(rulesRes.rules).toHaveLength(0);
+  });
+
+  it('deleteShift soft-deletes (status=inactive) when shift has schedule assignments', async () => {
+    const created = await createSchedule({ name: 'InUse', startTime: '08:00', endTime: '17:00' });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    await seedScheduleAssignment({
+      user_id: TEST_USER_ID,
+      shift_id: created.shift.id,
+      effective_from: '2026-01-01'
+    });
+
+    const res = await deleteShift(created.shift.id);
+    expect(res).toMatchObject({ success: true, mode: 'soft', shiftId: created.shift.id });
+
+    const { shifts } = await import('./schema/attendance');
+    const [after] = await db.select().from(shifts).where(eq(shifts.id, created.shift.id));
+    expect(after.status).toBe('inactive');
+    const { scheduleAssignments } = await import('./schema/attendance');
+    const [assignment] = await db
+      .select()
+      .from(scheduleAssignments)
+      .where(eq(scheduleAssignments.shift_id, created.shift.id));
+    expect(assignment).toBeDefined();
+  });
+
+  it('deleteShift soft-deletes when shift is referenced by employee_shifts (attendance history)', async () => {
+    const created = await createSchedule({ name: 'AttHist', startTime: '08:00', endTime: '17:00' });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    await seedEmployee(TEST_USER_ID);
+    await db.insert(employeeShifts).values({
+      user_id: TEST_USER_ID,
+      shift_id: created.shift.id,
+      date: '2026-01-15',
+      attendance_status: 'pending'
+    });
+
+    const res = await deleteShift(created.shift.id);
+    expect(res).toMatchObject({ success: true, mode: 'soft' });
+
+    const { shifts } = await import('./schema/attendance');
+    const [after] = await db.select().from(shifts).where(eq(shifts.id, created.shift.id));
+    expect(after.status).toBe('inactive');
+  });
+
+  it('deleteShift soft-deletes when shift is referenced by daily_checklists (snapshot)', async () => {
+    const created = await createSchedule({
+      name: 'ChecklistHist',
+      startTime: '08:00',
+      endTime: '17:00'
+    });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    const { seedUser } = await import('@/test-utils/db');
+    await seedUser(TEST_USER_ID);
+    const { dailyChecklists } = await import('./schema/checklists');
+    await db.insert(dailyChecklists).values({
+      user_id: TEST_USER_ID,
+      checklist_date: '2026-08-03',
+      shift_id: created.shift.id
+    });
+
+    const res = await deleteShift(created.shift.id);
+    expect(res).toMatchObject({ success: true, mode: 'soft' });
+
+    const { shifts } = await import('./schema/attendance');
+    const [after] = await db.select().from(shifts).where(eq(shifts.id, created.shift.id));
+    expect(after.status).toBe('inactive');
+  });
+
+  it('deleteShift returns not_found for non-existent id', async () => {
+    const res = await deleteShift(999999);
+    expect(res).toMatchObject({ success: false, reason: 'not_found' });
+  });
+
+  it('shift-level tolerance (set via createSchedule) flows through getEffectiveEmployeeSchedule (ADR-0004)', async () => {
+    // Regression for ticket02 P0: getEffectiveEmployeeSchedule previously read
+    // tolerance from shift_weekday_rules (now deprecated). New shifts must
+    // round-trip their tolerance from the shift row.
+    const created = await createSchedule({
+      name: 'CustomTolerance',
+      startTime: '08:00',
+      endTime: '17:00',
+      lateToleranceMinutes: 7,
+      absenceCutoffMinutes: 75
+    });
+    if (!created.success || !created.shift) throw new Error('seed failed');
+    // createSchedule already seeded all 7 default weekday rules (Mon–Fri
+    // working, Sat–Sun off, all with the shift's start/end). Don't re-insert.
+    await seedScheduleAssignment({ user_id: TEST_USER_ID, shift_id: created.shift.id });
+
+    const res = await getEffectiveEmployeeSchedule(TEST_USER_ID, '2026-08-03');
+    expect(res).not.toBeNull();
+    expect(res!.lateToleranceMinutes).toBe(7);
+    expect(res!.absenceCutoffMinutes).toBe(75);
   });
 });

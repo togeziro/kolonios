@@ -67,7 +67,7 @@ export const shifts = pgTable('shifts', {
   end_time: text('end_time').notNull(),
   type: shiftTypeEnum('type').default('fixed'),
   status: shiftStatusEnum('status').default('active'),
-  // Shift-wide break window (ADR: break is a property of the shift template)
+  // Shift-wide break window (break is a property of the shift template)
   break_start: text('break_start'), // HH:MM, null = no break
   break_end: text('break_end'), // HH:MM, null = no break
   max_break_minutes: integer('max_break_minutes'),

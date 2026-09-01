@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
+import * as z from 'zod';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withAudit } from '@/lib/audit';
@@ -12,8 +13,9 @@ import {
   locationCreateSchema,
   locationUpdateSchema,
   locationDeleteSchema,
-  scheduleCreateSchema,
-  scheduleUpdateSchema,
+  shiftCreateSchema,
+  shiftUpdateSchema,
+  shiftDeleteSchema,
   assignmentFiltersSchema,
   scheduleAssignmentSchema,
   bulkAssignmentSchema,
@@ -231,8 +233,24 @@ export const getSchedulesFn = createServerFn({ method: 'GET' }).handler(async ()
   return getShifts();
 });
 
-export const createScheduleFn = createServerFn({ method: 'POST' })
-  .validator(scheduleCreateSchema)
+// --- Shift master CRUD (admin) ---
+
+export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  await requirePermission('attendance', 'edit');
+  const { listShifts } = await import('@/lib/db/attendance');
+  return listShifts();
+});
+
+export const getShiftByIdFn = createServerFn({ method: 'GET' })
+  .validator(z.object({ id: z.number().int().positive() }))
+  .handler(async ({ data }) => {
+    await requirePermission('attendance', 'edit');
+    const { getShiftById } = await import('@/lib/db/attendance');
+    return getShiftById(data.id);
+  });
+
+export const createShiftFn = createServerFn({ method: 'POST' })
+  .validator(shiftCreateSchema)
   .handler(async ({ data }) => {
     const session = await requirePermission('attendance', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
@@ -242,8 +260,8 @@ export const createScheduleFn = createServerFn({ method: 'POST' })
       await withAudit(
         session.user.id,
         {
-          action: 'attendance.schedule.create',
-          entityType: 'schedule',
+          action: 'attendance.shift.create',
+          entityType: 'shift',
           entityId: String(result.shift?.id),
           before: null,
           after: result.shift
@@ -254,8 +272,8 @@ export const createScheduleFn = createServerFn({ method: 'POST' })
     return result;
   });
 
-export const updateScheduleFn = createServerFn({ method: 'POST' })
-  .validator(scheduleUpdateSchema)
+export const updateShiftFn = createServerFn({ method: 'POST' })
+  .validator(shiftUpdateSchema)
   .handler(async ({ data }) => {
     const session = await requirePermission('attendance', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
@@ -266,11 +284,34 @@ export const updateScheduleFn = createServerFn({ method: 'POST' })
       await withAudit(
         session.user.id,
         {
-          action: 'attendance.schedule.update',
-          entityType: 'schedule',
+          action: 'attendance.shift.update',
+          entityType: 'shift',
           entityId: String(id),
           before: null,
-          after: result
+          after: { id, ...patch }
+        },
+        async () => undefined
+      );
+    }
+    return result;
+  });
+
+export const deleteShiftFn = createServerFn({ method: 'POST' })
+  .validator(shiftDeleteSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('attendance', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { deleteShift } = await import('@/lib/db/attendance');
+    const result = await deleteShift(data.id);
+    if (result.success) {
+      await withAudit(
+        session.user.id,
+        {
+          action: 'attendance.shift.delete',
+          entityType: 'shift',
+          entityId: String(data.id),
+          before: null,
+          after: { mode: result.mode }
         },
         async () => undefined
       );
