@@ -1,0 +1,15 @@
+-- Backfill: shift rows inserted before migration 0033_legal_cardiac have
+-- `late_tolerance_minutes = 0` (the old DEFAULT from migration 0004_slim_leo).
+-- That value was a bug — every shift should have at least the new default of 5
+-- minutes unless the admin explicitly set it lower. The shift-level tolerance
+-- is now the source of truth (PR #109 / ADR-0004) and the schedule grid's
+-- `policyMissing` flag surfaces zero values as a "policy not configured"
+-- warning to admins, which is misleading.
+--
+-- This migration rewrites any `late_tolerance_minutes = 0` row to the new
+-- default (5). Admins who genuinely want a zero-tolerance shift should re-set
+-- the column AFTER running this migration (1 row, 2 minutes).
+--
+-- Idempotent: only touches rows currently at 0; safe to re-run after a partial
+-- apply.
+UPDATE "shifts" SET "late_tolerance_minutes" = 5 WHERE "late_tolerance_minutes" = 0;

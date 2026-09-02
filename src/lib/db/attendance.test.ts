@@ -613,6 +613,58 @@ describe('attendance data access (integration)', () => {
       expect(after.late_tolerance_minutes).toBe(12); // max(5, 12, 0)
       expect(after.absence_cutoff_minutes).toBe(180); // max(60, 180, 0)
     });
+
+    it('migration backfill (0034): late_tolerance_minutes=0 promoted to 5', async () => {
+      // Pre-migration state: shift rows inserted before 0033 have
+      // `late_tolerance_minutes = 0` (the old DEFAULT 0 from migration 0004).
+      // 0033 only added/normalized the column for new inserts; 0034 promotes
+      // any remaining `0` value to the new default (5). This test seeds a
+      // zero-tolerance shift alongside a non-zero one, runs the migration's
+      // UPDATE, and asserts the targeted row was promoted while the
+      // non-targeted row was untouched.
+      const { shifts } = await import('./schema/attendance');
+      const [zeroShift] = await db
+        .insert(shifts)
+        .values({
+          name: 'Legacy zero',
+          start_time: '08:00',
+          end_time: '17:00',
+          late_tolerance_minutes: 0
+        })
+        .returning();
+      const [untouchedShift] = await db
+        .insert(shifts)
+        .values({
+          name: 'Already configured',
+          start_time: '08:00',
+          end_time: '17:00',
+          late_tolerance_minutes: 7
+        })
+        .returning();
+
+      const { readFile } = await import('node:fs/promises');
+      const { fileURLToPath } = await import('node:url');
+      const migrationPath = fileURLToPath(
+        new URL('./migrations/0034_legacy_policy_backfill.sql', import.meta.url)
+      );
+      const raw = await readFile(migrationPath, 'utf8');
+
+      const statements = raw
+        .split(/-->\s*statement-breakpoint/g)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      for (const stmt of statements) {
+        await db.execute(sql.raw(stmt));
+      }
+
+      const [afterZero] = await db.select().from(shifts).where(eq(shifts.id, zeroShift.id));
+      const [afterUntouched] = await db
+        .select()
+        .from(shifts)
+        .where(eq(shifts.id, untouchedShift.id));
+      expect(afterZero.late_tolerance_minutes).toBe(5); // promoted from 0
+      expect(afterUntouched.late_tolerance_minutes).toBe(7); // unchanged
+    });
   });
 
   describe('monthly schedule data', () => {
