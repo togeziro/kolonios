@@ -4,12 +4,19 @@
  * Mirrors the per-cell write surface that the popover drives:
  *  - `setCellShiftFn`     — replace the existing `date_overrides` row for
  *                           (user, date) with one pointing at `shiftId`.
- *                           Does NOT touch `day_offs` (orphan Day-Off risk
- *                           is documented in the spec — resolver precedence
- *                           hides the override until the day-off is cleared).
+ *                           Also deletes any `day_offs` row for the same
+ *                           date — this is the orphan-prevention guard
+ *                           (see "Orphan Day-Off risk" in the spec). The
+ *                           popover's conflict UX already blocks the
+ *                           "day_off → shift" path with a "Clear Day Off"
+ *                           confirmation; this DELETE is a defensive
+ *                           server-side mirror in case a future code path
+ *                           or external write creates a masked orphan.
  *  - `setCellDayOffFn`    — delete any `date_overrides` row for (user, date)
  *                           then insert a `day_offs` row (with optional
  *                           reason from the popover input). Idempotent.
+ *                           The date_overrides DELETE is the symmetric
+ *                           orphan guard.
  *  - `clearCellFn`        — delete both `date_overrides` and `day_offs`
  *                           rows for (user, date).
  *  - `applyToWholeWeekFn` — iterate 7 dates starting at `weekStart`; for
@@ -277,6 +284,14 @@ export const setCellShiftFn = createServerFn({ method: 'POST' })
         await tx
           .delete(dateOverrides)
           .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
+        // Orphan-prevention guard: if a `day_offs` row exists for this
+        // (user, date), delete it so the new override takes precedence
+        // immediately instead of being masked. The popover's conflict UX
+        // already enforces this client-side; this DELETE is the
+        // server-side mirror (see EPIC_SUMMARY § Follow-ups #2).
+        await tx
+          .delete(dayOffs)
+          .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
         await tx.insert(dateOverrides).values({
           user_id: data.userId,
           date: data.date,
@@ -395,6 +410,10 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
             await tx
               .delete(dateOverrides)
               .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, date)));
+            // Orphan-prevention guard (matches `setCellShiftFn`).
+            await tx
+              .delete(dayOffs)
+              .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, date)));
             await tx.insert(dateOverrides).values({
               user_id: data.userId,
               date,
