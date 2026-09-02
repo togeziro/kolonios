@@ -20,7 +20,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { resetAllTables, seedScheduleAssignment, seedShift, seedDayOff } from '@/test-utils/db';
 import { db } from '@/lib/db';
-import { dateOverrides, dayOffs, scheduleAssignments } from '@/lib/db/schema/attendance';
+import { dateOverrides, dayOffs } from '@/lib/db/schema/attendance';
 
 const sessionUser = vi.hoisted(() => ({
   id: 'schedule-grid-test-admin',
