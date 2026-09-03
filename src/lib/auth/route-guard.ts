@@ -152,7 +152,8 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
     action: 'view'
   },
 
-  // /dashboard/tickets/* — crew ticket flow (new, detail, completed)
+  // /dashboard/tickets/* — crew ticket flow (list, new, detail, completed)
+  { pattern: /^\/dashboard\/tickets$/, module: 'tickets', action: 'view' },
   {
     pattern: /^\/dashboard\/tickets\/[^/]+\/completed$/,
     module: 'tickets',

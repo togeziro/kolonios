@@ -24,8 +24,8 @@ const domainLabels: Record<TicketDomain, string> = {
   backoffice: 'ticket.backoffice'
 };
 
-function relativeTime(dateStr: string): string {
-  return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: dateFnsLocale() });
+function relativeTime(dateStr: string, lng: string): string {
+  return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: dateFnsLocale(lng) });
 }
 
 function filterChipClass(active: boolean) {
@@ -49,7 +49,7 @@ function OpenTicketCard({
   reasons?: string[];
   relay?: TicketLegInfo;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const p = priorityConfig[ticket.priority];
 
   return (
@@ -92,7 +92,7 @@ function OpenTicketCard({
             <span>
               {t('ticket.openedBy')} {ticket.createdByName}
               {' · '}
-              {relativeTime(ticket.createdAt)}
+              {relativeTime(ticket.createdAt, i18n.language)}
             </span>
           </div>
         )}

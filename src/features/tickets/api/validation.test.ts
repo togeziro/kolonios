@@ -51,14 +51,14 @@ describe('submitWorkSessionSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects empty photos (at least one completion photo required)', () => {
+  it('allows empty photos (ticket already has a completion photo)', () => {
     const result = submitWorkSessionSchema.safeParse({
       ticketId: 42,
       materials: [],
       photos: [],
       notes: ''
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('rejects a material with qty 0', () => {

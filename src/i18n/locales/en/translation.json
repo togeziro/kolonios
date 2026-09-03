@@ -45,7 +45,9 @@
     "broadcast": "Broadcast",
     "tickets": "Tickets",
     "availableJobs": "Available Jobs",
-    "newTicket": "New Ticket"
+    "newTicket": "New Ticket",
+    "allTickets": "All Tickets",
+    "allTickets": "All Tickets"
   },
   "common": {
     "cancel": "Cancel",
@@ -1292,6 +1294,9 @@
     "myWork": "My Work",
     "notAvailableCount": "Not available for you ({{count}})",
     "markComplete": "Mark Complete",
+    "markCompleteRequiresPhoto": "At least 1 photo per ticket required — complete Work Session first",
+    "markCompleteRequiresReview": "Field tickets must be submitted via Work Session for SPV review, not Mark Complete",
+    "markCompleteHintWorkSession": "Use Work Session tab → Finish & Submit to send for SPV review",
     "openMyWork": "Open My Work",
     "taken": "Ticket taken",
     "takeFailed": "Failed to take ticket",
@@ -1350,7 +1355,8 @@
     "openedBy": "Opened by",
     "take": "Take",
     "noOpenTickets": "No open tickets available",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "overviewHint": "See Legs for timeline, Work Session to submit per leg"
   },
   "storage": {
     "title": "Storage Settings",
@@ -1432,10 +1438,14 @@
     "notes": "Notes",
     "notesPlaceholder": "Notes about this session",
     "finishSubmit": "Finish & Submit",
+    "submitLeg": "Submit Leg",
+    "submitLegHint": "Send this step for review and unlock the next one",
+    "finishSubmitHint": "Send the final step to your supervisor for review",
+    "photoUploadFailedStorageNotConfigured": "Photo upload failed — storage is not configured. Ask an admin to set it up in Storage Settings",
     "notInProgress": "This ticket is not in progress",
     "back": "Back",
-    "submitSuccess": "Work session submitted",
-    "submitFailed": "Failed to submit work session",
+    "submitSuccess": "Step sent for review",
+    "submitFailed": "Couldn't send this step for review",
     "photoUploadFailed": "Photo upload failed",
     "elapsed": "Elapsed",
     "inProgress": "In Progress",

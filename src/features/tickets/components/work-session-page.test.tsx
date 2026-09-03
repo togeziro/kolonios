@@ -90,7 +90,7 @@ describe('WorkSessionPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /add-photo/i }));
     fireEvent.click(screen.getByRole('button', { name: /add-log/i }));
-    fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
     await waitFor(() =>
       expect(submitMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -127,7 +127,7 @@ describe('WorkSessionPage', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /add-photo/i }));
-    fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
     await waitFor(() =>
       expect(navigateMock).toHaveBeenCalledWith(
         expect.objectContaining({ to: '/dashboard/work-session/$ticketId/handoff' })

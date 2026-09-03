@@ -4,6 +4,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import {
   ticketIdSchema,
   listOpenTicketsSchema,
+  listTicketsSchema,
   createTicketSchema,
   legIdSchema,
   arriveTicketSchema,
@@ -35,6 +36,15 @@ export const listOpenTicketsFn = createServerFn({ method: 'GET' })
     return listOpenTickets(session.user.id, filters);
   });
 
+export const listTicketsFn = createServerFn({ method: 'GET' })
+  .validator(listTicketsSchema)
+  .handler(async ({ data: filters }) => {
+    const session = await requirePermission('tickets', 'view');
+    await checkRateLimit(`tickets:${session.user.id}`);
+    const { listTickets } = await import('@/lib/db/tickets');
+    return listTickets(session.user.id, filters);
+  });
+
 export const getTicketDetailFn = createServerFn({ method: 'GET' })
   .validator(ticketIdSchema)
   .handler(async ({ data }) => {
@@ -57,6 +67,31 @@ export const completeTicketFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const session = await requirePermission('tickets', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
+    // Field tickets must go via Work Session → submitted → SPV review → completed.
+    // Direct Mark Complete is blocked for non-admin field tickets (server guard, not just UI).
+    const { db } = await import('@/lib/db');
+    const { tickets } = await import('@/lib/db/schema/tickets');
+    const { eq } = await import('drizzle-orm');
+    const { FIELD_TASK_TYPES } = await import('@/lib/tickets/engine');
+    const { getUserRoleGroup } = await import('@/lib/db/role-groups');
+    const [row] = await db
+      .select({ taskType: tickets.task_type })
+      .from(tickets)
+      .where(eq(tickets.id, data.ticketId))
+      .limit(1);
+    if (row) {
+      const isField = (FIELD_TASK_TYPES as readonly string[]).includes(row.taskType);
+      if (isField) {
+        const rg = await getUserRoleGroup(session.user.id);
+        const isAdmin = rg?.is_admin === true;
+        if (!isAdmin) {
+          return {
+            success: false as const,
+            message: 'Field tickets must be submitted via Work Session for SPV review'
+          };
+        }
+      }
+    }
     const { completeTicket } = await import('@/lib/db/tickets');
     return completeTicket(session.user.id, data.ticketId);
   });
