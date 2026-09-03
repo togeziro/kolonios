@@ -55,10 +55,10 @@ describe('nav-config', () => {
   it('nests tickets pages under a Tickets dropdown', () => {
     const tickets = navItems.find((item) => item.title === 'Tickets');
     const children = tickets?.items?.map((item) => item.title) ?? [];
-    expect(children).toEqual(['Available Jobs', 'New Ticket']);
+    expect(children).toEqual(['All Tickets', 'Available Jobs', 'New Ticket']);
     expect(tickets!.module).toBe('tickets');
     const urls = tickets?.items?.map((item) => item.url) ?? [];
-    expect(urls).toEqual(['/dashboard/jobs', '/dashboard/tickets/new']);
+    expect(urls).toEqual(['/dashboard/tickets', '/dashboard/jobs', '/dashboard/tickets/new']);
   });
 
   it('nests payroll admin pages under a Payroll dropdown', () => {
@@ -323,7 +323,7 @@ describe('filterNavItemsByRole', () => {
   });
 
   it('keeps a parent that is itself a link even when children are filtered', () => {
-    // The Tickets parent links to /dashboard/tickets/new with module
+    // The Tickets parent links to /dashboard/tickets with module
     // 'tickets'; with tickets.view (but no jobs.view) the parent survives
     // and only the Available Jobs child is dropped.
     const perms: Permissions = { tickets: { view: true } };
@@ -331,7 +331,7 @@ describe('filterNavItemsByRole', () => {
       (item) => item.title === 'Tickets'
     );
     expect(tickets).toBeDefined();
-    expect(tickets?.items?.map((item) => item.title)).toEqual(['New Ticket']);
+    expect(tickets?.items?.map((item) => item.title)).toEqual(['All Tickets', 'New Ticket']);
   });
 
   it('preserves mixed-visibility children in order', () => {
@@ -411,6 +411,10 @@ describe('filterNavItemsByRole', () => {
     const perms: Permissions = { tickets: { view: true } };
     filterNavItemsByRole(navItems, perms, false);
     const tickets = navItems.find((item) => item.title === 'Tickets');
-    expect(tickets?.items?.map((item) => item.title)).toEqual(['Available Jobs', 'New Ticket']);
+    expect(tickets?.items?.map((item) => item.title)).toEqual([
+      'All Tickets',
+      'Available Jobs',
+      'New Ticket'
+    ]);
   });
 });

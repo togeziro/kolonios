@@ -45,7 +45,14 @@ export function useCompleteTicket() {
         queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
         queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
       } else {
-        toast.error(res?.message ?? t('ticket.completeFailed'));
+        const msg = res?.message ?? '';
+        if (msg.includes('at least 1 photo')) {
+          toast.error(t('ticket.markCompleteRequiresPhoto'));
+        } else if (msg.includes('Field tickets must be submitted via Work Session')) {
+          toast.error(t('ticket.markCompleteRequiresReview'));
+        } else {
+          toast.error(msg || t('ticket.completeFailed'));
+        }
       }
     },
     onError: () => {
@@ -126,7 +133,12 @@ export function useSubmitWorkSession() {
         queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
         queryClient.invalidateQueries({ queryKey: ticketsKeys.completed() });
       } else {
-        toast.error(res?.message ?? t('workSession.submitFailed'));
+        const msg = res?.message ?? '';
+        if (msg.includes('at least 1 photo')) {
+          toast.error(t('ticket.markCompleteRequiresPhoto'));
+        } else {
+          toast.error(msg || t('workSession.submitFailed'));
+        }
       }
     },
     onError: () => toast.error(t('workSession.submitFailed'))

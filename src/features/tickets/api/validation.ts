@@ -10,6 +10,24 @@ export const listOpenTicketsSchema = z.object({
   priority: z.enum(['low', 'medium', 'high']).optional()
 });
 
+export const listTicketsSchema = z.object({
+  status: z
+    .enum([
+      'open',
+      'assigned',
+      'in_progress',
+      'submitted',
+      'approved',
+      'rejected',
+      'rework',
+      'completed',
+      'cancelled'
+    ])
+    .optional(),
+  domain: z.enum(['field', 'backoffice']).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional()
+});
+
 export const ticketLegInputSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional()
@@ -71,7 +89,8 @@ export const reviewTicketSchema = z.object({
 export const submitWorkSessionSchema = z.object({
   ticketId: z.number().int().positive(),
   materials: z.array(workSessionMaterialSchema).max(20),
-  photos: z.array(workSessionPhotoSchema).min(1).max(4),
+  // 1 foto per ticket (not per leg): allow 0 new photos if ticket already has a photo — server guards the first photo.
+  photos: z.array(workSessionPhotoSchema).min(0).max(4),
   notes: z.string().max(2000),
   log: z.array(workSessionLogEntrySchema).max(50).default([])
 });

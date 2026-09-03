@@ -45,7 +45,9 @@
     "broadcast": "Siaran",
     "tickets": "Tiket",
     "availableJobs": "Pekerjaan Tersedia",
-    "newTicket": "Tiket Baru"
+    "newTicket": "Tiket Baru",
+    "allTickets": "Semua Tiket",
+    "allTickets": "Semua Tiket"
   },
   "common": {
     "cancel": "Batal",
@@ -1292,6 +1294,9 @@
     "myWork": "Pekerjaan Saya",
     "notAvailableCount": "Tidak tersedia untuk Anda ({{count}})",
     "markComplete": "Tandai Selesai",
+    "markCompleteRequiresPhoto": "Butuh minimal 1 foto per tiket — isi Work Session dulu",
+    "markCompleteRequiresReview": "Tiket lapangan harus lewat Work Session untuk review SPV, bukan Tandai Selesai langsung",
+    "markCompleteHintWorkSession": "Gunakan tab Work Session → Selesai & Kirim untuk ajukan ke SPV",
     "openMyWork": "Buka Pekerjaan Saya",
     "taken": "Tiket diambil",
     "takeFailed": "Gagal mengambil tiket",
@@ -1350,7 +1355,8 @@
     "openedBy": "Dibuka oleh",
     "take": "Ambil",
     "noOpenTickets": "Tidak ada tiket terbuka",
-    "unavailable": "Tidak tersedia"
+    "unavailable": "Tidak tersedia",
+    "overviewHint": "Lihat Legs untuk timeline, Work Session untuk submit per-leg"
   },
   "storage": {
     "title": "Pengaturan Penyimpanan",
@@ -1431,11 +1437,15 @@
     "warehouse": "Gudang",
     "notes": "Catatan",
     "notesPlaceholder": "Catatan sesi ini",
-    "finishSubmit": "Selesai & Kirim",
+    "finishSubmit": "Selesai & Kirim untuk Review",
+    "submitLeg": "Kirim Tahap",
+    "submitLegHint": "Kirim langkah ini untuk ditinjau dan buka langkah berikutnya",
+    "finishSubmitHint": "Kirim langkah terakhir ke supervisor untuk ditinjau",
+    "photoUploadFailedStorageNotConfigured": "Gagal mengunggah foto — storage belum dikonfigurasi. Minta admin mengaturnya di Storage Settings",
     "notInProgress": "Tiket ini tidak sedang dikerjakan",
     "back": "Kembali",
-    "submitSuccess": "Sesi kerja terkirim",
-    "submitFailed": "Gagal mengirim sesi kerja",
+    "submitSuccess": "Langkah sudah dikirim untuk ditinjau",
+    "submitFailed": "Tidak bisa mengirim langkah ini untuk ditinjau",
     "photoUploadFailed": "Gagal mengunggah foto",
     "elapsed": "Durasi",
     "inProgress": "Sedang Berlangsung",

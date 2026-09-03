@@ -442,7 +442,7 @@ describe('tickets data access (integration)', () => {
   });
 
   describe('completeTicket', () => {
-    it('completes an in-progress ticket and finishes its legs', async () => {
+    it('completes an in-progress ticket and finishes its legs (requires 1 photo per ticket)', async () => {
       await seedEmployee(USER_A);
       const ticket = await seedTicket({
         title: 'Finishing',
@@ -450,8 +450,11 @@ describe('tickets data access (integration)', () => {
         taken_by: USER_A,
         created_by: 'seed'
       });
-      await seedTicketLeg(ticket.id, { name: 'Survey', status: 'in_progress' });
+      const leg1 = await seedTicketLeg(ticket.id, { name: 'Survey', status: 'in_progress' });
       await seedTicketLeg(ticket.id, { name: 'Install', status: 'open' });
+      await db
+        .insert(ticketPhotos)
+        .values({ leg_id: leg1.id, file_url: 'test/photo.jpg', uploader_id: USER_A });
 
       const res = await completeTicket(USER_A, ticket.id);
       expect(res.success).toBe(true);
@@ -463,6 +466,20 @@ describe('tickets data access (integration)', () => {
         .from(ticketLegs)
         .where(eq(ticketLegs.ticket_id, ticket.id));
       expect(legs.every((l) => l.status === 'completed')).toBe(true);
+    });
+
+    it('rejects complete without any photo (1 foto per ticket guard)', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'No photo',
+        status: 'in_progress',
+        taken_by: USER_A,
+        created_by: 'seed'
+      });
+      await seedTicketLeg(ticket.id, { name: 'Survey', status: 'in_progress' });
+      const res = await completeTicket(USER_A, ticket.id);
+      expect(res.success).toBe(false);
+      expect(res.message).toMatch(/photo/i);
     });
 
     it('rejects when the ticket is not in progress by the user', async () => {

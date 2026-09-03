@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query';
 import {
   getMyTicketsFn,
   listOpenTicketsFn,
+  listTicketsFn,
   getTicketDetailFn,
   getCompletedTicketsFn,
   listSubmittedTicketsFn
@@ -13,6 +14,7 @@ export const ticketsKeys = {
   all: ['tickets'] as const,
   mine: () => [...ticketsKeys.all, 'mine'] as const,
   open: (filters: TicketListFilters) => [...ticketsKeys.all, 'open', filters] as const,
+  list: (filters: TicketListFilters) => [...ticketsKeys.all, 'list', filters] as const,
   detail: (ticketId: number) => [...ticketsKeys.all, 'detail', ticketId] as const,
   completed: () => [...ticketsKeys.all, 'completed'] as const,
   submitted: () => [...ticketsKeys.all, 'submitted'] as const
@@ -40,6 +42,12 @@ export const openTicketsQueryOptions = (filters: TicketListFilters = {}) =>
   queryOptions({
     queryKey: ticketsKeys.open(filters),
     queryFn: () => listOpenTicketsFn({ data: filters })
+  });
+
+export const listTicketsQueryOptions = (filters: TicketListFilters = {}) =>
+  queryOptions({
+    queryKey: ticketsKeys.list(filters),
+    queryFn: () => listTicketsFn({ data: filters })
   });
 
 export const ticketDetailQueryOptions = (ticketId: number) =>

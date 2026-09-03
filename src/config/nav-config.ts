@@ -30,11 +30,19 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Tickets',
-    url: '/dashboard/tickets/new',
+    url: '/dashboard/tickets',
     icon: 'workspace',
     isActive: false,
     module: 'tickets',
     items: [
+      {
+        title: 'All Tickets',
+        url: '/dashboard/tickets',
+        icon: 'workspace',
+        isActive: false,
+        module: 'tickets',
+        items: []
+      },
       {
         title: 'Available Jobs',
         url: '/dashboard/jobs',

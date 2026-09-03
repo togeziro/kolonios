@@ -74,6 +74,20 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
   const domainLabel =
     ticket.domain === 'field' ? t('workSession.domainField') : t('workSession.domainBackoffice');
   const isField = (FIELD_TASK_TYPES as readonly string[]).includes(ticket.taskType);
+  // Differentiate label like in unified page: Submit Leg vs Finish & Submit for review
+  const submittableLeg = [...ticket.legs]
+    .sort(
+      (a, b) =>
+        Number(b.status === 'in_progress') - Number(a.status === 'in_progress') ||
+        a.legNumber - b.legNumber
+    )
+    .find((l) => ['open', 'assigned', 'in_progress'].includes(l.status));
+  const hasNextLeg = submittableLeg
+    ? ticket.legs.some(
+        (l) => l.legNumber > submittableLeg.legNumber && ['open', 'assigned'].includes(l.status)
+      )
+    : false;
+  const isLastLeg = !!submittableLeg && !hasNextLeg;
 
   const finish = () => {
     submit.mutate(
@@ -186,7 +200,7 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
       <ElapsedTimer takenAt={ticket.takenAt} />
 
       <Card className='space-y-3 rounded-2xl border p-4 dark:border-zinc-800/50 dark:bg-zinc-900'>
-        <CompletionPhotos photos={photos} onChange={setPhotos} />
+        <CompletionPhotos onChange={setPhotos} />
       </Card>
 
       <Card className='space-y-3 rounded-2xl border p-4 dark:border-zinc-800/50 dark:bg-zinc-900'>
@@ -206,8 +220,15 @@ export default function WorkSessionPage({ ticketId }: { ticketId: number }) {
           ) : (
             <Icons.check className='mr-2 h-4 w-4' />
           )}
-          {t('workSession.finishSubmit')}
+          {isLastLeg ? t('workSession.finishSubmit') : t('workSession.submitLeg')}
         </Button>
+        <p className='mt-1.5 text-center text-[11px] text-muted-foreground'>
+          {photos.length === 0
+            ? t('ticket.markCompleteRequiresPhoto')
+            : isLastLeg
+              ? t('workSession.finishSubmitHint')
+              : t('workSession.submitLegHint')}
+        </p>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ describe('CompletionPhotos', () => {
 
     render(
       <I18nextProvider i18n={i18n}>
-        <CompletionPhotos photos={[]} onChange={onChange} />
+        <CompletionPhotos onChange={onChange} />
       </I18nextProvider>
     );
 
@@ -55,7 +55,7 @@ describe('CompletionPhotos', () => {
 
     render(
       <I18nextProvider i18n={i18n}>
-        <CompletionPhotos photos={[]} onChange={onChange} />
+        <CompletionPhotos onChange={onChange} />
       </I18nextProvider>
     );
 

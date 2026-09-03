@@ -212,6 +212,57 @@ export async function listOpenTickets(
   }
 }
 
+export async function listTickets(
+  _userId: string,
+  filters: TicketListFilters = {}
+): Promise<TicketListResponse> {
+  try {
+    const where = buildConditions([
+      filters.status ? eq(tickets.status, filters.status) : undefined,
+      filters.domain != null
+        ? filters.domain === 'field'
+          ? inArray(tickets.task_type, [...FIELD_TASK_TYPES])
+          : notInArray(tickets.task_type, [...FIELD_TASK_TYPES])
+        : undefined,
+      filters.priority != null ? eq(tickets.priority, filters.priority) : undefined
+    ]);
+
+    const directRows = await db
+      .select()
+      .from(tickets)
+      .where(where)
+      .orderBy(desc(tickets.created_at));
+
+    const result: Ticket[] = [];
+    for (const row of directRows) {
+      const reqs = await loadRequirements(row.id);
+      // load takenByName if present
+      let takenByName: string | null = null;
+      if (row.taken_by) {
+        const [taker] = await db
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, row.taken_by))
+          .limit(1);
+        takenByName = taker?.name ?? null;
+      }
+      let creatorName: string | null = null;
+      if (row.created_by) {
+        const [creator] = await db
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, row.created_by))
+          .limit(1);
+        creatorName = creator?.name ?? null;
+      }
+      result.push(await toTicket(row, reqs, creatorName, takenByName));
+    }
+    return { success: true, tickets: result, unavailable: [] };
+  } catch (e) {
+    mapDbError(e, 'tickets.listTickets');
+  }
+}
+
 export async function getTicketDetail(
   _userId: string,
   ticketId: number
@@ -331,15 +382,26 @@ export async function takeTicket(userId: string, ticketId: number): Promise<Tick
         .for('update')
         .limit(1);
 
-      const [{ count }] = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(tickets)
-        .where(and(inArray(tickets.status, ['assigned', 'in_progress']), isMine(userId)));
-      if (count >= MAX_ACTIVE_TICKETS) {
-        return {
-          success: false,
-          message: `Active ticket limit reached (${MAX_ACTIVE_TICKETS})`
-        };
+      // Admin override: bypass active-ticket cap
+      let isAdmin = false;
+      try {
+        const { getUserRoleGroup } = await import('./role-groups');
+        const group = await getUserRoleGroup(userId);
+        isAdmin = !!group?.is_admin;
+      } catch {
+        isAdmin = false;
+      }
+      if (!isAdmin) {
+        const [{ count }] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(tickets)
+          .where(and(inArray(tickets.status, ['assigned', 'in_progress']), isMine(userId)));
+        if (count >= MAX_ACTIVE_TICKETS) {
+          return {
+            success: false,
+            message: `Active ticket limit reached (${MAX_ACTIVE_TICKETS})`
+          };
+        }
       }
 
       const [claimed] = await tx
@@ -376,6 +438,16 @@ export async function startLeg(userId: string, legId: number): Promise<TicketAct
 
     if (!['open', 'assigned'].includes(leg.status)) {
       return { success: false, message: 'Leg can only be started from open or assigned' };
+    }
+
+    // Guard: only one leg may be in_progress at a time — prevents 2× in_progress (0/3 stuck)
+    const [blocking] = await db
+      .select({ id: ticketLegs.id })
+      .from(ticketLegs)
+      .where(and(eq(ticketLegs.ticket_id, leg.ticket_id), eq(ticketLegs.status, 'in_progress')))
+      .limit(1);
+    if (blocking) {
+      return { success: false, message: 'Another leg is already in progress — finish it first' };
     }
 
     const [updated] = await db
@@ -493,6 +565,12 @@ export async function completeTicket(
   ticketId: number
 ): Promise<TicketActionResponse> {
   try {
+    // 1 foto per ticket guard — server-side, cannot be bypassed via API.
+    const existingPhotos = await loadPhotos(ticketId);
+    if (existingPhotos.length < 1) {
+      return { success: false, message: 'Work session requires at least 1 photo per ticket' };
+    }
+
     const [ticket] = await db
       .update(tickets)
       .set({ status: 'completed', completed_at: new Date(), updated_at: new Date() })
@@ -554,6 +632,21 @@ export async function submitWorkSession(
       const leg = pickSubmittableLeg(legs);
       if (!leg) {
         return { success: false, message: 'Leg is no longer submittable' };
+      }
+
+      // 1 foto per ticket guard: first submit needs ≥1 new photo, later legs may reuse existing ticket photo.
+      if (input.photos.length === 0) {
+        const existingPhotos = await tx
+          .select({ id: ticketPhotos.id })
+          .from(ticketPhotos)
+          .innerJoin(ticketLegs, eq(ticketPhotos.leg_id, ticketLegs.id))
+          .where(eq(ticketLegs.ticket_id, ticketId));
+        if (existingPhotos.length === 0) {
+          return {
+            success: false,
+            message: 'Work session requires at least 1 photo per ticket'
+          };
+        }
       }
 
       if (input.materials.length > 0) {

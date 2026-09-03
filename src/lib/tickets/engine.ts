@@ -269,3 +269,30 @@ export function formatArrivalBody(location?: {
     ? `${location.latitude},${location.longitude} ±${location.accuracy}m`
     : 'arrived (no location fix)';
 }
+
+// --- Completion guard (pure) — 1 foto per ticket, enforced both client & server ---
+
+export function canCompleteTicket(args: {
+  domain: 'field' | 'backoffice';
+  isAdmin: boolean;
+  photoCount: number;
+}): { allowed: boolean; reason?: 'requiresPhoto' | 'requiresReview' } {
+  // Field tickets must go via Work Session → submitted → SPV review → completed.
+  // Direct Mark Complete is only for admin/backoffice shortcut, but still needs photo.
+  if (args.photoCount < 1) return { allowed: false, reason: 'requiresPhoto' };
+  if (args.domain === 'field' && !args.isAdmin) {
+    return { allowed: false, reason: 'requiresReview' };
+  }
+  return { allowed: true };
+}
+
+export function workSessionSubmitAllowed(args: {
+  existingPhotoCount: number;
+  inputPhotoCount: number;
+}): { allowed: boolean; reason?: 'requiresPhoto' } {
+  // 1 foto per ticket: first submit needs ≥1 new photo; later legs may submit without new photo if ticket already has one.
+  if (args.existingPhotoCount === 0 && args.inputPhotoCount < 1) {
+    return { allowed: false, reason: 'requiresPhoto' };
+  }
+  return { allowed: true };
+}

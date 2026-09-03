@@ -76,7 +76,9 @@ export function formatCurrency(value: number | string, locale: string = getAppLo
 }
 
 export function dateFnsLocale(locale: string = getAppLocale()): Locale {
-  return locale === 'id-ID' ? id : enUS;
+  // Accept both app locale (id-ID/en-US) and i18n language (id/en)
+  if (locale.startsWith('id')) return id;
+  return enUS;
 }
 
 export function initialsFromName(name: string): string {

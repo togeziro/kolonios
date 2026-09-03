@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/components/icons';
 import { SelfieCapture } from '@/features/attendance/components/selfie-capture';
-import { PHOTO_UPLOAD_FAILED, uploadTicketPhoto } from '@/lib/storage/upload-client';
+import { uploadTicketPhoto } from '@/lib/storage/upload-client';
 import { toast } from 'sonner';
 
 const SLOT_COUNT = 2;
@@ -19,56 +19,75 @@ function uploadSlotPhoto(
   index: number,
   dataUrl: string,
   onKey: (key: string) => void,
-  onError: () => void
+  onError: (message: string) => void
 ) {
   const photoId = Date.now() + index;
   uploadTicketPhoto(dataUrl, photoId)
     .then(onKey)
     .catch((e: unknown) => {
-      if (e instanceof Error && e.message === PHOTO_UPLOAD_FAILED) {
-        onError();
-      }
+      const message = e instanceof Error ? e.message : String(e);
+      // Previously only PHOTO_UPLOAD_FAILED triggered toast — "Storage is not configured"
+      // and other S3 errors were swallowed, leaving slots in dataUrl-only state and
+      // Finish & Submit permanently disabled. Surface every failure.
+      onError(message);
     });
 }
 
 export default function CompletionPhotos({
-  photos,
   onChange,
   disabled
 }: {
-  photos: string[];
   onChange: (next: string[]) => void;
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
-  const [slots, setSlots] = useState<PhotoSlot[]>(() => {
-    const base = emptySlots(SLOT_COUNT);
-    photos.forEach((key, i) => {
-      if (i < SLOT_COUNT) base[i] = { key, dataUrl: null };
-    });
-    return base;
-  });
+  // Slot state is fully internal — the parent only needs the list of uploaded keys.
+  // Earlier versions read `photos` from props at init AND inside setState updaters,
+  // which caused "Cannot update a component while rendering a different one" because
+  // the parent's setPhotos fired during CompletionPhotos' render.
+  const [slots, setSlots] = useState<PhotoSlot[]>(() => emptySlots(SLOT_COUNT));
 
-  const updateSlot = (index: number, patch: Partial<PhotoSlot>) => {
-    setSlots((prev) => {
-      const next = prev.map((s, i) => (i === index ? { ...s, ...patch } : s));
-      onChange(next.map((s) => s.key).filter((k): k is string => k !== null));
-      return next;
-    });
+  const publishKeys = (next: PhotoSlot[]) => {
+    onChange(next.map((s) => s.key).filter((k): k is string => k !== null));
   };
 
   const capture = (index: number, dataUrl: string) => {
-    updateSlot(index, { dataUrl });
+    // Update local slot state first (preview), then fire upload. Both setters run
+    // outside of any setState updater so we don't update the parent during render.
+    setSlots((prev) => prev.map((s, i) => (i === index ? { ...s, dataUrl } : s)));
     uploadSlotPhoto(
       index,
       dataUrl,
-      (key) => updateSlot(index, { key }),
-      () => toast.error(t('workSession.photoUploadFailed'))
+      (key) => {
+        setSlots((prev) => {
+          const next = prev.map((s, i) => (i === index ? { ...s, key } : s));
+          publishKeys(next);
+          return next;
+        });
+      },
+      (message) => {
+        const isStorageNotConfigured = message === 'Storage is not configured';
+        toast.error(
+          isStorageNotConfigured
+            ? t('workSession.photoUploadFailedStorageNotConfigured')
+            : t('workSession.photoUploadFailed')
+        );
+        // Drop the failed slot's preview so the user can retry cleanly.
+        setSlots((prev) => {
+          const next = prev.map((s, i) => (i === index ? { key: null, dataUrl: null } : s));
+          publishKeys(next);
+          return next;
+        });
+      }
     );
   };
 
   const clear = (index: number) => {
-    updateSlot(index, { key: null, dataUrl: null });
+    setSlots((prev) => {
+      const next = prev.map((s, i) => (i === index ? { key: null, dataUrl: null } : s));
+      publishKeys(next);
+      return next;
+    });
   };
 
   return (

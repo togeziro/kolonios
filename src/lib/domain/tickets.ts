@@ -152,6 +152,7 @@ export type UnavailableTicket = Ticket & { eligibilityReasons: string[] };
 export type TicketListFilters = {
   domain?: TicketDomain;
   priority?: TicketPriority;
+  status?: TicketStatus;
 };
 
 export type TicketListResponse = {
