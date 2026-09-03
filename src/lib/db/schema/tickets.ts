@@ -85,6 +85,10 @@ export const tickets = pgTable('tickets', {
   assigned_to: text('assigned_to').references(() => user.id),
   taken_by: text('taken_by').references(() => user.id),
   taken_at: timestamp('taken_at'),
+  // First take/claim time — preserved across relay claims so total ticket
+  // duration (taken→completed) stays measurable even when taken_at is reset to
+  // each holder's session start. Used by achievements' fast-finish metric.
+  first_taken_at: timestamp('first_taken_at'),
   completed_at: timestamp('completed_at'),
   submitted_at: timestamp('submitted_at'),
   reviewed_by: text('reviewed_by').references(() => user.id),

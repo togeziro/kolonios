@@ -256,6 +256,21 @@ export function resolveLegAdvance(submittedLegNumber: number, legs: LegRow[]): L
   };
 }
 
+// A leg is claimable from the relay pool only when it is the *nearest* next leg:
+// status `assigned`, no assignee yet (it entered the pool via resolveLegAdvance),
+// and every earlier leg has been submitted (sequential — no parallel work).
+// An earlier open/in_progress/claimed leg blocks all later legs, so a non-sequential
+// leg (e.g. leg 3 while leg 2 is unfinished) is never claimable.
+export function pickClaimableLeg(legs: LegRow[]): LegRow | null {
+  const sorted = [...legs].sort((a, b) => a.leg_number - b.leg_number);
+  for (const l of sorted) {
+    if (l.status === 'submitted' || l.status === 'completed') continue;
+    if (l.status === 'assigned' && l.assignee_id === null) return l;
+    return null;
+  }
+  return null;
+}
+
 export function formatHandoffNote(existingNotes: string, note: string): string {
   return existingNotes ? `${existingNotes}\nHandoff: ${note}` : `Handoff: ${note}`;
 }

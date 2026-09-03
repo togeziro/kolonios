@@ -5,7 +5,8 @@ import {
   listTicketsFn,
   getTicketDetailFn,
   getCompletedTicketsFn,
-  listSubmittedTicketsFn
+  listSubmittedTicketsFn,
+  listRelayPoolFn
 } from './service';
 import { getObjectUrlFn } from '@/features/storage/api/service';
 import type { TicketListFilters } from './types';
@@ -14,6 +15,7 @@ export const ticketsKeys = {
   all: ['tickets'] as const,
   mine: () => [...ticketsKeys.all, 'mine'] as const,
   open: (filters: TicketListFilters) => [...ticketsKeys.all, 'open', filters] as const,
+  relay: (filters: TicketListFilters) => [...ticketsKeys.all, 'relay', filters] as const,
   list: (filters: TicketListFilters) => [...ticketsKeys.all, 'list', filters] as const,
   detail: (ticketId: number) => [...ticketsKeys.all, 'detail', ticketId] as const,
   completed: () => [...ticketsKeys.all, 'completed'] as const,
@@ -42,6 +44,12 @@ export const openTicketsQueryOptions = (filters: TicketListFilters = {}) =>
   queryOptions({
     queryKey: ticketsKeys.open(filters),
     queryFn: () => listOpenTicketsFn({ data: filters })
+  });
+
+export const relayPoolQueryOptions = (filters: TicketListFilters = {}) =>
+  queryOptions({
+    queryKey: ticketsKeys.relay(filters),
+    queryFn: () => listRelayPoolFn({ data: filters })
   });
 
 export const listTicketsQueryOptions = (filters: TicketListFilters = {}) =>

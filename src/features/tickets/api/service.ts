@@ -62,6 +62,24 @@ export const takeTicketFn = createServerFn({ method: 'POST' })
     return takeTicket(session.user.id, data.ticketId);
   });
 
+export const claimLegFn = createServerFn({ method: 'POST' })
+  .validator(legIdSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('tickets', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { claimLeg } = await import('@/lib/db/tickets');
+    return claimLeg(session.user.id, data.legId);
+  });
+
+export const listRelayPoolFn = createServerFn({ method: 'GET' })
+  .validator(listOpenTicketsSchema)
+  .handler(async ({ data: filters }) => {
+    const session = await requirePermission('jobs', 'view');
+    await checkRateLimit(`tickets:${session.user.id}`);
+    const { listRelayPool } = await import('@/lib/db/tickets');
+    return listRelayPool(session.user.id, filters);
+  });
+
 export const completeTicketFn = createServerFn({ method: 'POST' })
   .validator(ticketIdSchema)
   .handler(async ({ data }) => {

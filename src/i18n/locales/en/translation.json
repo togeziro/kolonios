@@ -1558,6 +1558,7 @@
     "enRouteTo": "En route to",
     "notAssigned": "This ticket is not assigned to you",
     "inProgressHint": "This ticket is already in progress",
+    "continueWorkSession": "Continue to Work Session",
     "back": "Back",
     "mapFailed": "Map could not be loaded",
     "distanceTo": "Distance to destination",
@@ -1566,7 +1567,14 @@
   "jobs": {
     "filterLocation": "Location",
     "filterPriority": "Priority",
-    "legBadge": "Leg {{x}} of {{y}}"
+    "legBadge": "Leg {{x}} of {{y}}",
+    "relayTitle": "Relay / Next Leg",
+    "relayEmpty": "No next legs available",
+    "heldBy": "Held by {{name}}",
+    "claimLeg": "Take Leg",
+    "claimLegHint": "Take: {{name}}",
+    "legClaimed": "Leg claimed",
+    "claimFailed": "Could not claim leg"
   },
   "changePassword": {
     "title": "Change Password",
