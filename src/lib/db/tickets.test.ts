@@ -13,6 +13,8 @@ import {
   addHandoffNote,
   reviewTicket,
   listSubmittedTickets,
+  claimLeg,
+  listRelayPool,
   MAX_ACTIVE_TICKETS
 } from './tickets';
 import { db } from '@/lib/db';
@@ -23,6 +25,8 @@ import {
   ticketPhotos,
   ticketWorklog
 } from './schema/tickets';
+import { roleGroups } from './schema/role-groups';
+import { userRoleGroups } from './schema/user-role-groups';
 import {
   resetAllTables,
   seedUser,
@@ -38,6 +42,7 @@ import {
 
 const USER_A = 'ticket-user-a';
 const USER_B = 'ticket-user-b';
+const USER_C = 'ticket-user-c';
 
 describe('tickets data access (integration)', () => {
   beforeEach(async () => {
@@ -818,6 +823,253 @@ describe('tickets data access (integration)', () => {
       expect(res.success).toBe(false);
 
       expect(await countRows()).toEqual(before);
+    });
+  });
+
+  async function seedPoolTicket(takenBy = USER_A) {
+    await seedEmployee(takenBy);
+    const ticket = await seedTicket({
+      title: 'Relay ticket',
+      status: 'in_progress',
+      taken_by: takenBy,
+      taken_at: new Date('2026-08-10T08:00:00'),
+      first_taken_at: new Date('2026-08-10T08:00:00')
+    });
+    const leg1 = await seedTicketLeg(ticket.id, { name: 'Survey', status: 'submitted' });
+    const leg2 = await seedTicketLeg(ticket.id, { name: 'Install', status: 'assigned' });
+    return { ticket, leg1, leg2 };
+  }
+
+  describe('claimLeg', () => {
+    it('transfers ownership to the claimant for the next pool leg', async () => {
+      const { ticket, leg2 } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+
+      const res = await claimLeg(USER_B, leg2.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.takenBy).toBe(USER_B);
+
+      const [legRow] = await db
+        .select({ assignee_id: ticketLegs.assignee_id, status: ticketLegs.status })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, leg2.id));
+      expect(legRow?.assignee_id).toBe(USER_B);
+      expect(legRow?.status).toBe('assigned');
+
+      const [ticketRow] = await db
+        .select({
+          status: tickets.status,
+          taken_by: tickets.taken_by,
+          taken_at: tickets.taken_at,
+          first_taken_at: tickets.first_taken_at
+        })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(ticketRow?.status).toBe('in_progress');
+      expect(ticketRow?.taken_by).toBe(USER_B);
+
+      // taken_at resets to the claimant's session start, but first_taken_at
+      // survives so the total ticket duration (for achievements) is preserved.
+      expect(ticketRow?.first_taken_at?.getTime()).toBe(new Date('2026-08-10T08:00:00').getTime());
+
+      // The handoff is recorded in the worklog so ownership history survives
+      // taken_by churn.
+      const [claimLog] = await db
+        .select({ kind: ticketWorklog.kind, body: ticketWorklog.body })
+        .from(ticketWorklog)
+        .where(eq(ticketWorklog.leg_id, leg2.id));
+      expect(claimLog?.kind).toBe('note');
+      expect(claimLog?.body).toContain('Leg 2 claimed');
+
+      // B can now work the claimed leg through the normal guards.
+      const startRes = await startLeg(USER_B, leg2.id);
+      expect(startRes.success).toBe(true);
+      const submitRes = await submitWorkSession(USER_B, ticket.id, {
+        materials: [],
+        photos: [{ fileUrl: 'tickets/0/relay.jpg' }],
+        notes: 'Install done',
+        log: []
+      });
+      expect(submitRes.success).toBe(true);
+      expect(submitRes.isLastLeg).toBe(true);
+    });
+
+    it('rejects a leg that is already claimed (assignee set)', async () => {
+      const { leg2 } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+      await db
+        .update(ticketLegs)
+        .set({ assignee_id: USER_A, taken_at: new Date() })
+        .where(eq(ticketLegs.id, leg2.id));
+
+      const res = await claimLeg(USER_B, leg2.id);
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('not available');
+    });
+
+    it('rejects a non-sequential leg (later leg before the pool leg)', async () => {
+      const { ticket } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+      const leg3 = await seedTicketLeg(ticket.id, { name: 'Leg 3', status: 'assigned' });
+
+      const res = await claimLeg(USER_B, leg3.id);
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('not available');
+    });
+
+    it('rejects a claim on a ticket that is not in progress', async () => {
+      await seedEmployee(USER_A);
+      await seedEmployee(USER_B);
+      const ticket = await seedTicket({
+        title: 'Submitted ticket',
+        status: 'submitted',
+        taken_by: USER_A
+      });
+      const leg2 = await seedTicketLeg(ticket.id, { name: 'Install', status: 'assigned' });
+
+      const res = await claimLeg(USER_B, leg2.id);
+      expect(res.success).toBe(false);
+      expect(res.message).toBe('Ticket is not in progress');
+    });
+
+    it('rejects when the claimant is not eligible', async () => {
+      const { ticket, leg2 } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+      await seedTicketRequirement(ticket.id, { skill: 'Fiber Optic' });
+
+      const res = await claimLeg(USER_B, leg2.id);
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('Not eligible');
+    });
+
+    it('rejects when the claimant is at the active ticket cap', async () => {
+      const { leg2 } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+      for (let i = 0; i < MAX_ACTIVE_TICKETS; i++) {
+        const other = await seedTicket({
+          title: `B ticket ${i}`,
+          status: 'in_progress',
+          taken_by: USER_B
+        });
+        await seedTicketLeg(other.id, { name: 'Leg 1', status: 'in_progress' });
+      }
+
+      const res = await claimLeg(USER_B, leg2.id);
+      expect(res.success).toBe(false);
+      expect(res.message).toContain('Active ticket limit reached');
+    });
+
+    it('lets an admin bypass the active ticket cap', async () => {
+      const { leg2 } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+      await db.insert(roleGroups).values({
+        id: 'admin-group',
+        name: 'Admins',
+        is_admin: true
+      });
+      await db.insert(userRoleGroups).values({
+        user_id: USER_B,
+        role_group_id: 'admin-group'
+      });
+      for (let i = 0; i < MAX_ACTIVE_TICKETS; i++) {
+        const other = await seedTicket({
+          title: `B ticket ${i}`,
+          status: 'in_progress',
+          taken_by: USER_B
+        });
+        await seedTicketLeg(other.id, { name: 'Leg 1', status: 'in_progress' });
+      }
+
+      const res = await claimLeg(USER_B, leg2.id);
+      expect(res.success).toBe(true);
+    });
+
+    it('allows the current holder to re-claim their own next leg (relay ganda)', async () => {
+      const { ticket, leg2 } = await seedPoolTicket(USER_A);
+
+      const res = await claimLeg(USER_A, leg2.id);
+      expect(res.success).toBe(true);
+      const [ticketRow] = await db
+        .select({ taken_by: tickets.taken_by })
+        .from(tickets)
+        .where(eq(tickets.id, ticket.id));
+      expect(ticketRow?.taken_by).toBe(USER_A);
+    });
+
+    it('lets exactly one of two concurrent claimants win', async () => {
+      const { leg2 } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+      await seedEmployee(USER_C);
+
+      const [resB, resC] = await Promise.all([
+        claimLeg(USER_B, leg2.id),
+        claimLeg(USER_C, leg2.id)
+      ]);
+      const wins = [resB, resC].filter((r) => r.success);
+      expect(wins).toHaveLength(1);
+
+      const [legRow] = await db
+        .select({ assignee_id: ticketLegs.assignee_id })
+        .from(ticketLegs)
+        .where(eq(ticketLegs.id, leg2.id));
+      expect([USER_B, USER_C]).toContain(legRow?.assignee_id);
+    });
+  });
+
+  describe('listRelayPool', () => {
+    it('lists in_progress tickets with an unclaimed next leg and holder info', async () => {
+      const { leg2 } = await seedPoolTicket(USER_A);
+      await seedEmployee(USER_B);
+
+      const res = await listRelayPool(USER_B);
+      expect(res.success).toBe(true);
+      expect(res.tickets).toHaveLength(1);
+      const item = res.tickets[0];
+      expect(item.title).toBe('Relay ticket');
+      expect(item.takenByName).toBe('Test User');
+      expect(item.claimableLeg).toEqual({
+        legId: leg2.id,
+        legNumber: 2,
+        name: 'Install',
+        legsTotal: 2
+      });
+    });
+
+    it('excludes tickets without an unclaimed pool leg', async () => {
+      await seedEmployee(USER_A);
+      const done = await seedTicket({
+        title: 'All done',
+        status: 'in_progress',
+        taken_by: USER_A
+      });
+      await seedTicketLeg(done.id, { name: 'Leg 1', status: 'submitted' });
+      const claimed = await seedTicket({
+        title: 'Already claimed',
+        status: 'in_progress',
+        taken_by: USER_A
+      });
+      await seedTicketLeg(claimed.id, { name: 'Leg 1', status: 'submitted' });
+      await seedTicketLeg(claimed.id, { name: 'Leg 2', status: 'assigned', assignee_id: USER_A });
+
+      const res = await listRelayPool(USER_B);
+      expect(res.tickets).toHaveLength(0);
+    });
+
+    it('splits out tickets the viewer is not eligible for', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Skilled relay',
+        status: 'in_progress',
+        taken_by: USER_A
+      });
+      await seedTicketLeg(ticket.id, { name: 'Leg 1', status: 'submitted' });
+      await seedTicketLeg(ticket.id, { name: 'Leg 2', status: 'assigned' });
+      await seedTicketRequirement(ticket.id, { skill: 'Fiber Optic' });
+
+      const res = await listRelayPool(USER_B);
+      expect(res.tickets).toHaveLength(0);
+      expect(res.unavailable).toHaveLength(1);
+      expect(res.unavailable[0].eligibilityReasons).toContain('Requires skill: Fiber Optic');
     });
   });
 

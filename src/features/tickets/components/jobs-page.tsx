@@ -8,10 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { dateFnsLocale } from '@/lib/format';
-import { openTicketsQueryOptions } from '../api/queries';
-import { useTakeTicket } from '../api/hooks';
-import type { Ticket, TicketPriority, TicketDomain } from '../api/types';
-import { LEG_FIXTURES, type TicketLegInfo } from './-leg-fixtures';
+import { openTicketsQueryOptions, relayPoolQueryOptions } from '../api/queries';
+import { useTakeTicket, useClaimLeg } from '../api/hooks';
+import type { Ticket, TicketPriority, TicketDomain, RelayPoolItem } from '../api/types';
 
 const priorityConfig: Record<TicketPriority, { bg: string; text: string; labelKey: string }> = {
   high: { bg: 'bg-red-500/10', text: 'text-red-400', labelKey: 'ticket.high' },
@@ -36,21 +35,33 @@ function filterChipClass(active: boolean) {
   }`;
 }
 
-function OpenTicketCard({
+function LegBadge({ legNumber, legsTotal }: { legNumber: number; legsTotal: number }) {
+  const { t } = useTranslation();
+  if (legsTotal <= 1) return null;
+  return (
+    <span className='bg-sky-500/10 text-sky-400 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider'>
+      {t('jobs.legBadge', { x: legNumber, y: legsTotal })}
+    </span>
+  );
+}
+
+function TicketCard({
   ticket,
-  onTake,
+  variant,
+  onAction,
   disabled,
-  reasons,
-  relay
+  reasons
 }: {
-  ticket: Ticket;
-  onTake: (id: number) => void;
+  ticket: Ticket | RelayPoolItem;
+  variant: 'open' | 'relay';
+  onAction: () => void;
   disabled?: boolean;
   reasons?: string[];
-  relay?: TicketLegInfo;
 }) {
   const { t, i18n } = useTranslation();
   const p = priorityConfig[ticket.priority];
+  const isRelay = variant === 'relay';
+  const item = isRelay ? (ticket as RelayPoolItem) : null;
 
   return (
     <div className='dark:bg-zinc-900 dark:border-zinc-800 flex flex-col gap-4 rounded-[1.5rem] border p-5'>
@@ -58,10 +69,18 @@ function OpenTicketCard({
         <div>
           <div className='mb-1 flex flex-wrap items-center gap-2'>
             <span className='dark:text-zinc-500 font-mono text-xs'>{ticket.ticketCode}</span>
-            {relay && relay.legsTotal > 1 && (
-              <span className='bg-sky-500/10 text-sky-400 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider'>
-                {t('jobs.legBadge', { x: relay.legNumber, y: relay.legsTotal })}
-              </span>
+            {isRelay && item ? (
+              <LegBadge
+                legNumber={item.claimableLeg.legNumber}
+                legsTotal={item.claimableLeg.legsTotal}
+              />
+            ) : (
+              ticket.legInfo && (
+                <LegBadge
+                  legNumber={ticket.legInfo.legNumber}
+                  legsTotal={ticket.legInfo.legsTotal}
+                />
+              )
             )}
             <span
               className={`${p.bg} ${p.text} rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider`}
@@ -74,9 +93,11 @@ function OpenTicketCard({
           </div>
           <h3 className='dark:text-zinc-100 font-semibold leading-tight'>{ticket.title}</h3>
         </div>
-        <span className='dark:bg-zinc-800 dark:text-zinc-300 shrink-0 rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-700'>
-          {t('ticket.open')}
-        </span>
+        {!isRelay && (
+          <span className='dark:bg-zinc-800 dark:text-zinc-300 shrink-0 rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-700'>
+            {t('ticket.open')}
+          </span>
+        )}
       </div>
 
       <div className='flex flex-col gap-2'>
@@ -86,21 +107,38 @@ function OpenTicketCard({
             <span>{ticket.location.name}</span>
           </div>
         )}
-        {ticket.createdByName && (
-          <div className='dark:text-zinc-400 flex items-center gap-2 text-sm'>
-            <Icons.user className='h-[18px] w-[18px]' />
-            <span>
-              {t('ticket.openedBy')} {ticket.createdByName}
-              {' · '}
-              {relativeTime(ticket.createdAt, i18n.language)}
-            </span>
-          </div>
-        )}
-        {ticket.requiredSkills.length > 0 && (
-          <div className='dark:text-zinc-400 flex items-center gap-2 text-sm'>
-            <Icons.warning className='h-[18px] w-[18px]' />
-            <span>{ticket.requiredSkills.join(', ')}</span>
-          </div>
+        {isRelay && item ? (
+          <>
+            {ticket.takenByName && (
+              <div className='dark:text-zinc-400 flex items-center gap-2 text-sm'>
+                <Icons.user className='h-[18px] w-[18px]' />
+                <span>{t('jobs.heldBy', { name: ticket.takenByName })}</span>
+              </div>
+            )}
+            <div className='dark:text-zinc-400 flex items-center gap-2 text-sm'>
+              <Icons.chevronRight className='h-[18px] w-[18px]' />
+              <span>{t('jobs.claimLegHint', { name: item.claimableLeg.name })}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            {ticket.createdByName && (
+              <div className='dark:text-zinc-400 flex items-center gap-2 text-sm'>
+                <Icons.user className='h-[18px] w-[18px]' />
+                <span>
+                  {t('ticket.openedBy')} {ticket.createdByName}
+                  {' · '}
+                  {relativeTime(ticket.createdAt, i18n.language)}
+                </span>
+              </div>
+            )}
+            {ticket.requiredSkills.length > 0 && (
+              <div className='dark:text-zinc-400 flex items-center gap-2 text-sm'>
+                <Icons.warning className='h-[18px] w-[18px]' />
+                <span>{ticket.requiredSkills.join(', ')}</span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -111,27 +149,24 @@ function OpenTicketCard({
         </div>
       )}
       <Button
-        onClick={() => onTake(ticket.id)}
+        onClick={onAction}
         disabled={disabled}
         className='mt-2 w-full py-3 font-semibold dark:bg-zinc-100 dark:text-zinc-900 bg-zinc-900 text-white'
       >
-        {t('ticket.take')}
+        {isRelay ? t('jobs.claimLeg') : t('ticket.take')}
       </Button>
     </div>
   );
 }
 
-export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLegInfo> } = {}) {
+export default function JobsPage() {
   const { t } = useTranslation();
   const { domain } = useSearch({ from: JobsRoute.id });
   const navigate = useNavigate();
   const { isAdmin, permissions } = useRoleGroupPermissions();
   const canCreate = isAdmin || permissions.tickets?.add === true;
   const takeTicket = useTakeTicket();
-
-  // TODO(wire): leg data comes from fixtures today; the wiring pass supplies
-  // the real per-ticket map (same shape) and this merge becomes a no-op.
-  const legs: Record<number, TicketLegInfo> = { ...LEG_FIXTURES, ...legMap };
+  const claimLeg = useClaimLeg();
 
   // Location/Priority filters are intentionally local state (not URL) — they
   // narrow already-fetched tickets client-side only.
@@ -144,6 +179,10 @@ export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLeg
   const tickets = data?.tickets ?? [];
   const unavailable = data?.unavailable ?? [];
 
+  const relayQuery = useQuery(relayPoolQueryOptions(filters));
+  const relayTickets = relayQuery.data?.tickets ?? [];
+  const relayUnavailable = relayQuery.data?.unavailable ?? [];
+
   function setDomain(next: TicketDomain | undefined) {
     navigate({ to: '/dashboard/jobs', search: { domain: next } });
   }
@@ -151,7 +190,17 @@ export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLeg
   async function handleTake(ticketId: number) {
     const res = await takeTicket.mutateAsync(ticketId);
     if (res?.success) {
-      navigate({ to: '/dashboard/tickets/$ticketId', params: { ticketId: String(ticketId) } });
+      navigate({ to: '/dashboard/en-route/$ticketId', params: { ticketId: String(ticketId) } });
+    }
+  }
+
+  async function handleClaim(legId: number) {
+    const res = await claimLeg.mutateAsync(legId);
+    if (res?.success && res.ticket) {
+      navigate({
+        to: '/dashboard/en-route/$ticketId',
+        params: { ticketId: String(res.ticket.id) }
+      });
     }
   }
 
@@ -163,7 +212,9 @@ export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLeg
 
   const locationOptions = [
     ...new Set(
-      tickets.map((ticket) => ticket.location?.name).filter((name): name is string => Boolean(name))
+      [...tickets, ...relayTickets]
+        .map((ticket) => ticket.location?.name)
+        .filter((name): name is string => Boolean(name))
     )
   ];
   const priorityOptions: TicketPriority[] = ['high', 'medium', 'low'];
@@ -173,6 +224,10 @@ export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLeg
     (priorityFilter === null || ticket.priority === priorityFilter);
   const visibleTickets = tickets.filter(matchesFilters);
   const visibleUnavailable = unavailable.filter(matchesFilters);
+  const visibleRelay = relayTickets.filter(matchesFilters);
+  const visibleRelayUnavailable = relayUnavailable.filter(matchesFilters);
+
+  const claimPending = claimLeg.isPending;
 
   return (
     <div className='flex min-h-screen flex-col'>
@@ -216,7 +271,7 @@ export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLeg
       </header>
 
       <main className='flex-1 px-4 py-4'>
-        {!isLoading && tickets.length > 0 && (
+        {!isLoading && (tickets.length > 0 || relayTickets.length > 0) && (
           <div className='no-scrollbar mb-3 flex items-center gap-2 overflow-x-auto'>
             <span className='dark:text-zinc-500 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400'>
               {t('jobs.filterLocation')}
@@ -247,45 +302,96 @@ export default function JobsPage({ legMap }: { legMap?: Record<number, TicketLeg
             ))}
           </div>
         )}
-        {isLoading ? (
-          <div className='flex justify-center py-8'>
-            <Icons.spinner className='h-6 w-6 animate-spin text-muted-foreground' />
-          </div>
-        ) : visibleTickets.length === 0 && visibleUnavailable.length === 0 ? (
-          <p className='text-muted-foreground py-8 text-center text-sm'>
-            {t('ticket.noOpenTickets')}
-          </p>
-        ) : (
-          <div className='flex flex-col gap-4'>
-            {visibleTickets.map((ticket) => (
-              <OpenTicketCard
-                key={ticket.id}
-                ticket={ticket}
-                onTake={handleTake}
-                disabled={takeTicket.isPending}
-                relay={legs[ticket.id]}
-              />
-            ))}
-            {visibleUnavailable.length > 0 && (
-              <>
-                <h2 className='dark:text-zinc-500 pt-4 text-xs font-semibold uppercase tracking-wider text-zinc-400'>
-                  {t('ticket.unavailable')}
-                </h2>
-                {visibleUnavailable.map((ticket) => (
-                  <div key={ticket.id} className='opacity-75'>
-                    <OpenTicketCard
-                      ticket={ticket}
-                      onTake={() => {}}
-                      disabled
-                      reasons={ticket.eligibilityReasons}
-                      relay={legs[ticket.id]}
-                    />
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        )}
+
+        <section>
+          <h2 className='dark:text-zinc-500 mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400'>
+            <Icons.dashboard className='h-3.5 w-3.5' />
+            {t('ticket.openTickets')}
+          </h2>
+          {isLoading ? (
+            <div className='flex justify-center py-8'>
+              <Icons.spinner className='h-6 w-6 animate-spin text-muted-foreground' />
+            </div>
+          ) : visibleTickets.length === 0 && visibleUnavailable.length === 0 ? (
+            <p className='text-muted-foreground py-8 text-center text-sm'>
+              {t('ticket.noOpenTickets')}
+            </p>
+          ) : (
+            <div className='flex flex-col gap-4'>
+              {visibleTickets.map((ticket) => (
+                <TicketCard
+                  key={ticket.id}
+                  variant='open'
+                  ticket={ticket}
+                  onAction={() => handleTake(ticket.id)}
+                  disabled={takeTicket.isPending}
+                />
+              ))}
+              {visibleUnavailable.length > 0 && (
+                <>
+                  <h3 className='dark:text-zinc-500 pt-4 text-xs font-semibold uppercase tracking-wider text-zinc-400'>
+                    {t('ticket.unavailable')}
+                  </h3>
+                  {visibleUnavailable.map((ticket) => (
+                    <div key={ticket.id} className='opacity-75'>
+                      <TicketCard
+                        variant='open'
+                        ticket={ticket}
+                        onAction={() => {}}
+                        disabled
+                        reasons={ticket.eligibilityReasons}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className='mb-6'>
+          <h2 className='dark:text-zinc-500 mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400'>
+            <Icons.trendingUp className='h-3.5 w-3.5' />
+            {t('jobs.relayTitle')}
+          </h2>
+          {relayQuery.isLoading ? (
+            <div className='flex justify-center py-8'>
+              <Icons.spinner className='h-6 w-6 animate-spin text-muted-foreground' />
+            </div>
+          ) : visibleRelay.length === 0 && visibleRelayUnavailable.length === 0 ? (
+            <p className='text-muted-foreground py-4 text-center text-sm'>{t('jobs.relayEmpty')}</p>
+          ) : (
+            <div className='flex flex-col gap-4'>
+              {visibleRelay.map((item) => (
+                <TicketCard
+                  key={item.id}
+                  variant='relay'
+                  ticket={item}
+                  onAction={() => handleClaim(item.claimableLeg.legId)}
+                  disabled={claimPending}
+                />
+              ))}
+              {visibleRelayUnavailable.length > 0 && (
+                <>
+                  <h3 className='dark:text-zinc-500 pt-2 text-xs font-semibold uppercase tracking-wider text-zinc-400'>
+                    {t('ticket.unavailable')}
+                  </h3>
+                  {visibleRelayUnavailable.map((item) => (
+                    <div key={item.id} className='opacity-75'>
+                      <TicketCard
+                        variant='relay'
+                        ticket={item}
+                        onAction={() => {}}
+                        disabled
+                        reasons={item.eligibilityReasons}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

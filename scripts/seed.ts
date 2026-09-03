@@ -739,6 +739,7 @@ async function seedTickets() {
         assigned_to: techId,
         taken_by: techId,
         taken_at: new Date(),
+        first_taken_at: new Date(),
         created_by: adminId
       },
       {
@@ -913,6 +914,7 @@ async function seedAchievementsDemo() {
       assigned_to: techId,
       taken_by: techId,
       taken_at: takenAt,
+      first_taken_at: takenAt,
       completed_at: completedAt,
       created_by: adminId
     }))
@@ -933,6 +935,7 @@ async function seedAchievementsDemo() {
       assigned_to: techId,
       taken_by: techId,
       taken_at: takenAtSubmitted,
+      first_taken_at: takenAtSubmitted,
       submitted_at: submittedAt,
       created_by: adminId
     },
@@ -945,6 +948,7 @@ async function seedAchievementsDemo() {
       assigned_to: techId,
       taken_by: techId,
       taken_at: new Date(submittedAt.getTime() - 5 * 60 * 60 * 1000),
+      first_taken_at: new Date(submittedAt.getTime() - 5 * 60 * 60 * 1000),
       submitted_at: new Date(submittedAt.getTime() - 30 * 60 * 1000),
       created_by: adminId
     }

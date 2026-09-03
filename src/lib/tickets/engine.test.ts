@@ -11,6 +11,7 @@ import {
   pickSubmittableLeg,
   resolveSubmittedNotes,
   resolveLegAdvance,
+  pickClaimableLeg,
   formatHandoffNote,
   formatArrivalBody
 } from './engine';
@@ -409,6 +410,62 @@ describe('ticket engine (pure functions)', () => {
         kind: 'advance',
         nextLeg: { id: 2, legNumber: 2, name: 'B' }
       });
+    });
+  });
+
+  describe('pickClaimableLeg', () => {
+    it('returns null for an empty ticket', () => {
+      expect(pickClaimableLeg([])).toBeNull();
+    });
+
+    it('picks the next assigned leg with no assignee after a submitted leg', () => {
+      const legs = [
+        leg({ id: 1, leg_number: 1, status: 'submitted' }),
+        leg({ id: 2, leg_number: 2, status: 'assigned', assignee_id: null })
+      ];
+      expect(pickClaimableLeg(legs)?.id).toBe(2);
+    });
+
+    it('returns null when the next leg is already claimed', () => {
+      const legs = [
+        leg({ id: 1, leg_number: 1, status: 'submitted' }),
+        leg({ id: 2, leg_number: 2, status: 'assigned', assignee_id: 'user-a' })
+      ];
+      expect(pickClaimableLeg(legs)).toBeNull();
+    });
+
+    it('blocks a later leg when an earlier leg is still open', () => {
+      const legs = [
+        leg({ id: 1, leg_number: 1, status: 'submitted' }),
+        leg({ id: 2, leg_number: 2, status: 'open' }),
+        leg({ id: 3, leg_number: 3, status: 'assigned', assignee_id: null })
+      ];
+      expect(pickClaimableLeg(legs)).toBeNull();
+    });
+
+    it('blocks a non-sequential leg when an earlier assigned leg is unclaimed', () => {
+      const legs = [
+        leg({ id: 1, leg_number: 1, status: 'submitted' }),
+        leg({ id: 2, leg_number: 2, status: 'assigned', assignee_id: null }),
+        leg({ id: 3, leg_number: 3, status: 'assigned', assignee_id: null })
+      ];
+      expect(pickClaimableLeg(legs)?.id).toBe(2);
+    });
+
+    it('returns null when every leg is submitted or completed', () => {
+      const legs = [
+        leg({ id: 1, leg_number: 1, status: 'submitted' }),
+        leg({ id: 2, leg_number: 2, status: 'completed' })
+      ];
+      expect(pickClaimableLeg(legs)).toBeNull();
+    });
+
+    it('returns null when the next leg is in progress', () => {
+      const legs = [
+        leg({ id: 1, leg_number: 1, status: 'submitted' }),
+        leg({ id: 2, leg_number: 2, status: 'in_progress' })
+      ];
+      expect(pickClaimableLeg(legs)).toBeNull();
     });
   });
 

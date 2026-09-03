@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { db } from './index';
 import { mapDbError } from '../errors';
 import { buildConditions } from './utils';
@@ -27,7 +27,10 @@ import type {
   TicketActionResponse,
   CreateTicketResponse,
   NewTicketInput,
-  WorkSessionSubmitInput
+  WorkSessionSubmitInput,
+  RelayPoolResponse,
+  RelayPoolItem,
+  TicketLegInfo
 } from '@/lib/domain/tickets';
 import {
   MAX_ACTIVE_TICKETS,
@@ -40,6 +43,7 @@ import {
   pickSubmittableLeg,
   resolveSubmittedNotes,
   resolveLegAdvance,
+  pickClaimableLeg,
   formatHandoffNote,
   formatArrivalBody,
   type EligibilityProfile
@@ -49,8 +53,26 @@ export { MAX_ACTIVE_TICKETS };
 
 type RequirementRow = typeof taskRequirements.$inferSelect;
 
+class TicketClaimLostError extends Error {
+  constructor() {
+    super('Ticket moved out of in_progress during claim');
+    this.name = 'TicketClaimLostError';
+  }
+}
+
 async function loadRequirements(ticketId: number): Promise<RequirementRow[]> {
   return db.select().from(taskRequirements).where(eq(taskRequirements.task_id, ticketId));
+}
+
+async function loadRequirementsForTickets(
+  ticketIds: number[]
+): Promise<Map<number, RequirementRow[]>> {
+  if (ticketIds.length === 0) return new Map();
+  const rows = await db
+    .select()
+    .from(taskRequirements)
+    .where(inArray(taskRequirements.task_id, ticketIds));
+  return groupBy(rows, (row) => row.task_id);
 }
 
 async function loadCustomer(customerId: string | null) {
@@ -145,6 +167,23 @@ async function loadWorklog(ticketId: number) {
   return rows.map(({ ticket_worklog }) => worklogToDomain(ticket_worklog));
 }
 
+async function loadLegSummaries(ticketIds: number[]): Promise<Map<number, TicketLegInfo>> {
+  if (ticketIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      ticketId: ticketLegs.ticket_id
+    })
+    .from(ticketLegs)
+    .where(inArray(ticketLegs.ticket_id, ticketIds));
+  const counts = groupBy(rows, (row) => row.ticketId);
+  const result = new Map<number, TicketLegInfo>();
+  for (const [ticketId, list] of counts) {
+    // Open tickets have no leg started yet, so the current leg is always 1.
+    result.set(ticketId, { legNumber: 1, legsTotal: list.length });
+  }
+  return result;
+}
+
 async function getEligibilityProfile(userId: string): Promise<EligibilityProfile> {
   const [employee, skillRows] = await Promise.all([
     db.select().from(employees).where(eq(employees.id, userId)).limit(1),
@@ -165,6 +204,51 @@ async function getEligibilityProfile(userId: string): Promise<EligibilityProfile
 
 function isMine(userId: string): ReturnType<typeof sql> {
   return sql`(${tickets.assigned_to} = ${userId} OR ${tickets.taken_by} = ${userId})`;
+}
+
+// Generic in-memory group-by used to bucket a flat row set by a key (used by the
+// ticket/leg/requirement batch loaders below — they all do the same three-line
+// Map dance, so it lives once here).
+function groupBy<T>(rows: T[], key: (row: T) => number): Map<number, T[]> {
+  const buckets = new Map<number, T[]>();
+  for (const row of rows) {
+    const bucket = buckets.get(key(row)) ?? [];
+    bucket.push(row);
+    buckets.set(key(row), bucket);
+  }
+  return buckets;
+}
+
+const ACTIVE_TICKET_STATUSES = ['assigned', 'in_progress'] as const;
+
+// Admin override: bypass the active-ticket cap. Fails closed — if the role-group
+// lookup itself errors, the claim is rejected rather than silently counted as
+// admin (which would let a non-admin skirt the cap).
+async function isAdminUser(userId: string): Promise<boolean> {
+  const { getUserRoleGroup } = await import('./role-groups');
+  const group = await getUserRoleGroup(userId);
+  return group?.is_admin === true;
+}
+
+// Enforces MAX_ACTIVE_TICKETS for non-admin callers. Returns a failure message
+// (already localized by callers) when the cap is hit, or null when the caller
+// may proceed. Admin users and the current ticket holder (re-claiming their own
+// next leg — relay ganda) skip the cap entirely.
+async function enforceActiveCap(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  opts: { skipForCurrentHolder?: boolean } = {}
+): Promise<string | null> {
+  if (opts.skipForCurrentHolder) return null;
+  if (await isAdminUser(userId)) return null;
+  const [{ count }] = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tickets)
+    .where(and(inArray(tickets.status, [...ACTIVE_TICKET_STATUSES]), isMine(userId)));
+  if (count >= MAX_ACTIVE_TICKETS) {
+    return `Active ticket limit reached (${MAX_ACTIVE_TICKETS})`;
+  }
+  return null;
 }
 
 export async function listOpenTickets(
@@ -194,11 +278,14 @@ export async function listOpenTickets(
       .where(where)
       .orderBy(desc(tickets.created_at));
 
+    const legSummaries = await loadLegSummaries(rows.map((r) => r.ticket.id));
+
     const eligible: TicketListResponse['tickets'] = [];
     const unavailable: TicketListResponse['unavailable'] = [];
     for (const row of rows) {
       const reqs = await loadRequirements(row.ticket.id);
       const ticket = await toTicket(row.ticket, reqs, row.creatorName ?? null);
+      ticket.legInfo = legSummaries.get(row.ticket.id) ?? null;
       const reasons = unmetRequirementReasons(reqs, profile);
       if (reasons.length === 0) {
         eligible.push(ticket);
@@ -209,6 +296,81 @@ export async function listOpenTickets(
     return { success: true, tickets: eligible, unavailable };
   } catch (e) {
     mapDbError(e, 'tickets.listOpenTickets');
+  }
+}
+
+// Relay pool: in_progress tickets whose nearest next leg (assigned, assignee
+// null) is unclaimed. Includes holder name, ticket header, and which leg is
+// available. Mirrors listOpenTickets' eligible/unavailable split per caller.
+export async function listRelayPool(
+  userId: string,
+  filters: TicketListFilters = {}
+): Promise<RelayPoolResponse> {
+  try {
+    const profile = await getEligibilityProfile(userId);
+
+    const where = buildConditions([
+      eq(tickets.status, 'in_progress'),
+      filters.domain != null
+        ? filters.domain === 'field'
+          ? inArray(tickets.task_type, [...FIELD_TASK_TYPES])
+          : notInArray(tickets.task_type, [...FIELD_TASK_TYPES])
+        : undefined,
+      filters.priority != null ? eq(tickets.priority, filters.priority) : undefined
+    ]);
+
+    const rows = await db
+      .select({
+        ticket: tickets,
+        takenByName: user.name
+      })
+      .from(tickets)
+      .leftJoin(user, eq(tickets.taken_by, user.id))
+      .where(where)
+      .orderBy(desc(tickets.created_at));
+
+    const legRows = await db
+      .select()
+      .from(ticketLegs)
+      .where(
+        inArray(
+          ticketLegs.ticket_id,
+          rows.map((r) => r.ticket.id)
+        )
+      )
+      .orderBy(asc(ticketLegs.ticket_id), asc(ticketLegs.leg_number));
+    const legsByTicket = groupBy(legRows, (leg) => leg.ticket_id);
+
+    const reqsByTicket = await loadRequirementsForTickets(rows.map((r) => r.ticket.id));
+
+    const ticketsResult: RelayPoolResponse['tickets'] = [];
+    const unavailable: RelayPoolResponse['unavailable'] = [];
+    for (const row of rows) {
+      const legs = legsByTicket.get(row.ticket.id) ?? [];
+      const claimable = pickClaimableLeg(legs);
+      if (!claimable) continue;
+
+      const reqs = reqsByTicket.get(row.ticket.id) ?? [];
+      const ticket = await toTicket(row.ticket, reqs, null, row.takenByName ?? null);
+      const reasons = unmetRequirementReasons(reqs, profile);
+      const item: RelayPoolItem = {
+        ...ticket,
+        claimableLeg: {
+          legId: claimable.id,
+          legNumber: claimable.leg_number,
+          name: claimable.name,
+          legsTotal: legs.length
+        }
+      };
+      if (reasons.length === 0) {
+        ticketsResult.push(item);
+      } else {
+        unavailable.push({ ...item, eligibilityReasons: reasons });
+      }
+    }
+    return { success: true, tickets: ticketsResult, unavailable };
+  } catch (e) {
+    mapDbError(e, 'tickets.listRelayPool');
   }
 }
 
@@ -382,27 +544,8 @@ export async function takeTicket(userId: string, ticketId: number): Promise<Tick
         .for('update')
         .limit(1);
 
-      // Admin override: bypass active-ticket cap
-      let isAdmin = false;
-      try {
-        const { getUserRoleGroup } = await import('./role-groups');
-        const group = await getUserRoleGroup(userId);
-        isAdmin = !!group?.is_admin;
-      } catch {
-        isAdmin = false;
-      }
-      if (!isAdmin) {
-        const [{ count }] = await tx
-          .select({ count: sql<number>`count(*)::int` })
-          .from(tickets)
-          .where(and(inArray(tickets.status, ['assigned', 'in_progress']), isMine(userId)));
-        if (count >= MAX_ACTIVE_TICKETS) {
-          return {
-            success: false,
-            message: `Active ticket limit reached (${MAX_ACTIVE_TICKETS})`
-          };
-        }
-      }
+      const capMessage = await enforceActiveCap(tx, userId);
+      if (capMessage) return { success: false, message: capMessage };
 
       const [claimed] = await tx
         .update(tickets)
@@ -410,6 +553,7 @@ export async function takeTicket(userId: string, ticketId: number): Promise<Tick
           status: 'assigned',
           taken_by: userId,
           taken_at: new Date(),
+          first_taken_at: new Date(),
           updated_at: new Date()
         })
         .where(and(eq(tickets.id, ticketId), eq(tickets.status, 'open')))
@@ -421,6 +565,114 @@ export async function takeTicket(userId: string, ticketId: number): Promise<Tick
     return result;
   } catch (e) {
     mapDbError(e, 'tickets.takeTicket');
+  }
+}
+
+// Relay pool claim: transfers ticket ownership to the claimant for the next
+// sequential leg. Template mirrors takeTicket (eligibility, active cap, race-safe
+// conditional UPDATEs). The ticket stays in_progress — only taken_by moves.
+export async function claimLeg(userId: string, legId: number): Promise<TicketActionResponse> {
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [leg] = await tx.select().from(ticketLegs).where(eq(ticketLegs.id, legId)).limit(1);
+      if (!leg) return { success: false, message: 'Leg not found' };
+
+      const [ticket] = await tx
+        .select()
+        .from(tickets)
+        .where(eq(tickets.id, leg.ticket_id))
+        .limit(1);
+      if (!ticket) return { success: false, message: 'Ticket not found' };
+      if (ticket.status !== 'in_progress') {
+        return { success: false, message: 'Ticket is not in progress' };
+      }
+
+      // Only the nearest sequential pool leg is claimable (status assigned,
+      // assignee null, every earlier leg submitted).
+      const legs = await tx
+        .select()
+        .from(ticketLegs)
+        .where(eq(ticketLegs.ticket_id, ticket.id))
+        .orderBy(asc(ticketLegs.leg_number));
+      const claimable = pickClaimableLeg(legs);
+      if (!claimable || claimable.id !== legId) {
+        return { success: false, message: 'Leg is not available in the relay pool' };
+      }
+
+      const profile = await getEligibilityProfile(userId);
+      const reqs = await loadRequirements(ticket.id);
+      const reasons = unmetRequirementReasons(reqs, profile);
+      if (reasons.length > 0) {
+        return { success: false, message: `Not eligible: ${reasons.join(', ')}` };
+      }
+
+      // Serialize concurrent claims by the same user on the user's own employees
+      // row so the capacity re-count sees the just-claimed ticket (same reasoning
+      // as takeTicket).
+      await tx
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.id, userId))
+        .for('update')
+        .limit(1);
+
+      // Admin override: bypass active-ticket cap. A holder re-claiming their own
+      // next leg (relay ganda) also skips the cap — they already hold the ticket.
+      const isCurrentHolder = ticket.taken_by === userId;
+      const capMessage = await enforceActiveCap(tx, userId, {
+        skipForCurrentHolder: isCurrentHolder
+      });
+      if (capMessage) return { success: false, message: capMessage };
+
+      // Claim the leg first (contended resource): conditional UPDATE returns a row
+      // only when the leg is still unclaimed, so concurrent claimants race here.
+      const [claimedLeg] = await tx
+        .update(ticketLegs)
+        .set({
+          assignee_id: userId,
+          taken_at: new Date(),
+          updated_at: new Date()
+        })
+        .where(
+          and(
+            eq(ticketLegs.id, legId),
+            eq(ticketLegs.status, 'assigned'),
+            isNull(ticketLegs.assignee_id)
+          )
+        )
+        .returning();
+      if (!claimedLeg) return { success: false, message: 'Leg is no longer available' };
+
+      // Transfer ownership. Roll back the whole tx if the ticket moved states
+      // concurrently (e.g. last leg submitted by the holder).
+      const [claimedTicket] = await tx
+        .update(tickets)
+        .set({ taken_by: userId, taken_at: new Date(), updated_at: new Date() })
+        .where(and(eq(tickets.id, ticket.id), eq(tickets.status, 'in_progress')))
+        .returning();
+      if (!claimedTicket) throw new TicketClaimLostError();
+
+      // Record the handoff so ownership history survives taken_by churn (the
+      // spec defers history to worklog/audit, not taken_by).
+      await tx.insert(ticketWorklog).values({
+        leg_id: claimedLeg.id,
+        kind: 'note',
+        body: `Leg ${claimedLeg.leg_number} claimed (${claimedLeg.name})`,
+        created_by: userId
+      });
+
+      return {
+        success: true,
+        message: 'Leg claimed',
+        ticket: await toTicket(claimedTicket, reqs)
+      };
+    });
+    return result;
+  } catch (e) {
+    if (e instanceof TicketClaimLostError) {
+      return { success: false, message: 'Ticket is no longer in progress' };
+    }
+    mapDbError(e, 'tickets.claimLeg');
   }
 }
 

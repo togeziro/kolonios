@@ -25,5 +25,9 @@ export type {
   WorkSessionMaterialInput,
   WorkSessionPhotoInput,
   WorkSessionSubmitInput,
-  TicketPhoto
+  TicketPhoto,
+  TicketLegInfo,
+  RelayPoolLeg,
+  RelayPoolItem,
+  RelayPoolResponse
 } from '@/lib/domain/tickets';

@@ -1558,6 +1558,7 @@
     "enRouteTo": "Dalam perjalanan ke",
     "notAssigned": "Tiket ini tidak ditugaskan kepada Anda",
     "inProgressHint": "Tiket ini sudah dalam pengerjaan",
+    "continueWorkSession": "Lanjut ke Work Session",
     "back": "Kembali",
     "mapFailed": "Peta tidak dapat dimuat",
     "distanceTo": "Jarak ke tujuan",
@@ -1566,7 +1567,14 @@
   "jobs": {
     "filterLocation": "Lokasi",
     "filterPriority": "Prioritas",
-    "legBadge": "Leg {{x}} dari {{y}}"
+    "legBadge": "Leg {{x}} dari {{y}}",
+    "relayTitle": "Relay / Leg Berikutnya",
+    "relayEmpty": "Belum ada leg lanjutan",
+    "heldBy": "Dipegang oleh {{name}}",
+    "claimLeg": "Ambil Leg",
+    "claimLegHint": "Ambil: {{name}}",
+    "legClaimed": "Leg berhasil diambil",
+    "claimFailed": "Gagal mengambil leg"
   },
   "changePassword": {
     "title": "Ubah Kata Sandi",

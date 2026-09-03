@@ -14,7 +14,9 @@ const mocks = vi.hoisted(() => ({
   submitWorkSession: vi.fn(),
   addHandoffNote: vi.fn(),
   reviewTicket: vi.fn(),
-  listSubmittedTickets: vi.fn()
+  listSubmittedTickets: vi.fn(),
+  claimLeg: vi.fn(),
+  listRelayPool: vi.fn()
 }));
 
 // The split query supplies the production provider handler behind each exported
@@ -39,7 +41,9 @@ vi.mock('@/lib/db/tickets', () => ({
   submitWorkSession: mocks.submitWorkSession,
   addHandoffNote: mocks.addHandoffNote,
   reviewTicket: mocks.reviewTicket,
-  listSubmittedTickets: mocks.listSubmittedTickets
+  listSubmittedTickets: mocks.listSubmittedTickets,
+  claimLeg: mocks.claimLeg,
+  listRelayPool: mocks.listRelayPool
 }));
 vi.mock('@tanstack/react-start', () => ({
   createServerFn: () => {
@@ -90,6 +94,10 @@ import { submitHandoffNoteFn_createServerFn_handler } from './service?tss-server
 import { reviewTicketFn_createServerFn_handler } from './service?tss-serverfn-split';
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { listSubmittedTicketsFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { claimLegFn_createServerFn_handler } from './service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { listRelayPoolFn_createServerFn_handler } from './service?tss-serverfn-split';
 
 serverFnProvider.handler = startLegFn_createServerFn_handler;
 
@@ -105,7 +113,9 @@ import {
   submitWorkSessionFn,
   submitHandoffNoteFn,
   reviewTicketFn,
-  listSubmittedTicketsFn
+  listSubmittedTicketsFn,
+  claimLegFn,
+  listRelayPoolFn
 } from './service';
 
 describe('startLegFn', () => {
@@ -203,6 +213,40 @@ describe('takeTicketFn', () => {
     expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
     expect(mocks.takeTicket).toHaveBeenCalledWith('u1', 9);
     expect(res).toEqual({ success: true });
+  });
+});
+
+describe('claimLegFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serverFnProvider.handler = claimLegFn_createServerFn_handler;
+  });
+
+  it('guards with tickets.edit permission and a write rate limit', async () => {
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.claimLeg.mockResolvedValue({ success: true });
+    const res = await claimLegFn({ data: { legId: 4 } } as never);
+    expect(mocks.requirePermission).toHaveBeenCalledWith('tickets', 'edit');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('write:u1');
+    expect(mocks.claimLeg).toHaveBeenCalledWith('u1', 4);
+    expect(res).toEqual({ success: true });
+  });
+});
+
+describe('listRelayPoolFn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serverFnProvider.handler = listRelayPoolFn_createServerFn_handler;
+  });
+
+  it('guards with jobs.view permission and passes filters through', async () => {
+    mocks.requirePermission.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.listRelayPool.mockResolvedValue({ success: true, tickets: [], unavailable: [] });
+    const res = await listRelayPoolFn({ data: { domain: 'field' } } as never);
+    expect(mocks.requirePermission).toHaveBeenCalledWith('jobs', 'view');
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('tickets:u1');
+    expect(mocks.listRelayPool).toHaveBeenCalledWith('u1', { domain: 'field' });
+    expect(res).toEqual({ success: true, tickets: [], unavailable: [] });
   });
 });
 

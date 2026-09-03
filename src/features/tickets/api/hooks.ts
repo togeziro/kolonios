@@ -8,7 +8,8 @@ import {
   startLegFn,
   arriveTicketFn,
   submitWorkSessionFn,
-  submitHandoffNoteFn
+  submitHandoffNoteFn,
+  claimLegFn
 } from './service';
 import { ticketsKeys } from './queries';
 import type { NewTicketInput } from './types';
@@ -31,6 +32,23 @@ export function useTakeTicket() {
     onError: () => {
       toast.error(t('ticket.takeFailed'));
     }
+  });
+}
+
+export function useClaimLeg() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    mutationFn: (legId: number) => claimLegFn({ data: { legId } }),
+    onSuccess: (res) => {
+      if (res?.success) {
+        toast.success(t('jobs.legClaimed'));
+        queryClient.invalidateQueries({ queryKey: ticketsKeys.all });
+      } else {
+        toast.error(res?.message ?? t('jobs.claimFailed'));
+      }
+    },
+    onError: () => toast.error(t('jobs.claimFailed'))
   });
 }
 

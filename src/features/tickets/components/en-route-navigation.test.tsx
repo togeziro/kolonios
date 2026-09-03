@@ -192,6 +192,7 @@ describe('EnRouteNavigationPage', () => {
     renderPage();
 
     expect(screen.getByText(/already in progress/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /continue to work session/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /arrived/i })).toBeNull();
   });
 

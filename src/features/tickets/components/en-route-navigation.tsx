@@ -103,9 +103,7 @@ export default function EnRouteNavigationPage({ ticketId }: { ticketId: number }
       <div className='space-y-4 p-4 text-center'>
         <p className='text-sm text-muted-foreground'>{t('enRoute.inProgressHint')}</p>
         <Link to='/dashboard/work-session/$ticketId' params={{ ticketId: String(ticketId) }}>
-          <Button variant='outline' size='sm'>
-            {t('enRoute.back')}
-          </Button>
+          <Button size='sm'>{t('enRoute.continueWorkSession')}</Button>
         </Link>
       </div>
     );

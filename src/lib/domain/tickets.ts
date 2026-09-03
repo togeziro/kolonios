@@ -20,6 +20,11 @@ export type TicketDomain = 'field' | 'backoffice';
 
 export type TicketReviewDecision = 'approved' | 'rejected';
 
+export type TicketLegInfo = {
+  legNumber: number;
+  legsTotal: number;
+};
+
 export type Ticket = {
   id: number;
   ticketCode: string | null;
@@ -53,6 +58,8 @@ export type Ticket = {
   completedAt: string | null;
   createdByName: string | null;
   createdAt: string;
+  /** Real leg info for open/relay tickets (current leg number, total legs). Null when n/a. */
+  legInfo?: TicketLegInfo | null;
 };
 
 export type TicketLeg = {
@@ -177,3 +184,18 @@ export type TicketActionResponse = {
 
 export type CreateTicketResponse = TicketDetailResponse;
 export type TicketPhotoInput = { fileUrl: string };
+
+export type RelayPoolLeg = {
+  legId: number;
+  legNumber: number;
+  name: string;
+  legsTotal: number;
+};
+
+export type RelayPoolItem = Ticket & { claimableLeg: RelayPoolLeg };
+
+export type RelayPoolResponse = {
+  success: boolean;
+  tickets: RelayPoolItem[];
+  unavailable: (RelayPoolItem & { eligibilityReasons: string[] })[];
+};

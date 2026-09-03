@@ -11,7 +11,8 @@ import {
   monthBounds,
   weekStartOf,
   shiftDays,
-  type AchievementData
+  type AchievementData,
+  type CompletedTicketRow
 } from '@/lib/achievements/engine';
 
 export type { AchievementData };
@@ -43,16 +44,26 @@ export async function getAchievementData(userId: string): Promise<AchievementDat
     .select({
       taskType: tickets.task_type,
       completedAt: tickets.completed_at,
+      firstTakenAt: tickets.first_taken_at,
       takenAt: tickets.taken_at
     })
     .from(tickets)
     .where(and(eq(tickets.assigned_to, userId), eq(tickets.status, 'completed')));
 
+  // Total ticket duration = first claim → completion. `first_taken_at` is
+  // preserved across relay claims (taken_at resets per holder session), so the
+  // fast-finish metric measures the whole job, not just the last leg.
+  const resolved: CompletedTicketRow[] = completedTickets.map((t) => ({
+    taskType: t.taskType,
+    completedAt: t.completedAt,
+    takenAt: t.firstTakenAt ?? t.takenAt
+  }));
+
   return {
     ...computeStreakStats(attendanceRows, today),
     last7Days: computeWeekDots(attendanceRows, today),
     ...computeMonthlyAttendance(attendanceRows, bounds),
-    ...computeTicketAchievements(completedTickets, {
+    ...computeTicketAchievements(resolved, {
       weekStart,
       toBusinessDate: businessDateInTimeZone
     })
