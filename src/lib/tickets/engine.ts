@@ -311,3 +311,34 @@ export function workSessionSubmitAllowed(args: {
   }
   return { allowed: true };
 }
+
+// --- Detail-page leg action (pure) ---
+
+export type DetailLegAction =
+  | { kind: 'start-leg'; legId: number }
+  | { kind: 'claim-leg'; legId: number; reasons: string[] }
+  | { kind: 'none' };
+
+/**
+ * Decides which primary action the ticket detail page should offer for the
+ * viewer. The holder starts the next leg; a non-holder may only claim the
+ * nearest relay-pool leg (with eligibility reasons surfaced when blocked).
+ * Open tickets use the separate Take flow and are `none` here.
+ */
+export function resolveDetailLegAction(args: {
+  status: TicketStatus;
+  isHolder: boolean;
+  startableLegId: number | null;
+  claimableLegId: number | null;
+  claimEligibilityReasons: string[];
+}): DetailLegAction {
+  if (args.status === 'open') return { kind: 'none' };
+  if (args.isHolder) {
+    return args.startableLegId != null
+      ? { kind: 'start-leg', legId: args.startableLegId }
+      : { kind: 'none' };
+  }
+  return args.claimableLegId != null
+    ? { kind: 'claim-leg', legId: args.claimableLegId, reasons: args.claimEligibilityReasons }
+    : { kind: 'none' };
+}

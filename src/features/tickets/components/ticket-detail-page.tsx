@@ -10,9 +10,19 @@ import { Icons } from '@/components/icons';
 import { useAppLocale } from '@/lib/locale';
 import { formatDue } from './ticket-card';
 import { ticketDetailQueryOptions } from '../api/queries';
-import { useSubmitWorkSession, useStartLeg, useTakeTicket, useCompleteTicket } from '../api/hooks';
+import {
+  useSubmitWorkSession,
+  useStartLeg,
+  useTakeTicket,
+  useClaimLeg,
+  useCompleteTicket
+} from '../api/hooks';
 import { useRoleGroupPermissions } from '@/hooks/use-nav';
-import { canCompleteTicket, workSessionSubmitAllowed } from '@/lib/tickets/engine';
+import {
+  canCompleteTicket,
+  workSessionSubmitAllowed,
+  resolveDetailLegAction
+} from '@/lib/tickets/engine';
 import LegTimeline, { completedLegCount } from './leg-timeline';
 import ReworkBanner, { getReworkNote } from './rework-banner';
 import CompletionPhotos from './completion-photos';
@@ -43,6 +53,7 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
   const { data, isLoading } = useQuery(ticketDetailQueryOptions(ticketId));
   const takeTicket = useTakeTicket();
   const startLeg = useStartLeg();
+  const claimLeg = useClaimLeg();
   const completeTicket = useCompleteTicket();
   const submit = useSubmitWorkSession();
   const { isAdmin, permissions } = useRoleGroupPermissions();
@@ -76,6 +87,13 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
   const isField = (FIELD_TASK_TYPES as readonly string[]).includes(ticket.taskType);
   const domainLabel = isField ? t('workSession.domainField') : t('workSession.domainBackoffice');
   const startableLeg = ticket.legs.find((l) => l.status === 'open' || l.status === 'assigned');
+  const legAction = resolveDetailLegAction({
+    status: ticket.status,
+    isHolder: ticket.isHolder === true,
+    startableLegId: startableLeg?.id ?? null,
+    claimableLegId: ticket.claimableLeg?.legId ?? null,
+    claimEligibilityReasons: ticket.claimEligibilityReasons ?? []
+  });
   const isInProgress = ticket.status === 'in_progress';
   const domain = isField ? ('field' as const) : ('backoffice' as const);
   const existingPhotoCount = ticket.photos.length;
@@ -292,7 +310,18 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
               {ticket.status === 'open' && (
                 <Button
                   className='w-full'
-                  onClick={() => takeTicket.mutate(ticket.id)}
+                  onClick={() =>
+                    takeTicket.mutate(ticket.id, {
+                      onSuccess: (res) => {
+                        if (res?.success) {
+                          navigate({
+                            to: '/dashboard/en-route/$ticketId',
+                            params: { ticketId: String(ticket.id) }
+                          });
+                        }
+                      }
+                    })
+                  }
                   disabled={takeTicket.isPending}
                 >
                   {takeTicket.isPending ? (
@@ -303,11 +332,11 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
                   {t('ticket.takeTicket')}
                 </Button>
               )}
-              {startableLeg && ticket.status !== 'open' && (
+              {legAction.kind === 'start-leg' && (
                 <Button
                   variant='outline'
                   className='w-full'
-                  onClick={() => startLeg.mutate(startableLeg.id)}
+                  onClick={() => startLeg.mutate(legAction.legId)}
                   disabled={startLeg.isPending}
                 >
                   {startLeg.isPending ? (
@@ -318,6 +347,43 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
                   {t('ticket.startLeg')}
                 </Button>
               )}
+              {legAction.kind === 'claim-leg' &&
+                (legAction.reasons.length > 0 ? (
+                  <div className='space-y-1'>
+                    <Button variant='outline' className='w-full' disabled>
+                      <Icons.check className='mr-2 h-4 w-4' />
+                      {t('jobs.claimLeg')}
+                    </Button>
+                    <p className='text-center text-[11px] text-muted-foreground'>
+                      {legAction.reasons.join(', ')}
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    variant='outline'
+                    className='w-full'
+                    onClick={() =>
+                      claimLeg.mutate(legAction.legId, {
+                        onSuccess: (res) => {
+                          if (res?.success) {
+                            navigate({
+                              to: '/dashboard/en-route/$ticketId',
+                              params: { ticketId: String(ticket.id) }
+                            });
+                          }
+                        }
+                      })
+                    }
+                    disabled={claimLeg.isPending}
+                  >
+                    {claimLeg.isPending ? (
+                      <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+                    ) : (
+                      <Icons.check className='mr-2 h-4 w-4' />
+                    )}
+                    {t('jobs.claimLeg')}
+                  </Button>
+                ))}
               {showMarkComplete && (
                 <Button
                   variant='secondary'
@@ -359,16 +425,48 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
           {!isInProgress ? (
             <Card className='dark:border-zinc-800/50 p-4 text-center dark:bg-zinc-900'>
               <p className='text-sm text-muted-foreground'>{t('workSession.notInProgress')}</p>
-              {startableLeg && ticket.status !== 'open' && canEdit && (
+              {legAction.kind === 'start-leg' && (
                 <Button
                   variant='outline'
                   size='sm'
                   className='mt-3'
-                  onClick={() => startLeg.mutate(startableLeg.id)}
+                  onClick={() => startLeg.mutate(legAction.legId)}
                   disabled={startLeg.isPending}
                 >
                   {t('ticket.startLeg')}
                 </Button>
+              )}
+              {legAction.kind === 'claim-leg' && legAction.reasons.length === 0 && (
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='mt-3'
+                  onClick={() =>
+                    claimLeg.mutate(legAction.legId, {
+                      onSuccess: (res) => {
+                        if (res?.success) {
+                          navigate({
+                            to: '/dashboard/en-route/$ticketId',
+                            params: { ticketId: String(ticket.id) }
+                          });
+                        }
+                      }
+                    })
+                  }
+                  disabled={claimLeg.isPending}
+                >
+                  {t('jobs.claimLeg')}
+                </Button>
+              )}
+              {legAction.kind === 'claim-leg' && legAction.reasons.length > 0 && (
+                <div className='mt-3 space-y-1'>
+                  <Button variant='outline' size='sm' disabled>
+                    {t('jobs.claimLeg')}
+                  </Button>
+                  <p className='text-center text-[11px] text-muted-foreground'>
+                    {legAction.reasons.join(', ')}
+                  </p>
+                </div>
               )}
             </Card>
           ) : (

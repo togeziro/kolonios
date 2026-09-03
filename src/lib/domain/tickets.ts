@@ -152,6 +152,11 @@ export type TicketDetail = Ticket & {
   worklog: TicketLogEntry[];
   requesterId: string | null;
   createdAt: string;
+  /** True when the viewing user currently holds this ticket (taken_by/assigned_to). */
+  isHolder?: boolean;
+  /** Nearest relay-pool leg the viewing user may claim (non-holder, ticket in_progress). */
+  claimableLeg?: RelayPoolLeg | null;
+  claimEligibilityReasons?: string[];
 };
 
 export type UnavailableTicket = Ticket & { eligibilityReasons: string[] };

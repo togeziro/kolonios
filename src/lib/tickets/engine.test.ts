@@ -13,7 +13,8 @@ import {
   resolveLegAdvance,
   pickClaimableLeg,
   formatHandoffNote,
-  formatArrivalBody
+  formatArrivalBody,
+  resolveDetailLegAction
 } from './engine';
 import type { EligibilityProfile, LegRow, RequirementRow } from './engine';
 
@@ -494,6 +495,53 @@ describe('ticket engine (pure functions)', () => {
 
     it('falls back when there is no location fix at all', () => {
       expect(formatArrivalBody(undefined)).toBe('arrived (no location fix)');
+    });
+  });
+
+  describe('resolveDetailLegAction', () => {
+    const base = {
+      status: 'in_progress' as const,
+      isHolder: false,
+      startableLegId: null,
+      claimableLegId: null,
+      claimEligibilityReasons: [] as string[]
+    };
+
+    it('is none for open tickets (Take flow is separate)', () => {
+      expect(resolveDetailLegAction({ ...base, status: 'open' })).toEqual({ kind: 'none' });
+    });
+
+    it('offers start-leg to the holder with a startable leg', () => {
+      expect(resolveDetailLegAction({ ...base, isHolder: true, startableLegId: 7 })).toEqual({
+        kind: 'start-leg',
+        legId: 7
+      });
+    });
+
+    it('is none for a holder with no startable leg', () => {
+      expect(resolveDetailLegAction({ ...base, isHolder: true })).toEqual({ kind: 'none' });
+    });
+
+    it('offers claim-leg to a non-holder with a claimable pool leg', () => {
+      expect(resolveDetailLegAction({ ...base, claimableLegId: 9 })).toEqual({
+        kind: 'claim-leg',
+        legId: 9,
+        reasons: []
+      });
+    });
+
+    it('carries eligibility reasons on a blocked claim', () => {
+      expect(
+        resolveDetailLegAction({
+          ...base,
+          claimableLegId: 9,
+          claimEligibilityReasons: ['Requires skill: Fiber Optic']
+        })
+      ).toEqual({ kind: 'claim-leg', legId: 9, reasons: ['Requires skill: Fiber Optic'] });
+    });
+
+    it('is none for a non-holder with no claimable leg', () => {
+      expect(resolveDetailLegAction(base)).toEqual({ kind: 'none' });
     });
   });
 });

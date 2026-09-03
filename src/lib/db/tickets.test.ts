@@ -220,6 +220,82 @@ describe('tickets data access (integration)', () => {
         }
       ]);
     });
+
+    it('marks the viewer as holder and exposes no claimable leg for the ticket owner', async () => {
+      await seedEmployee(USER_A);
+      const ticket = await seedTicket({
+        title: 'Relay in progress',
+        status: 'in_progress',
+        taken_by: USER_A
+      });
+      const leg1 = await seedTicketLeg(ticket.id, { status: 'submitted', name: 'Survey' });
+      await seedTicketLeg(ticket.id, { status: 'assigned', name: 'Install' });
+
+      const res = await getTicketDetail(USER_A, ticket.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.isHolder).toBe(true);
+      expect(res.ticket?.claimableLeg).toBeNull();
+      expect(res.ticket?.claimEligibilityReasons).toEqual([]);
+      expect(leg1.status).toBe('submitted');
+    });
+
+    it('exposes the nearest claimable relay leg for a non-holder viewer', async () => {
+      await seedEmployee(USER_B);
+      await seedUser(USER_A);
+      const ticket = await seedTicket({
+        title: 'Relay in progress',
+        status: 'in_progress',
+        taken_by: USER_A
+      });
+      await seedTicketLeg(ticket.id, { status: 'submitted', name: 'Survey' });
+      const claimable = await seedTicketLeg(ticket.id, { status: 'assigned', name: 'Install' });
+
+      const res = await getTicketDetail(USER_B, ticket.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.isHolder).toBe(false);
+      expect(res.ticket?.claimableLeg).toEqual({
+        legId: claimable.id,
+        legNumber: claimable.leg_number,
+        name: 'Install',
+        legsTotal: 2
+      });
+      expect(res.ticket?.claimEligibilityReasons).toEqual([]);
+    });
+
+    it('reports eligibility reasons when a non-holder viewer cannot claim', async () => {
+      await seedEmployee(USER_B);
+      await seedUser(USER_A);
+      const ticket = await seedTicket({
+        title: 'Relay in progress',
+        status: 'in_progress',
+        taken_by: USER_A
+      });
+      await seedTicketLeg(ticket.id, { status: 'submitted', name: 'Survey' });
+      await seedTicketLeg(ticket.id, { status: 'assigned', name: 'Install' });
+      await seedTicketRequirement(ticket.id, { skill: 'Fiber Optic' });
+
+      const res = await getTicketDetail(USER_B, ticket.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.isHolder).toBe(false);
+      expect(res.ticket?.claimableLeg).toBeDefined();
+      expect(res.ticket?.claimEligibilityReasons).toContain('Requires skill: Fiber Optic');
+    });
+
+    it('exposes no claimable leg for a non-holder when the ticket is not in progress', async () => {
+      await seedEmployee(USER_B);
+      await seedUser(USER_A);
+      const ticket = await seedTicket({
+        title: 'Submitted for review',
+        status: 'submitted',
+        taken_by: USER_A
+      });
+      await seedTicketLeg(ticket.id, { status: 'submitted', name: 'Survey' });
+      const res = await getTicketDetail(USER_B, ticket.id);
+      expect(res.success).toBe(true);
+      expect(res.ticket?.isHolder).toBe(false);
+      expect(res.ticket?.claimableLeg).toBeNull();
+      expect(res.ticket?.claimEligibilityReasons).toEqual([]);
+    });
   });
 
   describe('createTicket', () => {

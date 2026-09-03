@@ -30,6 +30,7 @@ import type {
   WorkSessionSubmitInput,
   RelayPoolResponse,
   RelayPoolItem,
+  RelayPoolLeg,
   TicketLegInfo
 } from '@/lib/domain/tickets';
 import {
@@ -426,7 +427,7 @@ export async function listTickets(
 }
 
 export async function getTicketDetail(
-  _userId: string,
+  userId: string,
   ticketId: number
 ): Promise<TicketDetailResponse> {
   try {
@@ -439,14 +440,45 @@ export async function getTicketDetail(
     if (!row) return { success: false, message: 'Ticket not found' };
     const reqs = await loadRequirements(ticketId);
     const ticket = await toTicket(row.ticket, reqs, null, row.takenByName ?? null);
+    const rawLegs = await db
+      .select()
+      .from(ticketLegs)
+      .where(eq(ticketLegs.ticket_id, ticketId))
+      .orderBy(asc(ticketLegs.leg_number));
+    const legs = rawLegs.map(toLeg);
+
+    // Viewer-scoped relay context: the detail page must show "Take Leg" instead
+    // of "Start Leg" when the current user is NOT the ticket holder and a
+    // claimable pool leg exists. Mirrors listRelayPool eligibility so the UI
+    // never offers an action the server will reject.
+    const isHolder = row.ticket.taken_by === userId || row.ticket.assigned_to === userId;
+    let claimableLeg: RelayPoolLeg | null = null;
+    let claimEligibilityReasons: string[] = [];
+    if (!isHolder && row.ticket.status === 'in_progress') {
+      const claimable = pickClaimableLeg(rawLegs);
+      if (claimable) {
+        claimableLeg = {
+          legId: claimable.id,
+          legNumber: claimable.leg_number,
+          name: claimable.name,
+          legsTotal: rawLegs.length
+        };
+        const profile = await getEligibilityProfile(userId);
+        claimEligibilityReasons = unmetRequirementReasons(reqs, profile);
+      }
+    }
+
     const detail: TicketDetail = {
       ...ticket,
-      legs: await loadLegs(ticketId),
+      legs,
       materials: await loadMaterials(ticketId),
       photos: await loadPhotos(ticketId),
       worklog: await loadWorklog(ticketId),
       requesterId: row.ticket.requester_id,
-      createdAt: row.ticket.created_at.toISOString()
+      createdAt: row.ticket.created_at.toISOString(),
+      isHolder,
+      claimableLeg,
+      claimEligibilityReasons
     };
     return { success: true, ticket: detail };
   } catch (e) {
