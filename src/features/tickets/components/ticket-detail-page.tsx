@@ -77,7 +77,6 @@ export default function TicketDetailPage({ ticketId }: { ticketId: number }) {
   const domainLabel = isField ? t('workSession.domainField') : t('workSession.domainBackoffice');
   const startableLeg = ticket.legs.find((l) => l.status === 'open' || l.status === 'assigned');
   const isInProgress = ticket.status === 'in_progress';
-  const canWork = isInProgress && canEdit;
   const domain = isField ? ('field' as const) : ('backoffice' as const);
   const existingPhotoCount = ticket.photos.length;
   const markCompleteGuard = canCompleteTicket({
