@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n/config';
+import { businessDateInTimeZone } from '@/lib/dates';
 import { ScheduleGrid } from './schedule-grid';
 import type { ScheduleGridResponse } from '../api/types';
+
+vi.mock('@/lib/dates', () => ({
+  businessDateInTimeZone: vi.fn(() => '2026-09-03')
+}));
 
 class ResizeObserverMock {
   observe() {}
@@ -127,5 +132,27 @@ describe('ScheduleGrid', () => {
     // The 🇮🇩 character is the convention copied from MySchedulePage.
     expect(screen.getByText('🇮🇩')).toBeTruthy();
     expect(screen.getByText('Independence Day')).toBeTruthy();
+  });
+
+  it('highlights the today column header (5th column = Thursday 03 Sep 2026) with table-success and aria-current=date', () => {
+    // Week Mon 2026-08-31..Sun 2026-09-06 contains Thursday 2026-09-03,
+    // which is the 5th columnheader once the employee column is counted.
+    const response = makeResponse({ weekStart: '2026-08-31', weekEnd: '2026-09-06' });
+
+    render(
+      withQueryClient(
+        createElement(ScheduleGrid, {
+          response,
+          today: businessDateInTimeZone(new Date())
+        })
+      )
+    );
+
+    const headers = screen.getAllByRole('columnheader');
+    const todayHeader = headers[4];
+    expect(todayHeader.className).toContain('table-success');
+    expect(todayHeader.className).toContain('bg-success');
+    expect(todayHeader.getAttribute('aria-current')).toBe('date');
+    expect(headers[3].getAttribute('aria-current')).toBeNull();
   });
 });

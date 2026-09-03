@@ -1742,10 +1742,22 @@
     "nav": {
       "toolbarLabel": "Navigasi minggu",
       "prev": "Minggu sebelumnya",
+      "prevWeek": "← Minggu sebelumnya",
       "today": "Hari ini",
       "next": "Minggu berikutnya",
+      "nextWeek": "Minggu berikutnya →",
       "monthPickerLabel": "Loncat ke bulan",
+      "yearPickerLabel": "Loncat ke tahun",
       "pageSeparator": "/"
+    },
+    "actions": {
+      "bulk": "Ulangi Jadwal Secara Massal",
+      "import": "Impor Excel",
+      "export": "Ekspor Excel"
+    },
+    "export": {
+      "success": "Jadwal berhasil diekspor ke Excel",
+      "failed": "Gagal mengekspor jadwal. Silakan coba lagi."
     },
     "filter": {
       "searchLabel": "Cari berdasarkan nama karyawan",

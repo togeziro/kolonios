@@ -16,6 +16,12 @@ export type ScheduleGridProps = {
    * Only rows with `row.hasAssignment === false` will surface the CTA.
    */
   onAssignShift?: (row: GridRow) => void;
+  /**
+   * Business-timezone "today" (YYYY-MM-DD). When set, the matching day
+   * column header is highlighted (Kerjoo `table-success` parity) and
+   * annotated with `aria-current="date"`.
+   */
+  today?: string;
 };
 
 /**
@@ -27,14 +33,19 @@ export type ScheduleGridProps = {
  * national holiday (or a recurring holiday whose MM-DD falls on that
  * date within the current year).
  */
-export function ScheduleGrid({ response, skeleton = false, onAssignShift }: ScheduleGridProps) {
+export function ScheduleGrid({
+  response,
+  skeleton = false,
+  onAssignShift,
+  today
+}: ScheduleGridProps) {
   const { t } = useTranslation();
   const days = weekDays(response.weekStart);
 
   return (
     <div className='overflow-x-auto rounded-md border'>
       <div role='grid' aria-label={t('scheduleGrid.gridAria')} className='min-w-[64rem]'>
-        <ScheduleGridHeader days={days} holidayByDate={response.holidays.byDate} />
+        <ScheduleGridHeader days={days} holidayByDate={response.holidays.byDate} today={today} />
         {response.rows.length === 0
           ? null
           : response.rows.map((row) => (
@@ -53,10 +64,12 @@ export function ScheduleGrid({ response, skeleton = false, onAssignShift }: Sche
 
 function ScheduleGridHeader({
   days,
-  holidayByDate
+  holidayByDate,
+  today
 }: {
   days: string[];
   holidayByDate: Record<string, string>;
+  today?: string;
 }) {
   const { t } = useTranslation();
   return (
@@ -73,14 +86,19 @@ function ScheduleGridHeader({
         const dow = dayOfWeek(date);
         const isWeekend = WEEKEND_DAYS.includes(dow as (typeof WEEKEND_DAYS)[number]);
         const holiday = holidayByDate[date] ?? null;
+        const isToday = date === today;
         const label = formatColumnLabel(date, t);
         return (
           <div
             key={date}
             role='columnheader'
+            aria-current={isToday ? 'date' : undefined}
             className={cn(
               'flex flex-col items-center justify-center border-r px-2 py-1 text-center',
-              isWeekend && 'bg-muted/40'
+              isWeekend && 'bg-muted/40',
+              // `table-success` is an inert Kerjoo-parity marker (Bootstrap
+              // class); the real highlight comes from bg-success/border-success.
+              isToday && 'table-success border-success bg-success/10 text-success-foreground'
             )}
             title={holiday ?? undefined}
             aria-label={

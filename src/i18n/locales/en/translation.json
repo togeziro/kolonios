@@ -1742,10 +1742,22 @@
     "nav": {
       "toolbarLabel": "Week navigation",
       "prev": "Previous week",
+      "prevWeek": "← Prev week",
       "today": "Today",
       "next": "Next week",
+      "nextWeek": "Next week →",
       "monthPickerLabel": "Jump to month",
+      "yearPickerLabel": "Jump to year",
       "pageSeparator": "/"
+    },
+    "actions": {
+      "bulk": "Repeat Schedule in Bulk",
+      "import": "Import Excel",
+      "export": "Export Excel"
+    },
+    "export": {
+      "success": "Schedule exported to Excel",
+      "failed": "Couldn't export the schedule. Please try again."
     },
     "filter": {
       "searchLabel": "Search by employee name",

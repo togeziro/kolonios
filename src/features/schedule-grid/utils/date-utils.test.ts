@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   dayOfWeek,
+  daysInMonth,
   formatWeekRangeLabel,
   monthOfDate,
+  splitMonthYear,
   startOfWeek,
   weekDays
 } from './date-utils';
@@ -40,6 +42,18 @@ describe('schedule-grid date utils', () => {
 
   it('monthOfDate extracts YYYY-MM', () => {
     expect(monthOfDate('2026-08-03')).toBe('2026-08');
+  });
+
+  it('daysInMonth handles 30/31-day months and February leap years', () => {
+    expect(daysInMonth('2026-09')).toBe(30);
+    expect(daysInMonth('2026-08')).toBe(31);
+    expect(daysInMonth('2024-02')).toBe(29); // leap year
+    expect(daysInMonth('2026-02')).toBe(28);
+  });
+
+  it('splitMonthYear splits YYYY-MM-DD into zero-padded month and year', () => {
+    expect(splitMonthYear('2026-08-03')).toEqual({ year: '2026', month: '08' });
+    expect(splitMonthYear('2027-12-31')).toEqual({ year: '2027', month: '12' });
   });
 
   it('formatWeekRangeLabel collapses the same-month range', () => {

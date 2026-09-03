@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Icons } from '@/components/icons';
 import { useDebounce } from '@/hooks/use-debounce';
 import { businessDateInTimeZone } from '@/lib/dates';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import { scheduleGridQueryOptions } from '../api/queries';
+import { exportMonthFn } from '../api/export-service';
 import type { ScheduleGridFilters, ScheduleGridRow } from '../api/types';
 import { AssignShiftDialog } from './assign-shift-dialog';
 import { FilterBar } from './filter-bar';
@@ -15,7 +18,7 @@ import { WeekNav } from './week-nav';
 import { WeekStartToggle } from './week-start-toggle';
 import { useWeekStartPreference } from './use-week-start';
 import { SEARCH_DEBOUNCE_MS } from '../utils/constants';
-import { addDays, monthOfDate, startOfWeek } from '../utils/date-utils';
+import { addDays, monthOfDate, splitMonthYear, startOfWeek } from '../utils/date-utils';
 
 const EMPTY_FILTERS = {
   month: '',
@@ -66,6 +69,7 @@ export function ScheduleGridPage() {
     page,
     pageSize
   };
+  const { year: pickerYear, month: pickerMonth } = splitMonthYear(filters.month);
 
   const { data: divisionsResult } = useQuery(departmentsQueryOptions());
   const divisions = useMemo(() => {
@@ -106,13 +110,40 @@ export function ScheduleGridPage() {
     setPage(1);
   }, []);
 
+  const exportMutation = useMutation({
+    mutationFn: () =>
+      exportMonthFn({
+        data: {
+          month: filters.month,
+          divisionId,
+          query: search.length > 0 ? search : null
+        }
+      }),
+    onSuccess: (res) => {
+      if (!res?.success || !res.base64) {
+        toast.error(t('scheduleGrid.export.failed'));
+        return;
+      }
+      const bytes = Uint8Array.from(atob(res.base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: res.mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t('scheduleGrid.export.success'));
+    },
+    onError: () => toast.error(t('scheduleGrid.export.failed'))
+  });
+
   const weekEnd = data?.weekEnd ?? addDays(weekStart, 6);
   const isCurrentWeek = today >= weekStart && today <= weekEnd;
   const rowCount = data?.rows.length ?? 0;
   const total = data?.total ?? 0;
 
   return (
-    <div className='space-y-4'>
+    <div className='col-sm-12 space-y-4'>
       <Card>
         <CardHeader>
           <div className='flex flex-wrap items-start justify-between gap-3'>
@@ -124,16 +155,6 @@ export function ScheduleGridPage() {
           </div>
         </CardHeader>
         <CardContent className='space-y-4'>
-          <WeekNav
-            weekStart={weekStart}
-            weekEnd={weekEnd}
-            month={monthOfDate(weekStart)}
-            onPrev={handlePrev}
-            onToday={handleToday}
-            onNext={handleNext}
-            onPickDate={handlePickDate}
-            isCurrentWeek={isCurrentWeek}
-          />
           <FilterBar
             divisions={divisions}
             divisionId={divisionId}
@@ -142,6 +163,37 @@ export function ScheduleGridPage() {
             pendingSearch={pendingSearch}
             onPendingSearchChange={setPendingSearch}
             isPending={isPending}
+          />
+          <div className='flex flex-wrap items-center gap-2'>
+            <Button variant='outline' size='sm' disabled data-testid='schedule-grid-bulk'>
+              <Icons.copy className='mr-1 size-3.5' />
+              {t('scheduleGrid.actions.bulk')}
+            </Button>
+            <Button variant='outline' size='sm' disabled data-testid='schedule-grid-import'>
+              <Icons.download className='mr-1 size-3.5' />
+              {t('scheduleGrid.actions.import')}
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              data-testid='schedule-grid-export'
+              onClick={() => exportMutation.mutate()}
+              disabled={exportMutation.isPending}
+            >
+              <Icons.upload className='mr-1 size-3.5' />
+              {t('scheduleGrid.actions.export')}
+            </Button>
+          </div>
+          <WeekNav
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+            month={pickerMonth}
+            year={pickerYear}
+            onPrev={handlePrev}
+            onToday={handleToday}
+            onNext={handleNext}
+            onPickDate={handlePickDate}
+            isCurrentWeek={isCurrentWeek}
           />
 
           {isError ? (
@@ -160,6 +212,7 @@ export function ScheduleGridPage() {
                 holidays: { byDate: {} }
               }}
               skeleton
+              today={today}
             />
           ) : data && rowCount === 0 ? (
             <EmptyState
@@ -171,7 +224,7 @@ export function ScheduleGridPage() {
               }}
             />
           ) : data ? (
-            <ScheduleGrid response={data} onAssignShift={setAssignTarget} />
+            <ScheduleGrid response={data} onAssignShift={setAssignTarget} today={today} />
           ) : null}
 
           {data ? (

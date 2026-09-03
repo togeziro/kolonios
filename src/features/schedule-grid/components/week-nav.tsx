@@ -9,7 +9,10 @@ import { formatWeekRangeLabel } from '../utils/date-utils';
 export type WeekNavProps = {
   weekStart: string;
   weekEnd: string;
+  /** Zero-padded month of the visible week, e.g. `08`. */
   month: string;
+  /** Four-digit year of the visible week, e.g. `2026`. */
+  year: string;
   onPrev: () => void;
   onToday: () => void;
   onNext: () => void;
@@ -29,14 +32,14 @@ export type WeekNavProps = {
 const TODAY_ARIA = 'date' as const;
 
 /**
- * Toolbar above the schedule grid: Prev / Today / Next buttons, a date
- * picker that snaps to the week containing the chosen date, and a
- * "Aug 25 – Aug 31, 2026" style range label.
+ * Toolbar above the schedule grid: Prev / Today / Next buttons, separate
+ * Month + Year pickers that snap to the week containing the 15th of the
+ * chosen month, and a "Aug 25 – Aug 31, 2026" style range label.
  *
- * The month-year picker is intentionally a native `<input type="month">`
- * behind a `<NativeSelect>` wrapper — keeps the bundle small, accessible
- * by default, and free of Popover/Calendar dependencies that ticket 02/03
- * may want to upgrade later (e.g. shadcn Calendar).
+ * Kerjoo parity (ticket 01): the picker is two native `<select>`s — Month
+ * (`January…December`) and Year (`2025, 2026, 2027…`) — mirroring the
+ * `e47`/`e60` comboboxes. Selecting either fires `onPickDate` with a
+ * `YYYY-MM-15` date so the parent can snap to the correct week.
  *
  * Ticket 04: keyboard shortcuts wired on the toolbar's `onKeyDown`.
  * `←` jumps to the previous week, `→` to the next week, `T` (or `t`)
@@ -47,6 +50,7 @@ export function WeekNav({
   weekStart,
   weekEnd,
   month,
+  year,
   onPrev,
   onToday,
   onNext,
@@ -56,13 +60,6 @@ export function WeekNav({
   maxDate
 }: WeekNavProps) {
   const { t } = useTranslation();
-
-  // The picker operates on YYYY-MM (a real <input type="month"> would be
-  // nicer but its keyboard/UX varies wildly across browsers; a custom
-  // month grid is out of scope for ticket 01). We derive the pickable
-  // year from the current week and emit a date string in the middle of
-  // that month so onPickDate can snap to the right week.
-  const pickerMonth = month;
 
   const handleToolbarKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Don't hijack typing inside form controls (search, select, etc.).
@@ -102,6 +99,7 @@ export function WeekNav({
         aria-keyshortcuts='ArrowLeft'
       >
         <ChevronLeft className='size-4' />
+        {t('scheduleGrid.nav.prevWeek')}
       </Button>
       <Button
         variant='outline'
@@ -120,20 +118,36 @@ export function WeekNav({
         aria-label={t('scheduleGrid.nav.next')}
         aria-keyshortcuts='ArrowRight'
       >
+        {t('scheduleGrid.nav.nextWeek')}
         <ChevronRight className='size-4' />
       </Button>
 
       <NativeSelect
         aria-label={t('scheduleGrid.nav.monthPickerLabel')}
-        className='h-9 w-40'
-        value={pickerMonth}
+        className='h-9 w-36'
+        value={month}
         onChange={(event) => {
-          const next = event.target.value;
           // Snap to the 15th of the chosen month — always inside the month.
-          onPickDate(`${next}-15`);
+          onPickDate(`${year}-${event.target.value}-15`);
         }}
       >
-        {buildMonthOptions(minDate, maxDate).map((opt) => (
+        {buildMonthOptions().map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </NativeSelect>
+
+      <NativeSelect
+        aria-label={t('scheduleGrid.nav.yearPickerLabel')}
+        className='h-9 w-28'
+        value={year}
+        onChange={(event) => {
+          // Keep the month, snap to the 15th of the chosen year's month.
+          onPickDate(`${event.target.value}-${month}-15`);
+        }}
+      >
+        {buildYearOptions(minDate, maxDate).map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
@@ -147,28 +161,31 @@ export function WeekNav({
   );
 }
 
-function buildMonthOptions(
+function buildMonthOptions(): Array<{ value: string; label: string }> {
+  const monthFmt = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' });
+  const out: Array<{ value: string; label: string }> = [];
+  for (let month = 1; month <= 12; month += 1) {
+    const value = String(month).padStart(2, '0');
+    const label = monthFmt.format(new Date(Date.UTC(2020, month - 1, 1)));
+    out.push({ value, label });
+  }
+  return out;
+}
+
+function buildYearOptions(
   minDate?: string,
   maxDate?: string
 ): Array<{ value: string; label: string }> {
-  // Anchor: start from the min/max if provided, else +/- 1 year from now.
+  // Anchor: start from the min/max if provided, else ±2 years from now.
   const now = new Date();
   const anchorYear = now.getUTCFullYear();
-  const minYear = minDate ? Number(minDate.slice(0, 4)) : anchorYear - 1;
-  const maxYear = maxDate ? Number(maxDate.slice(0, 4)) : anchorYear + 1;
-  const monthFmt = new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
+  const minYear = minDate ? Number(minDate.slice(0, 4)) : anchorYear - 2;
+  const maxYear = maxDate ? Number(maxDate.slice(0, 4)) : anchorYear + 2;
 
   const out: Array<{ value: string; label: string }> = [];
   for (let year = minYear; year <= maxYear; year += 1) {
-    for (let month = 1; month <= 12; month += 1) {
-      const value = `${year}-${String(month).padStart(2, '0')}`;
-      const label = monthFmt.format(new Date(Date.UTC(year, month - 1, 1)));
-      out.push({ value, label });
-    }
+    const value = String(year);
+    out.push({ value, label: value });
   }
   return out;
 }

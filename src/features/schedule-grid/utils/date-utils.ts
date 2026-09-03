@@ -65,6 +65,28 @@ export function monthOfDate(dateStr: string): string {
 }
 
 /**
+ * Number of days in a `YYYY-MM` month (28/29/30/31). Used by the month
+ * export to build one column per day of the month.
+ */
+export function daysInMonth(month: string): number {
+  const [y, m] = month.split('-').map(Number);
+  // Day 0 of the following month = last day of the target month (UTC-safe).
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+/**
+ * Split a YYYY-MM-DD string into its `year` (YYYY) and `month` (MM) parts.
+ * Used by the WeekNav picker, which renders two separate Kerjoo-parity
+ * comboboxes instead of a single month input.
+ */
+export function splitMonthYear(dateStr: string): {
+  year: string;
+  month: string;
+} {
+  return { year: dateStr.slice(0, 4), month: dateStr.slice(5, 7) };
+}
+
+/**
  * "Aug 25 – Aug 31, 2026" style range label. Always renders in en-US
  * locale (no translation) because month abbreviations are widely
  * understood in the Indonesian admin UI without forcing i18n bundles.
@@ -72,9 +94,18 @@ export function monthOfDate(dateStr: string): string {
 export function formatWeekRangeLabel(weekStart: string, weekEnd: string): string {
   const start = parseDate(weekStart);
   const end = parseDate(weekEnd);
-  const monthFmt = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' });
-  const dayFmt = new Intl.DateTimeFormat('en-US', { day: 'numeric', timeZone: 'UTC' });
-  const yearFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'UTC' });
+  const monthFmt = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    timeZone: 'UTC'
+  });
+  const dayFmt = new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    timeZone: 'UTC'
+  });
+  const yearFmt = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
   const startMonth = monthFmt.format(start);
   const endMonth = monthFmt.format(end);
   const startDay = dayFmt.format(start);
