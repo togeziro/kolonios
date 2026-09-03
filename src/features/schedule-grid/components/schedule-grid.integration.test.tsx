@@ -55,6 +55,7 @@ const {
   applyToWholeWeekFnMock,
   listEligibleShiftsForDayFnMock,
   createAssignmentInlineFnMock,
+  exportMonthFnMock,
   listShiftsFnMock,
   getDepartmentsFnMock,
   toastSuccessMock,
@@ -68,6 +69,7 @@ const {
   applyToWholeWeekFnMock: vi.fn(),
   listEligibleShiftsForDayFnMock: vi.fn(),
   createAssignmentInlineFnMock: vi.fn(),
+  exportMonthFnMock: vi.fn(),
   listShiftsFnMock: vi.fn(),
   getDepartmentsFnMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -78,6 +80,10 @@ const {
 vi.mock('../api/service', () => ({
   getScheduleGridFn: (...args: unknown[]) => getScheduleGridFnMock(...args),
   createAssignmentInlineFn: (...args: unknown[]) => createAssignmentInlineFnMock(...args)
+}));
+
+vi.mock('../api/export-service', () => ({
+  exportMonthFn: (...args: unknown[]) => exportMonthFnMock(...args)
 }));
 
 vi.mock('../api/write-service', () => ({
@@ -139,6 +145,15 @@ if (!HTMLElement.prototype.hasPointerCapture) {
 }
 if (!HTMLElement.prototype.releasePointerCapture) {
   HTMLElement.prototype.releasePointerCapture = () => {};
+}
+
+// jsdom doesn't implement blob URLs; stub them so the Export button's
+// `a.download` path resolves without crashing.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = () => 'blob:mock';
+}
+if (!URL.revokeObjectURL) {
+  URL.revokeObjectURL = () => {};
 }
 
 // ----- Fixture helpers -----
@@ -424,6 +439,12 @@ function stubServerFns(): void {
       { id: 3, name: 'Operations', is_active: true }
     ]
   });
+  exportMonthFnMock.mockResolvedValue({
+    success: true as const,
+    base64: Buffer.from('fake-xlsx').toString('base64'),
+    filename: 'Shift_Schedule_2026-09.xlsx',
+    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
 }
 
 function renderPage() {
@@ -587,7 +608,9 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
       expect(within(document.body).getByRole('option', { name: /Morning/ })).toBeTruthy();
     });
 
-    const morningOption = within(document.body).getByRole('option', { name: /Morning/ });
+    const morningOption = within(document.body).getByRole('option', {
+      name: /Morning/
+    });
     await act(async () => {
       fireEvent.click(morningOption);
     });
@@ -658,6 +681,27 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
       const trigger = screen.getByTestId(`schedule-grid-cell-trigger-u2-${date}`);
       expect(trigger.getAttribute('aria-label')).toBe(`${date}, Morning shift, 08:00 to 17:00`);
     }
+  });
+
+  it('export — Export Excel button calls exportMonthFn with the current month + filters', async () => {
+    renderPage();
+    await waitForGridSettled();
+
+    const exportButton = screen.getByTestId('schedule-grid-export');
+    expect(exportButton.hasAttribute('disabled')).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(exportButton);
+    });
+
+    await waitFor(() => {
+      expect(exportMonthFnMock).toHaveBeenCalledWith({
+        data: { month: '2026-08', divisionId: null, query: null }
+      });
+    });
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Schedule exported to Excel');
+    });
   });
 
   it('keyboard nav — arrow keys + T in the WeekNav toolbar', async () => {
