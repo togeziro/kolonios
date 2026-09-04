@@ -76,6 +76,7 @@ describe('nav-config', () => {
     expect(children).toEqual([
       'Attendance Locations',
       'Attendance Schedules',
+      'Schedule Grid',
       'Attendance Assignments',
       'Attendance Reports',
       'Attendance Face Settings'

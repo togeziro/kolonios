@@ -50,6 +50,7 @@ export const navTitleKeys: Record<string, string> = {
   Settings: 'navigation.settings',
   'Attendance Locations': 'navigation.attendanceLocations',
   'Attendance Schedules': 'navigation.attendanceSchedules',
+  'Schedule Grid': 'navigation.scheduleGrid',
   'Attendance Assignments': 'navigation.attendanceAssignments',
   'Attendance Reports': 'navigation.attendanceReports',
   'Attendance Face Settings': 'navigation.attendanceFaceSettings',

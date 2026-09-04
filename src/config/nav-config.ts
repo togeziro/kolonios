@@ -180,6 +180,14 @@ export const navItems: NavItem[] = [
         items: []
       },
       {
+        title: 'Schedule Grid',
+        url: '/dashboard/admin/attendance/schedule-grid',
+        icon: 'calendar',
+        isActive: false,
+        module: 'attendance_admin',
+        items: []
+      },
+      {
         title: 'Attendance Assignments',
         url: '/dashboard/admin/attendance/assignments',
         icon: 'clock',

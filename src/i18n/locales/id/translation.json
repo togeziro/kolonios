@@ -25,6 +25,7 @@
     "settings": "Pengaturan",
     "attendanceLocations": "Lokasi Absensi",
     "attendanceSchedules": "Jadwal Absensi",
+    "scheduleGrid": "Grid Jadwal",
     "attendanceAssignments": "Penugasan Absensi",
     "attendanceReports": "Laporan Absensi",
     "attendanceFaceSettings": "Pengaturan Wajah Absensi",
