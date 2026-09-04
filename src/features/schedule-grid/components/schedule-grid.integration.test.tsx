@@ -57,6 +57,7 @@ const {
   listEligibleShiftsForDayFnMock,
   createAssignmentInlineFnMock,
   exportMonthFnMock,
+  importMonthFnMock,
   listShiftsFnMock,
   getDepartmentsFnMock,
   toastSuccessMock,
@@ -73,6 +74,7 @@ const {
   listEligibleShiftsForDayFnMock: vi.fn(),
   createAssignmentInlineFnMock: vi.fn(),
   exportMonthFnMock: vi.fn(),
+  importMonthFnMock: vi.fn(),
   listShiftsFnMock: vi.fn(),
   getDepartmentsFnMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -88,6 +90,10 @@ vi.mock('../api/service', () => ({
 
 vi.mock('../api/export-service', () => ({
   exportMonthFn: (...args: unknown[]) => exportMonthFnMock(...args)
+}));
+
+vi.mock('../api/import-service', () => ({
+  importMonthFn: (...args: unknown[]) => importMonthFnMock(...args)
 }));
 
 vi.mock('../api/write-service', () => ({
@@ -452,6 +458,12 @@ function stubServerFns(): void {
     base64: Buffer.from('fake-xlsx').toString('base64'),
     filename: 'Shift_Schedule_2026-09.xlsx',
     mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+  importMonthFnMock.mockResolvedValue({
+    success: true as const,
+    rowsApplied: 0,
+    cellsApplied: 0,
+    partialFailures: []
   });
   repeatWeekBulkFnMock.mockImplementation(
     async ({ data }: { data: { targetWeekStarts: string[] } }) => ({
@@ -850,5 +862,80 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     await waitFor(() => {
       expect(toastWarningMock).toHaveBeenCalledWith('Repeated to 2 weeks; 1 cells failed');
     });
+  });
+
+  it('import — partial failures surface a downloadable CSV link; clean imports hide it', async () => {
+    importMonthFnMock.mockResolvedValueOnce({
+      success: true as const,
+      rowsApplied: 1,
+      cellsApplied: 4,
+      partialFailures: [
+        {
+          row: 3,
+          date: '2026-08-15',
+          employeeCode: 'EMP-0002',
+          value: 'XXX',
+          error: 'unknownShiftCode'
+        }
+      ]
+    });
+
+    renderPage();
+    await waitForGridSettled();
+
+    // No link before any import.
+    expect(screen.queryByTestId('schedule-grid-import-failures-download')).toBeNull();
+
+    const file = new File(['fake-xlsx-bytes'], 'Shift_Schedule_2026-08.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('schedule-grid-import-input'), {
+        target: { files: [file] }
+      });
+    });
+
+    await waitFor(() => {
+      expect(importMonthFnMock).toHaveBeenCalledWith({
+        data: { month: '2026-08', fileBase64: expect.any(String) }
+      });
+    });
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Imported 4 cells; 1 cells failed');
+    });
+
+    // The CSV link appears only when at least one row failed.
+    const link = await screen.findByTestId('schedule-grid-import-failures-download');
+    expect(link.getAttribute('download')).toBe('Import_Failures_2026-08.csv');
+    // jsdom here ships a real createObjectURL (the blob:mock stub only
+    // applies where it is missing) — assert the blob scheme, not the stub.
+    expect(link.getAttribute('href')).toMatch(/^blob:/);
+    expect(link.textContent).toMatch(/Download failures \(1\)/);
+  });
+
+  it('import — clean import shows no failures download link', async () => {
+    importMonthFnMock.mockResolvedValueOnce({
+      success: true as const,
+      rowsApplied: 2,
+      cellsApplied: 5,
+      partialFailures: []
+    });
+
+    renderPage();
+    await waitForGridSettled();
+
+    const file = new File(['fake-xlsx-bytes'], 'Shift_Schedule_2026-08.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('schedule-grid-import-input'), {
+        target: { files: [file] }
+      });
+    });
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Imported 5 cells for 2 employees');
+    });
+    expect(screen.queryByTestId('schedule-grid-import-failures-download')).toBeNull();
   });
 });

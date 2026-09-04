@@ -53,6 +53,7 @@ export function ScheduleGrid({
                 key={row.userId}
                 row={row}
                 days={days}
+                weekStart={response.weekStart}
                 skeleton={skeleton}
                 onAssignShift={onAssignShift}
               />
@@ -125,11 +126,13 @@ function ScheduleGridHeader({
 function ScheduleGridBodyRow({
   row,
   days,
+  weekStart,
   skeleton,
   onAssignShift
 }: {
   row: GridRow;
   days: string[];
+  weekStart: string;
   skeleton: boolean;
   onAssignShift?: (row: GridRow) => void;
 }) {
@@ -161,7 +164,7 @@ function ScheduleGridBodyRow({
         }
         return (
           <div key={date} role='gridcell' className='border-r p-1'>
-            <GridCell employeeId={row.userId} cell={cell} />
+            <GridCell employeeId={row.userId} cell={cell} weekStart={weekStart} />
           </div>
         );
       })}

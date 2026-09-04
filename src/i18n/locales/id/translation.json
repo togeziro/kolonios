@@ -1779,6 +1779,7 @@
       "success": "Berhasil impor {{cells}} sel untuk {{rows}} karyawan",
       "partial": "Berhasil impor {{cells}} sel; {{failures}} sel gagal",
       "failed": "Gagal mengimpor jadwal. Silakan coba lagi.",
+      "downloadFailures": "Unduh yang gagal ({{count}})",
       "invalidFile": "File Excel tidak valid"
     },
     "filter": {

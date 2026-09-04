@@ -37,12 +37,23 @@ const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 const MAX_BASE64_LENGTH = Math.ceil((MAX_IMPORT_BYTES * 4) / 3) + 1024;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Machine-readable import failure codes (contract shared with the client
+// CSV download; keep in sync with the toast copy in `schedule-grid-page`).
+const IMPORT_WRITE_FAILED = 'writeFailed' as const;
+const IMPORT_UNKNOWN_SHIFT_CODE = 'unknownShiftCode' as const;
+const IMPORT_UNKNOWN_EMPLOYEE = 'unknownEmployee' as const;
+
 export const importMonthSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Month must be YYYY-MM'),
   fileBase64: z.string().min(1).max(MAX_BASE64_LENGTH, 'File too large')
 });
 
 export type ImportMonthInput = z.infer<typeof importMonthSchema>;
+
+export type ImportErrorCode =
+  | typeof IMPORT_WRITE_FAILED
+  | typeof IMPORT_UNKNOWN_SHIFT_CODE
+  | typeof IMPORT_UNKNOWN_EMPLOYEE;
 
 export type ImportMonthResult = {
   success: true;
@@ -53,7 +64,7 @@ export type ImportMonthResult = {
     date: string;
     employeeCode?: string;
     value?: string;
-    error: string;
+    error: ImportErrorCode;
   }>;
 };
 
@@ -66,11 +77,53 @@ function normaliseCellValue(
   // hyphens as well so a manually-edited file stays forgiving.
   const upper = trimmed.toUpperCase();
   if (upper === 'OFF' || upper === 'LIBUR' || upper === 'DAY OFF') return { kind: 'dayOff' };
-  if (trimmed === '—' || upper === '-' || upper === 'HOLIDAY' || upper === '—')
-    return { kind: 'clear' };
+  // Em dash `—` (U+2014) is the export's unassigned token — it has no case
+  // mapping, so compare `trimmed` directly. Plain hyphens are normalised too
+  // so a manually-edited file stays forgiving.
+  if (trimmed === '—' || upper === '-' || upper === 'HOLIDAY') return { kind: 'clear' };
   // SheetJS may return numbers when a lone digit shift code is present; keep
   // the trimmed string as the code.
   return { kind: 'shift', code: trimmed };
+}
+
+// Drizzle transaction client type (same Parameters<> pattern as
+// `PayrollTransaction` in `src/lib/db/payroll.ts`).
+type ImportTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type ImportCellWrite = { kind: 'clear' } | { kind: 'dayOff' } | { kind: 'shift'; shiftId: number };
+
+/**
+ * Single-cell DELETE-then-INSERT (orphan guard mirrors `setCellShiftFn`:
+ * delete both tables first so a stale counterpart can never mask the new
+ * row, then insert the target row). Shared by the clear/dayOff/shift
+ * branches of the import loop.
+ */
+async function writeImportCell(
+  tx: ImportTx,
+  userId: string,
+  date: string,
+  cell: ImportCellWrite,
+  actorId: string
+): Promise<void> {
+  await tx
+    .delete(dateOverrides)
+    .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)));
+  await tx.delete(dayOffs).where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)));
+  if (cell.kind === 'dayOff') {
+    await tx.insert(dayOffs).values({
+      user_id: userId,
+      date,
+      reason: null,
+      created_by: actorId
+    });
+  } else if (cell.kind === 'shift') {
+    await tx.insert(dateOverrides).values({
+      user_id: userId,
+      date,
+      shift_id: cell.shiftId,
+      created_by: actorId
+    });
+  }
 }
 
 export const importMonthFn = createServerFn({ method: 'POST' })
@@ -98,7 +151,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
     }
 
     // Prefer the named export sheet; fall back to the first sheet so a
-    // manually-created workbook still imports ( Kerjoo-compatible behaviour ).
+    // manually-created workbook still imports (Kerjoo-compatible behaviour).
     const sheetName = workbook.SheetNames.includes(SHIFT_SCHEDULE_SHEET_NAME)
       ? SHIFT_SCHEDULE_SHEET_NAME
       : workbook.SheetNames[0];
@@ -173,7 +226,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
             date: dateByCol.get(col) ?? '',
             employeeCode: employeeCodeRaw,
             value: rawCell,
-            error: 'unknownEmployee'
+            error: IMPORT_UNKNOWN_EMPLOYEE
           });
         }
         continue;
@@ -190,12 +243,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
         if (normal.kind === 'clear') {
           try {
             await db.transaction(async (tx) => {
-              await tx
-                .delete(dateOverrides)
-                .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)));
-              await tx
-                .delete(dayOffs)
-                .where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)));
+              await writeImportCell(tx, userId, date, { kind: 'clear' }, session.user.id);
             });
             cellsApplied += 1;
             rowHadSuccess = true;
@@ -206,7 +254,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
               date,
               employeeCode: employeeCodeRaw,
               value: rawCell.trim(),
-              error: 'writeFailed'
+              error: IMPORT_WRITE_FAILED
             });
           }
           continue;
@@ -215,18 +263,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
         if (normal.kind === 'dayOff') {
           try {
             await db.transaction(async (tx) => {
-              await tx
-                .delete(dateOverrides)
-                .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)));
-              await tx
-                .delete(dayOffs)
-                .where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)));
-              await tx.insert(dayOffs).values({
-                user_id: userId,
-                date,
-                reason: null,
-                created_by: session.user.id
-              });
+              await writeImportCell(tx, userId, date, { kind: 'dayOff' }, session.user.id);
             });
             cellsApplied += 1;
             rowHadSuccess = true;
@@ -237,7 +274,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
               date,
               employeeCode: employeeCodeRaw,
               value: rawCell.trim(),
-              error: 'writeFailed'
+              error: IMPORT_WRITE_FAILED
             });
           }
           continue;
@@ -251,25 +288,14 @@ export const importMonthFn = createServerFn({ method: 'POST' })
             date,
             employeeCode: employeeCodeRaw,
             value: rawCell.trim(),
-            error: 'unknownShiftCode'
+            error: IMPORT_UNKNOWN_SHIFT_CODE
           });
           continue;
         }
 
         try {
           await db.transaction(async (tx) => {
-            await tx
-              .delete(dateOverrides)
-              .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)));
-            await tx
-              .delete(dayOffs)
-              .where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)));
-            await tx.insert(dateOverrides).values({
-              user_id: userId,
-              date,
-              shift_id: shiftId,
-              created_by: session.user.id
-            });
+            await writeImportCell(tx, userId, date, { kind: 'shift', shiftId }, session.user.id);
           });
           cellsApplied += 1;
           rowHadSuccess = true;
@@ -280,7 +306,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
             date,
             employeeCode: employeeCodeRaw,
             value: rawCell.trim(),
-            error: 'writeFailed'
+            error: IMPORT_WRITE_FAILED
           });
         }
       }

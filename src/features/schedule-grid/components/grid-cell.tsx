@@ -23,7 +23,16 @@ import { CellPopover } from './cell-popover';
  * fields directly via `buildCellAriaLabel` (the locked "date + cell state"
  * rule). The label is locale-independent — see `utils/aria.ts`.
  */
-export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridCellData }) {
+export function GridCell({
+  employeeId,
+  cell,
+  weekStart
+}: {
+  employeeId: string;
+  cell: GridCellData;
+  /** Anchor of the displayed week — forwarded so "Apply to all 7 days" writes the visible window. */
+  weekStart?: string;
+}) {
   const { t } = useTranslation();
 
   const isWeekend = isWeekendDate(cell.date);
@@ -99,7 +108,12 @@ export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridC
   // unrelated refetches don't reset mid-edit input.
   // See `.scratch/shift-scheduler/EPIC_SUMMARY.md` § Follow-ups #4.
   return (
-    <CellPopover key={getCellIdentityKey(cell)} employeeId={employeeId} cell={cell}>
+    <CellPopover
+      key={getCellIdentityKey(cell)}
+      employeeId={employeeId}
+      cell={cell}
+      weekStart={weekStart}
+    >
       {inner}
     </CellPopover>
   );

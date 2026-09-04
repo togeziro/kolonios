@@ -221,6 +221,36 @@ describe('schedule-grid write service (integration)', () => {
       // Sat day_off was not touched (skipped from iteration).
       expect(await readDayOff(TEST_USER_ID, '2026-08-08')).not.toBeNull();
     });
+
+    it('captures a failing date into partialFailures without aborting the batch', async () => {
+      // Fail only the first per-date transaction (Mon 2026-08-03); the
+      // remaining 6 dates must still apply. Regression test for the
+      // follow-up finding: the inner catch used to call the throwing
+      // `mapDbError` before pushing to `partialFailures`, aborting the
+      // whole batch via DomainError.
+      const txSpy = vi.spyOn(db, 'transaction').mockRejectedValueOnce(new Error('boom'));
+
+      const res = (await serverFnProvider.handler!({
+        data: {
+          userId: TEST_USER_ID,
+          weekStart: '2026-08-03',
+          mode: 'shift',
+          shiftId: 1,
+          includeWeekend: true
+        }
+      })) as {
+        success: boolean;
+        daysApplied: number;
+        partialFailures: Array<{ date: string; error: string }>;
+      };
+      txSpy.mockRestore();
+
+      expect(res.success).toBe(true);
+      expect(res.daysApplied).toBe(6);
+      expect(res.partialFailures).toEqual([{ date: '2026-08-03', error: 'internal' }]);
+      // A later date in the same batch still applied.
+      expect(await readDateOverride(TEST_USER_ID, '2026-08-04')).not.toBeNull();
+    });
   });
 
   describe('repeatWeekBulkFn — bulk cross-week duplicate (ticket 03)', () => {

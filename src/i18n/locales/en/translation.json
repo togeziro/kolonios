@@ -1779,6 +1779,7 @@
       "success": "Imported {{cells}} cells for {{rows}} employees",
       "partial": "Imported {{cells}} cells; {{failures}} cells failed",
       "failed": "Couldn't import the schedule. Please try again.",
+      "downloadFailures": "Download failures ({{count}})",
       "invalidFile": "Invalid Excel file"
     },
     "filter": {

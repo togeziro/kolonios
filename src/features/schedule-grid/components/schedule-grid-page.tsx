@@ -11,7 +11,7 @@ import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import { attendanceKeys } from '@/features/attendance/api/queries';
 import { scheduleGridQueryOptions, scheduleGridKeys } from '../api/queries';
 import { exportMonthFn } from '../api/export-service';
-import { importMonthFn } from '../api/import-service';
+import { importMonthFn, type ImportErrorCode } from '../api/import-service';
 import type { ScheduleGridFilters, ScheduleGridRow } from '../api/types';
 import { AssignShiftDialog } from './assign-shift-dialog';
 import { BulkRepeatDialog } from './bulk-repeat-dialog';
@@ -27,6 +27,45 @@ const EMPTY_FILTERS = {
   month: '',
   weekStart: ''
 } as ScheduleGridFilters;
+
+type ImportFailureRow = {
+  row: number;
+  date: string;
+  employeeCode?: string;
+  value?: string;
+  error: ImportErrorCode;
+};
+
+function csvCell(value: string): string {
+  // OWASP CSV-injection guard: a value starting with = + - @ (or tab/CR)
+  // becomes a live formula when the CSV is opened in Excel. Prefixing a
+  // single quote keeps the text inert while leaving normal codes (EMP001,
+  // KPI, dates) byte-identical. `value` echoes raw user-edited Excel cells.
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Build the downloadable CSV for `importMonthFn` partial failures. Mirrors
+ * the export download pattern below (`a.download` on a Blob URL) so an
+ * admin can see exactly which (row, date) cells failed and why — the toast
+ * alone only shows counts.
+ */
+function buildPartialFailuresCsv(failures: ImportFailureRow[]): string {
+  const lines = ['row,date,employeeCode,value,error'];
+  for (const f of failures) {
+    lines.push(
+      [
+        csvCell(String(f.row)),
+        csvCell(f.date),
+        csvCell(f.employeeCode ?? ''),
+        csvCell(f.value ?? ''),
+        csvCell(f.error)
+      ].join(',')
+    );
+  }
+  return lines.join('\r\n');
+}
 
 export function ScheduleGridPage() {
   const { t } = useTranslation();
@@ -46,8 +85,23 @@ export function ScheduleGridPage() {
   const [pageSize] = useState<number>(25);
   const [assignTarget, setAssignTarget] = useState<ScheduleGridRow | null>(null);
   const [bulkOpen, setBulkOpen] = useState<boolean>(false);
+  const [importFailures, setImportFailures] = useState<{
+    url: string;
+    filename: string;
+    count: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  // Revoke the failures Blob URL when it is replaced or the page
+  // unmounts (avoids leaking object URLs across repeated imports). The
+  // cleanup revokes the previous URL before the new effect runs.
+  useEffect(() => {
+    const url = importFailures?.url;
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [importFailures]);
 
   // Re-anchor the displayed week when the preference flips — but never
   // re-anchor on every render (that would freeze the user's nav).
@@ -162,7 +216,18 @@ export function ScheduleGridPage() {
             failures: res.partialFailures.length
           })
         );
+        // Surface the per-cell failures as a downloadable CSV (hidden when
+        // zero — the link below only renders while `importFailures` is set).
+        const csv = buildPartialFailuresCsv(res.partialFailures);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        setImportFailures({
+          url,
+          filename: `Import_Failures_${filters.month}.csv`,
+          count: res.partialFailures.length
+        });
       } else {
+        setImportFailures(null);
         toast.success(
           t('scheduleGrid.import.success', { cells: res.cellsApplied, rows: res.rowsApplied })
         );
@@ -258,6 +323,16 @@ export function ScheduleGridPage() {
               <Icons.upload className='mr-1 size-3.5' />
               {t('scheduleGrid.actions.export')}
             </Button>
+            {importFailures ? (
+              <a
+                href={importFailures.url}
+                download={importFailures.filename}
+                data-testid='schedule-grid-import-failures-download'
+                className='text-xs font-medium text-primary underline underline-offset-4'
+              >
+                {t('scheduleGrid.import.downloadFailures', { count: importFailures.count })}
+              </a>
+            ) : null}
           </div>
           <WeekNav
             weekStart={weekStart}

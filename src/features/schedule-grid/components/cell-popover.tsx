@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 
 import type { ScheduleGridCell as GridCellData } from '../api/types';
 import { buildCellAriaLabel } from '../utils/aria';
-import { addDays, dayOfWeek } from '../utils/date-utils';
+import { addDays, dayOfWeek, weekDays } from '../utils/date-utils';
 import {
   useApplyToWholeWeek,
   useClearCell,
@@ -57,6 +57,14 @@ export type CellPopoverProps = {
   cell: GridCellData;
   /** Render slot for the cell content (so click-target is the existing cell UI). */
   children: React.ReactNode;
+  /**
+   * Anchor of the currently displayed week (YYYY-MM-DD, respects the user's
+   * week-start preference via `schedule-grid-page.tsx`). The "Apply to all
+   * 7 days" toggle writes exactly this visible window. When omitted (legacy
+   * callers / unit tests), falls back to the Sunday-start window containing
+   * `cell.date` — which misses the visible Sunday on a Monday-start grid.
+   */
+  weekStart?: string;
 };
 
 /**
@@ -77,7 +85,7 @@ function formatDateHeading(date: string, t: (key: string) => string): string {
   return `${t(weekdayKeys[dow]!)} · ${date}`;
 }
 
-export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
+export function CellPopover({ employeeId, cell, children, weekStart }: CellPopoverProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [shiftId, setShiftId] = useState<string>(cell.shiftId != null ? String(cell.shiftId) : '');
@@ -96,9 +104,10 @@ export function CellPopover({ employeeId, cell, children }: CellPopoverProps) {
   // Fetch shifts eligible for this cell's day-of-week.
   const { data: dayShifts = [] } = useEligibleShiftsForDay(dayOfWeek(cell.date));
 
-  // Pre-compute the week dates for the bulk toggle.
-  const weekDates: string[] = [];
-  for (let i = 0; i < 7; i += 1) weekDates.push(addDays(cell.date, -dayOfWeek(cell.date) + i));
+  // Pre-compute the week dates for the bulk toggle: the currently
+  // displayed week when the caller passes its anchor, otherwise the
+  // legacy Sunday-start window containing `cell.date`.
+  const weekDates: string[] = weekDays(weekStart ?? addDays(cell.date, -dayOfWeek(cell.date)));
 
   // Apply-to-week is gated server-side by `applyToWholeWeekFn` (which
   // deletes any existing override/day-off per day and skips weekends per

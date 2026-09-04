@@ -23,13 +23,13 @@
  * same orphan guard as `setCellShiftFn` / `setCellDayOffFn`.
  *
  * Failure semantics: per-cell failures are captured into `partialFailures`
- * (`[{ userId, date, error }]`) and NEVER abort the batch. Note this
- * deliberately diverges from `applyToWholeWeekFn`'s inner catch, which
- * calls the throwing `mapDbError` before pushing to `partialFailures` (so a
- * single failed date aborts that batch via `DomainError`). Here the per-cell
+ * (`[{ userId, date, error }]`) and NEVER abort the batch. The per-cell
  * catch logs via the non-throwing `logger` and continues; `mapDbError` is
  * only used for unexpected top-level failures, mirroring the outer tuple
- * convention of the other write fns.
+ * convention of the other write fns. `applyToWholeWeekFn` uses the same
+ * `logger.error` + continue pattern for its per-date catch (fixed in the
+ * follow-up session; previously it called the throwing `mapDbError` there,
+ * which aborted the batch on the first failing date).
  *
  * When `includeWeekend === false`, weekend offsets (`WEEKEND_DAYS = Sat/Sun`,
  * via the shared `isWeekendDate` helper) are neither read from the source

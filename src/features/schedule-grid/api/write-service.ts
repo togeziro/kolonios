@@ -44,6 +44,7 @@ import * as z from 'zod';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { mapDbError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { db } from '@/lib/db';
 import { getHolidaysInRange } from '@/lib/db/attendance';
 import {
@@ -436,7 +437,10 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
         daysApplied += 1;
         affectedDates.push(date);
       } catch (e) {
-        mapDbError(e, `scheduleGrid.applyToWeek.${date}`);
+        // Non-throwing log (NOT `mapDbError`, which throws `never`) so one
+        // failing date lands in `partialFailures` without aborting the
+        // remaining batch — same pattern as `repeatWeekBulkFn`.
+        logger.error({ err: e, userId: data.userId, date }, '[db:scheduleGrid.applyToWeek]');
         partialFailures.push({ date, error: ERROR_INTERNAL });
       }
     }

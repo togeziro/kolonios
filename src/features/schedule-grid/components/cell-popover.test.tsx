@@ -306,4 +306,64 @@ describe('CellPopover', () => {
       expect.stringMatching(/Applied to 4 days.*2 failed/i)
     );
   });
+
+  it('anchors "Apply to all 7 days" to the displayed Monday-start week, not the Sunday-start window', async () => {
+    // Regression test (issue 03 observed): the popover used to anchor
+    // `cell.date − dow` (Sunday-start), so on a Monday-start grid it wrote
+    // Sun-1wk…Sat and missed the visible Sunday. With `weekStart` (the
+    // displayed week's anchor, threaded from ScheduleGrid → GridCell) it
+    // must write exactly Mon…Sun of the visible week.
+    const mut = mutStub();
+    mut.mutateAsync.mockResolvedValue({
+      success: true,
+      daysApplied: 7,
+      partialFailures: [],
+      affectedUserId: 'u1',
+      affectedDates: [
+        '2026-08-31',
+        '2026-09-01',
+        '2026-09-02',
+        '2026-09-03',
+        '2026-09-04',
+        '2026-09-05',
+        '2026-09-06'
+      ]
+    });
+    applyWeekMock.mockReturnValue(mut);
+
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          // Wednesday inside the Monday-start week 2026-08-31…2026-09-06.
+          cell: makeCell({ date: '2026-09-02' }),
+          weekStart: '2026-08-31',
+          children: createElement('span', null, 'Morning')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-09-02'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('apply-to-week-switch')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('apply-to-week-switch'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('popover-save-button'));
+    });
+
+    // Sunday-start anchor would have been 2026-08-30 (missing visible Sun 09-06).
+    expect(mut.mutateAsync).toHaveBeenCalledWith({
+      userId: 'u1',
+      weekStart: '2026-08-31',
+      mode: 'shift',
+      shiftId: 1,
+      includeWeekend: true
+    });
+  });
 });
