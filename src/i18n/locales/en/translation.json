@@ -1775,6 +1775,12 @@
       "partial": "Repeated to {{weeks}} weeks; {{failures}} cells failed",
       "failed": "Couldn't repeat the schedule. Please try again."
     },
+    "import": {
+      "success": "Imported {{cells}} cells for {{rows}} employees",
+      "partial": "Imported {{cells}} cells; {{failures}} cells failed",
+      "failed": "Couldn't import the schedule. Please try again.",
+      "invalidFile": "Invalid Excel file"
+    },
     "filter": {
       "searchLabel": "Search by employee name",
       "searchPlaceholder": "Search employee…",

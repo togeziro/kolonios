@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,10 @@ import { Icons } from '@/components/icons';
 import { useDebounce } from '@/hooks/use-debounce';
 import { businessDateInTimeZone } from '@/lib/dates';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
-import { scheduleGridQueryOptions } from '../api/queries';
+import { attendanceKeys } from '@/features/attendance/api/queries';
+import { scheduleGridQueryOptions, scheduleGridKeys } from '../api/queries';
 import { exportMonthFn } from '../api/export-service';
+import { importMonthFn } from '../api/import-service';
 import type { ScheduleGridFilters, ScheduleGridRow } from '../api/types';
 import { AssignShiftDialog } from './assign-shift-dialog';
 import { BulkRepeatDialog } from './bulk-repeat-dialog';
@@ -44,6 +46,8 @@ export function ScheduleGridPage() {
   const [pageSize] = useState<number>(25);
   const [assignTarget, setAssignTarget] = useState<ScheduleGridRow | null>(null);
   const [bulkOpen, setBulkOpen] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   // Re-anchor the displayed week when the preference flips — but never
   // re-anchor on every render (that would freeze the user's nav).
@@ -139,6 +143,56 @@ export function ScheduleGridPage() {
     onError: () => toast.error(t('scheduleGrid.export.failed'))
   });
 
+  const importMutation = useMutation({
+    mutationFn: (fileBase64: string) =>
+      importMonthFn({ data: { month: filters.month, fileBase64 } }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: scheduleGridKeys.all });
+      queryClient.invalidateQueries({ queryKey: attendanceKeys.effectiveSchedule() });
+      queryClient.invalidateQueries({ queryKey: attendanceKeys.assignments({}) });
+      queryClient.invalidateQueries({ queryKey: attendanceKeys.dayOffs() });
+      if (!res?.success) {
+        toast.error(t('scheduleGrid.import.failed'));
+        return;
+      }
+      if (res.partialFailures.length > 0) {
+        toast.success(
+          t('scheduleGrid.import.partial', {
+            cells: res.cellsApplied,
+            failures: res.partialFailures.length
+          })
+        );
+      } else {
+        toast.success(
+          t('scheduleGrid.import.success', { cells: res.cellsApplied, rows: res.rowsApplied })
+        );
+      }
+    },
+    onError: () => toast.error(t('scheduleGrid.import.failed'))
+  });
+
+  const handleImportFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+        const base64 = btoa(binary);
+        await importMutation.mutateAsync(base64);
+      } catch {
+        toast.error(t('scheduleGrid.import.failed'));
+      } finally {
+        // Allow re-selecting the same file.
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [importMutation, t, filters.month]
+  );
+
   const weekEnd = data?.weekEnd ?? addDays(weekStart, 6);
   const isCurrentWeek = today >= weekStart && today <= weekEnd;
   const rowCount = data?.rows.length ?? 0;
@@ -176,7 +230,21 @@ export function ScheduleGridPage() {
               <Icons.copy className='mr-1 size-3.5' />
               {t('scheduleGrid.actions.bulk')}
             </Button>
-            <Button variant='outline' size='sm' disabled data-testid='schedule-grid-import'>
+            <input
+              ref={fileInputRef}
+              type='file'
+              accept='.xlsx'
+              className='hidden'
+              data-testid='schedule-grid-import-input'
+              onChange={handleImportFileChange}
+            />
+            <Button
+              variant='outline'
+              size='sm'
+              data-testid='schedule-grid-import'
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importMutation.isPending}
+            >
               <Icons.download className='mr-1 size-3.5' />
               {t('scheduleGrid.actions.import')}
             </Button>

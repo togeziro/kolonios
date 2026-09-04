@@ -1775,6 +1775,12 @@
       "partial": "Berhasil diulang ke {{weeks}} minggu; {{failures}} sel gagal",
       "failed": "Gagal mengulangi jadwal. Silakan coba lagi."
     },
+    "import": {
+      "success": "Berhasil impor {{cells}} sel untuk {{rows}} karyawan",
+      "partial": "Berhasil impor {{cells}} sel; {{failures}} sel gagal",
+      "failed": "Gagal mengimpor jadwal. Silakan coba lagi.",
+      "invalidFile": "File Excel tidak valid"
+    },
     "filter": {
       "searchLabel": "Cari berdasarkan nama karyawan",
       "searchPlaceholder": "Cari karyawan…",
