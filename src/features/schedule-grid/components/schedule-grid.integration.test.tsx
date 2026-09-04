@@ -734,6 +734,85 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     });
   });
 
+  it('export — a client-side download failure toasts the failure copy (never silent)', async () => {
+    // A throw inside `onSuccess` never reaches React Query's `onError`, so
+    // the page guards the download step itself. Regression: force
+    // `createObjectURL` to throw and assert the failure toast fires.
+    const originalCreateObjectURL = URL.createObjectURL;
+    URL.createObjectURL = () => {
+      throw new Error('no blob URLs');
+    };
+    try {
+      renderPage();
+      await waitForGridSettled();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('schedule-grid-export'));
+      });
+
+      await waitFor(() => {
+        expect(exportMonthFnMock).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(toastErrorMock).toHaveBeenCalledWith(
+          "Couldn't export the schedule. Please try again."
+        );
+      });
+      expect(toastSuccessMock).not.toHaveBeenCalled();
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+    }
+  });
+
+  it('import — a failures-CSV Blob failure toasts the failure copy (never silent)', async () => {
+    // Same class as the export guard above, on the import partial-failures
+    // path: `createObjectURL` throwing inside `onSuccess` never reaches
+    // `onError`, so the page guards the CSV-link step itself.
+    importMonthFnMock.mockResolvedValueOnce({
+      success: true as const,
+      rowsApplied: 1,
+      cellsApplied: 4,
+      partialFailures: [
+        {
+          row: 3,
+          date: '2026-08-15',
+          employeeCode: 'EMP-0002',
+          value: 'XXX',
+          error: 'unknownShiftCode'
+        }
+      ]
+    });
+    const originalCreateObjectURL = URL.createObjectURL;
+    URL.createObjectURL = () => {
+      throw new Error('no blob URLs');
+    };
+    try {
+      renderPage();
+      await waitForGridSettled();
+
+      const file = new File(['fake-xlsx-bytes'], 'Shift_Schedule_2026-08.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      await act(async () => {
+        fireEvent.change(screen.getByTestId('schedule-grid-import-input'), {
+          target: { files: [file] }
+        });
+      });
+
+      await waitFor(() => {
+        expect(importMonthFnMock).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(toastErrorMock).toHaveBeenCalledWith(
+          "Couldn't import the schedule. Please try again."
+        );
+      });
+      expect(screen.queryByTestId('schedule-grid-import-failures-download')).toBeNull();
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+    }
+  });
+
   it('keyboard nav — arrow keys + T in the WeekNav toolbar', async () => {
     renderPage();
     await waitForGridSettled();

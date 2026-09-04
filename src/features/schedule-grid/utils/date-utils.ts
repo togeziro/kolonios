@@ -76,13 +76,11 @@ export function monthOfDate(dateStr: string): string {
 
 /**
  * Number of days in a `YYYY-MM` month (28/29/30/31). Used by the month
- * export to build one column per day of the month.
+ * export to build one column per day of the month. Single source of truth
+ * lives in `@/lib/dates` (shared with the technician month grid);
+ * re-exported here so existing feature imports keep working.
  */
-export function daysInMonth(month: string): number {
-  const [y, m] = month.split('-').map(Number);
-  // Day 0 of the following month = last day of the target month (UTC-safe).
-  return new Date(Date.UTC(y, m, 0)).getUTCDate();
-}
+export { daysInMonth } from '@/lib/dates';
 
 /**
  * Split a YYYY-MM-DD string into its `year` (YYYY) and `month` (MM) parts.

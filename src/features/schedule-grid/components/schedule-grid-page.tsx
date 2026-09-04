@@ -184,14 +184,25 @@ export function ScheduleGridPage() {
         toast.error(t('scheduleGrid.export.failed'));
         return;
       }
-      const bytes = Uint8Array.from(atob(res.base64), (c) => c.charCodeAt(0));
-      const blob = new Blob([bytes], { type: res.mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = res.filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      // A throw inside `onSuccess` never reaches `onError` (React Query
+      // treats it as a render-side crash, not a mutation failure), so the
+      // whole client-side download step is guarded: any failure surfaces
+      // the same failure toast instead of going silently missing.
+      try {
+        const bytes = Uint8Array.from(atob(res.base64), (c) => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: res.mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = res.filename;
+        a.click();
+        // Revoke on the next macrotask: revoking synchronously in the same
+        // task as `a.click()` can abort the download in Firefox/Safari.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch {
+        toast.error(t('scheduleGrid.export.failed'));
+        return;
+      }
       toast.success(t('scheduleGrid.export.success'));
     },
     onError: () => toast.error(t('scheduleGrid.export.failed'))
@@ -218,14 +229,22 @@ export function ScheduleGridPage() {
         );
         // Surface the per-cell failures as a downloadable CSV (hidden when
         // zero — the link below only renders while `importFailures` is set).
-        const csv = buildPartialFailuresCsv(res.partialFailures);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        setImportFailures({
-          url,
-          filename: `Import_Failures_${filters.month}.csv`,
-          count: res.partialFailures.length
-        });
+        // Guarded like the export download above: a throw inside `onSuccess`
+        // never reaches `onError`, so a Blob-URL failure must not silently
+        // drop the failures link (the partial toast already fired).
+        try {
+          const csv = buildPartialFailuresCsv(res.partialFailures);
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          setImportFailures({
+            url,
+            filename: `Import_Failures_${filters.month}.csv`,
+            count: res.partialFailures.length
+          });
+        } catch {
+          setImportFailures(null);
+          toast.error(t('scheduleGrid.import.failed'));
+        }
       } else {
         setImportFailures(null);
         toast.success(

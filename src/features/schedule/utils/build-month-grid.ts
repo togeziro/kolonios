@@ -4,6 +4,7 @@ import {
   type WeekdayScheduleRule,
   type DateOverride
 } from '@/lib/attendance/schedule';
+import { daysInMonth } from '@/lib/dates';
 import type { ScheduleMonthData, ScheduleWeekdayRuleRow } from '@/lib/db/attendance';
 
 export type MonthGridCell = {
@@ -17,11 +18,6 @@ export type MonthGridCell = {
   isHoliday: boolean;
   holidayName: string | null;
 };
-
-function daysInMonth(month: string): number {
-  const [y, m] = month.split('-').map(Number);
-  return new Date(y, m, 0).getDate();
-}
 
 export function buildMonthGrid(month: string, data: ScheduleMonthData): MonthGridCell[] {
   const [y, m] = month.split('-').map(Number);
