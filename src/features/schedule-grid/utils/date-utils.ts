@@ -3,9 +3,9 @@
  * No side effects, no DB, no React — easy to unit test.
  */
 
-import type { WeekStart } from './constants';
+import { WEEKEND_DAYS, type WeekStart } from './constants';
 
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 
 /**
  * Parse a YYYY-MM-DD string into a UTC Date at midnight. Using UTC avoids
@@ -35,6 +35,16 @@ export function addDays(dateStr: string, days: number): string {
  */
 export function dayOfWeek(dateStr: string): number {
   return parseDate(dateStr).getUTCDay();
+}
+
+/**
+ * True when a YYYY-MM-DD string falls on an Indonesian business-calendar
+ * weekend (Sat=6, Sun=0 — see `WEEKEND_DAYS`). Shared by the per-week
+ * "apply to week" toggle and the bulk "repeat week" fn so the
+ * `includeWeekend === false` skip stays a single source of truth.
+ */
+export function isWeekendDate(dateStr: string): boolean {
+  return WEEKEND_DAYS.includes(dayOfWeek(dateStr) as (typeof WEEKEND_DAYS)[number]);
 }
 
 /**

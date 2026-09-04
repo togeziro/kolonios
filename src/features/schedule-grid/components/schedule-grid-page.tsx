@@ -12,6 +12,7 @@ import { scheduleGridQueryOptions } from '../api/queries';
 import { exportMonthFn } from '../api/export-service';
 import type { ScheduleGridFilters, ScheduleGridRow } from '../api/types';
 import { AssignShiftDialog } from './assign-shift-dialog';
+import { BulkRepeatDialog } from './bulk-repeat-dialog';
 import { FilterBar } from './filter-bar';
 import { ScheduleGrid } from './schedule-grid';
 import { WeekNav } from './week-nav';
@@ -42,6 +43,7 @@ export function ScheduleGridPage() {
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(25);
   const [assignTarget, setAssignTarget] = useState<ScheduleGridRow | null>(null);
+  const [bulkOpen, setBulkOpen] = useState<boolean>(false);
 
   // Re-anchor the displayed week when the preference flips — but never
   // re-anchor on every render (that would freeze the user's nav).
@@ -165,7 +167,12 @@ export function ScheduleGridPage() {
             isPending={isPending}
           />
           <div className='flex flex-wrap items-center gap-2'>
-            <Button variant='outline' size='sm' disabled data-testid='schedule-grid-bulk'>
+            <Button
+              variant='outline'
+              size='sm'
+              data-testid='schedule-grid-bulk'
+              onClick={() => setBulkOpen(true)}
+            >
               <Icons.copy className='mr-1 size-3.5' />
               {t('scheduleGrid.actions.bulk')}
             </Button>
@@ -240,6 +247,15 @@ export function ScheduleGridPage() {
         }}
         userId={assignTarget?.userId ?? null}
         userName={assignTarget?.fullName}
+      />
+
+      <BulkRepeatDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        sourceWeekStart={weekStart}
+        divisionId={divisionId}
+        query={search.length > 0 ? search : null}
+        totalEmployees={total}
       />
     </div>
   );

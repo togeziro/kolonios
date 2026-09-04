@@ -18,9 +18,17 @@
 
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { resetAllTables, seedScheduleAssignment, seedShift, seedDayOff } from '@/test-utils/db';
+import {
+  resetAllTables,
+  seedScheduleAssignment,
+  seedShift,
+  seedDayOff,
+  seedDateOverride,
+  seedEmployee
+} from '@/test-utils/db';
 import { db } from '@/lib/db';
 import { dateOverrides, dayOffs } from '@/lib/db/schema/attendance';
+import { addDays } from '../utils/date-utils';
 
 const sessionUser = vi.hoisted(() => ({
   id: 'schedule-grid-test-admin',
@@ -82,6 +90,8 @@ vi.mock('@/lib/rate-limit', () => ({
 import { setCellShiftFn_createServerFn_handler } from './write-service?tss-serverfn-split';
 // @ts-expect-error TanStack Start's provider query is a Vite-only module id.
 import { applyToWholeWeekFn_createServerFn_handler } from './write-service?tss-serverfn-split';
+// @ts-expect-error TanStack Start's provider query is a Vite-only module id.
+import { repeatWeekBulkFn_createServerFn_handler } from './bulk-service?tss-serverfn-split';
 
 const TEST_USER_ID = 'schedule-grid-test-user-orphan';
 
@@ -210,6 +220,213 @@ describe('schedule-grid write service (integration)', () => {
       expect(await readDayOff(TEST_USER_ID, '2026-08-04')).toBeNull();
       // Sat day_off was not touched (skipped from iteration).
       expect(await readDayOff(TEST_USER_ID, '2026-08-08')).not.toBeNull();
+    });
+  });
+
+  describe('repeatWeekBulkFn — bulk cross-week duplicate (ticket 03)', () => {
+    beforeEach(() => {
+      serverFnProvider.handler = repeatWeekBulkFn_createServerFn_handler;
+    });
+
+    it('replicates source overrides + day offs onto the target week (DELETE-then-INSERT orphan guard)', async () => {
+      // Source week 2026-08-31 (Mon) .. 2026-09-06 (Sun).
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-08-31', shift_id: 1 });
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-09-01', reason: 'Cuti' });
+      // Conflicting target rows that the copy must replace, not duplicate.
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-09-07', reason: 'Old' });
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-09-08', shift_id: 1 });
+
+      const res = (await serverFnProvider.handler!({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-07'],
+          userIds: [TEST_USER_ID],
+          includeWeekend: false
+        }
+      })) as {
+        success: boolean;
+        weeksApplied: number;
+        usersAffected: number;
+        cellsApplied: number;
+        partialFailures: Array<{ userId: string; date: string; error: string }>;
+      };
+
+      expect(res.success).toBe(true);
+      expect(res.weeksApplied).toBe(1);
+      expect(res.usersAffected).toBe(1);
+      expect(res.cellsApplied).toBe(2);
+      expect(res.partialFailures).toEqual([]);
+
+      // Target Mon: override written, stale day off removed.
+      expect(await readDayOff(TEST_USER_ID, '2026-09-07')).toBeNull();
+      const targetOverride = await readDateOverride(TEST_USER_ID, '2026-09-07');
+      expect(targetOverride).not.toBeNull();
+      expect(targetOverride!.shift_id).toBe(1);
+      // Target Tue: day off written (reason carried over), stale override removed.
+      expect(await readDateOverride(TEST_USER_ID, '2026-09-08')).toBeNull();
+      expect((await readDayOff(TEST_USER_ID, '2026-09-08'))?.reason).toBe('Cuti');
+      // Source week untouched.
+      expect(await readDateOverride(TEST_USER_ID, '2026-08-31')).not.toBeNull();
+      expect((await readDayOff(TEST_USER_ID, '2026-09-01'))?.reason).toBe('Cuti');
+    });
+
+    it('skips weekend source dates when includeWeekend=false', async () => {
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-09-05', shift_id: 1 }); // Sat
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-09-06', reason: 'Libur' }); // Sun
+
+      const res = (await serverFnProvider.handler!({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-07'],
+          userIds: [TEST_USER_ID],
+          includeWeekend: false
+        }
+      })) as { success: boolean; cellsApplied: number; weeksApplied: number };
+
+      expect(res.success).toBe(true);
+      expect(res.cellsApplied).toBe(0);
+      expect(res.weeksApplied).toBe(0);
+      expect(await readDateOverride(TEST_USER_ID, '2026-09-12')).toBeNull(); // target Sat
+      expect(await readDayOff(TEST_USER_ID, '2026-09-13')).toBeNull(); // target Sun
+    });
+
+    it('copies weekend source dates when includeWeekend=true', async () => {
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-09-05', shift_id: 1 }); // Sat
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-09-06', reason: 'Libur' }); // Sun
+
+      const res = (await serverFnProvider.handler!({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-07'],
+          userIds: [TEST_USER_ID],
+          includeWeekend: true
+        }
+      })) as { success: boolean; cellsApplied: number };
+
+      expect(res.success).toBe(true);
+      expect(res.cellsApplied).toBe(2);
+      const satOverride = await readDateOverride(TEST_USER_ID, '2026-09-12');
+      expect(satOverride).not.toBeNull();
+      expect(satOverride!.shift_id).toBe(1);
+      expect((await readDayOff(TEST_USER_ID, '2026-09-13'))?.reason).toBe('Libur');
+    });
+
+    it('resolves users from the division + search filter when userIds is omitted', async () => {
+      const { employee: empA } = await seedEmployee('bulk-user-a', { full_name: 'Aldi Repeat' });
+      await seedEmployee('bulk-user-b', { full_name: 'Bayu Repeat' });
+      await seedDateOverride({ user_id: 'bulk-user-a', date: '2026-08-31', shift_id: 1 });
+      await seedDayOff({ user_id: 'bulk-user-a', date: '2026-09-01', reason: 'Cuti' });
+      await seedDateOverride({ user_id: 'bulk-user-b', date: '2026-08-31', shift_id: 1 });
+
+      // Division filter → only user A.
+      const byDivision = (await serverFnProvider.handler!({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-07'],
+          divisionId: String(empA.department_id),
+          query: null,
+          includeWeekend: false
+        }
+      })) as {
+        success: boolean;
+        usersAffected: number;
+        cellsApplied: number;
+      };
+
+      expect(byDivision.success).toBe(true);
+      expect(byDivision.usersAffected).toBe(1);
+      expect(byDivision.cellsApplied).toBe(2);
+      expect(await readDateOverride('bulk-user-a', '2026-09-07')).not.toBeNull();
+      expect(await readDateOverride('bulk-user-b', '2026-09-07')).toBeNull();
+
+      // Search filter → only user B.
+      const byQuery = (await serverFnProvider.handler!({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-14'],
+          divisionId: null,
+          query: 'Bayu',
+          includeWeekend: false
+        }
+      })) as { success: boolean; usersAffected: number; cellsApplied: number };
+
+      expect(byQuery.success).toBe(true);
+      expect(byQuery.usersAffected).toBe(1);
+      expect(byQuery.cellsApplied).toBe(1);
+      expect(await readDateOverride('bulk-user-b', '2026-09-14')).not.toBeNull();
+    });
+
+    it('captures a failing cell into partialFailures without aborting the batch', async () => {
+      await seedDateOverride({ user_id: TEST_USER_ID, date: '2026-08-31', shift_id: 1 });
+      await seedDayOff({ user_id: TEST_USER_ID, date: '2026-09-01', reason: 'Cuti' });
+      // Fail only the first per-cell transaction (Mon copy); the Tue copy
+      // must still land.
+      const txSpy = vi.spyOn(db, 'transaction').mockRejectedValueOnce(new Error('boom'));
+
+      const res = (await serverFnProvider.handler!({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-07'],
+          userIds: [TEST_USER_ID],
+          includeWeekend: false
+        }
+      })) as {
+        success: boolean;
+        cellsApplied: number;
+        partialFailures: Array<{ userId: string; date: string; error: string }>;
+      };
+      txSpy.mockRestore();
+
+      expect(res.success).toBe(true);
+      expect(res.cellsApplied).toBe(1);
+      expect(res.partialFailures).toEqual([
+        { userId: TEST_USER_ID, date: '2026-09-07', error: 'internal' }
+      ]);
+      // The surviving cell still applied.
+      expect((await readDayOff(TEST_USER_ID, '2026-09-08'))?.reason).toBe('Cuti');
+    });
+
+    it('rejects more than 12 target weeks and an empty target list (schema caps)', async () => {
+      const thirteen = Array.from({ length: 13 }, (_, i) => addDays('2026-09-07', i * 7));
+      await expect(
+        serverFnProvider.handler!({
+          data: {
+            sourceWeekStart: '2026-08-31',
+            targetWeekStarts: thirteen,
+            userIds: [TEST_USER_ID],
+            includeWeekend: false
+          }
+        })
+      ).rejects.toThrow();
+      await expect(
+        serverFnProvider.handler!({
+          data: {
+            sourceWeekStart: '2026-08-31',
+            targetWeekStarts: [],
+            userIds: [TEST_USER_ID],
+            includeWeekend: false
+          }
+        })
+      ).rejects.toThrow();
+    });
+
+    it('denies callers without attendance_admin:edit (403) before any write', async () => {
+      requirePermissionMock.mockRejectedValueOnce(
+        new Error('Forbidden: attendance_admin.edit required')
+      );
+      checkRateLimitMock.mockClear();
+
+      await expect(
+        serverFnProvider.handler!({
+          data: {
+            sourceWeekStart: '2026-08-31',
+            targetWeekStarts: ['2026-09-07'],
+            userIds: [TEST_USER_ID],
+            includeWeekend: false
+          }
+        })
+      ).rejects.toThrow(/Forbidden/);
+      expect(checkRateLimitMock).not.toHaveBeenCalled();
     });
   });
 });

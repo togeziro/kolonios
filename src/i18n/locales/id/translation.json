@@ -1759,6 +1759,22 @@
       "success": "Jadwal berhasil diekspor ke Excel",
       "failed": "Gagal mengekspor jadwal. Silakan coba lagi."
     },
+    "bulk": {
+      "title": "Ulangi Jadwal Secara Massal",
+      "description": "Salin hari libur dan override shift minggu ini ke minggu-minggu berikutnya.",
+      "sourceWeek": "Minggu sumber: {{range}}",
+      "weeksLabel": "Ulangi untuk",
+      "weeksUnit": "minggu ke depan",
+      "targetWeeks": "Minggu target",
+      "includeWeekend": "Sertakan Akhir Pekan",
+      "includeWeekendHint": "Jika mati, Sabtu dan Minggu tidak diubah.",
+      "summary": "{{users}} karyawan × {{weeks}} minggu",
+      "apply": "Ulangi jadwal",
+      "success": "Berhasil diulang ke {{weeks}} minggu untuk {{users}} karyawan",
+      "noData": "Tidak ada yang disalin — minggu sumber tidak punya hari libur atau override shift.",
+      "partial": "Berhasil diulang ke {{weeks}} minggu; {{failures}} sel gagal",
+      "failed": "Gagal mengulangi jadwal. Silakan coba lagi."
+    },
     "filter": {
       "searchLabel": "Cari berdasarkan nama karyawan",
       "searchPlaceholder": "Cari karyawan…",

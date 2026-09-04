@@ -23,8 +23,8 @@
  *                           each date either call `setCellShiftFn` or
  *                           `setCellDayOffFn`. Per-day failures are
  *                           captured into `partialFailures` rather than
- *                           aborting the whole batch. `WEEKEND_DAYS = [6, 0]`
- *                           is the source of truth for "weekend"; when
+ *                           aborting the whole batch. Weekend handling uses
+ *                           the shared `isWeekendDate` helper (Sat/Sun); when
  *                           `includeWeekend === false` those days are
  *                           skipped regardless of week-start (Mon vs Sun).
  *
@@ -60,8 +60,7 @@ import {
   type ShiftPolicy,
   type WeekdayScheduleRule
 } from '@/lib/attendance/schedule';
-import { WEEKEND_DAYS } from '../utils/constants';
-import { addDays, dayOfWeek } from '../utils/date-utils';
+import { addDays, dayOfWeek, isWeekendDate } from '../utils/date-utils';
 import type { ScheduleGridCell } from './types';
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
@@ -390,10 +389,7 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
     const dates: string[] = [];
     for (let i = 0; i < 7; i += 1) {
       const date = addDays(data.weekStart, i);
-      if (
-        !data.includeWeekend &&
-        WEEKEND_DAYS.includes(dayOfWeek(date) as (typeof WEEKEND_DAYS)[number])
-      ) {
+      if (!data.includeWeekend && isWeekendDate(date)) {
         continue;
       }
       dates.push(date);

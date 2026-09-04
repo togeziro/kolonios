@@ -1759,6 +1759,22 @@
       "success": "Schedule exported to Excel",
       "failed": "Couldn't export the schedule. Please try again."
     },
+    "bulk": {
+      "title": "Repeat Schedule in Bulk",
+      "description": "Copy this week's day offs and shift overrides to upcoming weeks.",
+      "sourceWeek": "Source week: {{range}}",
+      "weeksLabel": "Repeat for the next",
+      "weeksUnit": "weeks",
+      "targetWeeks": "Target weeks",
+      "includeWeekend": "Include Weekend",
+      "includeWeekendHint": "When off, Saturday and Sunday are left untouched.",
+      "summary": "{{users}} employees × {{weeks}} weeks",
+      "apply": "Repeat schedule",
+      "success": "Repeated to {{weeks}} weeks for {{users}} employees",
+      "noData": "Nothing to copy — the source week has no day offs or shift overrides.",
+      "partial": "Repeated to {{weeks}} weeks; {{failures}} cells failed",
+      "failed": "Couldn't repeat the schedule. Please try again."
+    },
     "filter": {
       "searchLabel": "Search by employee name",
       "searchPlaceholder": "Search employee…",

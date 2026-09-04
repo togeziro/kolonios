@@ -3,8 +3,7 @@ import { cn } from '@/lib/utils';
 import type { ScheduleGridCell as GridCellData } from '../api/types';
 import { getCellIdentityKey } from '../utils/cell-identity';
 import { buildCellAriaLabel } from '../utils/aria';
-import { WEEKEND_DAYS } from '../utils/constants';
-import { dayOfWeek } from '../utils/date-utils';
+import { isWeekendDate } from '../utils/date-utils';
 import { CellPopover } from './cell-popover';
 
 /**
@@ -27,7 +26,7 @@ import { CellPopover } from './cell-popover';
 export function GridCell({ employeeId, cell }: { employeeId: string; cell: GridCellData }) {
   const { t } = useTranslation();
 
-  const isWeekend = WEEKEND_DAYS.includes(dayOfWeek(cell.date) as (typeof WEEKEND_DAYS)[number]);
+  const isWeekend = isWeekendDate(cell.date);
   const cellAriaLabel = buildCellAriaLabel(cell);
 
   const inner = (() => {

@@ -4,6 +4,7 @@ import {
   dayOfWeek,
   daysInMonth,
   formatWeekRangeLabel,
+  isWeekendDate,
   monthOfDate,
   splitMonthYear,
   startOfWeek,
@@ -62,5 +63,12 @@ describe('schedule-grid date utils', () => {
 
   it('formatWeekRangeLabel keeps both month names when crossing a month boundary', () => {
     expect(formatWeekRangeLabel('2026-08-28', '2026-09-03')).toBe('Aug 28 – Sep 3, 2026');
+  });
+
+  it('isWeekendDate matches WEEKEND_DAYS (Sat=6, Sun=0)', () => {
+    expect(isWeekendDate('2026-08-03')).toBe(false); // Monday
+    expect(isWeekendDate('2026-08-07')).toBe(false); // Friday
+    expect(isWeekendDate('2026-08-08')).toBe(true); // Saturday
+    expect(isWeekendDate('2026-08-09')).toBe(true); // Sunday
   });
 });

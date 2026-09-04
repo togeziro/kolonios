@@ -2,7 +2,8 @@
  * React Query factories for the write-side schedule grid (ticket 02).
  *
  * The popover composes `setCellShiftMutation`, `setCellDayOffMutation`,
- * `clearCellMutation`, and `applyToWholeWeekMutation`. Each wraps the
+ * `clearCellMutation`, and `applyToWholeWeekMutation`, and the grid page's
+ * bulk-repeat dialog composes `repeatWeekBulkMutation` (ticket 03). Each wraps the
  * corresponding server fn in a `useMutation` hook. Cache invalidation
  * crosses the `scheduleGridKeys` namespace AND the cross-feature
  * `attendanceKeys.effectiveSchedule` / `attendanceKeys.assignments` keys
@@ -27,6 +28,11 @@ import {
   setCellShiftFn,
   type CellWriteResult
 } from './write-service';
+import {
+  repeatWeekBulkFn,
+  type RepeatWeekBulkInput,
+  type RepeatWeekBulkResult
+} from './bulk-service';
 import { scheduleGridKeys } from './queries';
 
 export type SetCellShiftInput = {
@@ -116,6 +122,42 @@ export function applyToWholeWeekMutation(
   };
 }
 
+export type RepeatWeekBulkMutationInput = {
+  sourceWeekStart: string;
+  targetWeekStarts: string[];
+  /** Explicit selection (e.g. future row-selection UI). Omit to use the filter scope. */
+  userIds?: string[];
+  divisionId?: string | null;
+  query?: string | null;
+  includeWeekend: boolean;
+};
+
+/**
+ * Bulk repeat (ticket 03, Kerjoo e42 parity). The dialog passes the grid's
+ * active filter (`divisionId` / `query`) so the server resolves every
+ * matching employee (cap 200) — not just the current page of rows. Cache
+ * invalidation matches the other write mutations (grid + cross-feature
+ * attendance keys).
+ */
+export function repeatWeekBulkMutation(
+  queryClient: ReturnType<typeof useQueryClient>
+): UseMutationOptions<RepeatWeekBulkResult, Error, RepeatWeekBulkMutationInput> {
+  return {
+    mutationFn: async (input) => {
+      const payload: RepeatWeekBulkInput = {
+        sourceWeekStart: input.sourceWeekStart,
+        targetWeekStarts: input.targetWeekStarts,
+        userIds: input.userIds,
+        divisionId: input.divisionId ?? null,
+        query: input.query ?? null,
+        includeWeekend: input.includeWeekend
+      };
+      return repeatWeekBulkFn({ data: payload });
+    },
+    onSettled: () => invalidateScheduleGridCaches(queryClient)
+  };
+}
+
 export function useSetCellShift() {
   const queryClient = useQueryClient();
   return useMutation(setCellShiftMutation(queryClient));
@@ -134,4 +176,9 @@ export function useClearCell() {
 export function useApplyToWholeWeek() {
   const queryClient = useQueryClient();
   return useMutation(applyToWholeWeekMutation(queryClient));
+}
+
+export function useRepeatWeekBulk() {
+  const queryClient = useQueryClient();
+  return useMutation(repeatWeekBulkMutation(queryClient));
 }

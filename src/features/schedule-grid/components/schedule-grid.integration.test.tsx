@@ -53,6 +53,7 @@ const {
   setCellDayOffFnMock,
   clearCellFnMock,
   applyToWholeWeekFnMock,
+  repeatWeekBulkFnMock,
   listEligibleShiftsForDayFnMock,
   createAssignmentInlineFnMock,
   exportMonthFnMock,
@@ -60,13 +61,15 @@ const {
   getDepartmentsFnMock,
   toastSuccessMock,
   toastInfoMock,
-  toastErrorMock
+  toastErrorMock,
+  toastWarningMock
 } = vi.hoisted(() => ({
   getScheduleGridFnMock: vi.fn(),
   setCellShiftFnMock: vi.fn(),
   setCellDayOffFnMock: vi.fn(),
   clearCellFnMock: vi.fn(),
   applyToWholeWeekFnMock: vi.fn(),
+  repeatWeekBulkFnMock: vi.fn(),
   listEligibleShiftsForDayFnMock: vi.fn(),
   createAssignmentInlineFnMock: vi.fn(),
   exportMonthFnMock: vi.fn(),
@@ -74,7 +77,8 @@ const {
   getDepartmentsFnMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastInfoMock: vi.fn(),
-  toastErrorMock: vi.fn()
+  toastErrorMock: vi.fn(),
+  toastWarningMock: vi.fn()
 }));
 
 vi.mock('../api/service', () => ({
@@ -91,6 +95,10 @@ vi.mock('../api/write-service', () => ({
   setCellDayOffFn: (...args: unknown[]) => setCellDayOffFnMock(...args),
   clearCellFn: (...args: unknown[]) => clearCellFnMock(...args),
   applyToWholeWeekFn: (...args: unknown[]) => applyToWholeWeekFnMock(...args)
+}));
+
+vi.mock('../api/bulk-service', () => ({
+  repeatWeekBulkFn: (...args: unknown[]) => repeatWeekBulkFnMock(...args)
 }));
 
 vi.mock('../api/shifts-helper', () => ({
@@ -122,7 +130,7 @@ vi.mock('sonner', () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccessMock(...args),
     error: (...args: unknown[]) => toastErrorMock(...args),
-    warning: vi.fn(),
+    warning: (...args: unknown[]) => toastWarningMock(...args),
     info: (...args: unknown[]) => toastInfoMock(...args)
   }
 }));
@@ -445,6 +453,15 @@ function stubServerFns(): void {
     filename: 'Shift_Schedule_2026-09.xlsx',
     mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
+  repeatWeekBulkFnMock.mockImplementation(
+    async ({ data }: { data: { targetWeekStarts: string[] } }) => ({
+      success: true as const,
+      weeksApplied: data.targetWeekStarts.length,
+      usersAffected: 2,
+      cellsApplied: data.targetWeekStarts.length * 2,
+      partialFailures: []
+    })
+  );
 }
 
 function renderPage() {
@@ -468,6 +485,7 @@ beforeEach(() => {
   toastSuccessMock.mockReset();
   toastInfoMock.mockReset();
   toastErrorMock.mockReset();
+  toastWarningMock.mockReset();
   i18n.changeLanguage('en');
 });
 
@@ -739,6 +757,98 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
       const calls = getScheduleGridFnMock.mock.calls;
       const weekStarts = calls.map((c) => (c[0] as { data: { weekStart: string } }).data.weekStart);
       expect(weekStarts[weekStarts.length - 1]).toBe('2026-08-31');
+    });
+  });
+
+  it('bulk — Repeat Schedule in Bulk opens the dialog, summarizes users × weeks, and applies', async () => {
+    renderPage();
+    await waitForGridSettled();
+
+    const bulkButton = screen.getByTestId('schedule-grid-bulk');
+    expect(bulkButton.hasAttribute('disabled')).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(bulkButton);
+    });
+    await screen.findByTestId('bulk-repeat-dialog');
+
+    // Default: 2 fixture employees × 4 weeks.
+    expect(screen.getByTestId('bulk-summary').textContent).toBe('2 employees × 4 weeks');
+
+    // Narrow to 2 upcoming weeks; the dialog previews both target weeks.
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('bulk-weeks-select'), { target: { value: '2' } });
+    });
+    expect(screen.getByTestId('bulk-summary').textContent).toBe('2 employees × 2 weeks');
+    expect(screen.getByTestId('bulk-target-week-2026-09-07')).toBeTruthy();
+    expect(screen.getByTestId('bulk-target-week-2026-09-14')).toBeTruthy();
+
+    // Include Weekend defaults to off.
+    expect(screen.getByTestId('bulk-include-weekend').getAttribute('aria-checked')).toBe('false');
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('bulk-repeat-apply'));
+    });
+
+    await waitFor(() => {
+      expect(repeatWeekBulkFnMock).toHaveBeenCalledWith({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-07', '2026-09-14'],
+          divisionId: null,
+          query: null,
+          includeWeekend: false
+        }
+      });
+    });
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Repeated to 2 weeks for 2 employees');
+    });
+    // The dialog closes after a successful apply.
+    await waitFor(() => {
+      expect(screen.queryByTestId('bulk-repeat-dialog')).toBeNull();
+    });
+  });
+
+  it('bulk — Include Weekend on is forwarded and partial failures toast a warning', async () => {
+    repeatWeekBulkFnMock.mockResolvedValueOnce({
+      success: true as const,
+      weeksApplied: 2,
+      usersAffected: 2,
+      cellsApplied: 3,
+      partialFailures: [{ userId: 'u1', date: '2026-09-07', error: 'internal' }]
+    });
+
+    renderPage();
+    await waitForGridSettled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('schedule-grid-bulk'));
+    });
+    await screen.findByTestId('bulk-repeat-dialog');
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('bulk-include-weekend'));
+    });
+    expect(screen.getByTestId('bulk-include-weekend').getAttribute('aria-checked')).toBe('true');
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('bulk-repeat-apply'));
+    });
+
+    await waitFor(() => {
+      expect(repeatWeekBulkFnMock).toHaveBeenCalledWith({
+        data: {
+          sourceWeekStart: '2026-08-31',
+          targetWeekStarts: ['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28'],
+          divisionId: null,
+          query: null,
+          includeWeekend: true
+        }
+      });
+    });
+    await waitFor(() => {
+      expect(toastWarningMock).toHaveBeenCalledWith('Repeated to 2 weeks; 1 cells failed');
     });
   });
 });
