@@ -8,11 +8,23 @@ import type { Money } from '../api/types';
  * not validate integrality.
  */
 
+/**
+ * Epsilon precision used to scrub binary-float noise (e.g. 0.1 + 0.2) before
+ * rounding, without masking real fractional cents.
+ */
+const ROUNDING_EPSILON_DIGITS = 12;
+
+/** Half-up tie-break: a value exactly midway between two integers rounds away from zero. */
+const HALF_UP_TIEBREAK = 0.5;
+
 /** Money is integer minor units. Every derived amount is rounded half-up. */
 export function roundMoney(value: number): Money {
   if (!Number.isFinite(value)) throw new RangeError('Money calculations must be finite.');
-  const normalized = Number(value.toFixed(12));
-  const rounded = normalized < 0 ? Math.ceil(normalized - 0.5) : Math.floor(normalized + 0.5);
+  const normalized = Number(value.toFixed(ROUNDING_EPSILON_DIGITS));
+  const rounded =
+    normalized < 0
+      ? Math.ceil(normalized - HALF_UP_TIEBREAK)
+      : Math.floor(normalized + HALF_UP_TIEBREAK);
   if (!Number.isSafeInteger(rounded)) throw new RangeError('Money exceeds the safe integer range.');
   return rounded;
 }
