@@ -31,6 +31,9 @@ export default function WorkLog({
   const [meter, setMeter] = useState('');
   const [photoKey, setPhotoKey] = useState<string | null>(null);
   const [photoPending, setPhotoPending] = useState(false);
+  // The captured dataUrl whose upload failed — kept so the user can retry the
+  // same photo instead of silently losing it (logPhotoFailed toast).
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const locationAdded = entries.some((e) => e.kind === 'location');
 
@@ -50,18 +53,30 @@ export default function WorkLog({
     setMeter('');
   };
 
-  const capturePhoto = (dataUrl: string) => {
+  const uploadPhoto = (dataUrl: string) => {
     setPhotoKey(null);
     setPhotoPending(true);
     uploadTicketPhoto(dataUrl, Date.now())
       .then((key) => {
+        setPendingPhoto(null);
         setPhotoKey(key);
         addEntry({ kind: 'photo', body: key });
       })
       .catch(() => {
+        setPendingPhoto(dataUrl);
         toast.error(t('workSession.logPhotoFailed'));
       })
       .finally(() => setPhotoPending(false));
+  };
+
+  const capturePhoto = (dataUrl: string) => {
+    setPendingPhoto(null);
+    uploadPhoto(dataUrl);
+  };
+
+  const retryPhoto = () => {
+    if (!pendingPhoto) return;
+    uploadPhoto(pendingPhoto);
   };
 
   const handleLocationConfirm = (result: { lat: number; lng: number; accuracy: number }) => {
@@ -139,6 +154,19 @@ export default function WorkLog({
                 onClear={() => undefined}
               />
               {photoKey && <Icons.check className='size-4 self-center text-green-500' />}
+              {pendingPhoto && (
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='shrink-0 self-center'
+                  disabled={photoPending}
+                  onClick={retryPhoto}
+                >
+                  <Icons.refresh className='mr-1 size-4' />
+                  {t('workSession.logPhotoRetry')}
+                </Button>
+              )}
             </div>
             {locationAdded ? (
               <Button type='button' variant='outline' size='sm' disabled>

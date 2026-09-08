@@ -1425,6 +1425,7 @@
     "logMeterPlaceholder": "Meter…",
     "logNotePlaceholder": "Add a note…",
     "logPhotoFailed": "Photo upload failed",
+    "logPhotoRetry": "Retry upload",
     "logTitle": "Work Log",
     "completionPhotos": "Completion Photos",
     "addPhoto": "Add Photo",

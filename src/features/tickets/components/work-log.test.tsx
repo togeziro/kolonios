@@ -1,20 +1,29 @@
 // @vitest-environment jsdom
 // i18n:skip
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
+const { uploadTicketPhotoMock, toastMock } = vi.hoisted(() => ({
+  uploadTicketPhotoMock: vi.fn(),
+  toastMock: { error: vi.fn(), success: vi.fn() }
+}));
+
 vi.mock('@/features/attendance/components/selfie-capture', () => ({
-  SelfieCapture: () => null
+  SelfieCapture: ({ onCapture }: { onCapture: (dataUrl: string) => void }) => (
+    <button type='button' onClick={() => onCapture('data:image/jpeg;base64,x')}>
+      capture-photo
+    </button>
+  )
 }));
 
 vi.mock('@/lib/storage/upload-client', () => ({
-  uploadTicketPhoto: vi.fn()
+  uploadTicketPhoto: uploadTicketPhotoMock
 }));
 
 vi.mock('sonner', () => ({
-  toast: { error: vi.fn(), success: vi.fn() }
+  toast: toastMock
 }));
 
 vi.mock('@/components/ui/map', () => ({
@@ -44,6 +53,12 @@ function renderLog(
     )
   };
 }
+
+beforeEach(() => {
+  uploadTicketPhotoMock.mockReset();
+  toastMock.error.mockReset();
+  toastMock.success.mockReset();
+});
 
 describe('WorkLog add-location flow', () => {
   it('shows "Add location" button when no location entry exists', () => {
@@ -88,5 +103,62 @@ describe('WorkLog add-location flow', () => {
     const dialog = screen.getByRole('dialog');
     fireEvent.keyDown(dialog, { key: 'Escape' });
     waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+});
+
+describe('WorkLog photo upload retry', () => {
+  it('keeps the captured photo and offers a retry button when upload fails', async () => {
+    uploadTicketPhotoMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
+    const { onChange } = renderLog([]);
+
+    fireEvent.click(screen.getByRole('button', { name: /capture-photo/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /retry upload/i })).toBeTruthy();
+    });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(toastMock.error).toHaveBeenCalled();
+  });
+
+  it('uploads the pending photo again on retry and appends the entry', async () => {
+    uploadTicketPhotoMock.mockRejectedValueOnce(new Error('PHOTO_UPLOAD_FAILED'));
+    uploadTicketPhotoMock.mockResolvedValueOnce('tickets/0/9.jpg');
+    const { onChange } = renderLog([]);
+
+    fireEvent.click(screen.getByRole('button', { name: /capture-photo/i }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /retry upload/i })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: /retry upload/i }));
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith([
+        expect.objectContaining({ kind: 'photo', body: 'tickets/0/9.jpg' })
+      ]);
+    });
+    expect(uploadTicketPhotoMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('disables the retry button while a retry upload is in flight', async () => {
+    let resolveUpload: (key: string) => void = () => undefined;
+    uploadTicketPhotoMock
+      .mockRejectedValueOnce(new Error('PHOTO_UPLOAD_FAILED'))
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveUpload = resolve;
+          })
+      );
+    renderLog([]);
+
+    fireEvent.click(screen.getByRole('button', { name: /capture-photo/i }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /retry upload/i })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: /retry upload/i }));
+    expect(
+      (screen.getByRole('button', { name: /retry upload/i }) as HTMLButtonElement).disabled
+    ).toBe(true);
+
+    resolveUpload('tickets/0/10.jpg');
+    await waitFor(() => expect(screen.queryByRole('button', { name: /retry upload/i })).toBeNull());
   });
 });
