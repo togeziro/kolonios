@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { locationsQueryOptions } from '../api/queries';
 import { deleteLocationFn } from '../api/service';
+import { DEFAULT_MAX_STALE_MS } from '../lib/location';
 import { LocationForm, type LocationFormState } from './admin-location-form';
 
 export function LocationManagePage() {
@@ -47,7 +48,7 @@ export function LocationManagePage() {
       gpsValidationEnabled: loc.gps_validation_enabled ?? true,
       selfieRequired: loc.selfie_required ?? false,
       maxAccuracyMeters: loc.max_accuracy_meters ?? 50,
-      maxStaleMs: loc.max_stale_ms ?? 30000
+      maxStaleMs: loc.max_stale_ms ?? DEFAULT_MAX_STALE_MS
     });
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };

@@ -51,6 +51,8 @@ export function SelfieCapture({
       requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          // Autoplay may reject when the tab is backgrounded; the stream is
+          // already attached and frames stay readable, so ignore the failure.
           void videoRef.current.play().catch(() => undefined);
         }
       });

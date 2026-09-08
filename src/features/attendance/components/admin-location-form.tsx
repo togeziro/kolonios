@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { LocationMap } from './location-map';
 import { createLocationFn, updateLocationFn } from '../api/service';
+import { DEFAULT_MAX_STALE_MS } from '../lib/location';
 import type { MapCoordinates } from '@/components/ui/map';
 
 export interface LocationFormState {
@@ -31,7 +32,7 @@ const emptyForm: LocationFormState = {
   gpsValidationEnabled: true,
   selfieRequired: false,
   maxAccuracyMeters: 50,
-  maxStaleMs: 30000
+  maxStaleMs: DEFAULT_MAX_STALE_MS
 };
 
 export function LocationForm({ initial }: { initial?: Partial<LocationFormState> }) {
