@@ -7,12 +7,20 @@ export interface FaceStream {
   stop: () => void;
 }
 
+// Ideal front-camera capture resolution shared by all selfie/face capture flows.
+export const SELFIE_CAPTURE_IDEAL_WIDTH = 640;
+export const SELFIE_CAPTURE_IDEAL_HEIGHT = 480;
+
 export async function startCamera(
   videoRef: RefObject<HTMLVideoElement | null>
 ): Promise<FaceStream> {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
-    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+    video: {
+      facingMode: 'user',
+      width: { ideal: SELFIE_CAPTURE_IDEAL_WIDTH },
+      height: { ideal: SELFIE_CAPTURE_IDEAL_HEIGHT }
+    }
   });
 
   const video = videoRef.current;

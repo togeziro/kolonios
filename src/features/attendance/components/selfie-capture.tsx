@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
+import { SELFIE_CAPTURE_IDEAL_WIDTH, SELFIE_CAPTURE_IDEAL_HEIGHT } from '@/lib/face/capture';
 
 export interface SelfieCaptureProps {
   required: boolean;
@@ -43,7 +44,11 @@ export function SelfieCapture({
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        video: {
+          facingMode: 'user',
+          width: { ideal: SELFIE_CAPTURE_IDEAL_WIDTH },
+          height: { ideal: SELFIE_CAPTURE_IDEAL_HEIGHT }
+        },
         audio: false
       });
       streamRef.current = stream;
