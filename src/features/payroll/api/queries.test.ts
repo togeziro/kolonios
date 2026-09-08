@@ -7,7 +7,24 @@ vi.mock('./service', () => ({
   listPayrollRecordsFn: vi.fn(),
   getPayrollReportFn: vi.fn(),
   adjustPayrollRecordFn: vi.fn(),
-  getMyPayslipsFn: vi.fn()
+  getMyPayslipsFn: vi.fn(),
+  alignBaseSalaryFn: vi.fn(),
+  approvePayrollFn: vi.fn(),
+  createEmployeeBpjsFamilyMemberFn: vi.fn(),
+  createPayrollPeriodFn: vi.fn(),
+  createSalaryComponentFn: vi.fn(),
+  deleteEmployeeBpjsFamilyMemberFn: vi.fn(),
+  deleteSalaryComponentFn: vi.fn(),
+  generatePayrollFn: vi.fn(),
+  lockPayrollFn: vi.fn(),
+  markPayrollPaidFn: vi.fn(),
+  overrideEmployeeTaxRecordFn: vi.fn(),
+  payPayQueueSelectionFn: vi.fn(),
+  updateCompanyPayrollSettingsFn: vi.fn(),
+  updateSalaryComponentFn: vi.fn(),
+  updateEmployeePayrollProfileFn: vi.fn(),
+  upsertAttendanceOverrideFn: vi.fn(),
+  upsertEmployeeBpjsEnrollmentFn: vi.fn()
 }));
 
 import { payrollKeys, payrollRecordsQueryOptions } from './queries';

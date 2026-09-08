@@ -40,129 +40,133 @@ export function usePayrollMutation<T>(
       )
   });
 }
-export const useCreateSalaryComponent = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof createSalaryComponentFn>[0]['data']) =>
-      createSalaryComponentFn({ data }),
-    () => [payrollKeys.components()]
-  );
-export const useUpdateSalaryComponent = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof updateSalaryComponentFn>[0]['data']) =>
-      updateSalaryComponentFn({ data }),
-    () => [payrollKeys.components()]
-  );
-export const useDeleteSalaryComponent = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof deleteSalaryComponentFn>[0]['data']) =>
-      deleteSalaryComponentFn({ data }),
-    () => [payrollKeys.components()]
-  );
-export const useCreatePayrollPeriod = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof createPayrollPeriodFn>[0]['data']) => createPayrollPeriodFn({ data }),
-    () => [payrollKeys.periods()]
-  );
-export const useGeneratePayroll = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof generatePayrollFn>[0]['data']) => generatePayrollFn({ data }),
-    () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()]
-  );
-export const useAdjustPayrollRecord = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof adjustPayrollRecordFn>[0]['data']) => adjustPayrollRecordFn({ data }),
-    () => [payrollKeys.records(), payrollKeys.report()]
-  );
-export const useApprovePayroll = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof approvePayrollFn>[0]['data']) => approvePayrollFn({ data }),
-    () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()]
-  );
-export const useMarkPayrollPaid = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof markPayrollPaidFn>[0]['data']) => markPayrollPaidFn({ data }),
-    () => [
+
+type PayrollMutation<T> = {
+  fn: (input: { data: T }) => Promise<unknown>;
+  keys: (data: T) => QueryKey[];
+};
+
+function defineMutation<T>({ fn, keys }: PayrollMutation<T>) {
+  return () => usePayrollMutation((data: Parameters<typeof fn>[0]['data']) => fn({ data }), keys);
+}
+
+const payrollMutations = {
+  useCreateSalaryComponent: defineMutation({
+    fn: createSalaryComponentFn,
+    keys: () => [payrollKeys.components()]
+  }),
+  useUpdateSalaryComponent: defineMutation({
+    fn: updateSalaryComponentFn,
+    keys: () => [payrollKeys.components()]
+  }),
+  useDeleteSalaryComponent: defineMutation({
+    fn: deleteSalaryComponentFn,
+    keys: () => [payrollKeys.components()]
+  }),
+  useCreatePayrollPeriod: defineMutation({
+    fn: createPayrollPeriodFn,
+    keys: () => [payrollKeys.periods()]
+  }),
+  useGeneratePayroll: defineMutation({
+    fn: generatePayrollFn,
+    keys: () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()]
+  }),
+  useAdjustPayrollRecord: defineMutation({
+    fn: adjustPayrollRecordFn,
+    keys: () => [payrollKeys.records(), payrollKeys.report()]
+  }),
+  useApprovePayroll: defineMutation({
+    fn: approvePayrollFn,
+    keys: () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()]
+  }),
+  useMarkPayrollPaid: defineMutation({
+    fn: markPayrollPaidFn,
+    keys: () => [
       payrollKeys.periods(),
       payrollKeys.records(),
       payrollKeys.report(),
       payrollKeys.payslips()
     ]
-  );
-export const usePayQueueSelection = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof payPayQueueSelectionFn>[0]['data']) =>
-      payPayQueueSelectionFn({ data }),
+  }),
+  usePayQueueSelection: defineMutation({
+    fn: payPayQueueSelectionFn,
     // Flatten the workflow tuple so each entry is its own QueryKey —
     // otherwise TanStack Query treats the whole tuple as one prefix and
     // never matches the individual `['payroll', 'periods', ...]` etc. keys
     // already in the cache, so the records page + payment history + queue
     // show stale data after a bulk-pay stamp (issue #02).
-    () => [
+    keys: () => [
       payrollKeys.periods(),
       payrollKeys.records(),
       payrollKeys.report(),
       payrollKeys.payslips(),
       payrollKeys.payQueue()
     ]
-  );
-export const useLockPayroll = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof lockPayrollFn>[0]['data']) => lockPayrollFn({ data }),
-    () => [
+  }),
+  useLockPayroll: defineMutation({
+    fn: lockPayrollFn,
+    keys: () => [
       payrollKeys.periods(),
       payrollKeys.records(),
       payrollKeys.report(),
       payrollKeys.payslips()
     ]
-  );
-export const useUpdateEmployeePayrollProfile = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof updateEmployeePayrollProfileFn>[0]['data']) =>
-      updateEmployeePayrollProfileFn({ data }),
-    (data) => [payrollKeys.profile(data.employeeId), payrollKeys.records()]
-  );
-export const useUpdateCompanyPayrollSettings = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof updateCompanyPayrollSettingsFn>[0]['data']) =>
-      updateCompanyPayrollSettingsFn({ data }),
-    () => [payrollKeys.companySettings()]
-  );
-export const useUpsertEmployeeBpjsEnrollment = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof upsertEmployeeBpjsEnrollmentFn>[0]['data']) =>
-      upsertEmployeeBpjsEnrollmentFn({ data }),
-    (data) => [payrollKeys.bpjs(data.employeeId)]
-  );
-export const useCreateEmployeeBpjsFamilyMember = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof createEmployeeBpjsFamilyMemberFn>[0]['data']) =>
-      createEmployeeBpjsFamilyMemberFn({ data }),
-    () => [payrollKeys.bpjsRoot()]
-  );
-export const useDeleteEmployeeBpjsFamilyMember = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof deleteEmployeeBpjsFamilyMemberFn>[0]['data']) =>
-      deleteEmployeeBpjsFamilyMemberFn({ data }),
-    () => [payrollKeys.bpjsRoot()]
-  );
-export const useUpsertAttendanceOverride = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof upsertAttendanceOverrideFn>[0]['data']) =>
-      upsertAttendanceOverrideFn({ data }),
-    (data) => [
+  }),
+  useUpdateEmployeePayrollProfile: defineMutation({
+    fn: updateEmployeePayrollProfileFn,
+    keys: (data) => [payrollKeys.profile(data.employeeId), payrollKeys.records()]
+  }),
+  useUpdateCompanyPayrollSettings: defineMutation({
+    fn: updateCompanyPayrollSettingsFn,
+    keys: () => [payrollKeys.companySettings()]
+  }),
+  useUpsertEmployeeBpjsEnrollment: defineMutation({
+    fn: upsertEmployeeBpjsEnrollmentFn,
+    keys: (data) => [payrollKeys.bpjs(data.employeeId)]
+  }),
+  useCreateEmployeeBpjsFamilyMember: defineMutation({
+    fn: createEmployeeBpjsFamilyMemberFn,
+    keys: () => [payrollKeys.bpjsRoot()]
+  }),
+  useDeleteEmployeeBpjsFamilyMember: defineMutation({
+    fn: deleteEmployeeBpjsFamilyMemberFn,
+    keys: () => [payrollKeys.bpjsRoot()]
+  }),
+  useUpsertAttendanceOverride: defineMutation({
+    fn: upsertAttendanceOverrideFn,
+    keys: (data) => [
       payrollKeys.attendanceOverride(data.payrollPeriodId, data.employeeId),
       payrollKeys.records()
     ]
-  );
-export const useOverrideEmployeeTaxRecord = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof overrideEmployeeTaxRecordFn>[0]['data']) =>
-      overrideEmployeeTaxRecordFn({ data }),
-    () => [['payroll', 'profile'] as const]
-  );
-export const useAlignBaseSalary = () =>
-  usePayrollMutation(
-    (data: Parameters<typeof alignBaseSalaryFn>[0]['data']) => alignBaseSalaryFn({ data }),
+  }),
+  useOverrideEmployeeTaxRecord: defineMutation({
+    fn: overrideEmployeeTaxRecordFn,
+    keys: () => [['payroll', 'profile'] as const]
+  }),
+  useAlignBaseSalary: defineMutation({
+    fn: alignBaseSalaryFn,
     // Alignment touches many employees' profiles at once; invalidate broadly.
-    () => [payrollKeys.all]
-  );
+    keys: () => [payrollKeys.all]
+  })
+};
+
+export const {
+  useCreateSalaryComponent,
+  useUpdateSalaryComponent,
+  useDeleteSalaryComponent,
+  useCreatePayrollPeriod,
+  useGeneratePayroll,
+  useAdjustPayrollRecord,
+  useApprovePayroll,
+  useMarkPayrollPaid,
+  usePayQueueSelection,
+  useLockPayroll,
+  useUpdateEmployeePayrollProfile,
+  useUpdateCompanyPayrollSettings,
+  useUpsertEmployeeBpjsEnrollment,
+  useCreateEmployeeBpjsFamilyMember,
+  useDeleteEmployeeBpjsFamilyMember,
+  useUpsertAttendanceOverride,
+  useOverrideEmployeeTaxRecord,
+  useAlignBaseSalary
+} = payrollMutations;
