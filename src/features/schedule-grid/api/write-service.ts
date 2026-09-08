@@ -35,6 +35,12 @@
  * Each write runs in its own DB transaction (DELETE-then-INSERT) so the
  * `date_overrides_user_date_unique` / `day_offs_user_date_unique` unique
  * constraints cannot fire.
+ *
+ * The three single-cell fns (`setCellShiftFn`, `setCellDayOffFn`,
+ * `clearCellFn`) share the transaction + re-resolve + error-folding
+ * scaffolding through `withCellWrite`; `applyToWholeWeekFn` keeps its own
+ * per-date loop because failures are captured into `partialFailures`
+ * instead of aborting the batch.
  */
 
 import { createServerFn } from '@tanstack/react-start';
@@ -272,6 +278,42 @@ async function resolveSingleCell(input: {
   };
 }
 
+/**
+ * Transaction handle type as passed by `db.transaction` — derived from the
+ * method signature so the shared wrapper and its callers never have to
+ * import drizzle's `PgTransaction` explicitly.
+ */
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Shared scaffolding for the single-cell write fns (`setCellShiftFn`,
+ * `setCellDayOffFn`, `clearCellFn`): run the write inside one DB
+ * transaction, re-resolve the affected cell via `resolveSingleCell` so the
+ * React Query cache update matches a fresh fetch, then fold any failure
+ * through a single `mapDbError` catch block into the `{ success: false }`
+ * tuple. The `context` string is the `mapDbError` log context; the caller
+ * keeps its `requirePermission` / `checkRateLimit` preamble.
+ */
+async function withCellWrite(
+  context: string,
+  input: { userId: string; date: string },
+  fn: (tx: DbTransaction) => Promise<void>
+): Promise<CellWriteResult> {
+  try {
+    await db.transaction(fn);
+    const cell = await resolveSingleCell(input);
+    return {
+      success: true,
+      cell,
+      affectedUserId: input.userId,
+      affectedDates: [input.date]
+    };
+  } catch (error) {
+    mapDbError(error, context);
+    return { success: false, error: ERROR_INTERNAL };
+  }
+}
+
 // --- setCellShiftFn ---
 
 export const setCellShiftFn = createServerFn({ method: 'POST' })
@@ -279,37 +321,25 @@ export const setCellShiftFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<CellWriteResult> => {
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
-    try {
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(dateOverrides)
-          .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
-        // Orphan-prevention guard: if a `day_offs` row exists for this
-        // (user, date), delete it so the new override takes precedence
-        // immediately instead of being masked. The popover's conflict UX
-        // already enforces this client-side; this DELETE is the
-        // server-side mirror (see EPIC_SUMMARY § Follow-ups #2).
-        await tx
-          .delete(dayOffs)
-          .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
-        await tx.insert(dateOverrides).values({
-          user_id: data.userId,
-          date: data.date,
-          shift_id: data.shiftId,
-          created_by: session.user.id
-        });
+    return withCellWrite('scheduleGrid.setCellShift', data, async (tx) => {
+      await tx
+        .delete(dateOverrides)
+        .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
+      // Orphan-prevention guard: if a `day_offs` row exists for this
+      // (user, date), delete it so the new override takes precedence
+      // immediately instead of being masked. The popover's conflict UX
+      // already enforces this client-side; this DELETE is the
+      // server-side mirror (see EPIC_SUMMARY § Follow-ups #2).
+      await tx
+        .delete(dayOffs)
+        .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
+      await tx.insert(dateOverrides).values({
+        user_id: data.userId,
+        date: data.date,
+        shift_id: data.shiftId,
+        created_by: session.user.id
       });
-      const cell = await resolveSingleCell({ userId: data.userId, date: data.date });
-      return {
-        success: true,
-        cell,
-        affectedUserId: data.userId,
-        affectedDates: [data.date]
-      };
-    } catch (e) {
-      mapDbError(e, 'scheduleGrid.setCellShift');
-      return { success: false, error: ERROR_INTERNAL };
-    }
+    });
   });
 
 // --- setCellDayOffFn ---
@@ -319,32 +349,20 @@ export const setCellDayOffFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<CellWriteResult> => {
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
-    try {
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(dateOverrides)
-          .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
-        await tx
-          .delete(dayOffs)
-          .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
-        await tx.insert(dayOffs).values({
-          user_id: data.userId,
-          date: data.date,
-          reason: data.reason ?? null,
-          created_by: session.user.id
-        });
+    return withCellWrite('scheduleGrid.setCellDayOff', data, async (tx) => {
+      await tx
+        .delete(dateOverrides)
+        .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
+      await tx
+        .delete(dayOffs)
+        .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
+      await tx.insert(dayOffs).values({
+        user_id: data.userId,
+        date: data.date,
+        reason: data.reason ?? null,
+        created_by: session.user.id
       });
-      const cell = await resolveSingleCell({ userId: data.userId, date: data.date });
-      return {
-        success: true,
-        cell,
-        affectedUserId: data.userId,
-        affectedDates: [data.date]
-      };
-    } catch (e) {
-      mapDbError(e, 'scheduleGrid.setCellDayOff');
-      return { success: false, error: ERROR_INTERNAL };
-    }
+    });
   });
 
 // --- clearCellFn ---
@@ -354,26 +372,14 @@ export const clearCellFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<CellWriteResult> => {
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
-    try {
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(dateOverrides)
-          .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
-        await tx
-          .delete(dayOffs)
-          .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
-      });
-      const cell = await resolveSingleCell({ userId: data.userId, date: data.date });
-      return {
-        success: true,
-        cell,
-        affectedUserId: data.userId,
-        affectedDates: [data.date]
-      };
-    } catch (e) {
-      mapDbError(e, 'scheduleGrid.clearCell');
-      return { success: false, error: ERROR_INTERNAL };
-    }
+    return withCellWrite('scheduleGrid.clearCell', data, async (tx) => {
+      await tx
+        .delete(dateOverrides)
+        .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
+      await tx
+        .delete(dayOffs)
+        .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
+    });
   });
 
 // --- applyToWholeWeekFn ---
@@ -436,11 +442,11 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
         }
         daysApplied += 1;
         affectedDates.push(date);
-      } catch (e) {
+      } catch (error) {
         // Non-throwing log (NOT `mapDbError`, which throws `never`) so one
         // failing date lands in `partialFailures` without aborting the
         // remaining batch — same pattern as `repeatWeekBulkFn`.
-        logger.error({ err: e, userId: data.userId, date }, '[db:scheduleGrid.applyToWeek]');
+        logger.error({ err: error, userId: data.userId, date }, '[db:scheduleGrid.applyToWeek]');
         partialFailures.push({ date, error: ERROR_INTERNAL });
       }
     }

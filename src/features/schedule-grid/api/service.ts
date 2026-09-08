@@ -499,10 +499,10 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
         assignment: result.assignment,
         ...(result.closedAssignment ? { closedAssignment: result.closedAssignment } : {})
       };
-    } catch (e) {
+    } catch (error) {
       // mapDbError logs + throws a DomainError; the client wraps the call
       // in try/catch and surfaces errorGeneric. We don't return a tuple
       // here because `mapDbError`'s return type is `never`.
-      mapDbError(e, 'scheduleGrid.createAssignmentInline');
+      mapDbError(error, 'scheduleGrid.createAssignmentInline');
     }
   });
