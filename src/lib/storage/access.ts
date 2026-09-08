@@ -1,11 +1,12 @@
-export type KeyFolder = 'attendance' | 'customers' | 'tickets' | 'checklists';
+export type KeyFolder = 'attendance' | 'customers' | 'tickets' | 'checklists' | 'avatars';
 
 export function parseKeyFolder(key: string): KeyFolder | null {
   const folder = key.split('/')[0];
   return folder === 'attendance' ||
     folder === 'customers' ||
     folder === 'tickets' ||
-    folder === 'checklists'
+    folder === 'checklists' ||
+    folder === 'avatars'
     ? folder
     : null;
 }
@@ -17,6 +18,7 @@ export function parseKeyFolder(key: string): KeyFolder | null {
  * - attendance/ keys: caller may read their own, or any with attendance.edit
  *   (modeled as isAdmin here; the server fn passes true only when it has
  *   already verified attendance.edit).
+ * - avatars/ keys: caller may read their own only (profile page self-view).
  * - customers/, tickets/ keys: no per-user ownership (module permission is
  *   the gate).
  */
@@ -32,6 +34,9 @@ export function canViewKey(
   }
   if (folder === 'checklists') {
     return canReviewChecklists || key.startsWith(`checklists/${userId}/`);
+  }
+  if (folder === 'avatars') {
+    return key.startsWith(`avatars/${userId}/`);
   }
   return folder === 'customers' || folder === 'tickets';
 }

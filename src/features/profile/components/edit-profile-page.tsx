@@ -4,13 +4,12 @@ import { useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { authClient, useSession } from '@/lib/auth/auth-client';
-import { uploadSelfie } from '@/lib/storage/upload-client';
+import { uploadAvatar } from '@/lib/storage/upload-client';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
-import { avatarUrlQueryOptions } from '../api/queries';
-import { myWorkInfoFixture } from '../lib/work-info';
+import { avatarUrlQueryOptions, myWorkInfoQueryOptions } from '../api/queries';
 import { initialsFromName } from '@/lib/format';
 
 function readAsDataURL(file: File): Promise<string> {
@@ -56,6 +55,8 @@ export default function EditProfilePage() {
   });
   const avatarSrc = image && !isObjectKey ? image : isObjectKey ? (avatarData?.url ?? null) : null;
 
+  const { data: workInfo } = useQuery(myWorkInfoQueryOptions());
+
   async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -65,9 +66,7 @@ export default function EditProfilePage() {
     setAvatarHint(null);
     try {
       const dataUrl = await readAsDataURL(file);
-      // TODO(wire): 'attendance' is the only existing upload folder — a
-      // dedicated avatars folder/presign path is pending backend scope.
-      const key = await uploadSelfie(dataUrl, 'attendance');
+      const key = await uploadAvatar(dataUrl);
       await authClient.updateUser({ image: key });
       toast.success(t('editProfile.avatarUpdated'));
     } catch {
@@ -224,19 +223,20 @@ export default function EditProfilePage() {
           <h2 className='text-muted-foreground dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider'>
             {t('editProfile.workInfo')}
           </h2>
-          {/* TODO(wire): rendered from fixtures until a self-profile server function exists. */}
+          {/* Work info resolved from the signed-in employee record; falls
+              back to em-dashes when the user has no employee profile. */}
           <dl>
             {[
-              { label: t('editProfile.employeeCode'), value: myWorkInfoFixture.employeeCode },
-              { label: t('editProfile.department'), value: myWorkInfoFixture.department },
-              { label: t('editProfile.jobTitle'), value: myWorkInfoFixture.jobTitle }
+              { label: t('editProfile.employeeCode'), value: workInfo?.employeeCode },
+              { label: t('editProfile.department'), value: workInfo?.department },
+              { label: t('editProfile.jobTitle'), value: workInfo?.jobTitle }
             ].map((row) => (
               <div
                 key={row.label}
                 className='dark:border-zinc-800/50 flex items-center justify-between border-b py-2.5 last:border-0'
               >
                 <dt className='text-muted-foreground dark:text-zinc-400 text-xs'>{row.label}</dt>
-                <dd className='dark:text-zinc-200 text-sm font-medium'>{row.value}</dd>
+                <dd className='dark:text-zinc-200 text-sm font-medium'>{row.value ?? '—'}</dd>
               </div>
             ))}
           </dl>

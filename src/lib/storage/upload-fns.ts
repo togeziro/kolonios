@@ -4,7 +4,13 @@ import { requirePermission, requireSession } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { deriveStorageConfig, readyConfig } from './config';
 
-export const uploadFolderSchema = z.enum(['attendance', 'customers', 'tickets', 'checklists']);
+export const uploadFolderSchema = z.enum([
+  'attendance',
+  'customers',
+  'tickets',
+  'checklists',
+  'avatars'
+]);
 
 export const getUploadUrlSchema = z.object({
   folder: uploadFolderSchema,
@@ -20,7 +26,8 @@ const FOLDER_PERMISSION = {
   attendance: ['attendance', 'view'],
   customers: ['customers', 'add'],
   tickets: ['tickets', 'view'],
-  checklists: ['checklist', 'edit']
+  checklists: ['checklist', 'edit'],
+  avatars: ['profile', 'view']
 } as const;
 
 export const getUploadUrlFn = createServerFn({ method: 'POST' })
@@ -35,12 +42,14 @@ export const getUploadUrlFn = createServerFn({ method: 'POST' })
     if (!derived) throw new Error('Storage is not configured');
     const config = await readyConfig(derived);
     const { buildStorageClient, createPresignedPutUrl } = await import('./presign');
-    const { attendanceSelfieKey, customerIdCardKey, ticketPhotoKey, checklistPhotoKey } =
+    const { attendanceSelfieKey, avatarKey, customerIdCardKey, ticketPhotoKey, checklistPhotoKey } =
       await import('./keys');
     const timestamp = Date.now();
     let key: string;
     if (data.folder === 'attendance') {
       key = attendanceSelfieKey(session.user.id, timestamp);
+    } else if (data.folder === 'avatars') {
+      key = avatarKey(session.user.id, timestamp);
     } else if (data.folder === 'customers') {
       // ownerId is the client-generated customer id (created in the form
       // before the row exists) — never the session user's id.

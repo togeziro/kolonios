@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   listEmployees,
   getEmployeeById,
+  getMyEmployee,
   createEmployee,
   updateEmployee,
   deleteEmployee
@@ -198,6 +199,26 @@ describe('employees data access (integration)', () => {
     it('reports failure for a missing employee id', async () => {
       const res = await getEmployeeById('nonexistent');
       expect(res.success).toBe(false);
+    });
+  });
+
+  describe('getMyEmployee', () => {
+    it('returns self-scoped work identity with joined department/designation', async () => {
+      await seedUser(TEST_EMP_USER_ID);
+      await seedEmployee(TEST_EMP_USER_ID);
+
+      const res = await getMyEmployee(TEST_EMP_USER_ID);
+      expect(res).toEqual({
+        employeeCode: expect.stringMatching(/^EMP-/),
+        department: 'Engineering',
+        jobTitle: 'Developer'
+      });
+    });
+
+    it('returns null for a user without an employee record', async () => {
+      await seedUser(TEST_EMP_USER_ID);
+      const res = await getMyEmployee(TEST_EMP_USER_ID);
+      expect(res).toBeNull();
     });
   });
 

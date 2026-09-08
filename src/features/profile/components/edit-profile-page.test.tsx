@@ -5,11 +5,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
-const { navigateMock, updateUserMock, uploadSelfieMock, toastMock, useSessionMock, queryMock } =
+const { navigateMock, updateUserMock, uploadAvatarMock, toastMock, useSessionMock, queryMock } =
   vi.hoisted(() => ({
     navigateMock: vi.fn(),
     updateUserMock: vi.fn(),
-    uploadSelfieMock: vi.fn(),
+    uploadAvatarMock: vi.fn(),
     toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
     useSessionMock: vi.fn(),
     queryMock: vi.fn()
@@ -40,18 +40,22 @@ vi.mock('@/lib/auth/auth-client', () => ({
 
 vi.mock('@/lib/storage/upload-client', () => ({
   PHOTO_UPLOAD_FAILED: 'PHOTO_UPLOAD_FAILED',
-  uploadSelfie: uploadSelfieMock
+  uploadAvatar: uploadAvatarMock
 }));
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
-  return { ...actual, useQuery: () => queryMock() };
+  return { ...actual, useQuery: (options: { queryKey: unknown[] }) => queryMock(options) };
 });
 
 vi.mock('../api/queries', () => ({
   profileKeys: { all: ['profile'], avatar: (key: string) => ['profile', 'avatar', key] },
   avatarUrlQueryOptions: (key: string) => ({
     queryKey: ['profile', 'avatar', key],
+    queryFn: vi.fn()
+  }),
+  myWorkInfoQueryOptions: () => ({
+    queryKey: ['profile', 'work-info'],
     queryFn: vi.fn()
   })
 }));
@@ -74,16 +78,29 @@ function renderPage() {
 
 beforeEach(() => {
   updateUserMock.mockReset();
-  uploadSelfieMock.mockReset();
+  uploadAvatarMock.mockReset();
   navigateMock.mockReset();
   toastMock.success.mockReset();
   toastMock.error.mockReset();
-  queryMock.mockReturnValue({ data: undefined });
+  queryMock.mockReset();
+  queryMock.mockImplementation(() => ({ data: undefined }));
   useSessionMock.mockReturnValue({ data: { user: sessionUser }, isPending: false });
 });
 
 describe('EditProfilePage', () => {
   it('renders all sections with session data and work-info rows', () => {
+    queryMock.mockImplementation((options: { queryKey: unknown[] }) => {
+      if (options.queryKey[1] === 'work-info') {
+        return {
+          data: {
+            employeeCode: 'TECH-0042',
+            department: 'Field Operations',
+            jobTitle: 'Senior Technician'
+          }
+        };
+      }
+      return { data: undefined };
+    });
     renderPage();
 
     expect(screen.getByText('Personal Information')).toBeTruthy();
@@ -124,7 +141,7 @@ describe('EditProfilePage', () => {
 
   it('uploads an avatar through the storage client then updates the session image', async () => {
     updateUserMock.mockResolvedValue({ data: {}, error: null });
-    uploadSelfieMock.mockResolvedValue('attendance/u/9.jpg');
+    uploadAvatarMock.mockResolvedValue('avatars/u/9.jpg');
     renderPage();
 
     const file = new File(['fake-image'], 'avatar.png', { type: 'image/png' });
@@ -133,16 +150,16 @@ describe('EditProfilePage', () => {
     });
 
     await waitFor(() => {
-      expect(uploadSelfieMock).toHaveBeenCalledWith(expect.any(String), 'attendance');
+      expect(uploadAvatarMock).toHaveBeenCalledWith(expect.any(String));
     });
     await waitFor(() => {
-      expect(updateUserMock).toHaveBeenCalledWith({ image: 'attendance/u/9.jpg' });
+      expect(updateUserMock).toHaveBeenCalledWith({ image: 'avatars/u/9.jpg' });
     });
     expect(toastMock.success).toHaveBeenCalled();
   });
 
   it('falls back to initials without crashing when storage is unconfigured', async () => {
-    uploadSelfieMock.mockRejectedValue(new Error('Storage is not configured'));
+    uploadAvatarMock.mockRejectedValue(new Error('Storage is not configured'));
     renderPage();
 
     const file = new File(['fake-image'], 'avatar.png', { type: 'image/png' });
@@ -151,7 +168,7 @@ describe('EditProfilePage', () => {
     });
 
     await waitFor(() => {
-      expect(uploadSelfieMock).toHaveBeenCalled();
+      expect(uploadAvatarMock).toHaveBeenCalled();
     });
     await waitFor(() => {
       expect(screen.getByRole('status').textContent).toContain("storage isn't available");

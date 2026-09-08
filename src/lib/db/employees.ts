@@ -207,6 +207,37 @@ export async function getEmployeeById(id: string): Promise<EmployeeByIdResponse>
   }
 }
 
+/**
+ * Self-scoped employee summary for the signed-in user (id mirrors user.id).
+ * Deliberately returns only work-identity fields — never salary/status — so
+ * it can be exposed to any signed-in user via their own profile page.
+ */
+export async function getMyEmployee(
+  userId: string
+): Promise<{ employeeCode: string; department: string; jobTitle: string } | null> {
+  try {
+    const [row] = await db
+      .select({
+        employeeCode: employees.employee_code,
+        department: departments.name,
+        jobTitle: designations.name
+      })
+      .from(employees)
+      .leftJoin(departments, eq(employees.department_id, departments.id))
+      .leftJoin(designations, eq(employees.designation_id, designations.id))
+      .where(eq(employees.id, userId))
+      .limit(1);
+    if (!row) return null;
+    return {
+      employeeCode: row.employeeCode,
+      department: row.department ?? '',
+      jobTitle: row.jobTitle ?? ''
+    };
+  } catch (e) {
+    mapDbError(e, 'employees.getMyEmployee');
+  }
+}
+
 type AuthUserRecord = { id: string; role?: string };
 type AuthApi = {
   createUser: (opts: { body: Record<string, unknown> }) => Promise<AuthUserRecord>;

@@ -2,6 +2,10 @@ export function attendanceSelfieKey(userId: string, timestamp: number): string {
   return `attendance/${userId}/${timestamp}.jpg`;
 }
 
+export function avatarKey(userId: string, timestamp: number): string {
+  return `avatars/${userId}/${timestamp}.jpg`;
+}
+
 export function customerIdCardKey(customerId: string): string {
   return `customers/${customerId}/id-card.jpg`;
 }

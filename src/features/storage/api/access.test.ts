@@ -6,6 +6,7 @@ describe('storage access guard', () => {
     expect(parseKeyFolder('attendance/u/1.jpg')).toBe('attendance');
     expect(parseKeyFolder('customers/c/id-card.jpg')).toBe('customers');
     expect(parseKeyFolder('tickets/1/2.jpg')).toBe('tickets');
+    expect(parseKeyFolder('avatars/u/1.jpg')).toBe('avatars');
     expect(parseKeyFolder('etc/passwd')).toBeNull();
   });
 
@@ -16,6 +17,12 @@ describe('storage access guard', () => {
 
   it('admins bypass the ownership check', () => {
     expect(canViewKey('attendance/user-2/1723640000.jpg', 'user-1', true)).toBe(true);
+  });
+
+  it('avatars keys are owner-scoped (self only, no admin bypass)', () => {
+    expect(canViewKey('avatars/user-1/1723640000.jpg', 'user-1', false)).toBe(true);
+    expect(canViewKey('avatars/user-2/1723640000.jpg', 'user-1', false)).toBe(false);
+    expect(canViewKey('avatars/user-2/1723640000.jpg', 'user-1', true)).toBe(false);
   });
 
   it('customers and tickets keys are not ownership-scoped', () => {

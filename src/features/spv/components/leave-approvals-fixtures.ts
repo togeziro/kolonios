@@ -1,6 +1,7 @@
-// TODO(wire): local fixtures for the Leave Approvals queue. Replace with a
-// reviewer-scoped leave listing server function once it exists. Balance
-// quotas and hourly permits ("Izin Jam") are explicitly out of scope.
+// Deliberate contract (deferred backend wiring): these fixtures stand in for
+// a reviewer-scoped leave listing server function, tracked at
+// .scratch/leave-approvals-live/issues/01-reviewer-scoped-leave-listing.md.
+// Balance quotas and hourly permits ("Izin Jam") are explicitly out of scope.
 export type LeaveRequestFixture = {
   id: number;
   requesterName: string;
