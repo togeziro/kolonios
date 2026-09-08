@@ -8,6 +8,19 @@ import type { Money } from '../api/types';
  * not validate integrality.
  */
 
+/** Money is integer minor units. Every derived amount is rounded half-up. */
+export function roundMoney(value: number): Money {
+  if (!Number.isFinite(value)) throw new RangeError('Money calculations must be finite.');
+  const normalized = Number(value.toFixed(12));
+  const rounded = normalized < 0 ? Math.ceil(normalized - 0.5) : Math.floor(normalized + 0.5);
+  if (!Number.isSafeInteger(rounded)) throw new RangeError('Money exceeds the safe integer range.');
+  return rounded;
+}
+
+export function isMoney(value: unknown): value is Money {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
 const DB_DECIMAL_PATTERN = /^\d+(?:\.\d{1,2})?$/;
 
 function dbDecimalToMinor(text: string): Money {
