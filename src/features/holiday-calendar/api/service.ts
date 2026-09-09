@@ -218,10 +218,11 @@ export function mapHolidayResponse(
   if (Array.isArray(payload)) {
     items = payload;
   } else if (payload && typeof payload === 'object') {
-    const object = payload as Record<string, unknown>;
-    for (const key of ['data', 'holidays', 'items']) {
-      if (Array.isArray(object[key])) {
-        items = object[key] as unknown[];
+    const payloadRecord = payload as Record<string, unknown>;
+    for (const candidateKey of ['data', 'holidays', 'items']) {
+      const candidate = payloadRecord[candidateKey];
+      if (Array.isArray(candidate)) {
+        items = candidate;
         break;
       }
     }
