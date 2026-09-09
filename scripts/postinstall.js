@@ -1,7 +1,7 @@
 // Re-applies the TanStack Asset.tsx hydration patch (`scripts/patch-react-router-asset.js`)
 // on every `bun install`. `@tanstack/react-router` still ships the unpatched
 // `Asset.js`, so React hydration mismatch #418 remains broken upstream; see
-// docs/HYDRATION_FIX.md.
+// docs/archive/fixes-2026-08/HYDRATION_FIX.md.
 //
 // The patch is idempotent: it no-ops if already applied.
 require('./patch-react-router-asset.js');

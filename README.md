@@ -170,10 +170,10 @@ Install dependencies and configure environment:
 ```bash
 bun install
 bun run prepare     # activate pre-commit hooks
-cp env.example.txt .env
+cp .env.example .env
 ```
 
-> Fill in `DATABASE_URL` and a strong `AUTH_SECRET` in `.env` (see `env.example.txt`).
+> Fill in `DATABASE_URL` and a strong `BETTER_AUTH_SECRET` in `.env` (see `.env.example`).
 
 Apply the schema and seed the database:
 
@@ -311,25 +311,25 @@ The server-function RPC boundary is hardened at every endpoint:
 
 Detailed docs live in [`docs/`](./docs/):
 
-| Doc                                                                                    | Contents                                                             |
-| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [docs/PRD.md](./docs/PRD.md)                                                           | Product requirements, features, security, roadmap                    |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                         | Tech stack, data flow, patterns                                      |
-| [docs/API.md](./docs/API.md)                                                           | Server function & auth reference                                     |
-| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                               | Notable changes                                                      |
-| [docs/TODO.md](./docs/TODO.md)                                                         | Task tracking                                                        |
-| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                             | Attendance module deep-dive                                          |
-| [docs/MOBILE.md](./docs/MOBILE.md)                                                     | Mobile staff dashboard                                               |
-| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                               | Shell registry + customer portal architecture 🆕                     |
-| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                   | Payroll module deep-dive 🆕                                          |
-| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                 | Kerjoo payroll requirement reference (finish-payroll scope) 🆕       |
-| [docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list 🆕        |
-| [docs/KERJOO_FEATURES_COMPLETE.md](./docs/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (live sidebar, 18 groups) 🆕            |
-| [docs/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios feature comparison + sidebar structure 🆕         |
-| [docs/MISSING_FEATURES_PRIORITIZED.md](./docs/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan with effort estimates 🆕                 |
-| [docs/TICKETS.md](./docs/TICKETS.md)                                                   | Ticket system + field ops (Stitch-driven design spec) 🆕             |
-| [docs/EN_ROUTE.md](./docs/EN_ROUTE.md)                                                 | En Route navigation deep-dive: data flow, fix validation, testing 🆕 |
-| [docs/audit/](./docs/audit/)                                                           | Repository audit + implementation summary                            |
+| Doc                                                                                                                                  | Contents                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [docs/PRD.md](./docs/PRD.md)                                                                                                         | Product requirements, features, security, roadmap                        |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                                                                       | Tech stack, data flow, patterns                                          |
+| [docs/API.md](./docs/API.md)                                                                                                         | Server function & auth reference                                         |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                                                                             | Notable changes                                                          |
+| [docs/TODO.md](./docs/TODO.md)                                                                                                       | Task tracking                                                            |
+| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                                                                           | Attendance module deep-dive                                              |
+| [docs/MOBILE.md](./docs/MOBILE.md)                                                                                                   | Mobile staff dashboard                                                   |
+| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                                                                             | Shell registry + customer portal architecture 🆕                         |
+| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                                                                 | Payroll module deep-dive 🆕                                              |
+| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                                                               | Kerjoo payroll requirement reference (finish-payroll scope) 🆕           |
+| [docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list (archived) 🆕 |
+| [docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md](./docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (archived) 🆕                               |
+| [docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios comparison (archived) 🆕                              |
+| [docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md](./docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan (archived) 🆕                                |
+| [docs/TICKETS.md](./docs/TICKETS.md)                                                                                                 | Ticket system + field ops (Stitch-driven design spec) 🆕                 |
+| [docs/EN_ROUTE.md](./docs/EN_ROUTE.md)                                                                                               | En Route navigation deep-dive: data flow, fix validation, testing 🆕     |
+| [docs/audit/](./docs/audit/)                                                                                                         | Repository audit + implementation summary                                |
 
 ## Code Quality & Architecture
 

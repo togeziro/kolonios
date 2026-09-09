@@ -38,9 +38,7 @@ function buildUrl(raw: string, dbName: string): string {
 export function parseDbUrl(options: { fallback?: string } = {}): DbUrlParts {
   const raw = process.env.DATABASE_URL?.trim() || options.fallback;
   if (!raw) {
-    fail(
-      'DATABASE_URL is not set. Copy env.example.txt to .env (or export DATABASE_URL) and retry.'
-    );
+    fail('DATABASE_URL is not set. Copy .env.example to .env (or export DATABASE_URL) and retry.');
   }
 
   let parsed: URL;
