@@ -96,8 +96,8 @@ export const listEligibleShiftsForDayFn = createServerFn({ method: 'GET' })
         }
 
         return { success: true, shifts: out };
-      } catch (e) {
-        mapDbError(e, 'scheduleGrid.listEligibleShiftsForDay');
+      } catch (error) {
+        mapDbError(error, 'scheduleGrid.listEligibleShiftsForDay');
         return { success: false, error: 'internal' };
       }
     }

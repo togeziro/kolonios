@@ -72,8 +72,8 @@ export function FaceCapture({
     try {
       const stream = await startCamera(videoRef);
       setFaceStream(stream);
-    } catch (err) {
-      if (!RETRIABLE_CAMERA_ERRORS.has(cameraErrorName(err))) throw err;
+    } catch (error) {
+      if (!RETRIABLE_CAMERA_ERRORS.has(cameraErrorName(error))) throw error;
       await new Promise((r) => setTimeout(r, CAMERA_RETRY_BACKOFF_MS));
       const stream = await startCamera(videoRef);
       setFaceStream(stream);
@@ -86,8 +86,8 @@ export function FaceCapture({
     setIsBusy(true);
     try {
       await beginVerification();
-    } catch (err) {
-      setError(t(cameraErrorKey(err)));
+    } catch (error) {
+      setError(t(cameraErrorKey(error)));
       setStatus('idle');
     } finally {
       setIsBusy(false);
@@ -104,8 +104,8 @@ export function FaceCapture({
       setFaceStream(null);
       setPreviewPhoto(null);
       await beginVerification();
-    } catch (err) {
-      setError(t(cameraErrorKey(err)));
+    } catch (error) {
+      setError(t(cameraErrorKey(error)));
       setStatus('idle');
     } finally {
       setIsBusy(false);
@@ -122,8 +122,8 @@ export function FaceCapture({
       setFaceStream(null);
       setPreviewPhoto(null);
       await beginVerification();
-    } catch (err) {
-      setError(t(cameraErrorKey(err)));
+    } catch (error) {
+      setError(t(cameraErrorKey(error)));
       setStatus('idle');
     } finally {
       setIsBusy(false);

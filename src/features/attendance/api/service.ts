@@ -45,9 +45,9 @@ export const checkInFn = createServerFn({ method: 'POST' })
     let shift;
     try {
       shift = await checkIn(session.user.id, data);
-    } catch (err) {
+    } catch (error) {
       await discardOrphanedUpload(data.photo);
-      throw err;
+      throw error;
     }
     if (!shift?.success) {
       await discardOrphanedUpload(data.photo);
@@ -75,9 +75,9 @@ export const checkOutFn = createServerFn({ method: 'POST' })
     let shift;
     try {
       shift = await checkOut(session.user.id, data);
-    } catch (err) {
+    } catch (error) {
       await discardOrphanedUpload(data.photo);
-      throw err;
+      throw error;
     }
     if (!shift?.success) {
       await discardOrphanedUpload(data.photo);

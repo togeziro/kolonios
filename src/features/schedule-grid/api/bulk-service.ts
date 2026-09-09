@@ -244,11 +244,11 @@ export const repeatWeekBulkFn = createServerFn({ method: 'POST' })
               cellsApplied += 1;
               appliedWeeks.add(targetWeekStart);
               appliedUsers.add(userId);
-            } catch (e) {
+            } catch (error) {
               // Non-throwing log (NOT `mapDbError`, which throws) so one
               // failing cell never aborts the remaining batch.
               logger.error(
-                { err: e, userId, date: targetDate },
+                { err: error, userId, date: targetDate },
                 '[db:scheduleGrid.repeatWeekBulk]'
               );
               partialFailures.push({ userId, date: targetDate, error: ERROR_INTERNAL });
@@ -264,8 +264,8 @@ export const repeatWeekBulkFn = createServerFn({ method: 'POST' })
         cellsApplied,
         partialFailures
       };
-    } catch (e) {
-      mapDbError(e, 'scheduleGrid.repeatWeekBulk');
+    } catch (error) {
+      mapDbError(error, 'scheduleGrid.repeatWeekBulk');
       return { success: false, error: ERROR_INTERNAL };
     }
   });

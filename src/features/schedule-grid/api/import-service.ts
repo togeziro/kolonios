@@ -247,8 +247,8 @@ export const importMonthFn = createServerFn({ method: 'POST' })
             });
             cellsApplied += 1;
             rowHadSuccess = true;
-          } catch (err) {
-            logger.error({ err, userId, date }, '[db:scheduleGrid.importMonth.clear]');
+          } catch (error) {
+            logger.error({ err: error, userId, date }, '[db:scheduleGrid.importMonth.clear]');
             partialFailures.push({
               row: excelRowNumber,
               date,
@@ -267,8 +267,8 @@ export const importMonthFn = createServerFn({ method: 'POST' })
             });
             cellsApplied += 1;
             rowHadSuccess = true;
-          } catch (err) {
-            logger.error({ err, userId, date }, '[db:scheduleGrid.importMonth.dayOff]');
+          } catch (error) {
+            logger.error({ err: error, userId, date }, '[db:scheduleGrid.importMonth.dayOff]');
             partialFailures.push({
               row: excelRowNumber,
               date,
@@ -299,8 +299,11 @@ export const importMonthFn = createServerFn({ method: 'POST' })
           });
           cellsApplied += 1;
           rowHadSuccess = true;
-        } catch (err) {
-          logger.error({ err, userId, date, shiftId }, '[db:scheduleGrid.importMonth.shift]');
+        } catch (error) {
+          logger.error(
+            { err: error, userId, date, shiftId },
+            '[db:scheduleGrid.importMonth.shift]'
+          );
           partialFailures.push({
             row: excelRowNumber,
             date,
