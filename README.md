@@ -134,9 +134,11 @@ src/
 │   │   ├── masterdata.ts          # Department/designation CRUD (uses utils)
 │   │   ├── attendance.ts          # Attendance CRUD with Haversine (uses utils)
 │   │   ├── achievements.ts        # Achievement aggregates: streak, monthly stats, ticket counts (uses utils)
-│   │   ├── payroll.ts             # Payroll data access with effective-date resolution (uses utils)
+│   │   ├── payroll.ts             # Payroll data access (effective-date resolution + PTKP/JKK tables live in lib/payroll/engine.ts)
 │   │   ├── audit.ts               # Audit log (uses utils)
 │   │   └── tickets.ts               # Ticket/leg system (replaces tasks.ts, uses utils)
+│   ├── payroll/                   # Pure payroll-domain engine (ADR-0001): effective-date resolution, PTKP/JKK tables
+│   │   └── engine.ts              # Pure rules (no DB, no IO, no clock); see engine.test.ts for the 22-case contract
 │   ├── errors.ts                  # DomainError + mapDbError
 │   ├── logger.ts                  # structured pino logger
 │   ├── parsers.ts                 # sort/filter parsers
