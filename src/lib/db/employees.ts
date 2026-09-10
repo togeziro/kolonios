@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from './index';
-import { mapDbError } from '../errors';
+import { DomainError, mapDbError } from '../errors';
+import { businessDateInTimeZone } from '@/lib/dates';
 import { employees } from './schema/employees';
 import { departments, designations } from './schema/masterdata';
 import type {
@@ -297,7 +298,13 @@ export async function createEmployee(data: EmployeeMutationPayload & { created_b
   }
 }
 
-export async function updateEmployee(id: string, data: EmployeeMutationPayload) {
+export const EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR = 'EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR';
+
+export async function updateEmployee(
+  id: string,
+  data: EmployeeMutationPayload,
+  options: { actorUserId?: string; effectiveDate?: string } = {}
+) {
   try {
     const existing = await getEmployeeOr404(id);
     if (!existing) {
@@ -317,29 +324,93 @@ export async function updateEmployee(id: string, data: EmployeeMutationPayload) 
       } catch {}
     }
 
-    const [updated] = await db
-      .update(employees)
-      .set({
-        full_name: data.full_name,
-        nickname: data.nickname ?? '',
-        email: data.email,
-        phone: data.phone ?? '',
-        birth_place: data.birth_place ?? '',
-        birth_date: data.birth_date,
-        address: data.address ?? '',
-        id_number: data.id_number ?? '',
-        department_id: data.department_id,
-        designation_id: data.designation_id,
-        is_internship: data.is_internship ?? false,
-        employment_status: data.employment_status ?? 'active',
-        join_date: data.join_date,
-        leave_date: data.leave_date ?? null,
-        base_salary: data.base_salary ?? 0,
-        status: data.status ?? 'active',
-        updated_at: new Date()
-      })
-      .where(eq(employees.id, id))
-      .returning();
+    // Dual-write path for the Career Timeline. Any change to one of the
+    // three tracked columns (department_id, designation_id,
+    // employment_status) flows through `appendCareerEventTx`, which writes
+    // the matching employee_career_events row AND updates the column. The
+    // legacy Edit Employee form and the new Career Timeline dialog share this
+    // single code path (ADR-0007, ticket 04 acceptance criteria).
+    //
+    // The legacy form can change several tracked columns at once, so every
+    // event insert AND the full employee UPDATE run inside ONE transaction:
+    // a failure anywhere rolls back all of them (no partially-applied edit).
+    const newEmploymentStatus = data.employment_status ?? 'active';
+    const departmentChanged = data.department_id !== existing.department_id;
+    const designationChanged = data.designation_id !== existing.designation_id;
+    const employmentStatusChanged = newEmploymentStatus !== existing.employment_status;
+    const hasTrackedChange = departmentChanged || designationChanged || employmentStatusChanged;
+
+    // A tracked-column change MUST be attributable to an actor. Silently
+    // skipping the timeline row (the pre-fix behaviour) lost the audit trail.
+    if (hasTrackedChange && !options.actorUserId) {
+      throw new DomainError(
+        'An actor is required to record a department, designation, or employment-status change.',
+        EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR
+      );
+    }
+    const actorUserId = options.actorUserId;
+
+    const effectiveDate = options.effectiveDate ?? businessDateInTimeZone(new Date());
+    const notes: string | null = null;
+
+    const { appendCareerEventTx } = await import('./career-timeline');
+
+    const [updated] = await db.transaction(async (tx) => {
+      if (departmentChanged && actorUserId) {
+        await appendCareerEventTx(tx, {
+          category: 'division',
+          employeeId: id,
+          toDepartmentId: data.department_id,
+          effectiveDate,
+          notes,
+          actorUserId
+        });
+      }
+      if (designationChanged && actorUserId) {
+        await appendCareerEventTx(tx, {
+          category: 'position',
+          employeeId: id,
+          toDesignationId: data.designation_id,
+          effectiveDate,
+          notes,
+          actorUserId
+        });
+      }
+      if (employmentStatusChanged && actorUserId) {
+        await appendCareerEventTx(tx, {
+          category: 'employment_status',
+          employeeId: id,
+          toLabel: newEmploymentStatus,
+          effectiveDate,
+          notes,
+          actorUserId
+        });
+      }
+
+      return tx
+        .update(employees)
+        .set({
+          full_name: data.full_name,
+          nickname: data.nickname ?? '',
+          email: data.email,
+          phone: data.phone ?? '',
+          birth_place: data.birth_place ?? '',
+          birth_date: data.birth_date,
+          address: data.address ?? '',
+          id_number: data.id_number ?? '',
+          department_id: data.department_id,
+          designation_id: data.designation_id,
+          is_internship: data.is_internship ?? false,
+          employment_status: newEmploymentStatus,
+          join_date: data.join_date,
+          leave_date: data.leave_date ?? null,
+          base_salary: data.base_salary ?? 0,
+          status: data.status ?? 'active',
+          updated_at: new Date()
+        })
+        .where(eq(employees.id, id))
+        .returning();
+    });
 
     return {
       success: true,

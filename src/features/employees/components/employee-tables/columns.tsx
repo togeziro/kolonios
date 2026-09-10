@@ -7,6 +7,7 @@ import type { Column, ColumnDef } from '@tanstack/react-table';
 import type { AppFeatures } from '@/lib/table-features';
 import { Icons } from '@/components/icons';
 import { formatDate } from '@/lib/format';
+import { Link } from '@tanstack/react-router';
 import { CellAction } from './cell-action';
 import { STATUS_OPTIONS } from './options';
 
@@ -68,7 +69,13 @@ export const columns: ColumnDef<AppFeatures, Employee>[] = [
       <div className='flex items-center gap-3'>
         <InitialChip name={row.original.full_name} />
         <div className='flex flex-col'>
-          <span className='font-medium'>{row.original.full_name}</span>
+          <Link
+            to='/dashboard/employees/$id'
+            params={{ id: row.original.id }}
+            className='font-medium hover:underline'
+          >
+            {row.original.full_name}
+          </Link>
           <span className='text-muted-foreground text-xs'>{row.original.email}</span>
         </div>
       </div>

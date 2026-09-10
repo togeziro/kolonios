@@ -10,7 +10,11 @@ async function loginAndSave(page: import('@playwright/test').Page, file: string)
   const submit = page.getByRole('button', { name: /Login|Masuk/i });
   await submit.waitFor({ state: 'visible' });
 
-  const email = file.includes('admin') ? 'admin@example.com' : 'employee@example.com';
+  const email = file.includes('admin')
+    ? 'admin@example.com'
+    : file.includes('hr')
+      ? 'hr@example.com'
+      : 'employee@example.com';
   const password = 'Password123!';
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -36,4 +40,8 @@ setup('authenticate admin', async ({ page }) => {
 
 setup('authenticate employee', async ({ page }) => {
   await loginAndSave(page, `${AUTH_DIR}/employee.json`);
+});
+
+setup('authenticate hr', async ({ page }) => {
+  await loginAndSave(page, `${AUTH_DIR}/hr.json`);
 });

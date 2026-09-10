@@ -8,4 +8,5 @@ export * from './audit-log';
 export * from './role-groups';
 export * from './user-role-groups';
 export * from './payroll';
+export * from './employee-career-events';
 export * from '../auth-schema';

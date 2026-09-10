@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { useSearch, useNavigate } from '@tanstack/react-router';
+import { Outlet, useMatch, useSearch, useNavigate } from '@tanstack/react-router';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -74,6 +74,10 @@ function EmployeesPage() {
   const { t } = useTranslation();
   const search = useSearch({ strict: false }) as SearchParams;
   const navigate = useNavigate() as unknown as NavigateWithSearch;
+  // The $id detail route renders through this parent: without an <Outlet/>
+  // the detail page never mounts and the list stays on screen even though
+  // the URL changes (ticket 04 E2E: list → open one employee).
+  const detailMatch = useMatch({ from: '/dashboard/employees/$id', shouldThrow: false });
 
   const page = (search.page as number) ?? 1;
   const perPage = (search.perPage as number) ?? 10;
@@ -149,6 +153,10 @@ function EmployeesPage() {
       <EmployeeFormSheetTrigger />
     </div>
   );
+
+  if (detailMatch) {
+    return <Outlet />;
+  }
 
   return (
     <PageContainer>

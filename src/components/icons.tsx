@@ -6,6 +6,7 @@ import {
   IconBell,
   IconBold,
   IconBox,
+  IconBriefcase,
   IconBrightness,
   IconBuilding,
   IconCamera,
@@ -64,6 +65,7 @@ import {
   IconPhone,
   IconPhoto,
   IconPizza,
+  IconPlayerPlay,
   IconPlus,
   IconProps,
   IconQrcode,
@@ -87,6 +89,7 @@ import {
   IconUnderline,
   IconUpload,
   IconUser,
+  IconUserCheck,
   IconUserCircle,
   IconUserEdit,
   IconUsers,
@@ -206,6 +209,11 @@ export const Icons = {
   sparkles: IconSparkles,
   badgeCheck: IconRosetteDiscountCheck,
   lock: IconLock,
+
+  // Career Timeline categories
+  briefcase: IconBriefcase,
+  userCheck: IconUserCheck,
+  playCircle: IconPlayerPlay,
 
   // Data / Charts
   trendingDown: IconTrendingDown,

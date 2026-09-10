@@ -1,11 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import {
   listEmployees,
   getEmployeeById,
   getMyEmployee,
   createEmployee,
   updateEmployee,
-  deleteEmployee
+  deleteEmployee,
+  EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR
 } from './employees';
 import { resetAllTables, seedUser, seedDepartment, seedDesignation } from '@/test-utils/db';
 import { db } from '@/lib/db';
@@ -291,6 +293,203 @@ describe('employees data access (integration)', () => {
         join_date: '2024-01-01'
       });
       expect(res.success).toBe(false);
+    });
+  });
+
+  describe('updateEmployee — dual-write to career timeline (regression for ticket 04)', () => {
+    it('produces exactly one matching employee_career_events row when department_id changes', async () => {
+      const { findCareerEventsFor } = await import('./career-timeline');
+      const { departments } = await import('./schema/masterdata');
+      const { seedDepartment } = await import('@/test-utils/db');
+
+      await seedUser(TEST_EMP_USER_ID);
+      await seedEmployee(TEST_EMP_USER_ID);
+      const otherDept = await seedDepartment({ code: 'OTHER', name: 'Other' });
+
+      await updateEmployee(
+        TEST_EMP_USER_ID,
+        {
+          full_name: 'Updated',
+          email: 'updated@test.com',
+          birth_date: '1990-01-01',
+          department_id: otherDept.id,
+          designation_id: desigId,
+          join_date: '2024-01-01'
+        },
+        { actorUserId: TEST_EMP_USER_ID }
+      );
+
+      const matches = await findCareerEventsFor(TEST_EMP_USER_ID, {
+        category: 'division',
+        toDepartmentId: otherDept.id
+      });
+      expect(matches).toHaveLength(1);
+    });
+
+    it('produces exactly one matching employee_career_events row when designation_id changes', async () => {
+      const { findCareerEventsFor } = await import('./career-timeline');
+      const { seedDepartment, seedDesignation } = await import('@/test-utils/db');
+
+      await seedUser(TEST_EMP_USER_ID);
+      await seedEmployee(TEST_EMP_USER_ID);
+      const otherDept = await seedDepartment({ code: 'OTHER2', name: 'Other2' });
+      const otherDesig = await seedDesignation(otherDept.id, {
+        code: 'OTHER2-DSG',
+        name: 'Senior Engineer'
+      });
+
+      await updateEmployee(
+        TEST_EMP_USER_ID,
+        {
+          full_name: 'Updated',
+          email: 'updated@test.com',
+          birth_date: '1990-01-01',
+          department_id: deptId,
+          designation_id: otherDesig.id,
+          join_date: '2024-01-01'
+        },
+        { actorUserId: TEST_EMP_USER_ID }
+      );
+
+      const matches = await findCareerEventsFor(TEST_EMP_USER_ID, {
+        category: 'position',
+        toDesignationId: otherDesig.id
+      });
+      expect(matches).toHaveLength(1);
+    });
+
+    it('produces exactly one employee_career_events row per tracked-column change', async () => {
+      const { findCareerEventsFor } = await import('./career-timeline');
+      const { seedDepartment } = await import('@/test-utils/db');
+
+      await seedUser(TEST_EMP_USER_ID);
+      await seedEmployee(TEST_EMP_USER_ID);
+      const otherDept = await seedDepartment({ code: 'OTHER3', name: 'Other3' });
+
+      await updateEmployee(
+        TEST_EMP_USER_ID,
+        {
+          full_name: 'Updated',
+          email: 'updated@test.com',
+          birth_date: '1990-01-01',
+          department_id: otherDept.id,
+          designation_id: desigId,
+          employment_status: 'probation',
+          join_date: '2024-01-01'
+        },
+        { actorUserId: TEST_EMP_USER_ID }
+      );
+
+      const divisionEvents = await findCareerEventsFor(TEST_EMP_USER_ID, {
+        category: 'division',
+        toDepartmentId: otherDept.id
+      });
+      expect(divisionEvents).toHaveLength(1);
+
+      const statusEvents = await findCareerEventsFor(TEST_EMP_USER_ID, {
+        category: 'employment_status',
+        toLabel: 'probation'
+      });
+      expect(statusEvents).toHaveLength(1);
+    });
+
+    it('does NOT create a Career Event when none of the tracked columns change', async () => {
+      const { listCareerEventsForEmployee } = await import('./career-timeline');
+
+      await seedUser(TEST_EMP_USER_ID);
+      await seedEmployee(TEST_EMP_USER_ID);
+
+      await updateEmployee(
+        TEST_EMP_USER_ID,
+        {
+          full_name: 'Just a name change',
+          email: 'unchanged@test.com',
+          birth_date: '1990-01-01',
+          department_id: deptId,
+          designation_id: desigId,
+          join_date: '2024-01-01'
+        },
+        { actorUserId: TEST_EMP_USER_ID }
+      );
+
+      expect(await listCareerEventsForEmployee(TEST_EMP_USER_ID)).toHaveLength(0);
+    });
+
+    it('rejects a tracked-column change when no actor is supplied (no silent skip)', async () => {
+      const { listCareerEventsForEmployee } = await import('./career-timeline');
+      const { seedDepartment } = await import('@/test-utils/db');
+
+      await seedUser(TEST_EMP_USER_ID);
+      await seedEmployee(TEST_EMP_USER_ID);
+      const otherDept = await seedDepartment({ code: 'NOACTOR', name: 'No Actor' });
+
+      await expect(
+        updateEmployee(TEST_EMP_USER_ID, {
+          full_name: 'Test Employee',
+          email: `${TEST_EMP_USER_ID}@test.com`,
+          birth_date: '1990-01-01',
+          department_id: otherDept.id,
+          designation_id: desigId,
+          join_date: '2024-01-01'
+        })
+      ).rejects.toMatchObject({ code: EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR });
+
+      // Neither the timeline row nor the tracked column was written.
+      expect(await listCareerEventsForEmployee(TEST_EMP_USER_ID)).toHaveLength(0);
+      const [emp] = await db
+        .select({ department_id: employees.department_id })
+        .from(employees)
+        .where(eq(employees.id, TEST_EMP_USER_ID))
+        .limit(1);
+      expect(emp?.department_id).toBe(deptId);
+    });
+
+    it('rolls back every write when a later append fails mid-edit (single transaction)', async () => {
+      const { listCareerEventsForEmployee } = await import('./career-timeline');
+      const { seedDepartment } = await import('@/test-utils/db');
+
+      await seedUser(TEST_EMP_USER_ID);
+      await seedEmployee(TEST_EMP_USER_ID);
+      const otherDept = await seedDepartment({ code: 'ATOMIC', name: 'Atomic' });
+
+      const readState = async () => {
+        const [row] = await db
+          .select({
+            department_id: employees.department_id,
+            designation_id: employees.designation_id,
+            employment_status: employees.employment_status,
+            full_name: employees.full_name
+          })
+          .from(employees)
+          .where(eq(employees.id, TEST_EMP_USER_ID))
+          .limit(1);
+        return row;
+      };
+
+      const before = await readState();
+      expect(await listCareerEventsForEmployee(TEST_EMP_USER_ID)).toHaveLength(0);
+
+      // department_id changes first and its event insert + column update
+      // succeed inside the shared transaction; the subsequent (invalid)
+      // designation append then throws, forcing a full rollback.
+      await expect(
+        updateEmployee(
+          TEST_EMP_USER_ID,
+          {
+            full_name: 'Test Employee',
+            email: `${TEST_EMP_USER_ID}@test.com`,
+            birth_date: '1990-01-01',
+            department_id: otherDept.id,
+            designation_id: 999_999,
+            employment_status: 'probation',
+            join_date: '2024-01-01'
+          },
+          { actorUserId: TEST_EMP_USER_ID }
+        )
+      ).rejects.toThrow();
+
+      expect(await listCareerEventsForEmployee(TEST_EMP_USER_ID)).toHaveLength(0);
+      expect(await readState()).toEqual(before);
     });
   });
 });

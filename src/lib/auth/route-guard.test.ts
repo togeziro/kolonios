@@ -79,6 +79,17 @@ describe('resolveRouteGuard', () => {
     });
   });
 
+  it('maps employee detail (dynamic id) to employees.view', () => {
+    expect(resolveRouteGuard('/dashboard/employees')).toEqual({
+      module: 'employees',
+      action: 'view'
+    });
+    expect(resolveRouteGuard('/dashboard/employees/emp-123')).toEqual({
+      module: 'employees',
+      action: 'view'
+    });
+  });
+
   it('maps SPV review and leave approvals to spv_review.view', () => {
     expect(resolveRouteGuard('/dashboard/spv/review')).toEqual({
       module: 'spv_review',
@@ -179,6 +190,7 @@ describe('resolveRouteGuard', () => {
       '/dashboard/change-password',
       '/dashboard/notifications',
       '/dashboard/employees',
+      '/dashboard/employees/any-id',
       '/dashboard/customers',
       '/dashboard/users',
       '/dashboard/admin/role-groups',
@@ -249,5 +261,15 @@ describe('resolveRouteGuard', () => {
     expect(recordsPrintIndex).toBeGreaterThanOrEqual(0);
     expect(recordsIndex).toBeGreaterThan(recordsPrintIndex);
     expect(payrollIndex).toBeGreaterThan(recordsIndex);
+
+    // /dashboard/employees/$id precedes its bare parent.
+    const employeeDetailIndex = ROUTE_REGISTRY.findIndex(
+      (e) => e.pattern.source === '^\\/dashboard\\/employees\\/[^/]+$'
+    );
+    const employeesIndex = ROUTE_REGISTRY.findIndex(
+      (e) => e.pattern.source === '^\\/dashboard\\/employees$'
+    );
+    expect(employeeDetailIndex).toBeGreaterThanOrEqual(0);
+    expect(employeesIndex).toBeGreaterThan(employeeDetailIndex);
   });
 });

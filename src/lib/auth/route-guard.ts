@@ -209,6 +209,7 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
   { pattern: /^\/dashboard\/edit-profile$/, module: 'profile', action: 'view' },
   { pattern: /^\/dashboard\/change-password$/, module: 'profile', action: 'view' },
   { pattern: /^\/dashboard\/notifications$/, module: 'notifications', action: 'view' },
+  { pattern: /^\/dashboard\/employees\/[^/]+$/, module: 'employees', action: 'view' },
   { pattern: /^\/dashboard\/employees$/, module: 'employees', action: 'view' },
   { pattern: /^\/dashboard\/customers$/, module: 'customers', action: 'view' },
   { pattern: /^\/dashboard\/users$/, module: 'users', action: 'view' }

@@ -4,6 +4,7 @@ import { zodValidator } from '@tanstack/zod-adapter';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withAudit } from '@/lib/audit';
+import { businessDateInTimeZone } from '@/lib/dates';
 import { employeeFiltersSchema, employeeIdSchema, employeeMutationSchema } from './validation';
 
 export const listEmployeesFn = createServerFn({ method: 'GET' })
@@ -57,7 +58,10 @@ export const updateEmployeeFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     const { updateEmployee, getEmployeeById } = await import('@/lib/db/employees');
     const before = await getEmployeeById(id);
-    const updated = await updateEmployee(id, values);
+    const updated = await updateEmployee(id, values, {
+      actorUserId: session.user.id,
+      effectiveDate: businessDateInTimeZone(new Date())
+    });
     await withAudit(
       session.user.id,
       {

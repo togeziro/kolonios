@@ -23,6 +23,7 @@ import {
 import { customers } from '@/lib/db/schema/customers';
 import { departments, designations, companySettings } from '@/lib/db/schema/masterdata';
 import { employees } from '@/lib/db/schema/employees';
+import { employeeCareerEvents } from '@/lib/db/schema/employee-career-events';
 import { notifications } from '@/lib/db/schema/notifications';
 import {
   tickets,
@@ -64,6 +65,7 @@ export async function resetDatabase() {
 
 export async function resetAllTables() {
   // Delete in correct order (child tables before parent tables)
+  await db.delete(employeeCareerEvents);
   await db.delete(payrollAttendanceOverrides);
   await db.delete(employeeBpjsFamilyMembers);
   await db.delete(employeeBpjsEnrollments);
