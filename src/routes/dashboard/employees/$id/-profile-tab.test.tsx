@@ -99,7 +99,7 @@ describe('EmployeeProfileTab — sub-tab shell', () => {
 
   it('switches to the Career Timeline sub-tab when clicked', () => {
     useQueryMock.mockReturnValue({
-      data: { lengthOfService: '0 Month', events: [] },
+      data: { lengthOfService: { years: 0, months: 0 }, events: [] },
       isLoading: false,
       isError: false
     });

@@ -9,9 +9,15 @@ import {
   timestamp
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import {
+  CAREER_EVENT_CATEGORIES,
+  type CareerEventCategory
+} from '../../career-timeline/categories';
 import { user } from '../auth-schema';
 import { employees } from './employees';
 import { departments, designations } from './masterdata';
+
+export { type CareerEventCategory };
 
 /**
  * Career Timeline — see ADR-0007 + ADR-0008 and
@@ -28,12 +34,7 @@ import { departments, designations } from './masterdata';
  * the relevant masterdata row (join key for "who was ever in X" queries).
  */
 
-export const careerEventCategoryEnum = pgEnum('career_event_category', [
-  'position',
-  'division',
-  'employment_status',
-  'start_work'
-]);
+export const careerEventCategoryEnum = pgEnum('career_event_category', CAREER_EVENT_CATEGORIES);
 
 export const employeeCareerEvents = pgTable(
   'employee_career_events',
@@ -101,4 +102,3 @@ export const employeeCareerEventRelations = relations(employeeCareerEvents, ({ o
 
 export type CareerEvent = typeof employeeCareerEvents.$inferSelect;
 export type NewCareerEvent = typeof employeeCareerEvents.$inferInsert;
-export type CareerEventCategory = (typeof careerEventCategoryEnum.enumValues)[number];

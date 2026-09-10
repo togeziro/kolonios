@@ -33,6 +33,47 @@ export async function listCareerEventsForEmployee(employeeId: string): Promise<C
   }
 }
 
+// --- Seed backfill -------------------------------------------------------------
+
+/**
+ * Idempotent `start_work` backfill for the seed script and the data-layer
+ * regression test: seed one `start_work` event per existing employee sourced
+ * from `employees.join_date`, with `actor_user_id = NULL` (system-seeded).
+ * The NOT EXISTS guard makes re-running on a previously-seeded DB a no-op.
+ * Label format mirrors the user-facing "Joined the company 29 June 2026"
+ * copy via `to_char` so rendering is locale-independent.
+ *
+ * Mirrors the shipped migration `0037_brief_thor_girl.sql` (which keeps its
+ * own copy of this SQL). Returns the number of rows inserted.
+ */
+export async function backfillStartWorkEvents(database: typeof db = db): Promise<number> {
+  const inserted = await database.execute(sql`
+    INSERT INTO "employee_career_events" (
+      "employee_id", "category", "effective_date", "notes",
+      "actor_user_id", "from_label", "to_label",
+      "created_at", "updated_at"
+    )
+    SELECT
+      e."id",
+      'start_work'::"career_event_category",
+      e."join_date"::date,
+      NULL,
+      NULL,
+      NULL,
+      'Joined the company ' || to_char(e."join_date"::date, 'FMDD FMMonth FMYYYY'),
+      NOW(),
+      NOW()
+    FROM "employees" e
+    WHERE NOT EXISTS (
+      SELECT 1 FROM "employee_career_events" ece
+      WHERE ece."employee_id" = e."id"
+        AND ece."category" = 'start_work'
+    )
+    RETURNING id
+  `);
+  return Array.isArray(inserted) ? inserted.length : 0;
+}
+
 // --- Dual-write payload -------------------------------------------------------
 
 /**

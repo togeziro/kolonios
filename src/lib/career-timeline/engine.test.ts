@@ -4,7 +4,6 @@ import {
   categoryColor,
   categoryIcon,
   categoryLabel,
-  formatEventDescription,
   lengthOfService,
   sortEventsByEffectiveDateDesc,
   type CareerEventCategory,
@@ -32,55 +31,67 @@ function row(
 }
 
 describe('lengthOfService', () => {
-  it('returns 0 Month when the employee joined today', () => {
-    expect(lengthOfService('2026-09-10', new Date(2026, 8, 10))).toBe('0 Month');
+  it('returns zero tenure when the employee joined today', () => {
+    expect(lengthOfService('2026-09-10', new Date(2026, 8, 10))).toEqual({
+      years: 0,
+      months: 0
+    });
   });
 
-  it('returns 1 Month when the employee joined exactly one calendar month ago', () => {
-    expect(lengthOfService('2026-08-10', new Date(2026, 8, 10))).toBe('1 Month');
+  it('returns 1 month when the employee joined exactly one calendar month ago', () => {
+    expect(lengthOfService('2026-08-10', new Date(2026, 8, 10))).toEqual({
+      years: 0,
+      months: 1
+    });
   });
 
-  it('returns 11 Month for 11 months 29 days — still under a year', () => {
+  it('returns 11 months for 11 months 29 days — still under a year', () => {
     // joined 2025-09-11, today 2026-09-10 → 11 complete calendar months, 1 day short of a year
-    expect(lengthOfService('2025-09-11', new Date(2026, 8, 10))).toBe('11 Month');
+    expect(lengthOfService('2025-09-11', new Date(2026, 8, 10))).toEqual({
+      years: 0,
+      months: 11
+    });
   });
 
-  it('returns 1 Year 0 Month on the exact one-year anniversary', () => {
-    expect(lengthOfService('2025-09-10', new Date(2026, 8, 10))).toBe('1 Year 0 Month');
+  it('returns 1 year 0 months on the exact one-year anniversary', () => {
+    expect(lengthOfService('2025-09-10', new Date(2026, 8, 10))).toEqual({
+      years: 1,
+      months: 0
+    });
   });
 
-  it('stays at 1 Year 0 Month one day after the anniversary', () => {
+  it('stays at 1 year 0 months one day after the anniversary', () => {
     // joined 2025-09-09, today 2026-09-10: 1 year + 1 day; no extra calendar month
-    expect(lengthOfService('2025-09-09', new Date(2026, 8, 10))).toBe('1 Year 0 Month');
+    expect(lengthOfService('2025-09-09', new Date(2026, 8, 10))).toEqual({
+      years: 1,
+      months: 0
+    });
   });
 
   it('counts extra calendar months after the anniversary', () => {
     // joined 2025-07-10, today 2026-09-10 → 1 year + 2 months
-    expect(lengthOfService('2025-07-10', new Date(2026, 8, 10))).toBe('1 Year 2 Month');
+    expect(lengthOfService('2025-07-10', new Date(2026, 8, 10))).toEqual({
+      years: 1,
+      months: 2
+    });
   });
 
   it('is timezone-stable for the join date string (YYYY-MM-DD is calendar-based)', () => {
     // Whatever the runtime timezone, "2025-09-10" → "2026-09-10" is exactly one calendar year.
-    expect(lengthOfService('2025-09-10', new Date(Date.UTC(2026, 8, 10, 23, 59, 59)))).toBe(
-      '1 Year 0 Month'
-    );
-  });
-});
-
-describe('formatEventDescription', () => {
-  it('renders "Not Set → X" when from_label is null', () => {
-    expect(formatEventDescription({ from_label: null, to_label: 'Field Services Engineer' })).toBe(
-      'Not Set → Field Services Engineer'
-    );
+    expect(lengthOfService('2025-09-10', new Date(Date.UTC(2026, 8, 10, 23, 59, 59)))).toEqual({
+      years: 1,
+      months: 0
+    });
   });
 
-  it('renders "X → Y" when both labels are set', () => {
-    expect(
-      formatEventDescription({
-        from_label: 'Helper Field Services Engineer',
-        to_label: 'Field Services Engineer'
-      })
-    ).toBe('Helper Field Services Engineer → Field Services Engineer');
+  it('returns null for a malformed join date', () => {
+    expect(lengthOfService('not-a-date', new Date(2026, 8, 10))).toBeNull();
+    expect(lengthOfService('2026-09', new Date(2026, 8, 10))).toBeNull();
+  });
+
+  it('returns null when the join date is in the future (negative tenure)', () => {
+    // joined 2026-09-11, today 2026-09-10 → negative tenure
+    expect(lengthOfService('2026-09-11', new Date(2026, 8, 10))).toBeNull();
   });
 });
 

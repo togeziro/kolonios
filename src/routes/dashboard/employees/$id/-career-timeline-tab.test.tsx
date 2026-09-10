@@ -112,7 +112,7 @@ function renderTab() {
 describe('CareerTimelineSubTab — header', () => {
   it('renders the Length-of-Service header from the query data', () => {
     setQuery({
-      lengthOfService: '2 Year 3 Month',
+      lengthOfService: { years: 2, months: 3 },
       events: []
     });
     renderTab();
@@ -122,7 +122,7 @@ describe('CareerTimelineSubTab — header', () => {
   });
 
   it('renders three enabled Change buttons (Division / Position / Work Status)', () => {
-    setQuery({ lengthOfService: '0 Month', events: [] });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events: [] });
     renderTab();
     expect(screen.getByRole('button', { name: 'Change Division' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change Position' })).toBeTruthy();
@@ -130,7 +130,7 @@ describe('CareerTimelineSubTab — header', () => {
   });
 
   it('opens the CareerEventDialog when Change Position is clicked', () => {
-    setQuery({ lengthOfService: '0 Month', events: [] });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events: [] });
     renderTab();
     expect(screen.queryByTestId('career-event-dialog-position')).toBeNull();
     fireEvent.click(screen.getByTestId('career-action-position'));
@@ -159,7 +159,7 @@ describe('CareerTimelineSubTab — event list ordering', () => {
       makeEvent({ id: 2, effective_date: '2026-03-15' }),
       makeEvent({ id: 3, effective_date: '2026-02-20' })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const items = Array.from(container.querySelectorAll('[data-testid="career-event-item"]'));
     expect(items.map((el) => el.getAttribute('data-event-id'))).toEqual(['2', '3', '1']);
@@ -171,7 +171,7 @@ describe('CareerTimelineSubTab — event list ordering', () => {
       makeEvent({ id: 5, effective_date: '2026-03-15' }),
       makeEvent({ id: 2, effective_date: '2026-03-15' })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const items = Array.from(container.querySelectorAll('[data-testid="career-event-item"]'));
     expect(items.map((el) => el.getAttribute('data-event-id'))).toEqual(['5', '2', '1']);
@@ -212,7 +212,7 @@ describe('CareerTimelineSubTab — event card rendering', () => {
         to_department_id: null
       })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const badges = Array.from(container.querySelectorAll('[data-testid="career-event-badge"]'));
     expect(badges).toHaveLength(3);
@@ -233,7 +233,7 @@ describe('CareerTimelineSubTab — event card rendering', () => {
         to_designation_id: 1
       })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     renderTab();
     expect(screen.getByText(/Not Set/)).toBeTruthy();
     expect(screen.getByText('Field Services Engineer')).toBeTruthy();
@@ -250,7 +250,7 @@ describe('CareerTimelineSubTab — event card rendering', () => {
         to_designation_id: 2
       })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const item = container.querySelector('[data-testid="career-event-item"]');
     expect(item).toBeTruthy();
@@ -275,7 +275,7 @@ describe('CareerTimelineSubTab — recorded-at meta line', () => {
         to_label: 'Field Services Engineer'
       })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     expect(container.querySelector('[data-testid="career-event-recorded-meta"]')).toBeNull();
   });
@@ -293,7 +293,7 @@ describe('CareerTimelineSubTab — recorded-at meta line', () => {
         to_department_id: 2
       })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const meta = container.querySelector('[data-testid="career-event-recorded-meta"]');
     expect(meta).toBeTruthy();
@@ -314,7 +314,7 @@ describe('CareerTimelineSubTab — expandable notes', () => {
         to_designation_id: 2
       })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     renderTab();
     const toggle = screen.getByRole('button', { name: /Show notes/i });
     expect(toggle).toBeTruthy();
@@ -334,7 +334,7 @@ describe('CareerTimelineSubTab — expandable notes', () => {
         notes: null
       })
     ];
-    setQuery({ lengthOfService: '0 Month', events });
+    setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const item = container.querySelector('[data-testid="career-event-item"]');
     expect(within(item as HTMLElement).queryByRole('button', { name: /Show notes/i })).toBeNull();

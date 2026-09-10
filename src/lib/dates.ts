@@ -1,5 +1,11 @@
 const DEFAULT_BUSINESS_TIME_ZONE = 'Asia/Jakarta';
 
+/**
+ * Strict `YYYY-MM-DD` shape check, shared by every Career Event
+ * validation surface (wire schemas + the dialog's client-side guard).
+ */
+export const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 export function businessDateInTimeZone(
   now: Date | number | string,
   timeZone: string = DEFAULT_BUSINESS_TIME_ZONE

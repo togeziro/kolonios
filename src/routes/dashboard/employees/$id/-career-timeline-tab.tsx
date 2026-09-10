@@ -56,7 +56,16 @@ export function CareerTimelineSubTab({ employee }: { employee: Employee }) {
             className='text-foreground text-2xl font-semibold tabular-nums'
             data-testid='career-timeline-length-of-service'
           >
-            {lengthOfService ?? t('employee.careerTimeline.headerEmpty')}
+            {lengthOfService
+              ? lengthOfService.years >= 1
+                ? t('employee.careerTimeline.lengthOfService', {
+                    years: lengthOfService.years,
+                    months: lengthOfService.months
+                  })
+                : t('employee.careerTimeline.lengthOfServiceMonths', {
+                    months: lengthOfService.months
+                  })
+              : t('employee.careerTimeline.headerEmpty')}
           </div>
           <div className='flex flex-wrap gap-2'>
             {ACTION_BUTTONS.map(({ key, icon: Icon, labelKey }) => (
@@ -66,7 +75,7 @@ export function CareerTimelineSubTab({ employee }: { employee: Employee }) {
                 variant='outline'
                 size='sm'
                 onClick={() => setActiveCategory(key)}
-                title={labelKey}
+                title={t(labelKey)}
                 data-testid={`career-action-${key}`}
               >
                 <Icon className='h-4 w-4' />

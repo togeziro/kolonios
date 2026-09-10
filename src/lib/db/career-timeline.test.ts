@@ -7,6 +7,7 @@ import { designations, departments } from '@/lib/db/schema/masterdata';
 import { resetAllTables, seedEmployee, seedUser } from '@/test-utils/db';
 import {
   appendCareerEvent,
+  backfillStartWorkEvents,
   deleteCareerEvent,
   findCareerEventsFor,
   listCareerEventsForEmployee,
@@ -143,33 +144,6 @@ describe('seed idempotency at the data layer', () => {
     await resetAllTables();
   });
 
-  // The shape mirrors the production backfill in
-  // src/lib/db/migrations/0037_brief_thor_girl.sql. Kept as a sql template
-  // tag here so the test does not depend on reading the raw migration file.
-  async function runSeedBackfill() {
-    await db.execute(sql`
-      INSERT INTO "employee_career_events" (
-        "employee_id", "category", "effective_date",
-        "from_label", "to_label",
-        "created_at", "updated_at"
-      )
-      SELECT
-        e."id",
-        'start_work'::"career_event_category",
-        e."join_date"::date,
-        NULL,
-        'Joined the company ' || to_char(e."join_date"::date, 'FMDD FMMonth FMYYYY'),
-        NOW(),
-        NOW()
-      FROM "employees" e
-      WHERE NOT EXISTS (
-        SELECT 1 FROM "employee_career_events" ece
-        WHERE ece."employee_id" = e."id"
-          AND ece."category" = 'start_work'
-      )
-    `);
-  }
-
   async function startWorkCount() {
     const rows = await db
       .select()
@@ -184,25 +158,25 @@ describe('seed idempotency at the data layer', () => {
   }
 
   it('produces exactly one start_work event the first time the seed runs', async () => {
-    await runSeedBackfill();
+    await backfillStartWorkEvents(db);
     expect(await startWorkCount()).toHaveLength(1);
   });
 
   it('still produces exactly one start_work event when the seed runs again (idempotent)', async () => {
-    await runSeedBackfill();
-    await runSeedBackfill();
-    await runSeedBackfill();
+    await backfillStartWorkEvents(db);
+    await backfillStartWorkEvents(db);
+    await backfillStartWorkEvents(db);
     expect(await startWorkCount()).toHaveLength(1);
   });
 
   it('sourced the effective_date from employees.join_date', async () => {
-    await runSeedBackfill();
+    await backfillStartWorkEvents(db);
     const [row] = await startWorkCount();
     expect(row?.effective_date).toBe('2024-01-01'); // default in seedEmployee
   });
 
   it('cascade-deletes events when the employee is deleted', async () => {
-    await runSeedBackfill();
+    await backfillStartWorkEvents(db);
     expect(await startWorkCount()).toHaveLength(1);
 
     await db.delete(employees).where(eq(employees.id, EMP_A));

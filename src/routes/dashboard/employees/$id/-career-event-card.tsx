@@ -17,12 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/lib/auth/auth-client';
-import {
-  categoryColor,
-  categoryIcon,
-  categoryLabel,
-  formatEventDescription
-} from '@/lib/career-timeline/engine';
+import { categoryColor, categoryIcon, categoryLabel } from '@/lib/career-timeline/engine';
 import { formatDate, formatLongDate } from '@/lib/format';
 import {
   useDeleteCareerEvent,
@@ -245,7 +240,7 @@ export function CareerEventCard({ event }: { event: CareerTimelineEvent }) {
         onOpenChange={setConfirmOpen}
         title={t('employee.careerTimeline.delete.confirmTitle')}
         description={t('employee.careerTimeline.delete.confirmDescription', {
-          description: formatEventDescription(event)
+          description: `${event.from_label ?? t('employee.careerTimeline.fromNotSet')} ${t('employee.careerTimeline.fromToSeparator')} ${event.to_label}`
         })}
         confirmLabel={t('employee.careerTimeline.delete.confirmAction')}
         destructive

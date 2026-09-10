@@ -7,6 +7,7 @@ import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { lengthOfService, type CareerEventRow } from '@/lib/career-timeline/engine';
 import type { CareerEvent as DbCareerEvent } from '@/lib/db/schema/employee-career-events';
+import { ISO_DATE_REGEX } from '@/lib/dates';
 
 const employeeIdSchema = z.string().min(1).max(64);
 
@@ -19,21 +20,21 @@ const appendCareerEventSchema = z.discriminatedUnion('category', [
     category: z.literal('position'),
     employeeId: employeeIdSchema,
     toDesignationId: z.coerce.number().int().positive(),
-    effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'effectiveDate must be YYYY-MM-DD'),
+    effectiveDate: z.string().regex(ISO_DATE_REGEX, 'effectiveDate must be YYYY-MM-DD'),
     notes: z.string().nullable().optional()
   }),
   z.object({
     category: z.literal('division'),
     employeeId: employeeIdSchema,
     toDepartmentId: z.coerce.number().int().positive(),
-    effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'effectiveDate must be YYYY-MM-DD'),
+    effectiveDate: z.string().regex(ISO_DATE_REGEX, 'effectiveDate must be YYYY-MM-DD'),
     notes: z.string().nullable().optional()
   }),
   z.object({
     category: z.literal('employment_status'),
     employeeId: employeeIdSchema,
     toLabel: employmentStatusEnum,
-    effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'effectiveDate must be YYYY-MM-DD'),
+    effectiveDate: z.string().regex(ISO_DATE_REGEX, 'effectiveDate must be YYYY-MM-DD'),
     notes: z.string().nullable().optional()
   })
 ]);
@@ -61,7 +62,7 @@ export type CareerTimelineEvent = {
 };
 
 export type CareerTimeline = {
-  lengthOfService: string;
+  lengthOfService: { years: number; months: number } | null;
   events: CareerTimelineEvent[];
 };
 
@@ -78,7 +79,7 @@ export const getCareerTimelineFn = createServerFn({ method: 'GET' })
     const length =
       employeeResult?.success && employeeResult.employee
         ? lengthOfService(employeeResult.employee.join_date, new Date())
-        : '0 Month';
+        : null;
     return {
       lengthOfService: length,
       events: events.map(serialize)

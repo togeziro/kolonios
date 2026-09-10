@@ -49,6 +49,8 @@ vi.mock('sonner', () => ({
 }));
 
 import '@/i18n/config';
+import i18n from '@/i18n/config';
+import { toast } from 'sonner';
 import { businessDateInTimeZone } from '@/lib/dates';
 import { CareerEventDialog } from './-career-event-dialog';
 
@@ -213,5 +215,24 @@ describe('CareerEventDialog — submission', () => {
     await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled());
     const call = mutateAsyncMock.mock.calls[0]?.[0] as { notes: string | null };
     expect(call.notes).toBeNull();
+  });
+
+  it('blocks submission and toasts the translated message when the effective date is invalid', async () => {
+    // employment_status needs no picker selection, so the only invalid field
+    // is the empty effective date — the app-level regex guard must fire.
+    renderDialog('employment_status');
+    await waitFor(() => screen.getByTestId('career-event-effective-date'));
+    fireEvent.change(screen.getByTestId('career-event-effective-date'), {
+      target: { value: '' }
+    });
+    // Submit directly (not via button click) so the empty `required` date
+    // input cannot short-circuit the flow via HTML constraint validation —
+    // the app-level regex guard is what we are exercising.
+    fireEvent.submit(screen.getByTestId('career-event-form'));
+
+    await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
+    const message = vi.mocked(toast.error).mock.calls[0]?.[0];
+    expect(message).toBe(i18n.t('employee.careerTimeline.append.effectiveDateRequired'));
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
 });

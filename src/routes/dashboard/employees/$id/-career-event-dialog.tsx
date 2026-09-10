@@ -27,7 +27,7 @@ import {
   designationOptionsQueryOptions
 } from '@/features/masterdata/api/queries';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { businessDateInTimeZone } from '@/lib/dates';
+import { businessDateInTimeZone, ISO_DATE_REGEX } from '@/lib/dates';
 
 export type CareerEventDialogCategory = 'position' | 'division' | 'employment_status';
 
@@ -44,15 +44,13 @@ const CATEGORY_ICONS = {
   employment_status: UserCheck
 } as const;
 
-const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
 function todayISO(): string {
   return businessDateInTimeZone(new Date());
 }
 
 function validatePayload(payload: AppendCareerEventPayload): string | null {
   if (!ISO_DATE_REGEX.test(payload.effectiveDate)) {
-    return 'effectiveDateInvalid';
+    return 'effectiveDateRequired';
   }
   if (
     payload.category === 'position' &&

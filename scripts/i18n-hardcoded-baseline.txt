@@ -93,7 +93,7 @@ src/routes/auth/v2.tsx:27
 src/routes/auth/v2/sign-in/index.tsx:20
 src/routes/auth/v2/sign-up/index.tsx:20
 src/routes/dashboard/customers.tsx:156
-src/routes/dashboard/employees.tsx:177
+src/routes/dashboard/employees.index.tsx:169
 src/routes/dashboard/users.tsx:169
 src/routes/dashboard/users.tsx:190
 src/routes/privacy-policy.tsx:14

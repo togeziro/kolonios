@@ -6,14 +6,9 @@
 
 // --- Category ---
 
-export const CAREER_EVENT_CATEGORIES = [
-  'position',
-  'division',
-  'employment_status',
-  'start_work'
-] as const;
+import { CAREER_EVENT_CATEGORIES, type CareerEventCategory } from './categories';
 
-export type CareerEventCategory = (typeof CAREER_EVENT_CATEGORIES)[number];
+export { CAREER_EVENT_CATEGORIES, type CareerEventCategory } from './categories';
 
 // --- Row shape (structural subset of the drizzle table) ---
 
@@ -41,14 +36,21 @@ export type CareerEventRow = {
  * (not total-days / 30) so the answer is timezone-stable and matches what
  * HR expects to see in the UI. Pinned by tests:
  *
- *   joined today               → "0 Month"
- *   joined exactly 1 month ago → "1 Month"
- *   joined 11 months 29d ago   → "11 Month"
- *   joined exactly 1 year ago  → "1 Year 0 Month"
- *   joined 1y 1d ago           → "1 Year 0 Month"
- *   joined 1y 2m ago           → "1 Year 2 Month"
+ *   joined today               → { years: 0, months: 0 }
+ *   joined exactly 1 month ago → { years: 0, months: 1 }
+ *   joined 11 months 29d ago   → { years: 0, months: 11 }
+ *   joined exactly 1 year ago  → { years: 1, months: 0 }
+ *   joined 1y 1d ago           → { years: 1, months: 0 }
+ *   joined 1y 2m ago           → { years: 1, months: 2 }
+ *
+ * Returns `null` for a malformed join date or a negative tenure (the join
+ * date in the future); the UI falls back to its "no join date on file"
+ * copy.
  */
-export function lengthOfService(joinDate: string, now: Date): string {
+export function lengthOfService(
+  joinDate: string,
+  now: Date
+): { years: number; months: number } | null {
   const parts = joinDate.split('-').map(Number);
   const jy = parts[0];
   const jm = parts[1];
@@ -61,7 +63,7 @@ export function lengthOfService(joinDate: string, now: Date): string {
     Number.isNaN(jm) ||
     Number.isNaN(jd)
   ) {
-    return '0 Month';
+    return null;
   }
 
   let years = now.getFullYear() - jy;
@@ -75,31 +77,12 @@ export function lengthOfService(joinDate: string, now: Date): string {
     years -= 1;
     months += 12;
   }
-  if (months < 0) {
-    // Defensive: `now` precedes `joinDate` (negative tenure). Treat as zero.
-    years = 0;
-    months = 0;
+  if (years < 0) {
+    // `now` precedes `joinDate` (negative tenure).
+    return null;
   }
 
-  if (years >= 1) {
-    return `${years} Year ${months} Month`;
-  }
-  return `${months} Month`;
-}
-
-// --- Display strings ---
-
-/**
- * "Not Set → X" when there is no previous label, "X → Y" otherwise.
- * The label snapshot survives masterdata renames (ADR-0007), so this
- * output is stable even if the source designation/department is renamed.
- */
-export function formatEventDescription(event: {
-  from_label: string | null;
-  to_label: string;
-}): string {
-  const from = event.from_label ?? 'Not Set';
-  return `${from} → ${event.to_label}`;
+  return { years, months };
 }
 
 // --- Category visuals (pure strings, UI maps them to classes/icons) ---

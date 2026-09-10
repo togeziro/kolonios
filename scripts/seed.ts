@@ -50,6 +50,7 @@ import {
   type NewCustomer
 } from '../src/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { backfillStartWorkEvents } from '../src/lib/db/career-timeline';
 import { businessDateInTimeZone } from '../src/lib/dates';
 
 async function seedUsers() {
@@ -434,38 +435,11 @@ async function seedEmployees() {
 /**
  * Backfill a `start_work` event for every employee that doesn't already
  * have one. Idempotent: the NOT EXISTS guard makes re-running on a
- * previously-seeded DB a no-op. The label format mirrors the spec
- * ("Joined the company 29 June 2026"); the date is rendered in the
- * server's local timezone via `to_char` so it stays stable.
+ * previously-seeded DB a no-op. Shares the single implementation with the
+ * data-layer regression test (see `backfillStartWorkEvents`).
  */
 async function seedStartWorkEvents() {
-  const inserted = await db.execute(sql`
-    INSERT INTO "employee_career_events" (
-      "employee_id", "category", "effective_date", "notes",
-      "actor_user_id", "from_label", "to_label",
-      "created_at", "updated_at"
-    )
-    SELECT
-      e."id",
-      'start_work'::"career_event_category",
-      e."join_date"::date,
-      NULL,
-      NULL,
-      NULL,
-      'Joined the company ' || to_char(e."join_date"::date, 'FMDD FMMonth FMYYYY'),
-      NOW(),
-      NOW()
-    FROM "employees" e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM "employee_career_events" ece
-      WHERE ece."employee_id" = e."id"
-        AND ece."category" = 'start_work'
-    )
-    RETURNING id
-  `);
-  const count =
-    (inserted as unknown as { count?: number }).count ??
-    (Array.isArray(inserted) ? inserted.length : 0);
+  const count = await backfillStartWorkEvents(db);
   console.log(`Seeded ${count} start_work events`);
 }
 

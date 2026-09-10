@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { isValidElement, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,7 @@ export function CareerTimeline({ children }: { children: ReactNode[] | ReactNode
         const isLast = index === items.length - 1;
         return (
           <li
-            key={index}
+            key={isValidElement(child) && child.key != null ? child.key : index}
             className='relative'
             data-testid='career-timeline-item-shell'
             data-first={isFirst ? 'true' : undefined}
