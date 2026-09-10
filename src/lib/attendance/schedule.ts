@@ -70,6 +70,17 @@ function parseTime(time: string): number {
   return parts[0] * 60 + parts[1];
 }
 
+/**
+ * Convert an HH:MM or HH:MM:SS clock string to seconds since midnight.
+ * Unlike `parseTime` (minute granularity for lateness), this keeps seconds
+ * so range comparisons (`checkOut >= checkIn`) stay exact when callers
+ * supply seconds.
+ */
+export function timeToSeconds(time: string): number {
+  const [h = 0, m = 0, s = 0] = time.split(':').map(Number);
+  return h * 3600 + m * 60 + s;
+}
+
 function dayOfWeekFromDate(dateStr: string): number {
   // dateStr: YYYY-MM-DD
   // Returns 0=Sun, 1=Mon, ..., 6=Sat

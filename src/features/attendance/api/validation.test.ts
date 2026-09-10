@@ -14,7 +14,8 @@ import {
   correctionRequestSchema,
   correctionReviewSchema,
   reportFiltersSchema,
-  exportFormatSchema
+  exportFormatSchema,
+  attendanceManualRecordSchema
 } from './validation';
 
 describe('attendanceCheckInSchema', () => {
@@ -311,5 +312,136 @@ describe('exportFormatSchema', () => {
     expect(exportFormatSchema.safeParse('xlsx').success).toBe(true);
     expect(exportFormatSchema.safeParse('pdf').success).toBe(true);
     expect(exportFormatSchema.safeParse('html').success).toBe(false);
+  });
+});
+
+describe('attendanceManualRecordSchema', () => {
+  const valid = {
+    employeeId: 'emp-1',
+    date: '2026-08-03',
+    checkInTime: '08:00',
+    checkOutTime: '13:00'
+  };
+
+  it('accepts a valid manual record payload', () => {
+    const parsed = attendanceManualRecordSchema.safeParse(valid);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) throw new Error('expected success');
+    // confirmOverwrite defaults to false when omitted
+    expect(parsed.data.confirmOverwrite).toBe(false);
+  });
+
+  it('defaults confirmOverwrite to false and accepts an explicit true', () => {
+    const omitted = attendanceManualRecordSchema.safeParse(valid);
+    expect(omitted.success && omitted.data.confirmOverwrite).toBe(false);
+
+    const confirmed = attendanceManualRecordSchema.safeParse({
+      ...valid,
+      confirmOverwrite: true
+    });
+    expect(confirmed.success && confirmed.data.confirmOverwrite).toBe(true);
+  });
+
+  it('accepts checkOutTime and reason as optional', () => {
+    const parsed = attendanceManualRecordSchema.safeParse({
+      employeeId: 'emp-1',
+      date: '2026-08-03',
+      checkInTime: '08:00'
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) throw new Error('expected success');
+    expect(parsed.data.checkOutTime).toBeUndefined();
+    expect(parsed.data.reason).toBeUndefined();
+  });
+
+  it('requires employeeId', () => {
+    expect(
+      attendanceManualRecordSchema.safeParse({
+        date: '2026-08-03',
+        checkInTime: '08:00'
+      }).success
+    ).toBe(false);
+    expect(
+      attendanceManualRecordSchema.safeParse({
+        employeeId: '',
+        date: '2026-08-03',
+        checkInTime: '08:00'
+      }).success
+    ).toBe(false);
+    expect(
+      attendanceManualRecordSchema.safeParse({
+        employeeId: '   ',
+        date: '2026-08-03',
+        checkInTime: '08:00'
+      }).success
+    ).toBe(false);
+  });
+
+  it('trims the reason on parse', () => {
+    const parsed = attendanceManualRecordSchema.safeParse({ ...valid, reason: '  note  ' });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) throw new Error('expected success');
+    expect(parsed.data.reason).toBe('note');
+  });
+
+  it('rejects a malformed date', () => {
+    expect(
+      attendanceManualRecordSchema.safeParse({
+        employeeId: 'emp-1',
+        date: '2026/08/03',
+        checkInTime: '08:00'
+      }).success
+    ).toBe(false);
+    expect(
+      attendanceManualRecordSchema.safeParse({
+        employeeId: 'emp-1',
+        date: '2026-8-3',
+        checkInTime: '08:00'
+      }).success
+    ).toBe(false);
+  });
+
+  it('rejects malformed time strings', () => {
+    const base = { employeeId: 'emp-1', date: '2026-08-03' };
+    expect(attendanceManualRecordSchema.safeParse({ ...base, checkInTime: '8:00' }).success).toBe(
+      false
+    );
+    expect(attendanceManualRecordSchema.safeParse({ ...base, checkInTime: '08:00' }).success).toBe(
+      true
+    );
+    expect(
+      attendanceManualRecordSchema.safeParse({ ...base, checkInTime: '08:00', checkOutTime: 'x' })
+        .success
+    ).toBe(false);
+    expect(
+      attendanceManualRecordSchema.safeParse({ ...base, checkInTime: '08:00', checkOutTime: '17' })
+        .success
+    ).toBe(false);
+    // HH:MM:SS is accepted
+    expect(
+      attendanceManualRecordSchema.safeParse({ ...base, checkInTime: '08:00:00' }).success
+    ).toBe(true);
+  });
+
+  it('rejects a reason longer than 1000 characters', () => {
+    const parsed = attendanceManualRecordSchema.safeParse({
+      ...valid,
+      reason: 'x'.repeat(1001)
+    });
+    expect(parsed.success).toBe(false);
+    expect(
+      attendanceManualRecordSchema.safeParse({ ...valid, reason: 'x'.repeat(1000) }).success
+    ).toBe(true);
+  });
+
+  it('does not encode the cross-field checkOut >= checkIn rule in the schema', () => {
+    // The server function enforces the ordering; the schema intentionally
+    // accepts any well-formed times so the client can drive the confirm flow.
+    const parsed = attendanceManualRecordSchema.safeParse({
+      ...valid,
+      checkInTime: '13:00',
+      checkOutTime: '08:00'
+    });
+    expect(parsed.success).toBe(true);
   });
 });

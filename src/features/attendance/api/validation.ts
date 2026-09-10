@@ -321,3 +321,18 @@ export const exportReportSchema = z.object({
   filters: reportFiltersSchema,
   format: exportFormatSchema
 });
+
+// --- Manual attendance (admin/HR) ---
+
+// Cross-field rule `checkOutTime >= checkInTime` cannot be expressed cleanly in
+// zod; `recordManualAttendanceFn` enforces it after parsing.
+export const attendanceManualRecordSchema = z.object({
+  employeeId: z.string().trim().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  checkInTime: timeString,
+  checkOutTime: timeString.optional(),
+  reason: z.string().trim().max(MAX_TEXT_LENGTH).optional(),
+  confirmOverwrite: z.boolean().default(false)
+});
+
+export type AttendanceManualRecordInput = z.infer<typeof attendanceManualRecordSchema>;

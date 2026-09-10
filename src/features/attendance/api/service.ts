@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import * as z from 'zod';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { timeToSeconds } from '@/lib/attendance/schedule';
 import { withAudit } from '@/lib/audit';
 import {
   attendanceCheckInSchema,
@@ -25,7 +26,8 @@ import {
   correctionRequestSchema,
   correctionReviewSchema,
   reportFiltersSchema,
-  exportReportSchema
+  exportReportSchema,
+  attendanceManualRecordSchema
 } from './validation';
 
 // A selfie/photo uploaded before the business submit failed would otherwise
@@ -505,6 +507,26 @@ export const getAdminAttendanceReportFn = createServerFn({ method: 'GET' })
     await requirePermission('attendance', 'edit');
     const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
     return getAdminAttendanceReport(filters);
+  });
+
+// Two-phase write: with `confirmOverwrite: false` and a conflicting row the
+// DB function returns `{ kind: 'overwrite_required', existing }` without
+// writing; the client re-issues the same call with `confirmOverwrite: true`.
+// The cross-field rule `checkOutTime >= checkInTime` cannot be expressed
+// cleanly in zod, so it is enforced here after parsing.
+export const recordManualAttendanceFn = createServerFn({ method: 'POST' })
+  .validator(attendanceManualRecordSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('attendance_admin', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { recordManualAttendance } = await import('@/lib/db/attendance');
+    if (data.checkOutTime && timeToSeconds(data.checkOutTime) < timeToSeconds(data.checkInTime)) {
+      throw new Error('checkOutTime must be on or after checkInTime');
+    }
+    return recordManualAttendance(session.user.id, {
+      ...data,
+      reason: data.reason || undefined
+    });
   });
 
 function escapeCsv(value: unknown): string {

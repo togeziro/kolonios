@@ -114,7 +114,7 @@ export function ScheduleAssignmentForm() {
             </select>
           </div>
           <div className='space-y-2'>
-            <Label htmlFor='as-shift'>{t('attendanceAdmin.scheduleName')}</Label>
+            <Label htmlFor='as-shift'>{t('attendanceAdmin.shiftName')}</Label>
             <select
               id='as-shift'
               className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm'

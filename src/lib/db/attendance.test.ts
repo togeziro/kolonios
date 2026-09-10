@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   getLocations,
   getShifts,
@@ -30,7 +30,9 @@ import {
   createSchedule,
   updateSchedule,
   deleteShift,
-  listShifts
+  listShifts,
+  recordManualAttendance,
+  resolveManualWritePlan
 } from './attendance';
 import {
   resetAllTables,
@@ -51,6 +53,7 @@ import {
   attendanceCorrections,
   nationalHolidays
 } from './schema/attendance';
+import { auditLog } from './schema/audit-log';
 
 const TEST_USER_ID = 'test-user-att-123';
 
@@ -1867,5 +1870,489 @@ describe('shift master CRUD (integration)', () => {
     expect(res).not.toBeNull();
     expect(res!.lateToleranceMinutes).toBe(7);
     expect(res!.absenceCutoffMinutes).toBe(75);
+  });
+});
+
+describe('recordManualAttendance (admin/HR manual entry)', () => {
+  beforeEach(async () => {
+    await resetAllTables();
+  });
+
+  afterAll(async () => {
+    await resetAllTables();
+  });
+
+  const ADMIN_ACTOR = 'admin-actor-1';
+  const TARGET_EMP = 'target-emp-1';
+  const OTHER_EMP = 'other-emp-1';
+  // Monday 2026-08-03 — keeps date->weekday math deterministic across runs.
+  const MON_DATE = '2026-08-03';
+
+  /** Seed a working schedule for the target employee for the Monday in MON_DATE. */
+  async function seedTargetSchedule(opts?: {
+    startTime?: string;
+    endTime?: string;
+    lateTolerance?: number;
+  }) {
+    const shift = await seedShift({
+      name: 'Morning',
+      start_time: opts?.startTime ?? '09:00',
+      end_time: opts?.endTime ?? '17:00',
+      late_tolerance_minutes: opts?.lateTolerance ?? 5,
+      absence_cutoff_minutes: 120
+    });
+    await seedShiftWeekdayRule(shift.id, {
+      // 1 = Monday — matches MON_DATE
+      day_of_week: 1,
+      is_working_day: true,
+      start_time: opts?.startTime ?? '09:00',
+      end_time: opts?.endTime ?? '17:00'
+    });
+    await seedScheduleAssignment({ user_id: TARGET_EMP, shift_id: shift.id });
+    return shift;
+  }
+
+  it('creates a fresh row when none exists; status derived from policy; audit row has before=null and after populated', async () => {
+    await seedEmployee(ADMIN_ACTOR, { full_name: 'Admin', email: 'admin@x.test' });
+    await seedEmployee(TARGET_EMP, { full_name: 'Sumantri', email: 'sumantri@x.test' });
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00',
+      reason: 'Forgotten clock-out'
+    });
+
+    expect(res.kind).toBe('created');
+    if (res.kind !== 'created') throw new Error('expected created');
+    expect(res.row.user_id).toBe(TARGET_EMP);
+    expect(res.row.date).toBe(MON_DATE);
+    expect(res.row.check_in_time).toBe('08:00');
+    expect(res.row.check_out_time).toBe('13:00');
+    // 08:00 on a 09:00 shift with 5 min tolerance → on time → 'present', no late duration
+    expect(res.row.attendance_status).toBe('present');
+    expect(res.row.late_duration).toBeNull();
+    expect(res.row.validation_state).toBe('disabled');
+
+    const [audit] = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'attendance.manual_record'));
+    expect(audit).toBeDefined();
+    expect(audit.entityType).toBe('attendance');
+    expect(audit.entityId).toBe(TARGET_EMP);
+    expect(audit.actorUserId).toBe(ADMIN_ACTOR);
+    expect(audit.before).toBeNull();
+    expect(audit.after).toMatchObject({
+      user_id: TARGET_EMP,
+      date: MON_DATE,
+      check_in_time: '08:00',
+      check_out_time: '13:00',
+      attendance_status: 'present',
+      validation_state: 'disabled',
+      manual_reason: 'Forgotten clock-out'
+    });
+  });
+
+  it('returns overwrite_required when a row exists and confirmOverwrite is false — no DB write, no audit row', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    // Seed an existing row directly so we can isolate the conflict path.
+    await db.insert(employeeShifts).values({
+      user_id: TARGET_EMP,
+      date: MON_DATE,
+      shift_id: 1,
+      check_in_time: '09:00',
+      check_out_time: '17:00',
+      attendance_status: 'present'
+    });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00'
+    });
+
+    expect(res.kind).toBe('overwrite_required');
+    if (res.kind !== 'overwrite_required') throw new Error('expected overwrite_required');
+    expect(res.existing.user_id).toBe(TARGET_EMP);
+    expect(res.existing.check_in_time).toBe('09:00');
+
+    // Existing row unchanged
+    const [stillThere] = await db
+      .select()
+      .from(employeeShifts)
+      .where(and(eq(employeeShifts.user_id, TARGET_EMP), eq(employeeShifts.date, MON_DATE)));
+    expect(stillThere.check_in_time).toBe('09:00');
+
+    // No audit row created on the no-write path
+    const audits = await db
+      .select()
+      .from(auditLog)
+      .where(
+        and(eq(auditLog.entityId, TARGET_EMP), eq(auditLog.action, 'attendance.manual_record'))
+      );
+    expect(audits).toHaveLength(0);
+  });
+
+  it('overwrites when confirmOverwrite=true; audit row carries before from old row and after from new row', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    await db.insert(employeeShifts).values({
+      user_id: TARGET_EMP,
+      date: MON_DATE,
+      shift_id: 1,
+      check_in_time: '09:00',
+      check_out_time: '17:00',
+      attendance_status: 'present'
+    });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00',
+      reason: 'Half-day recorded by admin',
+      confirmOverwrite: true
+    });
+
+    expect(res.kind).toBe('overwritten');
+    if (res.kind !== 'overwritten') throw new Error('expected overwritten');
+    expect(res.row.id).toBeGreaterThan(0);
+    expect(res.row.check_in_time).toBe('08:00');
+    expect(res.row.check_out_time).toBe('13:00');
+    expect(res.row.attendance_status).toBe('present');
+
+    const [audit] = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'attendance.manual_record'));
+    expect(audit).toBeDefined();
+    expect(audit.entityId).toBe(TARGET_EMP);
+    // before = snapshot of the previous row
+    expect(audit.before).toMatchObject({
+      user_id: TARGET_EMP,
+      date: MON_DATE,
+      check_in_time: '09:00',
+      check_out_time: '17:00',
+      attendance_status: 'present'
+    });
+    // after = snapshot of the new row + manual_reason
+    expect(audit.after).toMatchObject({
+      user_id: TARGET_EMP,
+      date: MON_DATE,
+      check_in_time: '08:00',
+      check_out_time: '13:00',
+      attendance_status: 'present',
+      validation_state: 'disabled',
+      manual_reason: 'Half-day recorded by admin'
+    });
+  });
+
+  it('recomputes lateDuration when overwriting with later times', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    // 09:00 start + 5 min tolerance → late by 1 min if you clock in at 09:06
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    await db.insert(employeeShifts).values({
+      user_id: TARGET_EMP,
+      date: MON_DATE,
+      shift_id: 1,
+      check_in_time: '08:00',
+      check_out_time: '17:00',
+      late_duration: null,
+      attendance_status: 'present'
+    });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '09:06',
+      checkOutTime: '17:00',
+      confirmOverwrite: true
+    });
+
+    expect(res.kind).toBe('overwritten');
+    if (res.kind !== 'overwritten') throw new Error('expected overwritten');
+    // 09:06 - (09:00 + 5min) = 1 minute late
+    expect(res.row.late_duration).toBe(1);
+    expect(res.row.attendance_status).toBe('late');
+  });
+
+  it('stores null check_out_time when checkOutTime is omitted and derives status from clock-in alone', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00'
+    });
+
+    expect(res.kind).toBe('created');
+    if (res.kind !== 'created') throw new Error('expected created');
+    expect(res.row.check_out_time).toBeNull();
+    expect(res.row.attendance_status).toBe('present');
+    expect(res.row.late_duration).toBeNull();
+  });
+
+  it('throws DomainError EMPLOYEE_NOT_FOUND when the employee id does not exist', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+
+    await expect(
+      recordManualAttendance(ADMIN_ACTOR, {
+        employeeId: 'no-such-employee',
+        date: MON_DATE,
+        checkInTime: '08:00'
+      })
+    ).rejects.toMatchObject({ code: 'EMPLOYEE_NOT_FOUND', name: 'DomainError' });
+  });
+
+  it('throws DomainError INVALID_TIME_RANGE when checkOutTime is before checkInTime', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+
+    await expect(
+      recordManualAttendance(ADMIN_ACTOR, {
+        employeeId: TARGET_EMP,
+        date: MON_DATE,
+        checkInTime: '13:00',
+        checkOutTime: '08:00'
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_TIME_RANGE', name: 'DomainError' });
+  });
+
+  it('compares times with second precision', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+
+    // Same minute, earlier seconds → out is before in.
+    await expect(
+      recordManualAttendance(ADMIN_ACTOR, {
+        employeeId: TARGET_EMP,
+        date: MON_DATE,
+        checkInTime: '08:00:50',
+        checkOutTime: '08:00:10'
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_TIME_RANGE', name: 'DomainError' });
+  });
+
+  it('treats equal times with and without seconds as a valid range', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00:00',
+      checkOutTime: '08:00'
+    });
+
+    expect(res.kind).toBe('created');
+  });
+
+  it('trims the reason before storing it on the audit row', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00',
+      reason: '  Forgotten clock-out  '
+    });
+
+    expect(res.kind).toBe('created');
+    const [audit] = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'attendance.manual_record'));
+    expect(audit.after).toMatchObject({ manual_reason: 'Forgotten clock-out' });
+  });
+
+  it('stores a whitespace-only reason as null on the audit row', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      reason: '   '
+    });
+
+    expect(res.kind).toBe('created');
+    const [audit] = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'attendance.manual_record'));
+    expect(audit.after).toMatchObject({ manual_reason: null });
+  });
+
+  it('resolveManualWritePlan decides on pre-transaction + in-transaction reads', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    const created = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00'
+    });
+    if (created.kind !== 'created') throw new Error('expected created');
+    const row = created.row;
+    const desired = {
+      checkInTime: '08:00',
+      checkOutTime: '13:00',
+      status: 'present' as const,
+      lateMinutes: null,
+      shiftId: row.shift_id
+    };
+
+    // No row anywhere → create.
+    expect(resolveManualWritePlan(undefined, undefined, desired)).toEqual({ action: 'create' });
+    // Row committed after the fast-path read: identical → noop …
+    expect(resolveManualWritePlan(undefined, row, desired)).toEqual({ action: 'noop', row });
+    // … differing → conflict instead of a silent duplicate.
+    expect(resolveManualWritePlan(undefined, row, { ...desired, checkInTime: '08:30' })).toEqual({
+      action: 'conflict',
+      existing: row
+    });
+    // Confirmed overwrite targets the in-transaction read.
+    expect(resolveManualWritePlan(row, row, desired)).toEqual({ action: 'overwrite', target: row });
+    // Vanished concurrently → fall back to an insert.
+    expect(resolveManualWritePlan(row, undefined, desired)).toEqual({ action: 'create' });
+  });
+
+  it('derives a deterministic default status when the employee has no schedule for the date', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    // No schedule assignment and no weekday rule for MON_DATE → effectiveSchedule is null
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00'
+    });
+
+    expect(res.kind).toBe('created');
+    if (res.kind !== 'created') throw new Error('expected created');
+    // Default is 'present' with shift_id null when there's no working schedule.
+    expect(res.row.attendance_status).toBe('present');
+    expect(res.row.shift_id).toBeNull();
+    expect(res.row.late_duration).toBeNull();
+  });
+
+  it('returns noop when re-saving the same times against an existing row', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    const shift = await seedTargetSchedule({
+      startTime: '09:00',
+      endTime: '17:00',
+      lateTolerance: 5
+    });
+
+    await db.insert(employeeShifts).values({
+      user_id: TARGET_EMP,
+      date: MON_DATE,
+      shift_id: shift.id,
+      check_in_time: '08:00',
+      check_out_time: '13:00',
+      attendance_status: 'present'
+    });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00'
+    });
+
+    expect(res.kind).toBe('noop');
+    if (res.kind !== 'noop') throw new Error('expected noop');
+    expect(res.row.check_in_time).toBe('08:00');
+
+    const audits = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'attendance.manual_record'));
+    expect(audits).toHaveLength(0);
+  });
+
+  it('validates date and time formats at the boundary', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+
+    await expect(
+      recordManualAttendance(ADMIN_ACTOR, {
+        employeeId: TARGET_EMP,
+        date: '2026-8-3', // not zero-padded
+        checkInTime: '08:00'
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATE', name: 'DomainError' });
+
+    await expect(
+      recordManualAttendance(ADMIN_ACTOR, {
+        employeeId: TARGET_EMP,
+        date: MON_DATE,
+        checkInTime: '8:00' // not HH:MM
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_CHECK_IN_TIME', name: 'DomainError' });
+
+    // reason length exceeds 1000
+    await expect(
+      recordManualAttendance(ADMIN_ACTOR, {
+        employeeId: TARGET_EMP,
+        date: MON_DATE,
+        checkInTime: '08:00',
+        reason: 'x'.repeat(1001)
+      })
+    ).rejects.toMatchObject({ code: 'REASON_TOO_LONG', name: 'DomainError' });
+  });
+
+  it('does not disturb other employees’ rows for the same date', async () => {
+    await seedEmployee(ADMIN_ACTOR);
+    await seedEmployee(TARGET_EMP);
+    await seedEmployee(OTHER_EMP);
+    await seedTargetSchedule({ startTime: '09:00', endTime: '17:00', lateTolerance: 5 });
+
+    await db.insert(employeeShifts).values({
+      user_id: OTHER_EMP,
+      date: MON_DATE,
+      check_in_time: '09:00',
+      check_out_time: '17:00',
+      attendance_status: 'present'
+    });
+
+    const res = await recordManualAttendance(ADMIN_ACTOR, {
+      employeeId: TARGET_EMP,
+      date: MON_DATE,
+      checkInTime: '08:00',
+      checkOutTime: '13:00'
+    });
+
+    expect(res.kind).toBe('created');
+
+    const [otherRow] = await db
+      .select()
+      .from(employeeShifts)
+      .where(eq(employeeShifts.user_id, OTHER_EMP));
+    expect(otherRow.check_in_time).toBe('09:00');
+    expect(otherRow.check_out_time).toBe('17:00');
   });
 });

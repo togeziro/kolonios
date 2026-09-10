@@ -1,7 +1,7 @@
 import { and, eq, or, gte, lte, sql, desc, asc } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm';
 import { db } from './index';
-import { mapDbError } from '../errors';
+import { DomainError, mapDbError } from '../errors';
 import { businessDateInTimeZone } from '@/lib/dates';
 import {
   employeeShifts,
@@ -20,6 +20,7 @@ import {
 import { employees } from './schema/employees';
 import { departments } from './schema/masterdata';
 import { dailyChecklists } from './schema/checklists';
+import { auditLog } from './schema/audit-log';
 import type {
   AttendanceCheckInPayload,
   AttendanceCheckOutPayload,
@@ -31,12 +32,14 @@ import type {
   PerformanceStatsResponse,
   EffectiveSchedule,
   LocationPolicy,
-  AttendancePolicy
+  AttendancePolicy,
+  EmployeeShift
 } from '@/lib/domain/attendance';
 import { buildPagination, buildConditions } from './utils';
 import {
   resolveAttendancePolicy as resolveAttendancePolicyUtil,
-  calculateLateMinutes
+  calculateLateMinutes,
+  timeToSeconds
 } from '@/lib/attendance/schedule';
 import { validateGpsLocation } from '@/lib/attendance/geo';
 
@@ -1409,6 +1412,303 @@ export async function getAdminAttendanceReport(filters: AdminReportFilters = {})
 export type AdminAttendanceReportRow = Awaited<
   ReturnType<typeof getAdminAttendanceReport>
 >['records'][number];
+
+// --- Manual Attendance (admin/HR) ---
+
+export type RecordManualAttendanceInput = {
+  employeeId: string;
+  /** YYYY-MM-DD */
+  date: string;
+  /** HH:MM or HH:MM:SS */
+  checkInTime: string;
+  /** HH:MM or HH:MM:SS; omit for a half-day / open-ended record */
+  checkOutTime?: string;
+  /** Optional free-text justification; max 1000 chars. */
+  reason?: string;
+  /** Set true to overwrite an existing row for (employeeId, date). */
+  confirmOverwrite?: boolean;
+};
+
+export type RecordManualAttendanceResult =
+  | { kind: 'created'; row: EmployeeShift }
+  | { kind: 'overwritten'; row: EmployeeShift }
+  | { kind: 'overwrite_required'; existing: EmployeeShift }
+  | { kind: 'noop'; row: EmployeeShift };
+
+const TIME_REGEX = /^\d{2}:\d{2}(:\d{2})?$/;
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_REASON_LENGTH = 1000;
+
+function serializeAuditSnapshot(row: EmployeeShift): Record<string, unknown> {
+  return { ...row };
+}
+
+/** Desired post-write state, derived from the input + effective schedule. */
+type ManualWriteDesired = {
+  checkInTime: string;
+  checkOutTime?: string;
+  status: 'present' | 'late';
+  lateMinutes: number | null;
+  shiftId: number | null;
+};
+
+type ManualWritePlan =
+  | { action: 'create' }
+  | { action: 'overwrite'; target: EmployeeShift }
+  | { action: 'conflict'; existing: EmployeeShift }
+  | { action: 'noop'; row: EmployeeShift };
+
+function manualRowMatches(row: EmployeeShift, desired: ManualWriteDesired): boolean {
+  return (
+    row.check_in_time === desired.checkInTime &&
+    row.check_out_time === (desired.checkOutTime ?? null) &&
+    row.attendance_status === desired.status &&
+    (row.late_duration ?? null) === desired.lateMinutes &&
+    row.shift_id === desired.shiftId
+  );
+}
+
+/**
+ * Decide the write path for a manual record given the pre-transaction read
+ * (`preExisting`) and a fresh in-transaction re-read (`fresh`).
+ *
+ * Called inside the write transaction so the decision is made on fresh state:
+ * a row committed concurrently after the fast-path read surfaces as
+ * `conflict` (or `noop` when identical) instead of silently producing a
+ * duplicate `(user_id, date)` row. `fresh` is undefined only when the row
+ * vanished between the two reads (no delete path exists in the app) — the
+ * caller falls back to an insert rather than updating zero rows.
+ */
+export function resolveManualWritePlan(
+  preExisting: EmployeeShift | undefined,
+  fresh: EmployeeShift | undefined,
+  desired: ManualWriteDesired
+): ManualWritePlan {
+  if (!preExisting) {
+    if (!fresh) return { action: 'create' };
+    return manualRowMatches(fresh, desired)
+      ? { action: 'noop', row: fresh }
+      : { action: 'conflict', existing: fresh };
+  }
+  // A pre-existing row means the fast path already cleared the confirm gate;
+  // prefer the in-transaction read as the overwrite target. `fresh` can only
+  // be missing if the row was deleted concurrently (no delete path exists in
+  // the app) — fall back to an insert rather than updating zero rows.
+  if (!fresh) return { action: 'create' };
+  return { action: 'overwrite', target: fresh };
+}
+
+function deriveAttendanceStatus(
+  effectiveSchedule: EffectiveSchedule | null,
+  checkInTime: string
+): {
+  shiftId: number | null;
+  lateMinutes: number | null;
+  status: 'present' | 'late';
+} {
+  if (!effectiveSchedule) {
+    // No working schedule for this date — admin is asserting presence; we have
+    // no rule to call it late or absent, so default to 'present'. Ticket and
+    // spec both ban auto-excuse here.
+    return { shiftId: null, lateMinutes: null, status: 'present' };
+  }
+  const lateMinutes = calculateLateMinutes({
+    schedule: effectiveSchedule,
+    actualCheckIn: checkInTime
+  });
+  return {
+    shiftId: effectiveSchedule.shiftId,
+    lateMinutes: lateMinutes > 0 ? lateMinutes : null,
+    status: lateMinutes > 0 ? 'late' : 'present'
+  };
+}
+
+/**
+ * Record or overwrite a manual attendance row on behalf of an employee.
+ *
+ * Bypasses the self-service GPS / selfie / face-verification pipeline; status
+ * (`present` / `late`) is derived from the entered times against the
+ * employee's effective schedule via the same `resolveEffectiveSchedule` /
+ * `calculateLateMinutes` engine the self-service path uses. The optional
+ * `reason` is recorded on the audit log row only — no new schema column.
+ *
+ * Two-phase write: the first call with a conflicting existing row returns
+ * `{ kind: 'overwrite_required', existing }` without writing; the caller
+ * re-issues the call with `confirmOverwrite: true` to commit. When the new
+ * times match the existing row the function short-circuits to
+ * `{ kind: 'noop', row }` so callers can pick an appropriate success copy.
+ *
+ * Errors thrown (as `DomainError`):
+ *  - `EMPLOYEE_ID_REQUIRED` — input missing employeeId
+ *  - `INVALID_DATE`        — date is not YYYY-MM-DD
+ *  - `INVALID_CHECK_IN_TIME` / `INVALID_CHECK_OUT_TIME` — bad HH:MM format
+ *  - `INVALID_TIME_RANGE`  — checkOutTime is before checkInTime
+ *  - `REASON_TOO_LONG`     — reason > 1000 chars
+ *  - `EMPLOYEE_NOT_FOUND`  — no row in `employees` for the given id
+ */
+export async function recordManualAttendance(
+  actorUserId: string,
+  input: RecordManualAttendanceInput
+): Promise<RecordManualAttendanceResult> {
+  try {
+    if (!input.employeeId?.trim()) {
+      throw new DomainError('Employee id is required.', 'EMPLOYEE_ID_REQUIRED');
+    }
+    if (!DATE_REGEX.test(input.date)) {
+      throw new DomainError('Date must be in YYYY-MM-DD format.', 'INVALID_DATE');
+    }
+    if (!TIME_REGEX.test(input.checkInTime)) {
+      throw new DomainError('checkInTime must be HH:MM or HH:MM:SS.', 'INVALID_CHECK_IN_TIME');
+    }
+    if (input.checkOutTime !== undefined && !TIME_REGEX.test(input.checkOutTime)) {
+      throw new DomainError('checkOutTime must be HH:MM or HH:MM:SS.', 'INVALID_CHECK_OUT_TIME');
+    }
+    if (
+      input.checkOutTime !== undefined &&
+      timeToSeconds(input.checkOutTime) < timeToSeconds(input.checkInTime)
+    ) {
+      throw new DomainError('checkOutTime must be on or after checkInTime.', 'INVALID_TIME_RANGE');
+    }
+    const reason = input.reason?.trim() ? input.reason.trim() : undefined;
+    if (reason !== undefined && reason.length > MAX_REASON_LENGTH) {
+      throw new DomainError(
+        `Reason must be ${MAX_REASON_LENGTH} characters or fewer.`,
+        'REASON_TOO_LONG'
+      );
+    }
+
+    const [employee] = await db
+      .select({ id: employees.id, location_id: employees.location_id })
+      .from(employees)
+      .where(eq(employees.id, input.employeeId))
+      .limit(1);
+    if (!employee) {
+      throw new DomainError(
+        `Employee with id ${input.employeeId} not found.`,
+        'EMPLOYEE_NOT_FOUND'
+      );
+    }
+
+    const effectiveSchedule = await getEffectiveEmployeeSchedule(input.employeeId, input.date);
+    const { shiftId, lateMinutes, status } = deriveAttendanceStatus(
+      effectiveSchedule,
+      input.checkInTime
+    );
+
+    // Manual entries bypass GPS / selfie enforcement regardless of policy,
+    // but we still capture which policy *was* in effect for downstream reports.
+    const lockLocationId = employee.location_id ?? 1;
+    let gpsValidationEnabled = false;
+    let selfieRequired = false;
+    if (effectiveSchedule) {
+      const policy = await getAttendancePolicy(lockLocationId, shiftId);
+      gpsValidationEnabled = policy.gpsValidationEnabled;
+      selfieRequired = policy.selfieRequired;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(employeeShifts)
+      .where(and(eq(employeeShifts.user_id, input.employeeId), eq(employeeShifts.date, input.date)))
+      .limit(1);
+
+    const desired: ManualWriteDesired = {
+      checkInTime: input.checkInTime,
+      checkOutTime: input.checkOutTime,
+      status,
+      lateMinutes,
+      shiftId
+    };
+
+    // Fast path on the pre-transaction read: surface noop / conflict without
+    // opening a transaction. Anything else proceeds to the write below, which
+    // re-reads inside the transaction before deciding.
+    if (existing && manualRowMatches(existing, desired)) {
+      return { kind: 'noop', row: existing };
+    }
+    if (existing && !input.confirmOverwrite) {
+      return { kind: 'overwrite_required', existing };
+    }
+
+    const outcome = await db.transaction(async (tx) => {
+      const [fresh] = await tx
+        .select()
+        .from(employeeShifts)
+        .where(
+          and(eq(employeeShifts.user_id, input.employeeId), eq(employeeShifts.date, input.date))
+        )
+        .limit(1);
+
+      const plan = resolveManualWritePlan(existing, fresh, desired);
+      if (plan.action === 'noop') {
+        return { kind: 'noop' as const, row: plan.row };
+      }
+      if (plan.action === 'conflict') {
+        return { kind: 'overwrite_required' as const, existing: plan.existing };
+      }
+
+      const target = plan.action === 'overwrite' ? plan.target : null;
+      const before = target ? serializeAuditSnapshot(target) : null;
+
+      const commonFields = {
+        shift_id: shiftId,
+        check_in_time: input.checkInTime,
+        check_out_time: input.checkOutTime ?? null,
+        late_duration: lateMinutes,
+        attendance_status: status,
+        gps_validation_enabled: gpsValidationEnabled,
+        selfie_required: selfieRequired,
+        // Manual entries bypass GPS / selfie verification by admin authority;
+        // 'disabled' mirrors the existing self-service bypass branch (see
+        // `checkIn` when `gpsValidationEnabled` is false).
+        validation_state: 'disabled' as const,
+        lock_location: lockLocationId
+      };
+
+      let updatedOrInserted: EmployeeShift;
+      if (target) {
+        const [updated] = await tx
+          .update(employeeShifts)
+          .set({ ...commonFields, updated_at: new Date() })
+          .where(eq(employeeShifts.id, target.id))
+          .returning();
+        updatedOrInserted = updated;
+      } else {
+        const [inserted] = await tx
+          .insert(employeeShifts)
+          .values({
+            user_id: input.employeeId,
+            date: input.date,
+            ...commonFields
+          })
+          .returning();
+        updatedOrInserted = inserted;
+      }
+
+      await tx.insert(auditLog).values({
+        actorUserId,
+        action: 'attendance.manual_record',
+        entityType: 'attendance',
+        entityId: input.employeeId,
+        before,
+        after: {
+          ...serializeAuditSnapshot(updatedOrInserted),
+          manual_reason: reason ?? null
+        },
+        requestId: null
+      });
+
+      if (target) {
+        return { kind: 'overwritten' as const, row: updatedOrInserted };
+      }
+      return { kind: 'created' as const, row: updatedOrInserted };
+    });
+
+    return outcome;
+  } catch (e) {
+    mapDbError(e, 'attendance.recordManualAttendance');
+  }
+}
 
 // --- National Holidays CRUD ---
 
