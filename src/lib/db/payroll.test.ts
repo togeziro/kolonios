@@ -27,16 +27,11 @@ import {
   taxSettings
 } from './schema/payroll';
 import {
-  resolveEffectiveRecord,
-  requireEffectiveRecord,
-  validatePayrollDateRange,
   assertEmployeeScope,
   assertPayrollTransition,
   assertPayrollRecordUnique,
-  resolveEffectiveRecords,
   assertPayrollPeriodUpdate,
-  assertPayrollRecordMutation,
-  assertEffectiveDate
+  assertPayrollRecordMutation
 } from './payroll';
 import {
   createEmployeeTaxProfile,
@@ -236,27 +231,8 @@ describe('payroll schema contract', () => {
 });
 
 describe('payroll effective-date access', () => {
-  it('resolves the latest record covering the as-of date and rejects overlap', () => {
-    const records = [
-      { id: 1, effective_from: '2026-01-01', effective_to: '2026-06-30' },
-      { id: 2, effective_from: '2026-07-01', effective_to: null }
-    ];
-    expect(resolveEffectiveRecord('emp-1', '2026-08-01', records)).toEqual(records[1]);
-    expect(resolveEffectiveRecord('emp-1', '2025-12-01', records)).toBeNull();
-    expect(() =>
-      resolveEffectiveRecord('emp-1', '2026-05-01', [
-        records[0],
-        { id: 3, effective_from: '2026-04-01', effective_to: '2026-08-01' }
-      ])
-    ).toThrow(/overlap/i);
-  });
-
-  it('rejects invalid ranges and missing employee scope', () => {
-    expect(() => validatePayrollDateRange('2026-08-01', '2026-07-31')).toThrow(/start/i);
+  it('rejects missing employee scope', () => {
     expect(() => assertEmployeeScope(undefined)).toThrow(/employee/i);
-    expect(() => requireEffectiveRecord('emp-1', '2026-08-01', [])).toThrow(
-      /required payroll data/i
-    );
   });
 
   it('rejects duplicate payroll records before insertion', () => {
@@ -268,19 +244,6 @@ describe('payroll effective-date access', () => {
     expect(() => assertPayrollTransition('locked', 'paid')).toThrow(/locked/i);
     expect(() => assertPayrollTransition('draft', 'paid')).toThrow(/transition/i);
     expect(() => assertPayrollTransition('paid', 'locked')).not.toThrow();
-  });
-
-  it('resolves every effective record used during a period and excludes outside records', () => {
-    const rows = [
-      { id: 1, effective_from: '2026-01-01', effective_to: '2026-06-30' },
-      { id: 2, effective_from: '2026-07-01', effective_to: '2026-07-15' },
-      { id: 3, effective_from: '2026-07-16', effective_to: null },
-      { id: 4, effective_from: '2026-08-01', effective_to: null }
-    ];
-    expect(resolveEffectiveRecords('emp-1', '2026-07-01', '2026-07-31', rows)).toEqual([
-      rows[1],
-      rows[2]
-    ]);
   });
 
   it('rejects status changes through period edits unless they are state-machine transitions', () => {
@@ -296,7 +259,6 @@ describe('payroll effective-date access', () => {
     expect(() => assertPayrollRecordMutation({ payroll_period_id: 11 }, 'employee-1', 10)).toThrow(
       /immutable/i
     );
-    expect(() => assertEffectiveDate('2026-02-30')).toThrow(/date/i);
   });
 });
 

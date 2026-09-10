@@ -19,10 +19,10 @@ import {
 import {
   getEmploymentContext,
   listEmployeePayrollProfileHistory,
-  resolveEffectiveRecord,
   withPayrollAuditTransaction,
   type PayrollTransaction
 } from '@/lib/db/payroll';
+import { resolveEffectiveRecord } from '@/lib/payroll/engine';
 import {
   assertEmployeeScope,
   assertProfileReferenceScope,

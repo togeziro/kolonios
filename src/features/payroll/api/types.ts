@@ -5,7 +5,8 @@ export type ComponentType = 'allowance' | 'deduction';
 export type ComponentMode = 'fixed' | 'percentage' | 'per-attendance';
 export type TaxMethod = 'none' | 'progressive' | 'ter';
 export type BpjsProgram = 'jkk' | 'jkm' | 'jht' | 'jp' | 'kesehatan';
-export type JkkRiskCategory = 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+import type { JkkRiskCategory } from '@/lib/domain/payroll';
+export type { JkkRiskCategory } from '@/lib/domain/payroll';
 export type Pph21Method = 'gross' | 'gross_up';
 
 export interface SalaryComponentDefinition {

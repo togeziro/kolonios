@@ -36,8 +36,14 @@ import {
 import { employees } from './schema/employees';
 import { departments, designations } from './schema/masterdata';
 import { buildConditions, buildPagination, buildStatusCondition } from './utils';
-import { asDateISO, type DateISO } from '../domain/date-iso';
 import { auditLog } from './schema/audit-log';
+import {
+  assertDateRange,
+  assertEffectiveDate,
+  resolveEffectiveRecord,
+  resolveEffectiveRecords,
+  requireEffectiveRecord
+} from '../payroll/engine';
 import type {
   NewEmployeeBpjsEnrollment,
   NewEmployeeSalaryAssignment,
@@ -49,34 +55,7 @@ import type {
   NewSalaryComponent
 } from './schema/payroll';
 
-type EffectiveRow = { id: number; effective_from: DateISO; effective_to: DateISO | null };
-type RawEffectiveRow = { id: number; effective_from: string; effective_to: string | null };
-
-function toEffectiveRows<T extends RawEffectiveRow>(rows: T[]): Array<T & EffectiveRow> {
-  return rows.map((row) => ({
-    ...row,
-    effective_from: asDateISO(row.effective_from),
-    effective_to: row.effective_to ? asDateISO(row.effective_to) : null
-  }));
-}
 export type PayrollTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-const PTKP_STATUS_ANNUAL: Record<string, number> = {
-  'TK/0': 54_000_000,
-  'TK/1': 58_500_000,
-  'TK/2': 63_000_000,
-  'TK/3': 67_500_000,
-  'K/0': 58_500_000,
-  'K/1': 63_000_000,
-  'K/2': 67_500_000,
-  'K/3': 72_000_000
-};
-
-export function mapPtkpStatusToAmount(status: string): number {
-  const annual = PTKP_STATUS_ANNUAL[status];
-  if (!annual) throw new DomainError(`Invalid PTKP status: ${status}`, 'INVALID_PTKP_STATUS');
-  return Math.round(annual / 12);
-}
 
 function previousDbDate(value: string): string {
   const date = new Date(`${value}T00:00:00Z`);
@@ -117,27 +96,6 @@ export async function withPayrollAuditTransaction<T>(
   }
 }
 
-export function assertEffectiveDate(value: string) {
-  const match = /^\d{4}-\d{2}-\d{2}$/.test(value);
-  const parsed = match ? new Date(`${value}T00:00:00Z`) : new Date('invalid');
-  if (!match || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
-    throw new DomainError('A valid ISO calendar date is required.', 'INVALID_DATE');
-  }
-}
-
-function assertDateRange(periodStart: string, periodEnd: string) {
-  assertEffectiveDate(periodStart);
-  assertEffectiveDate(periodEnd);
-  if (periodStart > periodEnd) {
-    throw new DomainError(
-      'Payroll period start must be on or before its end.',
-      'INVALID_DATE_RANGE'
-    );
-  }
-}
-
-export const validatePayrollDateRange = assertDateRange;
-
 function assertEmployeeId(employeeId: string | undefined): asserts employeeId is string {
   if (!employeeId?.trim()) {
     throw new DomainError(
@@ -149,65 +107,6 @@ function assertEmployeeId(employeeId: string | undefined): asserts employeeId is
 
 export function assertEmployeeScope(employeeId: string | undefined): asserts employeeId is string {
   assertEmployeeId(employeeId);
-}
-
-/** Resolve an ordered effective-dated result while making overlap ambiguity explicit. */
-export function resolveEffectiveRecord<T extends RawEffectiveRow>(
-  employeeId: string,
-  asOfDate: string,
-  rows: T[]
-): (T & EffectiveRow) | null {
-  assertEffectiveDate(asOfDate);
-  const asOf = asDateISO(asOfDate);
-  const active = toEffectiveRows(rows).filter(
-    (row) => row.effective_from <= asOf && (!row.effective_to || row.effective_to >= asOf)
-  );
-  if (active.length > 1) {
-    throw new DomainError(
-      `Overlapping effective payroll records for employee ${employeeId}.`,
-      'OVERLAPPING_EFFECTIVE_RECORDS'
-    );
-  }
-  return active[0] ?? null;
-}
-
-export function resolveEffectiveRecords<T extends RawEffectiveRow>(
-  employeeId: string,
-  periodStart: string,
-  periodEnd: string,
-  rows: T[]
-) {
-  assertDateRange(periodStart, periodEnd);
-  const start = asDateISO(periodStart);
-  const end = asDateISO(periodEnd);
-  const points = [
-    start,
-    ...toEffectiveRows(rows)
-      .map((row) => row.effective_from)
-      .filter((date) => date > start && date <= end)
-  ].toSorted();
-  const selected = new Map<number, T & EffectiveRow>();
-  for (const point of points) {
-    const row = resolveEffectiveRecord(employeeId, point, rows);
-    if (row) selected.set(row.id, row);
-  }
-  return [...selected.values()].toSorted(
-    (left, right) => left.effective_from.localeCompare(right.effective_from) || left.id - right.id
-  );
-}
-
-export function requireEffectiveRecord<T extends RawEffectiveRow>(
-  employeeId: string,
-  asOfDate: string,
-  rows: T[]
-) {
-  const row = resolveEffectiveRecord(employeeId, asOfDate, rows);
-  if (!row)
-    throw new DomainError(
-      'Required payroll data is missing for this period.',
-      'MISSING_PAYROLL_DATA'
-    );
-  return row as T & EffectiveRow;
 }
 
 function effectiveWhere(

@@ -1,7 +1,6 @@
 import type {
   AttendanceTotals,
   EmployerCost,
-  JkkRiskCategory,
   ManualAdjustment,
   Money,
   OvertimeResult,
@@ -287,14 +286,6 @@ export function grossUpTax(taxableBase: Money, profile: TaxProfile): TaxResult {
 export function calculateOvertime(): OvertimeResult {
   return { hours: 0, amount: 0, source: 'mvp-disabled' };
 }
-
-export const JKK_RATES: Record<JkkRiskCategory, number> = {
-  very_low: 0.24,
-  low: 0.54,
-  medium: 0.89,
-  high: 1.27,
-  very_high: 1.74
-};
 
 export function calculateBpjs(input: Pick<PayrollCalculationInput, 'bpjs'>): {
   deductions: PayrollLineItem[];

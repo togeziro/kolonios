@@ -16,11 +16,10 @@ import {
   getAttendanceOverride,
   getCompanyPayrollSettings,
   getEffectiveSalaryComponents,
-  mapPtkpStatusToAmount,
-  resolveEffectiveRecord,
   type PayrollTransaction
 } from '@/lib/db/payroll';
-import { calculatePayroll, JKK_RATES, parseDbDecimalToMoney } from '../utils/calculator';
+import { JKK_RATES, mapPtkpStatusToAmount, resolveEffectiveRecord } from '@/lib/payroll/engine';
+import { calculatePayroll, parseDbDecimalToMoney } from '../utils/calculator';
 import { toDbDecimal } from '../utils/money';
 import type {
   AttendancePolicy,

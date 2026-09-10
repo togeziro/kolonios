@@ -33,3 +33,12 @@ export function isRecordPaid(record: PayrollPaidRecordLike | null | undefined): 
     record.paid_at != null || record.period_status === 'paid' || record.period_status === 'locked'
   );
 }
+
+/**
+ * BPJS JKK (Jaminan Kecelakaan Kerja) risk category — drives the company-side
+ * contribution rate (`lib/payroll/engine.ts#JKK_RATES`). Lives in `lib/domain`
+ * because the engine is pure `lib/` code and ADR-0001 forbids `lib → features`;
+ * `features/payroll/api/types.ts` re-exports this as a shim for existing
+ * import sites.
+ */
+export type JkkRiskCategory = 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
