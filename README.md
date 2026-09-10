@@ -329,7 +329,7 @@ Detailed docs live in [`docs/`](./docs/):
 | [docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md](./docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (archived) 🆕                               |
 | [docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios comparison (archived) 🆕                              |
 | [docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md](./docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan (archived) 🆕                                |
-| [docs/TICKETS.md](./docs/TICKETS.md)                                                                                                 | Ticket system + field ops (Stitch-driven design spec) 🆕                 |
+| [docs/TICKETS.md](./docs/TICKETS.md)                                                                                                 | Ticket system + field ops (design spec) 🆕                               |
 | [docs/EN_ROUTE.md](./docs/EN_ROUTE.md)                                                                                               | En Route navigation deep-dive: data flow, fix validation, testing 🆕     |
 | [docs/audit/](./docs/audit/)                                                                                                         | Repository audit + implementation summary                                |
 
