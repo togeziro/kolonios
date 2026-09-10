@@ -6,6 +6,7 @@ import {
   resolveAttendancePolicy,
   isLocationStale,
   isAccuracyAcceptable,
+  calculateDistance,
   type EffectiveSchedule,
   type ShiftPolicy,
   type WeekdayScheduleRule
@@ -331,5 +332,31 @@ describe('isAccuracyAcceptable', () => {
 
   it('returns true when accuracy is exactly at limit', () => {
     expect(isAccuracyAcceptable(50, 50)).toBe(true);
+  });
+});
+
+// --- calculateDistance (Haversine) ---
+
+describe('calculateDistance (Haversine)', () => {
+  it('returns 0 for the same coordinates', () => {
+    expect(calculateDistance(40.7128, -74.006, 40.7128, -74.006)).toBe(0);
+  });
+
+  it('calculates distance between NYC and LA (~3940 km)', () => {
+    const d = calculateDistance(40.7128, -74.006, 34.0522, -118.2437);
+    expect(d).toBeGreaterThan(3900_000);
+    expect(d).toBeLessThan(4000_000);
+  });
+
+  it('calculates a short distance (~111 km per degree latitude)', () => {
+    const d = calculateDistance(0, 0, 1, 0);
+    expect(d).toBeGreaterThan(110_000);
+    expect(d).toBeLessThan(112_000);
+  });
+
+  it('handles negative coordinates (southern hemisphere)', () => {
+    const d = calculateDistance(-33.8688, 151.2093, -37.8136, 144.9631);
+    expect(d).toBeGreaterThan(700_000);
+    expect(d).toBeLessThan(750_000);
   });
 });

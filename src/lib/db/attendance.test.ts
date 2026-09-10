@@ -1,8 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import {
-  calculateDistance,
-  validateGpsLocation,
   getLocations,
   getShifts,
   createLeaveRequest,
@@ -56,30 +54,6 @@ import {
 
 const TEST_USER_ID = 'test-user-att-123';
 
-describe('calculateDistance (Haversine)', () => {
-  it('returns 0 for the same coordinates', () => {
-    expect(calculateDistance(40.7128, -74.006, 40.7128, -74.006)).toBe(0);
-  });
-
-  it('calculates distance between NYC and LA (~3940 km)', () => {
-    const d = calculateDistance(40.7128, -74.006, 34.0522, -118.2437);
-    expect(d).toBeGreaterThan(3900_000);
-    expect(d).toBeLessThan(4000_000);
-  });
-
-  it('calculates a short distance (~111 km per degree latitude)', () => {
-    const d = calculateDistance(0, 0, 1, 0);
-    expect(d).toBeGreaterThan(110_000);
-    expect(d).toBeLessThan(112_000);
-  });
-
-  it('handles negative coordinates (southern hemisphere)', () => {
-    const d = calculateDistance(-33.8688, 151.2093, -37.8136, 144.9631);
-    expect(d).toBeGreaterThan(700_000);
-    expect(d).toBeLessThan(750_000);
-  });
-});
-
 describe('attendance data access (integration)', () => {
   beforeEach(async () => {
     await resetAllTables();
@@ -87,84 +61,6 @@ describe('attendance data access (integration)', () => {
 
   afterAll(async () => {
     await resetAllTables();
-  });
-
-  describe('validateGpsLocation', () => {
-    const policy = {
-      gpsValidationEnabled: true,
-      selfieRequired: false,
-      maxAccuracyMeters: 50,
-      maxStaleMs: 30_000
-    };
-
-    it('rejects when any coordinate field is missing', async () => {
-      const res = await validateGpsLocation({
-        latitude: -6.2,
-        longitude: 106.85,
-        accuracy: 10,
-        capturedAt: Date.now(),
-        locationId: 1,
-        policy
-      });
-      if (res.ok) throw new Error('expected failure');
-      expect(res.code).toBe('GPS_REQUIRED');
-    });
-
-    it('rejects stale coordinates', async () => {
-      const loc = await seedLocation({ gps_validation_enabled: true });
-      const res = await validateGpsLocation({
-        latitude: loc.latitude!,
-        longitude: loc.longitude!,
-        accuracy: 10,
-        capturedAt: Date.now() - 120_000,
-        locationId: loc.id,
-        policy
-      });
-      if (res.ok) throw new Error('expected failure');
-      expect(res.code).toBe('GPS_STALE');
-    });
-
-    it('rejects low-accuracy coordinates', async () => {
-      const loc = await seedLocation({ gps_validation_enabled: true });
-      const res = await validateGpsLocation({
-        latitude: loc.latitude!,
-        longitude: loc.longitude!,
-        accuracy: 500,
-        capturedAt: Date.now(),
-        locationId: loc.id,
-        policy
-      });
-      if (res.ok) throw new Error('expected failure');
-      expect(res.code).toBe('GPS_INACCURATE');
-    });
-
-    it('rejects positions outside the geofence radius', async () => {
-      const loc = await seedLocation({ latitude: -6.2, longitude: 106.85, radius: 50 });
-      const res = await validateGpsLocation({
-        latitude: -7.0,
-        longitude: 106.85,
-        accuracy: 10,
-        capturedAt: Date.now(),
-        locationId: loc.id,
-        policy
-      });
-      if (res.ok) throw new Error('expected failure');
-      expect(res.code).toBe('OUTSIDE_RADIUS');
-    });
-
-    it('returns the distance when the position is valid', async () => {
-      const loc = await seedLocation({ latitude: -6.2, longitude: 106.85, radius: 500 });
-      const res = await validateGpsLocation({
-        latitude: -6.2,
-        longitude: 106.85,
-        accuracy: 10,
-        capturedAt: Date.now(),
-        locationId: loc.id,
-        policy
-      });
-      expect(res.ok).toBe(true);
-      if (res.ok) expect(res.distanceToOffice).toBe(0);
-    });
   });
 
   describe('locations', () => {

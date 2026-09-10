@@ -36,91 +36,14 @@ import type {
 import { buildPagination, buildConditions } from './utils';
 import {
   resolveAttendancePolicy as resolveAttendancePolicyUtil,
-  calculateLateMinutes,
-  isLocationStale,
-  isAccuracyAcceptable
+  calculateLateMinutes
 } from '@/lib/attendance/schedule';
+import { validateGpsLocation } from '@/lib/attendance/geo';
 
-function toRad(deg: number) {
-  return (deg * Math.PI) / 180;
-}
-
-export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-export type GpsValidationInput = {
-  latitude?: number;
-  longitude?: number;
-  accuracy?: number;
-  capturedAt?: number;
-  locationId?: number | null;
-  policy: AttendancePolicy;
-};
-
-export type GpsValidationResult =
-  | { ok: true; distanceToOffice: number }
-  | { ok: false; code: string; message: string };
-
-export async function validateGpsLocation(input: GpsValidationInput): Promise<GpsValidationResult> {
-  const { latitude, longitude, accuracy, capturedAt, locationId, policy } = input;
-  // When GPS validation is enabled every coordinate field is required;
-  // omitting any of them must not bypass validation.
-  if (
-    latitude == null ||
-    longitude == null ||
-    accuracy == null ||
-    capturedAt == null ||
-    locationId == null
-  ) {
-    return { ok: false, code: 'GPS_REQUIRED', message: 'GPS location is required' };
-  }
-  // Reject stale coordinates (server-side, never trust the client)
-  if (isLocationStale(capturedAt, Date.now(), policy.maxStaleMs)) {
-    return {
-      ok: false,
-      code: 'GPS_STALE',
-      message: 'Location is stale. Refresh your location and try again.'
-    };
-  }
-  // Reject inaccurate coordinates
-  if (!isAccuracyAcceptable(accuracy, policy.maxAccuracyMeters)) {
-    return {
-      ok: false,
-      code: 'GPS_INACCURATE',
-      message: 'GPS accuracy is too low. Move to an open area and refresh.'
-    };
-  }
-  // Validate geofence against the submitted location
-  const [location] = await db.select().from(locations).where(eq(locations.id, locationId)).limit(1);
-
-  if (!location || location.latitude == null || location.longitude == null) {
-    return { ok: false, code: 'GPS_REQUIRED', message: 'Location not found' };
-  }
-
-  const distanceToOffice = calculateDistance(
-    latitude,
-    longitude,
-    location.latitude,
-    location.longitude
-  );
-
-  if (location.radius != null && distanceToOffice > location.radius) {
-    return {
-      ok: false,
-      code: 'OUTSIDE_RADIUS',
-      message: `You are ${Math.round(distanceToOffice)}m from the office. Must be within ${location.radius}m.`
-    };
-  }
-
-  return { ok: true, distanceToOffice };
+/** Load a single office location by id; returns null when it does not exist. */
+async function getLocationById(id: number) {
+  const [location] = await db.select().from(locations).where(eq(locations.id, id)).limit(1);
+  return location ?? null;
 }
 
 export async function getLocations() {
@@ -240,7 +163,9 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
 
     // Check GPS validation
     if (policy.gpsValidationEnabled) {
-      const gps = await validateGpsLocation({ ...payload, policy });
+      const location =
+        payload.locationId != null ? await getLocationById(payload.locationId) : null;
+      const gps = validateGpsLocation({ ...payload, policy, location, now: Date.now() });
       if (!gps.ok) {
         return {
           success: false,
@@ -339,13 +264,17 @@ export async function checkOut(userId: string, payload: AttendanceCheckOutPayloa
       // Check-out is validated against the policy the check-in was locked to;
       // omitting any coordinate field must not bypass validation.
       const policy = await getAttendancePolicy(existing.lock_location, existing.shift_id);
-      const gps = await validateGpsLocation({
+      const location =
+        existing.lock_location != null ? await getLocationById(existing.lock_location) : null;
+      const gps = validateGpsLocation({
         latitude: payload.latitude,
         longitude: payload.longitude,
         accuracy: payload.accuracy,
         capturedAt: payload.capturedAt,
         locationId: existing.lock_location,
-        policy
+        policy,
+        location,
+        now: Date.now()
       });
       if (!gps.ok) {
         return {
