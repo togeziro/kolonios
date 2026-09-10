@@ -44,7 +44,7 @@
  */
 
 import { createServerFn } from '@tanstack/react-start';
-import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import * as z from 'zod';
 
 import { requirePermission } from '@/lib/auth/session';
@@ -52,22 +52,9 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { mapDbError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { db } from '@/lib/db';
-import { getHolidaysInRange } from '@/lib/db/attendance';
-import {
-  dateOverrides,
-  dayOffs,
-  scheduleAssignments,
-  shifts,
-  shiftWeekdayRules
-} from '@/lib/db/schema/attendance';
-import {
-  resolveEffectiveSchedule,
-  type DateOverride as EngineDateOverride,
-  type ScheduleAssignment as EngineAssignment,
-  type ShiftPolicy,
-  type WeekdayScheduleRule
-} from '@/lib/attendance/schedule';
-import { addDays, dayOfWeek, isWeekendDate } from '../utils/date-utils';
+import { dateOverrides, dayOffs } from '@/lib/db/schema/attendance';
+import { addDays, isWeekendDate } from '../utils/date-utils';
+import { resolveScheduleGridCell } from './cell-resolver';
 import type { ScheduleGridCell } from './types';
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
@@ -105,8 +92,11 @@ const ERROR_SHIFT_ID_REQUIRED = 'shiftIdRequired' as const;
 
 /**
  * Tuple returned by every single-cell write fn. `cell` is the post-write
- * state of the affected cell, re-resolved via `resolveEffectiveSchedule`
- * so the popover can update its React Query cache directly.
+ * state of the affected cell, re-resolved via `resolveScheduleGridCell`
+ * (see `./cell-resolver`) so the popover can update its React Query cache
+ * directly. The write and read paths share one cell builder, so
+ * "re-resolve after write" is provably identical to a fresh fetch —
+ * including holiday handling.
  */
 export type CellWriteResult =
   | {
@@ -134,151 +124,6 @@ export type BulkResult =
     };
 
 /**
- * Re-resolve a single (user, date) cell after a write. Mirrors the
- * resolution logic in `getScheduleGridFn` so the cache update matches
- * what a fresh fetch would return.
- */
-async function resolveSingleCell(input: {
-  userId: string;
-  date: string;
-}): Promise<ScheduleGridCell> {
-  const { userId, date } = input;
-
-  // 1) Assignment row that covers this date (most recent first).
-  const assignmentRows = await db
-    .select()
-    .from(scheduleAssignments)
-    .where(
-      and(
-        eq(scheduleAssignments.user_id, userId),
-        lte(scheduleAssignments.effective_from, date),
-        or(
-          sql`${scheduleAssignments.effective_to} IS NULL`,
-          gte(scheduleAssignments.effective_to, date)
-        )
-      )
-    )
-    .orderBy(desc(scheduleAssignments.effective_from))
-    .limit(1);
-
-  const matching = assignmentRows[0] ?? null;
-  const assignment: EngineAssignment | null = matching
-    ? {
-        userId: matching.user_id,
-        shiftId: matching.shift_id,
-        effectiveFrom: matching.effective_from,
-        effectiveTo: matching.effective_to
-      }
-    : null;
-
-  // 2) Override + day-off rows for this date.
-  const [overrideRow] = await db
-    .select()
-    .from(dateOverrides)
-    .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)))
-    .limit(1);
-
-  const [dayOffRow] = await db
-    .select()
-    .from(dayOffs)
-    .where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)))
-    .limit(1);
-
-  const overrideDates: EngineDateOverride[] = overrideRow
-    ? [{ date: overrideRow.date, shiftId: overrideRow.shift_id }]
-    : [];
-  const dayOffDates = dayOffRow ? [dayOffRow.date] : [];
-
-  // 3) Distinct shift ids needed: assignment shift + override shift.
-  const shiftIds = new Set<number>();
-  if (assignment) shiftIds.add(assignment.shiftId);
-  if (overrideRow) shiftIds.add(overrideRow.shift_id);
-
-  const weekdayRules: WeekdayScheduleRule[] = [];
-  const policiesByShift = new Map<number, ShiftPolicy>();
-  const shiftById = new Map<number, { id: number; name: string }>();
-
-  if (shiftIds.size > 0) {
-    const [ruleRows, shiftRows] = await Promise.all([
-      db
-        .select()
-        .from(shiftWeekdayRules)
-        .where(inArray(shiftWeekdayRules.shift_id, [...shiftIds])),
-      db
-        .select({
-          id: shifts.id,
-          name: shifts.name,
-          late_tolerance_minutes: shifts.late_tolerance_minutes,
-          absence_cutoff_minutes: shifts.absence_cutoff_minutes
-        })
-        .from(shifts)
-        .where(inArray(shifts.id, [...shiftIds]))
-    ]);
-    for (const r of ruleRows) {
-      weekdayRules.push({
-        dayOfWeek: r.day_of_week,
-        isWorkingDay: r.is_working_day ?? true,
-        startTime: r.start_time,
-        endTime: r.end_time
-      });
-    }
-    for (const s of shiftRows) {
-      shiftById.set(s.id, { id: s.id, name: s.name });
-      policiesByShift.set(s.id, {
-        shiftId: s.id,
-        lateToleranceMinutes: s.late_tolerance_minutes,
-        absenceCutoffMinutes: s.absence_cutoff_minutes
-      });
-    }
-  }
-
-  // 4) Holiday on this date (use the existing helper).
-  const [holiday] = await getHolidaysInRange(date, date);
-
-  // 5) Resolve via the shared engine.
-  const resolved = resolveEffectiveSchedule({
-    assignment,
-    weekdayRules,
-    shiftPolicies: [...policiesByShift.values()],
-    dateOverrides: overrideDates,
-    dayOffs: dayOffDates,
-    date
-  });
-
-  const hasAssignment = assignment != null;
-  const isDayOff = hasAssignment && dayOffDates.includes(date);
-
-  // 6) Recompute `policyMissing` for parity with `getScheduleGridFn`.
-  let policyMissing = false;
-  if (hasAssignment && !isDayOff && resolved == null) {
-    const effectiveShiftId = overrideRow?.shift_id ?? assignment!.shiftId;
-    const rule = weekdayRules.find((r) => r.dayOfWeek === dayOfWeek(date));
-    if (rule && rule.isWorkingDay) {
-      policyMissing = policiesByShift.get(effectiveShiftId) == null;
-    }
-  }
-
-  const holidayName = holiday?.name ?? null;
-
-  return {
-    date,
-    shiftId: resolved?.shiftId ?? null,
-    shiftName: resolved ? (shiftById.get(resolved.shiftId)?.name ?? null) : null,
-    startTime: resolved?.startTime ?? null,
-    endTime: resolved?.endTime ?? null,
-    lateToleranceMinutes: resolved?.lateToleranceMinutes ?? null,
-    absenceCutoffMinutes: resolved?.absenceCutoffMinutes ?? null,
-    isDayOff,
-    hasAssignment,
-    isHoliday: holidayName != null,
-    holidayName,
-    holidayOverUnassigned: !hasAssignment && holidayName != null,
-    dayOffReason: dayOffRow?.reason ?? null,
-    policyMissing
-  };
-}
-
-/**
  * Transaction handle type as passed by `db.transaction` — derived from the
  * method signature so the shared wrapper and its callers never have to
  * import drizzle's `PgTransaction` explicitly.
@@ -288,11 +133,12 @@ type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /**
  * Shared scaffolding for the single-cell write fns (`setCellShiftFn`,
  * `setCellDayOffFn`, `clearCellFn`): run the write inside one DB
- * transaction, re-resolve the affected cell via `resolveSingleCell` so the
- * React Query cache update matches a fresh fetch, then fold any failure
- * through a single `mapDbError` catch block into the `{ success: false }`
- * tuple. The `context` string is the `mapDbError` log context; the caller
- * keeps its `requirePermission` / `checkRateLimit` preamble.
+ * transaction, re-resolve the affected cell via `resolveScheduleGridCell`
+ * (the same builder the read path uses) so the React Query cache update
+ * matches a fresh fetch, then fold any failure through a single
+ * `mapDbError` catch block into the `{ success: false }` tuple. The
+ * `context` string is the `mapDbError` log context; the caller keeps its
+ * `requirePermission` / `checkRateLimit` preamble.
  */
 async function withCellWrite(
   context: string,
@@ -301,7 +147,7 @@ async function withCellWrite(
 ): Promise<CellWriteResult> {
   try {
     await db.transaction(fn);
-    const cell = await resolveSingleCell(input);
+    const cell = await resolveScheduleGridCell(input.userId, input.date);
     return {
       success: true,
       cell,

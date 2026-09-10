@@ -1,26 +1,13 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { mapDbError } from '@/lib/errors';
 import { db } from '@/lib/db';
-import { getHolidaysInRange } from '@/lib/db/attendance';
 import { departments } from '@/lib/db/schema/masterdata';
-import {
-  dateOverrides,
-  dayOffs,
-  scheduleAssignments,
-  shifts,
-  shiftWeekdayRules
-} from '@/lib/db/schema/attendance';
+import { scheduleAssignments } from '@/lib/db/schema/attendance';
 import { employees } from '@/lib/db/schema/employees';
-import {
-  resolveEffectiveSchedule,
-  type DateOverride as EngineDateOverride,
-  type ScheduleAssignment as EngineAssignment,
-  type ShiftPolicy,
-  type WeekdayScheduleRule
-} from '@/lib/attendance/schedule';
+import { resolveScheduleGridCells } from './cell-resolver';
 import {
   SCHEDULE_GRID_MAX_PAGE_SIZE,
   scheduleGridFiltersSchema,
@@ -28,7 +15,7 @@ import {
 } from './validation';
 import type { ScheduleGridCell, ScheduleGridResponse, ScheduleGridRow } from './types';
 import type { ScheduleGridFiltersInput, AssignShiftInlineInput } from './validation';
-import { addDays, dayOfWeek } from '../utils/date-utils';
+import { addDays, weekDays } from '../utils/date-utils';
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -61,11 +48,17 @@ export function buildEmployeeWhere(divisionId: number | null, search: string | n
 }
 
 /**
- * Resolve one 7-day window for a set of employees with a single batched
- * query pass (assignments, date overrides, day offs, distinct shifts,
- * weekday rules, holidays) — no N+1. Returns both the wire rows and the
+ * Resolve one 7-day window for a set of employees and adorn each resolved
+ * cell with the employee's name / department to build the grid rows.
+ *
+ * The heavy lifting — batched loads, the `resolveEffectiveSchedule` call,
+ * holiday projection, and cell shape — lives in `resolveScheduleGridCells`
+ * (`./cell-resolver`), which the write-side re-resolve shares, so precedence
+ * changes are a single edit and the two paths cannot drift. This function is
+ * the read-side decorator: it maps resolved cells (keyed by date) into
+ * ordered `ScheduleGridRow`s. Returns both the wire rows and the
  * holiday-by-date map so `getScheduleGridFn` keeps its response shape while
- * the month export reuses the exact same engine (`resolveEffectiveSchedule`).
+ * the month export reuses the exact same resolver.
  */
 export async function resolveWeekForEmployees(
   employeeRows: ScheduleEmployeeRow[],
@@ -76,244 +69,19 @@ export async function resolveWeekForEmployees(
   holidaysByDate: Record<string, string>;
 }> {
   const weekEnd = addDays(weekStart, 6);
-  const userIds = employeeRows.map((e) => e.id);
+  const weekDates = weekDays(weekStart);
 
-  // Assignments, weekday rules, shift policies — only meaningful when
-  // there are employees to resolve. Skipped otherwise.
-  let assignmentRows: (typeof scheduleAssignments.$inferSelect)[] = [];
-  let overrideRows: (typeof dateOverrides.$inferSelect)[] = [];
-  let dayOffRows: (typeof dayOffs.$inferSelect)[] = [];
-  let weekdayRuleRows: (typeof shiftWeekdayRules.$inferSelect)[] = [];
-  let shiftRows: (typeof shifts.$inferSelect)[] = [];
+  const { byUser, holidaysByDate } = await resolveScheduleGridCells({
+    userIds: employeeRows.map((e) => e.id),
+    startDate: weekStart,
+    endDate: weekEnd
+  });
 
-  if (userIds.length > 0) {
-    const employeeInClause = inArray(scheduleAssignments.user_id, userIds);
-    const assignmentWhere = and(
-      employeeInClause,
-      lte(scheduleAssignments.effective_from, weekEnd),
-      or(
-        sql`${scheduleAssignments.effective_to} IS NULL`,
-        gte(scheduleAssignments.effective_to, weekStart)
-      )
-    );
-
-    const [assignmentResult, overrideResult, dayOffResult] = await Promise.all([
-      db
-        .select()
-        .from(scheduleAssignments)
-        .where(assignmentWhere)
-        .orderBy(desc(scheduleAssignments.effective_from)),
-      db
-        .select()
-        .from(dateOverrides)
-        .where(
-          and(
-            inArray(dateOverrides.user_id, userIds),
-            gte(dateOverrides.date, weekStart),
-            lte(dateOverrides.date, weekEnd)
-          )
-        ),
-      db
-        .select()
-        .from(dayOffs)
-        .where(
-          and(
-            inArray(dayOffs.user_id, userIds),
-            gte(dayOffs.date, weekStart),
-            lte(dayOffs.date, weekEnd)
-          )
-        )
-    ]);
-
-    assignmentRows = assignmentResult;
-    overrideRows = overrideResult;
-    dayOffRows = dayOffResult;
-
-    // Distinct shift IDs across both assignments and overrides (overrides
-    // can reference a shift the employee isn't currently assigned to).
-    const distinctShiftIds = Array.from(
-      new Set([...assignmentRows.map((a) => a.shift_id), ...overrideRows.map((o) => o.shift_id)])
-    );
-
-    if (distinctShiftIds.length > 0) {
-      const [ruleResult, shiftResult] = await Promise.all([
-        db
-          .select()
-          .from(shiftWeekdayRules)
-          .where(inArray(shiftWeekdayRules.shift_id, distinctShiftIds)),
-        db.select().from(shifts).where(inArray(shifts.id, distinctShiftIds))
-      ]);
-      weekdayRuleRows = ruleResult;
-      shiftRows = shiftResult;
-    }
-  }
-
-  // Group related rows by employee + shift for O(1) resolution.
-  const assignmentsByUser = new Map<string, (typeof scheduleAssignments.$inferSelect)[]>();
-  for (const a of assignmentRows) {
-    const list = assignmentsByUser.get(a.user_id) ?? [];
-    list.push(a);
-    assignmentsByUser.set(a.user_id, list);
-  }
-
-  const overridesByUser = new Map<string, (typeof dateOverrides.$inferSelect)[]>();
-  for (const o of overrideRows) {
-    const list = overridesByUser.get(o.user_id) ?? [];
-    list.push(o);
-    overridesByUser.set(o.user_id, list);
-  }
-
-  const dayOffsByUser = new Map<string, (typeof dayOffs.$inferSelect)[]>();
-  for (const d of dayOffRows) {
-    const list = dayOffsByUser.get(d.user_id) ?? [];
-    list.push(d);
-    dayOffsByUser.set(d.user_id, list);
-  }
-
-  const rulesByShift = new Map<number, WeekdayScheduleRule[]>();
-  for (const r of weekdayRuleRows) {
-    const list = rulesByShift.get(r.shift_id) ?? [];
-    list.push({
-      dayOfWeek: r.day_of_week,
-      isWorkingDay: r.is_working_day ?? true,
-      startTime: r.start_time,
-      endTime: r.end_time
-    });
-    rulesByShift.set(r.shift_id, list);
-  }
-
-  const shiftById = new Map<number, typeof shifts.$inferSelect>(shiftRows.map((s) => [s.id, s]));
-
-  const policiesByShift = new Map<number, ShiftPolicy>();
-  for (const s of shiftRows) {
-    policiesByShift.set(s.id, {
-      shiftId: s.id,
-      lateToleranceMinutes: s.late_tolerance_minutes,
-      absenceCutoffMinutes: s.absence_cutoff_minutes
-    });
-  }
-
-  // Holidays for the week — single helper call.
-  const holidayRows = await getHolidaysInRange(weekStart, weekEnd);
-  const holidaysByDate: Record<string, string> = {};
-  for (const h of holidayRows) {
-    // Project recurring holidays onto the current week's year so the
-    // header badge shows the date the holiday actually lands on inside
-    // the visible window (e.g. recurring Aug 21 appears on 2026-08-21,
-    // not on its stored 1999-08-21).
-    if (h.isRecurring) {
-      const mmdd = h.date.slice(5, 10); // 'MM-DD'
-      for (let i = 0; i < 7; i += 1) {
-        const candidate = addDays(weekStart, i).slice(0, 10);
-        if (candidate.endsWith(mmdd)) {
-          holidaysByDate[candidate] = h.name;
-        }
-      }
-    } else if (h.date >= weekStart && h.date <= weekEnd) {
-      holidaysByDate[h.date] = h.name;
-    }
-  }
-
-  // Build the rows.
   const rows: ScheduleGridRow[] = employeeRows.map((employee) => {
-    const userAssignments = assignmentsByUser.get(employee.id) ?? [];
-    const userOverrides = overridesByUser.get(employee.id) ?? [];
-    const userDayOffs = dayOffsByUser.get(employee.id) ?? [];
-    const overrideDates: EngineDateOverride[] = userOverrides.map((o) => ({
-      date: o.date,
-      shiftId: o.shift_id
-    }));
-    const dayOffDates = userDayOffs.map((d) => d.date);
-    const dayOffReasonsByDate = new Map(userDayOffs.map((d) => [d.date, d.reason ?? null]));
-
-    const cells: ScheduleGridCell[] = [];
-    let activeShiftName: string | null = null;
-
-    for (let i = 0; i < 7; i += 1) {
-      const date = addDays(weekStart, i);
-      // Pick the most recent assignment whose range covers this date.
-      const matching = userAssignments.find(
-        (a) => a.effective_from <= date && (a.effective_to == null || a.effective_to >= date)
-      );
-      const assignment: EngineAssignment | null = matching
-        ? {
-            userId: matching.user_id,
-            shiftId: matching.shift_id,
-            effectiveFrom: matching.effective_from,
-            effectiveTo: matching.effective_to
-          }
-        : null;
-
-      const weekdayRules = assignment ? (rulesByShift.get(assignment.shiftId) ?? []) : [];
-      const shiftPolicies = assignment
-        ? (() => {
-            const ids = new Set<number>([assignment.shiftId]);
-            for (const o of userOverrides) {
-              if (o.date === date) ids.add(o.shift_id);
-            }
-            const out: ShiftPolicy[] = [];
-            for (const id of ids) {
-              const p = policiesByShift.get(id);
-              if (p) out.push(p);
-            }
-            return out;
-          })()
-        : [];
-
-      const resolved = resolveEffectiveSchedule({
-        assignment,
-        weekdayRules,
-        shiftPolicies,
-        dateOverrides: overrideDates,
-        dayOffs: dayOffDates,
-        date
-      });
-
-      const holidayName = holidaysByDate[date] ?? null;
-      const isHoliday = holidayName != null;
-      const hasAssignment = assignment != null;
-      const isDayOff = hasAssignment && dayOffDates.includes(date);
-      const dayOffReason = isDayOff ? (dayOffReasonsByDate.get(date) ?? null) : null;
-
-      // Track the active shift name from the latest assignment whose range
-      // overlaps the week — used for the row header pill.
-      if (matching && activeShiftName == null) {
-        const shift = shiftById.get(matching.shift_id);
-        activeShiftName = shift?.name ?? null;
-      }
-
-      cells.push({
-        date,
-        shiftId: resolved?.shiftId ?? null,
-        shiftName: resolved ? (shiftById.get(resolved.shiftId)?.name ?? null) : null,
-        startTime: resolved?.startTime ?? null,
-        endTime: resolved?.endTime ?? null,
-        lateToleranceMinutes: resolved?.lateToleranceMinutes ?? null,
-        absenceCutoffMinutes: resolved?.absenceCutoffMinutes ?? null,
-        isDayOff,
-        hasAssignment,
-        isHoliday,
-        holidayName,
-        holidayOverUnassigned: !hasAssignment && isHoliday,
-        dayOffReason,
-        // Engine delta (PR #109): resolveEffectiveSchedule now returns null
-        // when the effective shift has no `shift_policies` row (no
-        // DEFAULT_SHIFT_POLICY fallback). Surface that as `policyMissing`
-        // so the ticket-02 popover can warn the admin before any write.
-        policyMissing: (() => {
-          if (!hasAssignment || isDayOff || resolved != null) return false;
-          // `effectiveShiftId` mirrors the engine's precedence: date
-          // override > assignment.
-          const override = overrideDates.find((o) => o.date === date);
-          const effectiveShiftId = override?.shiftId ?? assignment!.shiftId;
-          const rule = (rulesByShift.get(effectiveShiftId) ?? []).find(
-            (r) => r.dayOfWeek === dayOfWeek(date)
-          );
-          if (!rule || !rule.isWorkingDay) return false;
-          return policiesByShift.get(effectiveShiftId) == null;
-        })()
-      });
-    }
+    // `resolveScheduleGridCells` emits an entry for every requested userId and
+    // a cell for every date in the window, so both lookups below are total.
+    const resolved = byUser.get(employee.id)!;
+    const cells: ScheduleGridCell[] = weekDates.map((date) => resolved.cells.get(date)!);
 
     return {
       userId: employee.id,
@@ -323,7 +91,7 @@ export async function resolveWeekForEmployees(
       divisionName:
         employee.departmentId != null ? (deptNameById.get(employee.departmentId) ?? '') : '',
       cells,
-      activeShiftName,
+      activeShiftName: resolved.activeShiftName,
       // Ticket 03: row-level flag drives the "+ Assign Shift" CTA in the
       // row header. True when at least one cell resolves against an
       // active `schedule_assignments` row.
