@@ -40,11 +40,12 @@
  * `clearCellFn`) share the transaction + re-resolve + error-folding
  * scaffolding through `withCellWrite`; `applyToWholeWeekFn` keeps its own
  * per-date loop because failures are captured into `partialFailures`
- * instead of aborting the batch.
+ * instead of aborting the batch. The DELETE-then-INSERT itself (including
+ * the orphan-prevention guard) lives in `./cell-write` and is shared with
+ * `repeatWeekBulkFn` in `bulk-service.ts`.
  */
 
 import { createServerFn } from '@tanstack/react-start';
-import { and, eq } from 'drizzle-orm';
 import * as z from 'zod';
 
 import { requirePermission } from '@/lib/auth/session';
@@ -52,9 +53,9 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { mapDbError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { db } from '@/lib/db';
-import { dateOverrides, dayOffs } from '@/lib/db/schema/attendance';
 import { addDays, isWeekendDate } from '../utils/date-utils';
 import { resolveScheduleGridCell } from './cell-resolver';
+import { clearCellTx, writeCellDayOffTx, writeCellShiftTx, type DbTransaction } from './cell-write';
 import type { ScheduleGridCell } from './types';
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
@@ -124,13 +125,6 @@ export type BulkResult =
     };
 
 /**
- * Transaction handle type as passed by `db.transaction` — derived from the
- * method signature so the shared wrapper and its callers never have to
- * import drizzle's `PgTransaction` explicitly.
- */
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-/**
  * Shared scaffolding for the single-cell write fns (`setCellShiftFn`,
  * `setCellDayOffFn`, `clearCellFn`): run the write inside one DB
  * transaction, re-resolve the affected cell via `resolveScheduleGridCell`
@@ -168,22 +162,11 @@ export const setCellShiftFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     return withCellWrite('scheduleGrid.setCellShift', data, async (tx) => {
-      await tx
-        .delete(dateOverrides)
-        .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
-      // Orphan-prevention guard: if a `day_offs` row exists for this
-      // (user, date), delete it so the new override takes precedence
-      // immediately instead of being masked. The popover's conflict UX
-      // already enforces this client-side; this DELETE is the
-      // server-side mirror (see EPIC_SUMMARY § Follow-ups #2).
-      await tx
-        .delete(dayOffs)
-        .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
-      await tx.insert(dateOverrides).values({
-        user_id: data.userId,
+      await writeCellShiftTx(tx, {
+        userId: data.userId,
         date: data.date,
-        shift_id: data.shiftId,
-        created_by: session.user.id
+        shiftId: data.shiftId,
+        createdBy: session.user.id
       });
     });
   });
@@ -196,17 +179,11 @@ export const setCellDayOffFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     return withCellWrite('scheduleGrid.setCellDayOff', data, async (tx) => {
-      await tx
-        .delete(dateOverrides)
-        .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
-      await tx
-        .delete(dayOffs)
-        .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
-      await tx.insert(dayOffs).values({
-        user_id: data.userId,
+      await writeCellDayOffTx(tx, {
+        userId: data.userId,
         date: data.date,
-        reason: data.reason ?? null,
-        created_by: session.user.id
+        reason: data.reason,
+        createdBy: session.user.id
       });
     });
   });
@@ -219,12 +196,7 @@ export const clearCellFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     return withCellWrite('scheduleGrid.clearCell', data, async (tx) => {
-      await tx
-        .delete(dateOverrides)
-        .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, data.date)));
-      await tx
-        .delete(dayOffs)
-        .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, data.date)));
+      await clearCellTx(tx, { userId: data.userId, date: data.date });
     });
   });
 
@@ -256,33 +228,20 @@ export const applyToWholeWeekFn = createServerFn({ method: 'POST' })
       try {
         if (data.mode === 'shift') {
           await db.transaction(async (tx) => {
-            await tx
-              .delete(dateOverrides)
-              .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, date)));
-            // Orphan-prevention guard (matches `setCellShiftFn`).
-            await tx
-              .delete(dayOffs)
-              .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, date)));
-            await tx.insert(dateOverrides).values({
-              user_id: data.userId,
+            await writeCellShiftTx(tx, {
+              userId: data.userId,
               date,
-              shift_id: data.shiftId!,
-              created_by: session.user.id
+              shiftId: data.shiftId!,
+              createdBy: session.user.id
             });
           });
         } else {
           await db.transaction(async (tx) => {
-            await tx
-              .delete(dateOverrides)
-              .where(and(eq(dateOverrides.user_id, data.userId), eq(dateOverrides.date, date)));
-            await tx
-              .delete(dayOffs)
-              .where(and(eq(dayOffs.user_id, data.userId), eq(dayOffs.date, date)));
-            await tx.insert(dayOffs).values({
-              user_id: data.userId,
+            await writeCellDayOffTx(tx, {
+              userId: data.userId,
               date,
-              reason: data.reason ?? null,
-              created_by: session.user.id
+              reason: data.reason,
+              createdBy: session.user.id
             });
           });
         }

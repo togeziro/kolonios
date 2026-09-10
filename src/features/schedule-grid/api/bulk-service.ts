@@ -15,12 +15,14 @@
  * "—" state of `hasAssignment && !isDayOff && resolved == null`) are
  * skipped: there is nothing explicit to replicate.
  *
- * Each target cell is written in its own DB transaction via DELETE-then-
- * INSERT (delete the target's `date_overrides` + `day_offs` rows first, then
- * insert the copied row) so the `date_overrides_user_date_unique` /
- * `day_offs_user_date_unique` constraints can never fire and a masked
- * orphan (a `day_offs` row hiding under a new override) is prevented — the
- * same orphan guard as `setCellShiftFn` / `setCellDayOffFn`.
+ * Each target cell is written in its own DB transaction via the shared
+ * `writeCellShiftTx` / `writeCellDayOffTx` helpers in `./cell-write`
+ * (DELETE-then-INSERT: delete the target's `date_overrides` + `day_offs`
+ * rows first, then insert the copied row) so the
+ * `date_overrides_user_date_unique` / `day_offs_user_date_unique`
+ * constraints can never fire and a masked orphan (a `day_offs` row hiding
+ * under a new override) is prevented — the same orphan guard as
+ * `setCellShiftFn` / `setCellDayOffFn`.
  *
  * Failure semantics: per-cell failures are captured into `partialFailures`
  * (`[{ userId, date, error }]`) and NEVER abort the batch. The per-cell
@@ -37,7 +39,7 @@
  */
 
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
+import { and, asc, gte, inArray, lte } from 'drizzle-orm';
 import * as z from 'zod';
 
 import { requirePermission } from '@/lib/auth/session';
@@ -49,6 +51,7 @@ import { dateOverrides, dayOffs } from '@/lib/db/schema/attendance';
 import { employees } from '@/lib/db/schema/employees';
 import { isWeekendDate, addDays, parseDate, DAY_MS } from '../utils/date-utils';
 import { buildEmployeeWhere } from './service';
+import { writeCellDayOffTx, writeCellShiftTx } from './cell-write';
 import { SCHEDULE_GRID_MAX_PAGE_SIZE } from './validation';
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
@@ -214,30 +217,19 @@ export const repeatWeekBulkFn = createServerFn({ method: 'POST' })
             const targetDate = addDays(targetWeekStart, offset);
             try {
               await db.transaction(async (tx) => {
-                await tx
-                  .delete(dateOverrides)
-                  .where(
-                    and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, targetDate))
-                  );
-                // Orphan-prevention guard (matches `setCellShiftFn` /
-                // `setCellDayOffFn`): clear the sibling row so the insert
-                // below cannot be masked by a stale counterpart.
-                await tx
-                  .delete(dayOffs)
-                  .where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, targetDate)));
                 if (cell.kind === 'override') {
-                  await tx.insert(dateOverrides).values({
-                    user_id: userId,
+                  await writeCellShiftTx(tx, {
+                    userId,
                     date: targetDate,
-                    shift_id: cell.shiftId,
-                    created_by: session.user.id
+                    shiftId: cell.shiftId,
+                    createdBy: session.user.id
                   });
                 } else {
-                  await tx.insert(dayOffs).values({
-                    user_id: userId,
+                  await writeCellDayOffTx(tx, {
+                    userId,
                     date: targetDate,
-                    reason: cell.reason ?? null,
-                    created_by: session.user.id
+                    reason: cell.reason,
+                    createdBy: session.user.id
                   });
                 }
               });

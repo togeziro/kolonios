@@ -4,8 +4,8 @@
  * Counterpart of `export-service.ts` / `export-xlsx.ts`. Accepts a
  * `Shift_Schedule_YYYY-MM.xlsx` file (produced by the export or edited
  * manually), parses it with SheetJS, and writes each cell back to
- * `date_overrides` / `day_offs` via per-cell DELETE-then-INSERT
- * transactions (the same orphan guard as `setCellShiftFn`).
+ * `date_overrides` / `day_offs` via the shared `./cell-write` helpers
+ * (per-cell DELETE-then-INSERT with the orphan guard).
  *
  * Vocabulary (normalised case-insensitively after trim):
  *  - `OFF` / `LIBUR` / `DAY OFF` → `day_offs` (reason null)
@@ -18,17 +18,17 @@
  */
 
 import { createServerFn } from '@tanstack/react-start';
-import { and, eq } from 'drizzle-orm';
 import * as z from 'zod';
 
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { db } from '@/lib/db';
-import { dateOverrides, dayOffs, shifts } from '@/lib/db/schema/attendance';
+import { shifts } from '@/lib/db/schema/attendance';
 import { employees } from '@/lib/db/schema/employees';
 
 import { SHIFT_SCHEDULE_SHEET_NAME } from './export-xlsx';
+import { clearCellTx, writeCellDayOffTx, writeCellShiftTx } from './cell-write';
 
 // 5 MiB raw binary limit — generous for 200 rows × 31 cols; the base64
 // envelope is ~33% larger. A single-cell schedule is ~10 KiB; this blocks
@@ -84,46 +84,6 @@ function normaliseCellValue(
   // SheetJS may return numbers when a lone digit shift code is present; keep
   // the trimmed string as the code.
   return { kind: 'shift', code: trimmed };
-}
-
-// Drizzle transaction client type (same Parameters<> pattern as
-// `PayrollTransaction` in `src/lib/db/payroll.ts`).
-type ImportTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-type ImportCellWrite = { kind: 'clear' } | { kind: 'dayOff' } | { kind: 'shift'; shiftId: number };
-
-/**
- * Single-cell DELETE-then-INSERT (orphan guard mirrors `setCellShiftFn`:
- * delete both tables first so a stale counterpart can never mask the new
- * row, then insert the target row). Shared by the clear/dayOff/shift
- * branches of the import loop.
- */
-async function writeImportCell(
-  tx: ImportTx,
-  userId: string,
-  date: string,
-  cell: ImportCellWrite,
-  actorId: string
-): Promise<void> {
-  await tx
-    .delete(dateOverrides)
-    .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)));
-  await tx.delete(dayOffs).where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)));
-  if (cell.kind === 'dayOff') {
-    await tx.insert(dayOffs).values({
-      user_id: userId,
-      date,
-      reason: null,
-      created_by: actorId
-    });
-  } else if (cell.kind === 'shift') {
-    await tx.insert(dateOverrides).values({
-      user_id: userId,
-      date,
-      shift_id: cell.shiftId,
-      created_by: actorId
-    });
-  }
 }
 
 export const importMonthFn = createServerFn({ method: 'POST' })
@@ -243,7 +203,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
         if (normal.kind === 'clear') {
           try {
             await db.transaction(async (tx) => {
-              await writeImportCell(tx, userId, date, { kind: 'clear' }, session.user.id);
+              await clearCellTx(tx, { userId, date });
             });
             cellsApplied += 1;
             rowHadSuccess = true;
@@ -263,7 +223,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
         if (normal.kind === 'dayOff') {
           try {
             await db.transaction(async (tx) => {
-              await writeImportCell(tx, userId, date, { kind: 'dayOff' }, session.user.id);
+              await writeCellDayOffTx(tx, { userId, date, createdBy: session.user.id });
             });
             cellsApplied += 1;
             rowHadSuccess = true;
@@ -295,7 +255,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
 
         try {
           await db.transaction(async (tx) => {
-            await writeImportCell(tx, userId, date, { kind: 'shift', shiftId }, session.user.id);
+            await writeCellShiftTx(tx, { userId, date, shiftId, createdBy: session.user.id });
           });
           cellsApplied += 1;
           rowHadSuccess = true;
