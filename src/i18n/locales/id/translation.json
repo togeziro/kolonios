@@ -372,16 +372,12 @@
     "emailAddress": "Alamat Email",
     "emailPlaceholder": "anda@contoh.com",
     "enterDetails": "Masukkan detail Anda untuk memulai.",
-    "helpDescription": "Lihat dokumentasi atau buka issue di GitHub, dukungan komunitas hanya satu klik lagi.",
     "login": "Masuk",
     "loginSubtitle": "Silakan masukkan detail Anda untuk masuk.",
     "loginTitle": "Masuk ke akun Anda",
     "name": "Nama",
     "namePlaceholder": "John Doe",
-    "needHelp": "Butuh bantuan?",
     "password": "Kata Sandi",
-    "readyDescription": "Clone repo, instal dependensi, dan dashboard Anda aktif dalam hitungan menit.",
-    "readyToLaunch": "Siap diluncurkan?",
     "register": "Daftar",
     "rememberMe": "Ingat saya",
     "rememberMe30": "Ingat saya selama 30 hari",
@@ -390,7 +386,6 @@
     "signInRateLimit": "Terlalu banyak percobaan masuk. Silakan tunggu sebentar dan coba lagi.",
     "signOut": "Keluar",
     "signUp": "Daftar",
-    "tagline": "Rancang. Bangun. Luncurkan. Ulangi.",
     "validationFailed": "Silakan masukkan email dan kata sandi Anda."
   },
   "attendance": {
@@ -1592,6 +1587,10 @@
     "saveFailed": "Gagal menyimpan branding",
     "loadFailed": "Gagal memuat branding",
     "companyNameRequired": "Nama perusahaan *",
+    "tagline": "Tagline publik",
+    "taglineHint": "Ditampilkan di panel login jika diisi. Kosongkan untuk menyembunyikan.",
+    "copyrightYear": "Tahun hak cipta",
+    "copyrightYearHint": "Tahun di footer login. Kosongkan untuk gunakan tahun saat ini.",
     "errorNoAlpha": "Logo membutuhkan latar transparan (PNG dengan channel alpha)"
   },
   "rateLimitSettings": {

@@ -76,6 +76,14 @@ export const companySettings = pgTable('company_settings', {
   company_address: text('company_address'),
   company_email: text('company_email'),
   company_phone: text('company_phone'),
+  // Public tagline shown on the login panel (V2BrandHeader). Hidden when
+  // null/whitespace — never falls back to i18n, since the i18n key was
+  // generic product copy that no tenant should inherit by default.
+  company_tagline: text('company_tagline'),
+  // Override for the login footer copyright year. Null means "use the
+  // current year" — keeps the footer honest for tenants founded earlier
+  // than today without forcing every admin to set it.
+  company_copyright_year: integer('company_copyright_year'),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull()
 });

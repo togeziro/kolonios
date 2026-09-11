@@ -372,16 +372,12 @@
     "emailAddress": "Email Address",
     "emailPlaceholder": "you@example.com",
     "enterDetails": "Enter your details to get started.",
-    "helpDescription": "Check out the docs or open an issue on GitHub, community support is just a click away.",
     "login": "Login",
     "loginSubtitle": "Please enter your details to login.",
     "loginTitle": "Login to your account",
     "name": "Name",
     "namePlaceholder": "John Doe",
-    "needHelp": "Need help?",
     "password": "Password",
-    "readyDescription": "Clone the repo, install dependencies, and your dashboard is live in minutes.",
-    "readyToLaunch": "Ready to launch?",
     "register": "Register",
     "rememberMe": "Remember me",
     "rememberMe30": "Remember me for 30 days",
@@ -390,7 +386,6 @@
     "signInRateLimit": "Too many login attempts. Please wait a moment and try again.",
     "signOut": "Sign out",
     "signUp": "Sign Up",
-    "tagline": "Design. Build. Launch. Repeat.",
     "validationFailed": "Please enter your email and password."
   },
   "attendance": {
@@ -1592,6 +1587,10 @@
     "saveFailed": "Could not save branding",
     "loadFailed": "Could not load branding",
     "companyNameRequired": "Company name *",
+    "tagline": "Public tagline",
+    "taglineHint": "Shown on the login panel when filled in. Leave blank to hide.",
+    "copyrightYear": "Copyright year",
+    "copyrightYearHint": "Year on the login footer. Leave blank to use the current year.",
     "errorNoAlpha": "Logo needs a transparent background (PNG with alpha channel)"
   },
   "rateLimitSettings": {

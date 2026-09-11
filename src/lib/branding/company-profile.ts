@@ -10,6 +10,8 @@ export interface CompanyProfileColumns {
   company_address?: string | null;
   company_email?: string | null;
   company_phone?: string | null;
+  company_tagline?: string | null;
+  company_copyright_year?: number | null;
 }
 
 const clean = (value: string | null | undefined) => {

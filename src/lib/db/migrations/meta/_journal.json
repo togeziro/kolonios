@@ -267,6 +267,13 @@
       "when": 1789053950002,
       "tag": "0037_brief_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1789122333297,
+      "tag": "0038_dashing_inertia",
+      "breakpoints": true
     }
   ]
 }

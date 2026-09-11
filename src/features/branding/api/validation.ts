@@ -13,7 +13,26 @@ export const brandingProfileSchema = z.object({
     (value) => (value === '' || value == null ? undefined : value),
     z.string().trim().email().max(100).optional()
   ),
-  phone: optionalText(30)
+  phone: optionalText(30),
+  // Empty string → null (lets the admin clear the field). Null also valid
+  // (unset). The login UI hides the tagline when this is null/whitespace,
+  // so an empty textarea is the same as not setting it.
+  tagline: z.preprocess(
+    (value) => (value === '' || value == null ? null : value),
+    z.string().trim().max(200).nullable().optional()
+  ),
+  // Same empty-string-to-null treatment. Range covers historical tenants
+  // (1900+) and allows setting the year one ahead for early-year posts.
+  copyrightYear: z.preprocess(
+    (value) => (value === '' || value == null ? null : value),
+    z
+      .number()
+      .int()
+      .min(1900)
+      .max(new Date().getFullYear() + 1)
+      .nullable()
+      .optional()
+  )
 });
 
 // Per-slot data-URL cap: 512 KB logo → ~700 KB base64; favicon is smaller.

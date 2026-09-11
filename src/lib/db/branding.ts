@@ -22,6 +22,8 @@ export interface CompanyBrandingUpdate {
     address?: string | null;
     email?: string | null;
     phone?: string | null;
+    tagline?: string | null;
+    copyrightYear?: number | null;
   };
 }
 
@@ -29,7 +31,9 @@ const toProfile = (row: CompanySetting | null): CompanyProfileColumns => ({
   company_name: row?.company_name ?? null,
   company_address: row?.company_address ?? null,
   company_email: row?.company_email ?? null,
-  company_phone: row?.company_phone ?? null
+  company_phone: row?.company_phone ?? null,
+  company_tagline: row?.company_tagline ?? null,
+  company_copyright_year: row?.company_copyright_year ?? null
 });
 
 const toBranding = (row: CompanySetting | null): CompanyBranding => ({
@@ -89,7 +93,10 @@ export async function updateCompanyBranding(
           company_name: update.profile?.name ?? before?.company_name ?? null,
           company_address: update.profile?.address ?? before?.company_address ?? null,
           company_email: update.profile?.email ?? before?.company_email ?? null,
-          company_phone: update.profile?.phone ?? before?.company_phone ?? null
+          company_phone: update.profile?.phone ?? before?.company_phone ?? null,
+          company_tagline: update.profile?.tagline ?? before?.company_tagline ?? null,
+          company_copyright_year:
+            update.profile?.copyrightYear ?? before?.company_copyright_year ?? null
         }
       }
     },
@@ -108,6 +115,12 @@ export async function updateCompanyBranding(
             : {}),
           ...(update.profile?.email !== undefined ? { company_email: update.profile.email } : {}),
           ...(update.profile?.phone !== undefined ? { company_phone: update.profile.phone } : {}),
+          ...(update.profile?.tagline !== undefined
+            ? { company_tagline: update.profile.tagline }
+            : {}),
+          ...(update.profile?.copyrightYear !== undefined
+            ? { company_copyright_year: update.profile.copyrightYear }
+            : {}),
           updated_at: new Date()
         })
         .where(eq(companySettings.id, row.id))

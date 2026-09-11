@@ -28,7 +28,14 @@ export function BrandingSection() {
   const update = useUpdateBrandingSettings();
 
   const { data, isLoading, isError } = useQuery(brandingSettingsQueryOptions());
-  const [profile, setProfile] = useState({ name: '', address: '', email: '', phone: '' });
+  const [profile, setProfile] = useState({
+    name: '',
+    address: '',
+    email: '',
+    phone: '',
+    tagline: '',
+    copyrightYear: '' as string
+  });
   const [previews, setPreviews] = useState<Partial<Record<SlotKey, string>>>({});
   const inputRefs = useRef<Partial<Record<SlotKey, HTMLInputElement | null>>>({});
 
@@ -37,7 +44,14 @@ export function BrandingSection() {
   if (data !== prevSettings) {
     setPrevSettings(data);
     if (data) {
-      setProfile({ ...data.profile });
+      setProfile({
+        name: data.profile.name,
+        address: data.profile.address,
+        email: data.profile.email,
+        phone: data.profile.phone,
+        tagline: data.profile.tagline ?? '',
+        copyrightYear: data.profile.copyrightYear?.toString() ?? ''
+      });
       setPreviews({
         ...(data.logoLight ? { logo_light: data.logoLight } : {}),
         ...(data.logoDark ? { logo_dark: data.logoDark } : {}),
@@ -80,7 +94,10 @@ export function BrandingSection() {
           name: profile.name,
           address: profile.address,
           email: profile.email,
-          phone: profile.phone
+          phone: profile.phone,
+          tagline: profile.tagline.trim() === '' ? null : profile.tagline.trim(),
+          copyrightYear:
+            profile.copyrightYear.trim() === '' ? null : Number.parseInt(profile.copyrightYear, 10)
         },
         ...(previews.logo_light !== undefined ? { logoLight: previews.logo_light } : {}),
         ...(previews.logo_dark !== undefined ? { logoDark: previews.logo_dark } : {}),
@@ -195,6 +212,32 @@ export function BrandingSection() {
                   maxLength={30}
                   onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
                 />
+              </div>
+            </div>
+
+            <div className='flex flex-col gap-2 border-t pt-4'>
+              <div className='flex flex-col gap-2'>
+                <Label htmlFor='branding-tagline'>{t('branding.tagline')}</Label>
+                <Input
+                  id='branding-tagline'
+                  value={profile.tagline}
+                  maxLength={200}
+                  onChange={(e) => setProfile((p) => ({ ...p, tagline: e.target.value }))}
+                />
+                <p className='text-muted-foreground text-xs'>{t('branding.taglineHint')}</p>
+              </div>
+              <div className='flex flex-col gap-2'>
+                <Label htmlFor='branding-copyright-year'>{t('branding.copyrightYear')}</Label>
+                <Input
+                  id='branding-copyright-year'
+                  type='number'
+                  inputMode='numeric'
+                  min={1900}
+                  max={new Date().getFullYear() + 1}
+                  value={profile.copyrightYear}
+                  onChange={(e) => setProfile((p) => ({ ...p, copyrightYear: e.target.value }))}
+                />
+                <p className='text-muted-foreground text-xs'>{t('branding.copyrightYearHint')}</p>
               </div>
             </div>
 

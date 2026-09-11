@@ -4,6 +4,8 @@ export interface PublicBranding {
   logoLight: string | null;
   logoDark: string | null;
   name: string | null;
+  tagline: string | null;
+  copyrightYear: number | null;
   updatedAt: string;
 }
 

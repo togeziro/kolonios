@@ -22,7 +22,7 @@ vi.mock('@/features/branding/components/brand-logo', () => ({
 
 function renderHeader() {
   const queryClient = new QueryClient();
-  render(
+  return render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
         <V2BrandHeader />
@@ -38,7 +38,13 @@ beforeEach(() => {
 describe('V2BrandHeader', () => {
   it('shows the company name and logo from branding', () => {
     brandingMock.mockReturnValue({
-      data: { name: 'Acme Corp', logoLight: 'data:l', logoDark: null }
+      data: {
+        name: 'Acme Corp',
+        logoLight: 'data:l',
+        logoDark: null,
+        tagline: null,
+        copyrightYear: null
+      }
     });
     renderHeader();
     expect(screen.getByText('Acme Corp')).toBeTruthy();
@@ -52,7 +58,15 @@ describe('V2BrandHeader', () => {
   });
 
   it('does not render an h1 so the card title stays the only one', () => {
-    brandingMock.mockReturnValue({ data: { name: 'Acme Corp', logoLight: null, logoDark: null } });
+    brandingMock.mockReturnValue({
+      data: {
+        name: 'Acme Corp',
+        logoLight: null,
+        logoDark: null,
+        tagline: null,
+        copyrightYear: null
+      }
+    });
     const { container } = render(
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={new QueryClient()}>
@@ -61,5 +75,47 @@ describe('V2BrandHeader', () => {
       </I18nextProvider>
     );
     expect(container.querySelector('h1')).toBeNull();
+  });
+
+  it('renders the tagline when branding.tagline is set', () => {
+    brandingMock.mockReturnValue({
+      data: {
+        name: 'Acme Corp',
+        logoLight: null,
+        logoDark: null,
+        tagline: 'Design. Build. Ship.',
+        copyrightYear: null
+      }
+    });
+    renderHeader();
+    expect(screen.getByText('Design. Build. Ship.')).toBeTruthy();
+  });
+
+  it('hides the tagline when branding.tagline is null', () => {
+    brandingMock.mockReturnValue({
+      data: {
+        name: 'Acme Corp',
+        logoLight: null,
+        logoDark: null,
+        tagline: null,
+        copyrightYear: null
+      }
+    });
+    const { container } = renderHeader();
+    expect(container.querySelectorAll('p').length).toBe(1);
+  });
+
+  it('hides the tagline when branding.tagline is empty or whitespace', () => {
+    brandingMock.mockReturnValue({
+      data: {
+        name: 'Acme Corp',
+        logoLight: null,
+        logoDark: null,
+        tagline: '   ',
+        copyrightYear: null
+      }
+    });
+    const { container } = renderHeader();
+    expect(container.querySelectorAll('p').length).toBe(1);
   });
 });

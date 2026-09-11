@@ -29,7 +29,9 @@ describe('company branding data access (integration)', () => {
           company_name: null,
           company_address: null,
           company_email: null,
-          company_phone: null
+          company_phone: null,
+          company_tagline: null,
+          company_copyright_year: null
         }
       });
     });
@@ -37,11 +39,13 @@ describe('company branding data access (integration)', () => {
     it('returns stored branding values', async () => {
       await updateCompanyBranding(ACTOR, {
         logoLight: 'data:image/png;base64,AAA',
-        profile: { name: 'PT Nusa' }
+        profile: { name: 'PT Nusa', tagline: 'Hello world', copyrightYear: 2024 }
       });
       const branding = await getCompanyBranding();
       expect(branding.logoLight).toBe('data:image/png;base64,AAA');
       expect(branding.profile.company_name).toBe('PT Nusa');
+      expect(branding.profile.company_tagline).toBe('Hello world');
+      expect(branding.profile.company_copyright_year).toBe(2024);
       expect(branding.favicon).toBeNull();
     });
   });

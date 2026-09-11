@@ -1,8 +1,9 @@
-import { IconWorld } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo } from '@/features/branding/components/brand-logo';
 import { usePublicBranding } from '@/features/branding/api/public-queries';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { ThemeModeToggle } from '@/components/themes/theme-mode-toggle';
 
 interface AuthCardProps {
   title: string;
@@ -21,16 +22,17 @@ export default function AuthCard({
   linkText,
   children
 }: AuthCardProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { data: branding } = usePublicBranding();
+  const year = branding?.copyrightYear ?? new Date().getFullYear();
   return (
     <>
       <div className='mx-auto flex w-full flex-col justify-center space-y-8 sm:w-[350px]'>
         <div className='space-y-2 text-center'>
           {branding?.name && (
-            <div className='flex items-center justify-center gap-2'>
+            <div className='flex flex-col items-center justify-center gap-2'>
               {branding?.logoLight || branding?.logoDark ? (
-                <BrandLogo className='h-12 w-12' />
+                <BrandLogo className='h-12 w-auto' />
               ) : null}
               <span className='text-xl font-semibold'>{branding.name}</span>
             </div>
@@ -50,16 +52,18 @@ export default function AuthCard({
         </div>
       </div>
 
-      <div className='absolute bottom-5 flex w-full justify-between px-10'>
-        <div className='text-sm'>
-          {t('auth.copyright', {
-            year: new Date().getFullYear(),
-            name: branding?.name ?? t('auth.brand')
-          })}
+      <div className='absolute bottom-5 flex w-full flex-col gap-2 px-10'>
+        <div className='flex w-full justify-between gap-2'>
+          <div className='text-sm'>
+            {t('auth.copyright', {
+              year,
+              name: branding?.name ?? t('auth.brand')
+            })}
+          </div>
         </div>
-        <div className='flex items-center gap-1 text-sm'>
-          <IconWorld className='size-4 text-muted-foreground' />
-          {i18n.language.toUpperCase()}
+        <div className='flex w-full items-center justify-end gap-1'>
+          <LanguageSwitcher />
+          <ThemeModeToggle />
         </div>
       </div>
     </>

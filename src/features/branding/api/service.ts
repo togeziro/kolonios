@@ -20,6 +20,8 @@ export interface BrandingSettings {
     address: string;
     email: string;
     phone: string;
+    tagline: string | null;
+    copyrightYear: number | null;
   };
 }
 
@@ -32,6 +34,8 @@ const toSettings = (branding: {
     company_address?: string | null;
     company_email?: string | null;
     company_phone?: string | null;
+    company_tagline?: string | null;
+    company_copyright_year?: number | null;
   };
 }): BrandingSettings => ({
   logoLight: branding.logoLight,
@@ -41,7 +45,9 @@ const toSettings = (branding: {
     name: branding.profile.company_name ?? '',
     address: branding.profile.company_address ?? '',
     email: branding.profile.company_email ?? '',
-    phone: branding.profile.company_phone ?? ''
+    phone: branding.profile.company_phone ?? '',
+    tagline: branding.profile.company_tagline ?? null,
+    copyrightYear: branding.profile.company_copyright_year ?? null
   }
 });
 
@@ -97,7 +103,9 @@ export const updateBrandingSettingsFn = createServerFn({ method: 'POST' })
               name: data.profile.name,
               address: data.profile.address || null,
               email: data.profile.email || null,
-              phone: data.profile.phone || null
+              phone: data.profile.phone || null,
+              tagline: data.profile.tagline ?? null,
+              copyrightYear: data.profile.copyrightYear ?? null
             }
           }
         : {})
@@ -107,9 +115,12 @@ export const updateBrandingSettingsFn = createServerFn({ method: 'POST' })
 
 // Public branding for the login page and app shells: unauthenticated by
 // design and deliberately limited to non-sensitive identity fields (logo
-// variants + company name). The name goes through the agreed Company
-// Profile fallback chain (DB → env → 'Kolonios'). `updatedAt` powers the
-// favicon cache-bust query string so already-open tabs pick up uploads.
+// variants + company name + public tagline + copyright year). Contact
+// details (address/email/phone) stay private — they belong to admin
+// settings, not the login screen. The name goes through the agreed
+// Company Profile fallback chain (DB → env → 'Kolonios'). `updatedAt`
+// powers the favicon cache-bust query string so already-open tabs pick
+// up uploads.
 export const getPublicBrandingFn = createServerFn({ method: 'GET' }).handler(async () => {
   const { getCompanyBranding } = await import('@/lib/db/branding');
   const branding = await getCompanyBranding();
@@ -117,6 +128,8 @@ export const getPublicBrandingFn = createServerFn({ method: 'GET' }).handler(asy
     logoLight: branding.logoLight,
     logoDark: branding.logoDark,
     name: resolveCompanyProfile(branding.profile).name,
+    tagline: branding.profile.company_tagline ?? null,
+    copyrightYear: branding.profile.company_copyright_year ?? null,
     updatedAt: branding.updatedAt
   };
 });
