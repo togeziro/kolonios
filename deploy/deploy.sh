@@ -14,6 +14,12 @@ SERVICE="${SERVICE:-kolonios}"
 cd "$APP_DIR"
 export PATH="/usr/local/bin:$HOME/.bun/bin:$PATH"
 
+if [[ ! -r "$ENV_FILE" ]]; then
+  echo "ERROR: cannot read $ENV_FILE as $(id -un)." >&2
+  echo "       Install it mode 640, owned root:kolonios (see docs/DEPLOY.md)." >&2
+  exit 1
+fi
+
 # Load runtime + build-time config. VITE_* values are baked into the client
 # bundle here, so they must be present at build time.
 set -a

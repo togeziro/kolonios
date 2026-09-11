@@ -3,10 +3,14 @@ import { assertProductionEnv } from './lib/env';
 import { initSentry } from './lib/sentry';
 import { requestIdMiddleware } from './lib/server-middleware';
 
-// Close the Postgres pool on shutdown so restarts don't leave connections
-// hanging until the server's own termination timeout.
+// Close the Postgres pool on shutdown, then exit. Registering a signal
+// listener suppresses the runtime's default termination, so without the
+// explicit exit `systemctl restart` would wait for the kill timeout.
 function closeDatabaseOnShutdown() {
-  void import('./lib/db').then(({ client }) => client?.end({ timeout: 5 })).catch(() => undefined);
+  void import('./lib/db')
+    .then(({ client }) => client?.end({ timeout: 5 }))
+    .catch(() => undefined)
+    .finally(() => process.exit(0));
 }
 
 if (typeof window === 'undefined') {

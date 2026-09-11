@@ -15,7 +15,9 @@ export const Route = createFileRoute('/api/v1/health')({
           if (!client) throw new Error('database client unavailable');
           await client`SELECT 1`;
           return Response.json({ status: 'ok' });
-        } catch {
+        } catch (error) {
+          const { logger } = await import('@/lib/logger');
+          logger.warn({ err: error }, 'health.check-failed');
           return Response.json({ status: 'unavailable' }, { status: 503 });
         }
       }

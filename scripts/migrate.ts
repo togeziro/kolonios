@@ -2,9 +2,13 @@ import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
-import { DEFAULT_DEV_DB_URL, parseDbUrl } from './lib/db-url';
+import { resolveDatabaseUrl } from '../src/lib/env';
+import { parseDbUrl } from './lib/db-url';
 
-const { url } = parseDbUrl({ fallback: DEFAULT_DEV_DB_URL });
+// resolveDatabaseUrl() refuses to fall back to the dev database in production,
+// so a prod `db:migrate:run` without DATABASE_URL fails instead of migrating
+// whatever happens to be on localhost:5432.
+const { url } = parseDbUrl({ fallback: resolveDatabaseUrl() });
 const connection = postgres(url);
 const db = drizzle(connection);
 const migrationsFolder = './src/lib/db/migrations';

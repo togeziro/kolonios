@@ -60,7 +60,7 @@ export function assertProductionEnv(): void {
   if (typeof window !== 'undefined') return;
 
   const missing: string[] = PRODUCTION_REQUIRED_ENV.filter((key) => !process.env[key]?.trim());
-  if (!process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRET) {
+  if (!process.env.BETTER_AUTH_SECRET?.trim() && !process.env.AUTH_SECRET?.trim()) {
     missing.push('BETTER_AUTH_SECRET');
   }
 

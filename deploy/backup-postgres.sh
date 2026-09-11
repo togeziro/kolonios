@@ -21,8 +21,15 @@ chmod 700 "$BACKUP_DIR"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 file="$BACKUP_DIR/kolonios-$stamp.sql.gz"
 
-pg_dump --no-owner --no-privileges "$DATABASE_URL" | gzip -9 >"$file"
-chmod 600 "$file"
+# Dump to a temp file first: a mid-stream pg_dump failure under `pipefail`
+# would otherwise leave a truncated .gz that looks like a real backup.
+tmp="$(mktemp "$BACKUP_DIR/.kolonios-XXXXXX.sql.gz")"
+trap 'rm -f "$tmp"' EXIT
+pg_dump --no-owner --no-privileges "$DATABASE_URL" | gzip -9 >"$tmp"
+gzip -t "$tmp"
+chmod 600 "$tmp"
+mv "$tmp" "$file"
+trap - EXIT
 echo "Wrote $file ($(du -h "$file" | cut -f1))"
 
 find "$BACKUP_DIR" -type f -name 'kolonios-*.sql.gz' -mtime "+$RETENTION_DAYS" -delete

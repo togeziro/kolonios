@@ -207,15 +207,18 @@ command -v gh >/dev/null 2>&1 || warn "gh not found — GitHub secrets will be s
 
 ask APP_URL "App URL users will visit (e.g. https://kolonios.internal):"
 ask REPO_URL "Git clone URL of this repo (Enter = local origin):"
+ask SSH_USER "SSH user for provisioning (your admin login on the VM):"
 ask DEPLOY_HOST "VM IP or hostname:"
-ask DEPLOY_USER "SSH user on the VM:"
+ask DEPLOY_USER "Deploy/service user the app runs as on the VM:"
 ask DEPLOY_PORT "SSH port:"
 ask DEPLOY_PATH "Deploy path on the VM:"
+ask DEPLOY_SSH_KEY_PATH "Path to the deploy private key (its public key is authorized):"
 ask ADMIN_EMAIL "Email for the first admin account:"
 
 [[ -n "${APP_URL:-}" ]] || { warn "APP_URL is required"; exit 1; }
 [[ -n "${DEPLOY_HOST:-}" ]] || { warn "DEPLOY_HOST is required"; exit 1; }
-DEPLOY_USER="${DEPLOY_USER:-root}"
+SSH_USER="${SSH_USER:-root}"
+DEPLOY_USER="${DEPLOY_USER:-kolonios}"
 DEPLOY_PORT="${DEPLOY_PORT:-22}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/kolonios}"
 if [[ -z "${REPO_URL:-}" ]]; then
@@ -225,12 +228,21 @@ fi
 
 APP_HOST="${APP_URL#*://}"; APP_HOST="${APP_HOST%%/*}"
 
+# Derive the deploy public key so stage 4 can authorize it.
+DEPLOY_PUBKEY=""
+if [[ -n "${DEPLOY_SSH_KEY_PATH:-}" && -f "${DEPLOY_SSH_KEY_PATH}.pub" ]]; then
+  DEPLOY_PUBKEY="$(cat "${DEPLOY_SSH_KEY_PATH}.pub")"
+elif [[ -n "${DEPLOY_SSH_KEY_PATH:-}" && -f "${DEPLOY_SSH_KEY_PATH}" ]] && command -v ssh-keygen >/dev/null 2>&1; then
+  DEPLOY_PUBKEY="$(ssh-keygen -y -f "$DEPLOY_SSH_KEY_PATH" 2>/dev/null || true)"
+fi
+[[ -n "$DEPLOY_PUBKEY" ]] || warn "no readable public key — authorize the deploy key by hand in stage 4"
+
 # ── 2. Base OS ────────────────────────────────────────────────────────────
 stage "VM: base OS, firewall, tools"
-say "SSH in:  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST"
+say "SSH in:  ssh -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST"
 step "Paste these on the VM:"
 say "  sudo apt update && sudo apt upgrade -y"
-say "  sudo apt install -y ufw git curl ca-certificates rsync"
+say "  sudo apt install -y ufw git curl ca-certificates rsync ssh"
 say "  sudo ufw allow OpenSSH"
 say "  sudo ufw allow 80,443/tcp"
 say "  sudo ufw --force enable"
@@ -255,14 +267,22 @@ stage "VM: database, service user, repo"
 DB_PASSWORD="$(_existing DB_PASSWORD 2>/dev/null || true)"
 [[ -n "$DB_PASSWORD" ]] || DB_PASSWORD="$(openssl rand -hex 32)"
 write_env DB_PASSWORD "$DB_PASSWORD"
-step "Create the role + database (password generated for you):"
-say "  sudo -u postgres psql -c \"CREATE ROLE kolonios LOGIN PASSWORD '$DB_PASSWORD';\""
-say "  sudo -u postgres psql -c \"CREATE DATABASE kolonios OWNER kolonios;\""
-step "Then the service user and checkout:"
-say "  sudo useradd --system --home $DEPLOY_PATH --shell /usr/sbin/nologin kolonios"
+step "Create the role + database (password generated for you; safe to re-run):"
+say "  sudo -u postgres psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='kolonios'\" | grep -q 1 || sudo -u postgres psql -c \"CREATE ROLE kolonios LOGIN PASSWORD '$DB_PASSWORD';\""
+say "  sudo -u postgres psql -tc \"SELECT 1 FROM pg_database WHERE datname='kolonios'\" | grep -q 1 || sudo -u postgres psql -c \"CREATE DATABASE kolonios OWNER kolonios;\""
+step "Service user (login-capable so CI can deploy), directories, checkout:"
+say "  id -u kolonios >/dev/null 2>&1 || sudo useradd --system --home-dir $DEPLOY_PATH --shell /bin/bash kolonios"
 say "  sudo mkdir -p $DEPLOY_PATH /etc/kolonios /var/backups/kolonios"
-say "  sudo git clone $REPO_URL $DEPLOY_PATH"
+say "  [ -d $DEPLOY_PATH/.git ] || sudo git clone $REPO_URL $DEPLOY_PATH"
 say "  sudo chown -R kolonios:kolonios $DEPLOY_PATH"
+if [[ -n "$DEPLOY_PUBKEY" ]]; then
+  step "Authorize the deploy public key for $DEPLOY_USER:"
+  say "  sudo install -d -m 700 -o kolonios -g kolonios $DEPLOY_PATH/.ssh"
+  say "  echo '$DEPLOY_PUBKEY' | sudo tee $DEPLOY_PATH/.ssh/authorized_keys"
+  say "  sudo chown kolonios:kolonios $DEPLOY_PATH/.ssh/authorized_keys && sudo chmod 600 $DEPLOY_PATH/.ssh/authorized_keys"
+else
+  note "Authorize your deploy public key in $DEPLOY_PATH/.ssh/authorized_keys by hand."
+fi
 note "Private repo? Use a deploy key or token in the clone URL."
 pause "Done? Press Enter."
 
@@ -304,8 +324,9 @@ fi
 # ── 7. Install env + units on the VM ──────────────────────────────────────
 stage "Install env, systemd unit, Caddy"
 step "Copy the env file to the VM:"
-say "  scp -P $DEPLOY_PORT $ENV_FILE $DEPLOY_USER@$DEPLOY_HOST:/tmp/kolonios.env"
-say "  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST \"sudo install -m 600 -o root -g kolonios /tmp/kolonios.env /etc/kolonios/kolonios.env && rm /tmp/kolonios.env\""
+say "  scp -P $DEPLOY_PORT $ENV_FILE $SSH_USER@$DEPLOY_HOST:/tmp/kolonios.env"
+say "  ssh -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST \"sudo install -m 640 -o root -g kolonios /tmp/kolonios.env /etc/kolonios/kolonios.env && rm /tmp/kolonios.env\""
+note "640 (not 600): the kolonios service user must read it to run deploy.sh."
 step "Let the service user restart the app without a password:"
 say "  echo 'kolonios ALL=(root) NOPASSWD: /usr/bin/systemctl restart kolonios' | sudo tee /etc/sudoers.d/kolonios-restart"
 step "Install the systemd unit:"
@@ -318,8 +339,11 @@ else
   say "  sudo cp $DEPLOY_PATH/deploy/Caddyfile.internal /etc/caddy/Caddyfile"
   note "Self-signed: browsers warn until the internal CA is trusted."
 fi
+say "  sudo mkdir -p /etc/systemd/system/caddy.service.d"
+say "  printf '[Service]\\nEnvironmentFile=/etc/default/caddy\\n' | sudo tee /etc/systemd/system/caddy.service.d/kolonios-env.conf"
 say "  echo 'DOMAIN=$APP_HOST' | sudo tee /etc/default/caddy"
-say "  sudo systemctl reload caddy"
+say "  sudo systemctl daemon-reload && sudo systemctl restart caddy"
+note "The package's caddy.service doesn't read /etc/default/caddy; the drop-in is what supplies DOMAIN."
 note "For auto-HTTPS, DNS for $APP_HOST must point at $DEPLOY_HOST."
 pause "Installed? Press Enter."
 
@@ -336,6 +360,7 @@ pause "Health returned {\"status\":\"ok\"}? Press Enter."
 stage "First admin account"
 step "1) Open the sign-in page and register with $ADMIN_EMAIL:"
 open_url "$APP_URL/auth/v2/sign-in"
+ADMIN_EMAIL_SQL="${ADMIN_EMAIL//\'/\'\'}"
 step "2) On the VM, grant that account full access (paste the whole block):"
 say "  set -a; source /etc/kolonios/kolonios.env; set +a"
 emit ""
@@ -344,9 +369,9 @@ emit "INSERT INTO role_groups (id,name,description,permissions,is_admin)"
 emit "VALUES ('zzzrg-admin','Administrator','Full system access','{}'::jsonb,true)"
 emit "ON CONFLICT (id) DO NOTHING;"
 emit "INSERT INTO user_role_groups (user_id,role_group_id)"
-emit "SELECT id,'zzzrg-admin' FROM \"user\" WHERE email='$ADMIN_EMAIL'"
+emit "SELECT id,'zzzrg-admin' FROM \"user\" WHERE email='$ADMIN_EMAIL_SQL'"
 emit "ON CONFLICT (user_id) DO NOTHING;"
-emit "UPDATE \"user\" SET role='admin' WHERE email='$ADMIN_EMAIL';"
+emit "UPDATE \"user\" SET role='admin' WHERE email='$ADMIN_EMAIL_SQL';"
 emit "SQL"
 emit ""
 pause "Admin can see the full dashboard? Press Enter."
@@ -358,12 +383,11 @@ set_secret DEPLOY_HOST "$DEPLOY_HOST"
 set_secret DEPLOY_USER "$DEPLOY_USER"
 set_secret DEPLOY_PORT "$DEPLOY_PORT"
 set_secret DEPLOY_PATH "$DEPLOY_PATH"
-ask DEPLOY_SSH_KEY_PATH "Path to the private key that can SSH to the VM:"
 if [[ -n "${DEPLOY_SSH_KEY_PATH:-}" && -f "$DEPLOY_SSH_KEY_PATH" ]]; then
   set_secret DEPLOY_SSH_KEY "$(cat "$DEPLOY_SSH_KEY_PATH")"
-  note "Make sure the matching public key is in $DEPLOY_USER@$DEPLOY_HOST:~/.ssh/authorized_keys."
+  note "Public key authorized at $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/.ssh/authorized_keys."
 else
-  SKIPPED+=("GitHub secret DEPLOY_SSH_KEY (add the deploy public key to the VM, then set it)")
+  SKIPPED+=("GitHub secret DEPLOY_SSH_KEY (authorize the deploy public key on the VM, then set it)")
   warn "no readable key at that path — set DEPLOY_SSH_KEY by hand"
 fi
 

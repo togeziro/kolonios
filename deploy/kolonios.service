@@ -9,6 +9,7 @@ Type=simple
 User=kolonios
 Group=kolonios
 WorkingDirectory=/opt/kolonios
+Environment=NODE_ENV=production
 EnvironmentFile=/etc/kolonios/kolonios.env
 ExecStart=/usr/local/bin/bun run /opt/kolonios/.output/server/index.mjs
 Restart=always
