@@ -350,6 +350,7 @@ function AdminAttendanceAddDialogBody({
               <Label htmlFor={field.name}>{t('attendanceAdmin.attendanceReasonLabel')}</Label>
               <Textarea
                 id={field.name}
+                data-testid='manual-attendance-reason'
                 maxLength={1000}
                 placeholder={t('attendanceAdmin.attendanceReasonPlaceholder')}
                 value={field.state.value}
