@@ -10,6 +10,7 @@ import ThemeProvider from '@/components/themes/theme-provider';
 import { DEFAULT_THEME_PRESET, THEME_PRESET_VALUES } from '@/lib/preferences/theme';
 import { I18nProvider } from '@/i18n/provider';
 import { LocaleProvider } from '@/features/settings/locale-provider';
+import { getPublicBrandingFn } from '@/features/branding/api/service';
 
 import '@/styles/globals.css';
 
@@ -75,22 +76,38 @@ const getActiveLanguage = createIsomorphicFn()
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'kolonios' },
-      {
-        name: 'description',
-        content: 'kolonios dashboard'
-      },
-      { tag: 'link', rel: 'icon', href: '/api/v1/branding/favicon' }
-    ]
-  }),
+  head: ({ loaderData }) => {
+    // The favicon href includes the row's updatedAt timestamp so the URL
+    // itself changes whenever an upload is saved — that bypasses the
+    // browser's sticky per-URL favicon cache for already-open tabs. The
+    // server also strips ?v before resolving the asset.
+    const v = loaderData?.brandingUpdatedAt ?? '';
+    return {
+      meta: [
+        { charSet: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { title: 'kolonios' },
+        {
+          name: 'description',
+          content: 'kolonios dashboard'
+        }
+      ],
+      links: [{ rel: 'icon', href: `/api/v1/branding/favicon${v ? `?v=${v}` : ''}` }]
+    };
+  },
   loader: async () => {
     const activeTheme = await getActiveTheme();
     const activeLanguage = await getActiveLanguage();
-    return { activeTheme, activeLanguage };
+    let brandingUpdatedAt = '';
+    try {
+      const branding = await getPublicBrandingFn();
+      brandingUpdatedAt = branding.updatedAt;
+    } catch {
+      // Branding is optional metadata for the root layout; if the server
+      // fn fails (DB unreachable mid-boot), fall back to a static link and
+      // let the page render — never block the document shell on it.
+    }
+    return { activeTheme, activeLanguage, brandingUpdatedAt };
   },
   component: RootDocument
 });

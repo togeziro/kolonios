@@ -24,6 +24,7 @@ describe('company branding data access (integration)', () => {
         logoLight: null,
         logoDark: null,
         favicon: null,
+        updatedAt: new Date(0).toISOString(),
         profile: {
           company_name: null,
           company_address: null,

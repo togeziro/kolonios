@@ -108,14 +108,16 @@ export const updateBrandingSettingsFn = createServerFn({ method: 'POST' })
 // Public branding for the login page and app shells: unauthenticated by
 // design and deliberately limited to non-sensitive identity fields (logo
 // variants + company name). The name goes through the agreed Company
-// Profile fallback chain (DB → env → 'Kolonios').
+// Profile fallback chain (DB → env → 'Kolonios'). `updatedAt` powers the
+// favicon cache-bust query string so already-open tabs pick up uploads.
 export const getPublicBrandingFn = createServerFn({ method: 'GET' }).handler(async () => {
   const { getCompanyBranding } = await import('@/lib/db/branding');
   const branding = await getCompanyBranding();
   return {
     logoLight: branding.logoLight,
     logoDark: branding.logoDark,
-    name: resolveCompanyProfile(branding.profile).name
+    name: resolveCompanyProfile(branding.profile).name,
+    updatedAt: branding.updatedAt
   };
 });
 

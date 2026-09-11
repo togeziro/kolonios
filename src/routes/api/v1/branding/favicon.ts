@@ -2,8 +2,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { getCompanyBranding } from '@/lib/db/branding';
 import { decodeBase64, stripPngDataUrl } from '@/lib/branding/assets';
 
+// 60s is short enough that an open tab picks up a re-upload within a minute
+// of the next focus/nav, and long enough that bursts of navigations don't
+// refetch. The ?v=<updatedAt> cache-bust on the href is the primary lever
+// for already-open tabs.
 const FAVICON_CACHE_HEADERS = {
-  'Cache-Control': 'public, max-age=300'
+  'Cache-Control': 'public, max-age=60'
 };
 
 function defaultFaviconResponse() {

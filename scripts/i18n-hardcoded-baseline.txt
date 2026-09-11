@@ -78,8 +78,8 @@ src/features/users/components/users-table/columns.tsx:73
 src/features/users/components/users-table/columns.tsx:96
 src/features/users/components/users-table/index.tsx:131
 src/features/users/components/users-table/index.tsx:152
-src/routes/__root.tsx:119
-src/routes/__root.tsx:120
+src/routes/__root.tsx:136
+src/routes/__root.tsx:137
 src/routes/about.tsx:15
 src/routes/about.tsx:16
 src/routes/about.tsx:20

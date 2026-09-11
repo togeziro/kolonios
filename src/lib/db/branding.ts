@@ -9,6 +9,7 @@ export interface CompanyBranding {
   logoLight: string | null;
   logoDark: string | null;
   favicon: string | null;
+  updatedAt: string;
   profile: CompanyProfileColumns;
 }
 
@@ -35,6 +36,7 @@ const toBranding = (row: CompanySetting | null): CompanyBranding => ({
   logoLight: row?.branding_logo_light ?? null,
   logoDark: row?.branding_logo_dark ?? null,
   favicon: row?.branding_favicon ?? null,
+  updatedAt: (row?.updated_at ?? new Date(0)).toISOString(),
   profile: toProfile(row)
 });
 

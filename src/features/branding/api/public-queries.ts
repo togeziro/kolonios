@@ -4,6 +4,7 @@ export interface PublicBranding {
   logoLight: string | null;
   logoDark: string | null;
   name: string | null;
+  updatedAt: string;
 }
 
 export const PUBLIC_BRANDING_KEY = ['branding', 'public'] as const;
