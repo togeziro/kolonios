@@ -1,0 +1,33 @@
+# Kolonios reverse proxy. Caddy obtains and renews TLS automatically.
+#
+#   DOMAIN=app.example.com caddy run --config deploy/Caddyfile
+#
+# The app listens on 127.0.0.1:3000 (see kolonios.service + HOST/PORT in the
+# environment file); only Caddy is reachable from the internet.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Caddy sets X-Forwarded-For / X-Forwarded-Proto automatically; the app
+	# uses them for client IP and secure-cookie detection.
+	reverse_proxy 127.0.0.1:3000 {
+		health_uri /api/v1/health
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/kolonios-access.log {
+			roll_size 50MiB
+			roll_keep 10
+		}
+	}
+}

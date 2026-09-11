@@ -1,0 +1,29 @@
+[Unit]
+Description=Kolonios (TanStack Start / Nitro bun server)
+Documentation=https://github.com/togeziro/kolonios
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kolonios
+Group=kolonios
+WorkingDirectory=/opt/kolonios
+EnvironmentFile=/etc/kolonios/kolonios.env
+ExecStart=/usr/local/bin/bun run /opt/kolonios/.output/server/index.mjs
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# Hardening. The app serves static assets from .output/ and holds no local
+# state; system paths stay read-only.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

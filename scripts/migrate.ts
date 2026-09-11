@@ -88,8 +88,15 @@ async function main() {
   await migrate(db, { migrationsFolder });
   console.log('Migrations applied');
 
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowProdSeed = process.env.ALLOW_PROD_SEED === '1';
+
   if (noSeed) {
     console.log('--no-seed: skipping auto-seed');
+  } else if (isProduction && !allowProdSeed) {
+    // The seed creates demo users with the well-known Password123! login.
+    // Never let that happen on a production database by accident.
+    console.log('Production detected — skipping auto-seed (set ALLOW_PROD_SEED=1 to override)');
   } else if (await isUserTableEmpty()) {
     console.log('User table is empty — seeding demo data...');
     const { seedDatabase } = await import('./seed');

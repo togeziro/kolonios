@@ -1,11 +1,9 @@
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type postgres from 'postgres';
+import { resolveDatabaseUrl } from '../env';
 import * as schema from './schema';
 
 type PayrollDb = PostgresJsDatabase<typeof schema> & { $client: ReturnType<typeof postgres> };
-
-const connectionString =
-  process.env.DATABASE_URL || 'postgres://tanstack:tanstack@localhost:5432/kolonios';
 
 const globalForDb = globalThis as unknown as {
   client?: ReturnType<typeof postgres>;
@@ -19,7 +17,7 @@ const isServer = typeof window === 'undefined';
 const postgresModule = isServer ? await import(/* @vite-ignore */ postgresSpecifier) : undefined;
 const client = isServer
   ? (globalForDb.client ??
-    (postgresModule?.default(connectionString, { max: 10 }) as ReturnType<typeof postgres>))
+    (postgresModule?.default(resolveDatabaseUrl(), { max: 10 }) as ReturnType<typeof postgres>))
   : undefined;
 if (process.env.NODE_ENV !== 'production') {
   globalForDb.client = client;
