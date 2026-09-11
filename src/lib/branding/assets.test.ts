@@ -17,9 +17,13 @@ describe('BRANDING_SLOT_REQUIREMENTS', () => {
     const slots = Object.keys(BRANDING_SLOT_REQUIREMENTS) as BrandingSlot[];
     expect(slots).toEqual(['logo_light', 'logo_dark', 'favicon']);
     expect(BRANDING_SLOT_REQUIREMENTS.logo_light.maxBytes).toBe(512 * 1024);
+    expect(BRANDING_SLOT_REQUIREMENTS.logo_light.minPx).toBe(64);
+    expect(BRANDING_SLOT_REQUIREMENTS.logo_light.maxPx).toBe(1024);
+    expect(BRANDING_SLOT_REQUIREMENTS.logo_light.square).toBe(false);
     expect(BRANDING_SLOT_REQUIREMENTS.favicon.maxBytes).toBe(256 * 1024);
     expect(BRANDING_SLOT_REQUIREMENTS.favicon.minPx).toBe(16);
     expect(BRANDING_SLOT_REQUIREMENTS.favicon.maxPx).toBe(512);
+    expect(BRANDING_SLOT_REQUIREMENTS.favicon.square).toBe(true);
   });
 });
 
@@ -74,13 +78,50 @@ describe('validateBrandingImage', () => {
     if (!result.ok) expect(result.reason).toBe('bad_dimensions');
   });
 
-  it('rejects a non-square logo', () => {
-    // IHDR patched to declare 300x200.
+  it('accepts non-square logos (landscape lockups, portraits)', () => {
+    for (const [w, h] of [
+      [320, 100],
+      [100, 320],
+      [1024, 64],
+      [256, 256]
+    ]) {
+      const png = PNG_1X1.slice();
+      const view = new DataView(png.buffer);
+      view.setUint32(16, w);
+      view.setUint32(20, h);
+      expect(validateBrandingImage('logo_light', png, 'image/png')).toEqual({
+        ok: true,
+        width: w,
+        height: h
+      });
+    }
+  });
+
+  it('rejects a logo with a side outside the 64-1024 px range', () => {
+    const wide = PNG_1X1.slice();
+    const viewWide = new DataView(wide.buffer);
+    viewWide.setUint32(16, 2000);
+    viewWide.setUint32(20, 100);
+    const tooBig = validateBrandingImage('logo_light', wide, 'image/png');
+    expect(tooBig.ok).toBe(false);
+    if (!tooBig.ok) expect(tooBig.reason).toBe('bad_dimensions');
+
+    const tiny = PNG_1X1.slice();
+    const viewTiny = new DataView(tiny.buffer);
+    viewTiny.setUint32(16, 32);
+    viewTiny.setUint32(20, 32);
+    const tooSmall = validateBrandingImage('logo_dark', tiny, 'image/png');
+    expect(tooSmall.ok).toBe(false);
+    if (!tooSmall.ok) expect(tooSmall.reason).toBe('bad_dimensions');
+  });
+
+  it('still rejects a non-square favicon', () => {
+    // IHDR patched to declare 180x120.
     const wide = PNG_1X1.slice();
     const view = new DataView(wide.buffer);
-    view.setUint32(16, 300);
-    view.setUint32(20, 200);
-    const result = validateBrandingImage('logo_light', wide, 'image/png');
+    view.setUint32(16, 180);
+    view.setUint32(20, 120);
+    const result = validateBrandingImage('favicon', wide, 'image/png');
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe('bad_dimensions');
   });

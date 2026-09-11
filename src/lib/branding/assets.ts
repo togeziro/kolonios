@@ -17,14 +17,18 @@ export interface SlotRequirement {
   maxBytes: number;
   minPx: number;
   maxPx: number;
+  /** When true, width must equal height (favicons; all consumers are square). */
+  square: boolean;
 }
 
 export const BRANDING_SLOT_REQUIREMENTS: Record<BrandingSlot, SlotRequirement> = {
-  logo_light: { maxBytes: 512 * 1024, minPx: 256, maxPx: 512 },
-  logo_dark: { maxBytes: 512 * 1024, minPx: 256, maxPx: 512 },
+  // Logos are usually landscape lockups, so any shape is accepted within
+  // a per-side range; every renderer fits them with object-contain / fit.
+  logo_light: { maxBytes: 512 * 1024, minPx: 64, maxPx: 1024, square: false },
+  logo_dark: { maxBytes: 512 * 1024, minPx: 64, maxPx: 1024, square: false },
   // Industry-standard favicon sizes are square: 16/32/48 tab icons, 180
   // Apple Touch, 192/512 PWA. Accept the full range; browsers downscale.
-  favicon: { maxBytes: 256 * 1024, minPx: 16, maxPx: 512 }
+  favicon: { maxBytes: 256 * 1024, minPx: 16, maxPx: 512, square: true }
 };
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
@@ -63,8 +67,13 @@ export function validateBrandingImage(
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const width = view.getUint32(16);
   const height = view.getUint32(20);
-  if (width !== height) return { ok: false, reason: 'bad_dimensions' };
-  if (width < requirement.minPx || width > requirement.maxPx) {
+  if (requirement.square && width !== height) return { ok: false, reason: 'bad_dimensions' };
+  if (
+    width < requirement.minPx ||
+    width > requirement.maxPx ||
+    height < requirement.minPx ||
+    height > requirement.maxPx
+  ) {
     return { ok: false, reason: 'bad_dimensions' };
   }
   const colorType = bytes[25];

@@ -339,17 +339,22 @@ export async function createPayslipPdf(
   if (payslip.companyLogo) {
     try {
       const png = await document.embedPng(payslip.companyLogo);
-      // 48px square aligned to the header baseline; 14 lifts the image bottom
-      // so the logo visually centers against the first text line's cap height.
-      const logoSize = 48;
+      // Fit inside a 48px box preserving aspect ratio (logos may be
+      // rectangular since slots accept any shape); the box stays anchored
+      // top-left where the square sat, 14 lifts the box bottom so it
+      // visually centers against the first text line's cap height.
+      const boxSize = 48;
       const logoBaselineOffset = 14;
+      const scale = Math.min(boxSize / png.width, boxSize / png.height);
+      const width = png.width * scale;
+      const height = png.height * scale;
       page.drawImage(png, {
         x: margin,
-        y: y - logoSize + logoBaselineOffset,
-        width: logoSize,
-        height: logoSize
+        y: y - boxSize + logoBaselineOffset + (boxSize - height) / 2,
+        width,
+        height
       });
-      y -= logoSize + 4;
+      y -= boxSize + 4;
     } catch {
       // fall through: text-only header
     }
