@@ -18,8 +18,8 @@ describe('BRANDING_SLOT_REQUIREMENTS', () => {
     expect(slots).toEqual(['logo_light', 'logo_dark', 'favicon']);
     expect(BRANDING_SLOT_REQUIREMENTS.logo_light.maxBytes).toBe(512 * 1024);
     expect(BRANDING_SLOT_REQUIREMENTS.favicon.maxBytes).toBe(256 * 1024);
-    expect(BRANDING_SLOT_REQUIREMENTS.favicon.minPx).toBe(256);
-    expect(BRANDING_SLOT_REQUIREMENTS.favicon.maxPx).toBe(256);
+    expect(BRANDING_SLOT_REQUIREMENTS.favicon.minPx).toBe(16);
+    expect(BRANDING_SLOT_REQUIREMENTS.favicon.maxPx).toBe(512);
   });
 });
 
@@ -50,12 +50,26 @@ describe('validateBrandingImage', () => {
     if (!result.ok) expect(result.reason).toBe('too_large');
   });
 
-  it('rejects a favicon that is not exactly 256x256', () => {
-    const PNG_300 = PNG_1X1.slice();
-    const view300 = new DataView(PNG_300.buffer);
-    view300.setUint32(16, 300);
-    view300.setUint32(20, 300);
-    const result = validateBrandingImage('favicon', PNG_300, 'image/png');
+  it('accepts industry-standard favicon sizes (16/32/48 tab, 180 touch, 192/512 PWA)', () => {
+    for (const size of [16, 32, 48, 180, 192, 256, 512]) {
+      const png = PNG_1X1.slice();
+      const view = new DataView(png.buffer);
+      view.setUint32(16, size);
+      view.setUint32(20, size);
+      expect(validateBrandingImage('favicon', png, 'image/png')).toEqual({
+        ok: true,
+        width: size,
+        height: size
+      });
+    }
+  });
+
+  it('rejects a favicon outside the 16-512 px range', () => {
+    const PNG_600 = PNG_1X1.slice();
+    const view600 = new DataView(PNG_600.buffer);
+    view600.setUint32(16, 600);
+    view600.setUint32(20, 600);
+    const result = validateBrandingImage('favicon', PNG_600, 'image/png');
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe('bad_dimensions');
   });

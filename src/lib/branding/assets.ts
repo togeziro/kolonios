@@ -22,7 +22,9 @@ export interface SlotRequirement {
 export const BRANDING_SLOT_REQUIREMENTS: Record<BrandingSlot, SlotRequirement> = {
   logo_light: { maxBytes: 512 * 1024, minPx: 256, maxPx: 512 },
   logo_dark: { maxBytes: 512 * 1024, minPx: 256, maxPx: 512 },
-  favicon: { maxBytes: 256 * 1024, minPx: 256, maxPx: 256 }
+  // Industry-standard favicon sizes are square: 16/32/48 tab icons, 180
+  // Apple Touch, 192/512 PWA. Accept the full range; browsers downscale.
+  favicon: { maxBytes: 256 * 1024, minPx: 16, maxPx: 512 }
 };
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
