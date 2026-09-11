@@ -1,4 +1,6 @@
-// @vitest-environment jsdom
+// Tests `deleteStorageObject`, which lives in `./presign` despite this file's
+// old `delete-object.test.ts` name (renamed to reflect the actual location).
+// Pure node: no DOM access, so the default `node` env from vite.config.ts applies.
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 

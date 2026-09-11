@@ -65,7 +65,16 @@ export async function deleteStorageObject(key: string): Promise<boolean> {
     await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }));
     return true;
   } catch (e) {
-    logger.warn({ err: e, key }, 'storage.delete-failed');
+    // Log structured fields only — pino's redact paths match JSON keys, not
+    // values nested inside `err.message`, so dropping the raw error prevents
+    // any future SDK/intermediary from leaking credentials through the message.
+    logger.warn(
+      {
+        key,
+        errorName: e instanceof Error ? e.name : 'UnknownError'
+      },
+      'storage.delete-failed'
+    );
     return false;
   }
 }
@@ -85,8 +94,18 @@ export async function testConnection(
     const name = e instanceof Error ? e.name : 'UnknownError';
     const detail = e instanceof Error ? e.message : 'Unknown storage error';
     const code = errorCode(name, status, detail);
+    // Log structured fields only — pino's redact paths match JSON keys, not
+    // values nested inside `err.message`. Dropping the raw `err` keeps any
+    // future SDK/intermediary that interpolates credentials into the message
+    // from leaking through the log line.
     logger.error(
-      { err: e, provider: config.provider, bucket: config.bucket, code },
+      {
+        provider: config.provider,
+        bucket: config.bucket,
+        code,
+        errorName: name,
+        httpStatus: status
+      },
       'storage.test-connection-failed'
     );
     return { ok: false, error: friendlyError(code), code };

@@ -5,7 +5,7 @@
 // test start from a clean, known state by truncating every table and seeding
 // only what the test needs.
 import { db } from '@/lib/db';
-import { eq, max } from 'drizzle-orm';
+import { eq, getTableName, max, sql } from 'drizzle-orm';
 import {
   nationalHolidays,
   attendanceCorrections,
@@ -63,58 +63,80 @@ export async function resetDatabase() {
   await db.delete(roleGroups);
 }
 
+// Every table reset by resetAllTables, in a single TRUNCATE. Source of truth
+// for the list — keeps resetAllTables a one-liner so adding/removing a schema
+// only requires editing this array.
+//
+// Array order is cosmetic — CASCADE handles FK ordering, so do not infer
+// semantics from position. Sorted alphabetically to make that obvious.
+const ALL_TABLES = [
+  account,
+  attendanceCorrections,
+  auditLog,
+  companyPayrollSettings,
+  companySettings,
+  customers,
+  dateOverrides,
+  dayOffs,
+  departments,
+  designations,
+  employeeBankAccounts,
+  employeeBenefitEnrollments,
+  employeeBpjsEnrollments,
+  employeeBpjsFamilyMembers,
+  employeeCareerEvents,
+  employeeDocuments,
+  employeeEmploymentEvents,
+  employeeSalaryAssignments,
+  employeeSalaryComponents,
+  employeeShifts,
+  employeeSkills,
+  employees,
+  leaveTypeConfigs,
+  leaves,
+  locations,
+  nationalHolidays,
+  notifications,
+  payrollAttendanceOverrides,
+  payrollPeriods,
+  payrollRecords,
+  payslips,
+  performanceReports,
+  roleGroups,
+  salaryComponents,
+  scheduleAssignments,
+  session,
+  shiftWeekdayRules,
+  shifts,
+  taskRequirements,
+  taxSettings,
+  employeeTaxProfiles,
+  employeeTaxRecords,
+  ticketLegs,
+  ticketMaterials,
+  ticketPhotos,
+  ticketWorklog,
+  tickets,
+  user,
+  userRoleGroups,
+  verification
+] as const;
+
 export async function resetAllTables() {
-  // Delete in correct order (child tables before parent tables)
-  await db.delete(employeeCareerEvents);
-  await db.delete(payrollAttendanceOverrides);
-  await db.delete(employeeBpjsFamilyMembers);
-  await db.delete(employeeBpjsEnrollments);
-  await db.delete(employeeDocuments);
-  await db.delete(employeeEmploymentEvents);
-  await db.delete(employeeBankAccounts);
-  await db.delete(employeeBenefitEnrollments);
-  await db.delete(employeeTaxRecords);
-  await db.delete(employeeTaxProfiles);
-  await db.delete(payslips);
-  await db.delete(payrollRecords);
-  await db.delete(payrollPeriods);
-  await db.delete(employeeSalaryComponents);
-  await db.delete(employeeSalaryAssignments);
-  await db.delete(salaryComponents);
-  await db.delete(companyPayrollSettings);
-  await db.delete(taxSettings);
-  await db.delete(nationalHolidays);
-  await db.delete(attendanceCorrections);
-  await db.delete(leaveTypeConfigs);
-  await db.delete(dayOffs);
-  await db.delete(dateOverrides);
-  await db.delete(scheduleAssignments);
-  await db.delete(shiftWeekdayRules);
-  await db.delete(auditLog);
-  await db.delete(employeeShifts);
-  await db.delete(leaves);
-  await db.delete(performanceReports);
-  await db.delete(ticketMaterials);
-  await db.delete(ticketPhotos);
-  await db.delete(ticketWorklog);
-  await db.delete(ticketLegs);
-  await db.delete(employeeSkills);
-  await db.delete(taskRequirements);
-  await db.delete(tickets);
-  await db.delete(customers);
-  await db.delete(employees);
-  await db.delete(companySettings);
-  await db.delete(designations);
-  await db.delete(departments);
-  await db.delete(locations);
-  await db.delete(shifts);
-  await db.delete(notifications);
-  await db.delete(userRoleGroups);
-  await db.delete(roleGroups);
-  await db.delete(session);
-  await db.delete(account);
-  await db.delete(verification);
-  await db.delete(user);
+  // Single TRUNCATE with CASCADE so FK ordering is handled by Postgres
+  // (no need to manually order child tables before parents). Without
+  // RESTART IDENTITY this matches the previous DELETE behaviour — sequences
+  // keep advancing, which is what the seed helpers assume. `sql.identifier`
+  // quotes reserved words like `user` so the statement parses.
+  const identifiers = ALL_TABLES.map((t) => sql.identifier(getTableName(t)));
+  try {
+    await db.execute(sql`TRUNCATE TABLE ${sql.join(identifiers, sql`, `)} CASCADE`);
+  } catch (e) {
+    throw new Error(
+      `resetAllTables: TRUNCATE failed — did you forget to run \`bun run db:generate\` after a schema change? Original error: ${(e as Error).message}`,
+      { cause: e }
+    );
+  }
 }
 
 export async function seedUser(id: string, overrides: Partial<typeof user.$inferInsert> = {}) {

@@ -1,17 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import {
-  S3Client,
-  HeadBucketCommand,
-  PutObjectCommand,
-  GetObjectCommand
-} from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import {
-  buildStorageClient,
-  createPresignedPutUrl,
-  createPresignedGetUrl,
-  testConnection
-} from './presign';
+import { buildStorageClient, createPresignedPutUrl, createPresignedGetUrl } from './presign';
 import type { StorageConfig } from './types';
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
@@ -28,14 +18,16 @@ const config: StorageConfig = {
   forcePathStyle: false
 };
 
-describe('storage presign', () => {
+describe('storage presign — URL signing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('builds an S3 client with the stored endpoint and path-style flag', async () => {
     const client = buildStorageClient(config) as S3Client;
-    const resolved = await (client as any).config.endpoint();
+    const resolved = await (
+      client as unknown as { config: { endpoint: () => Promise<URL> } }
+    ).config.endpoint();
     expect(resolved.hostname).toContain('idrivee2');
   });
 
@@ -67,57 +59,5 @@ describe('storage presign', () => {
       expect.any(GetObjectCommand),
       expect.objectContaining({ expiresIn: 3600 })
     );
-  });
-
-  it('reports ok when the bucket is reachable', async () => {
-    const send = vi.spyOn(S3Client.prototype, 'send').mockResolvedValue({} as never);
-    const result = await testConnection(config);
-    expect(result).toEqual({ ok: true });
-    expect(send).toHaveBeenCalledWith(expect.any(HeadBucketCommand));
-  });
-
-  it('returns a friendly error on auth failure', async () => {
-    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
-      new Error('InvalidAccessKeyId: The AWS Access Key Id you provided does not exist')
-    );
-    const result = await testConnection(config);
-    expect(result.ok).toBe(false);
-  });
-
-  it('maps an auth failure to INVALID_CREDENTIALS with a masked message', async () => {
-    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
-      Object.assign(new Error('InvalidAccessKeyId: secret-access-key leaked in message'), {
-        $metadata: { httpStatusCode: 400 }
-      })
-    );
-    const result = await testConnection(config);
-    expect(result).toMatchObject({ ok: false, code: 'INVALID_CREDENTIALS' });
-    expect(result.ok === false && result.error).toBe('Invalid access key or secret.');
-  });
-
-  it('maps HTTP 403 to FORBIDDEN', async () => {
-    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
-      Object.assign(new Error('AccessDenied'), { $metadata: { httpStatusCode: 403 } })
-    );
-    const result = await testConnection(config);
-    expect(result.ok === false && result.code).toBe('FORBIDDEN');
-  });
-
-  it('maps HTTP 404 to NOT_FOUND', async () => {
-    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
-      Object.assign(new Error('NoSuchBucket'), { $metadata: { httpStatusCode: 404 } })
-    );
-    const result = await testConnection(config);
-    expect(result.ok === false && result.code).toBe('NOT_FOUND');
-    expect(result.ok === false && result.error).toBe('Bucket not found or not accessible.');
-  });
-
-  it('maps network failures to NETWORK_ERROR', async () => {
-    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
-      new TypeError('fetch failed: socket hang up')
-    );
-    const result = await testConnection(config);
-    expect(result.ok === false && result.code).toBe('NETWORK_ERROR');
-    expect(result.ok === false && result.error).toBe('Could not reach the storage endpoint.');
   });
 });

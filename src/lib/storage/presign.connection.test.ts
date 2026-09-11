@@ -1,0 +1,97 @@
+import { describe, expect, it, vi, beforeAll, beforeEach } from 'vitest';
+import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
+import { testConnection } from './presign';
+import { logger } from '@/lib/logger';
+import type { StorageConfig } from './types';
+
+// Spy installed in beforeAll (logger import isn't available inside vi.hoisted).
+// Suppresses noisy logger output and lets the masked-message test inspect payloads.
+const errorSpy = vi.fn();
+let installed = false;
+
+const config: StorageConfig = {
+  provider: 'idrive_e2',
+  endpoint: 'https://us-east-1.idrivee2.com',
+  region: 'us-east-1',
+  bucket: 'koloni-dev',
+  accessKeyId: 'ak',
+  secretAccessKey: 'sk',
+  forcePathStyle: false
+};
+
+describe('storage testConnection', () => {
+  beforeAll(() => {
+    if (!installed) {
+      vi.spyOn(logger, 'error').mockImplementation((...args: unknown[]) => {
+        errorSpy(...args);
+        return undefined;
+      });
+      installed = true;
+    }
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    errorSpy.mockClear();
+  });
+
+  it('reports ok when the bucket is reachable', async () => {
+    const send = vi.spyOn(S3Client.prototype, 'send').mockResolvedValue({} as never);
+    const result = await testConnection(config);
+    expect(result).toEqual({ ok: true });
+    expect(send).toHaveBeenCalledWith(expect.any(HeadBucketCommand));
+  });
+
+  it('returns a friendly error on auth failure', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      new Error('InvalidAccessKeyId: The AWS Access Key Id you provided does not exist')
+    );
+    const result = await testConnection(config);
+    expect(result.ok).toBe(false);
+  });
+
+  it('maps an auth failure to INVALID_CREDENTIALS with a masked message', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      Object.assign(new Error('InvalidAccessKeyId: secret-access-key leaked in message'), {
+        $metadata: { httpStatusCode: 400 }
+      })
+    );
+    const result = await testConnection(config);
+    expect(result).toMatchObject({ ok: false, code: 'INVALID_CREDENTIALS' });
+    expect(result.ok === false && result.error).toBe('Invalid access key or secret.');
+    // The thrown error's message contains a sensitive-looking substring; assert
+    // it never reaches the logger payload (pino redact only matches keys, not
+    // values inside err.message, so production code must omit `err` entirely).
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const loggedPayload = errorSpy.mock.calls[0][0] as Record<string, unknown>;
+    const payloadText = JSON.stringify(loggedPayload);
+    expect(payloadText).not.toContain('secret-access-key');
+    expect(payloadText).not.toContain('InvalidAccessKeyId');
+  });
+
+  it('maps HTTP 403 to FORBIDDEN', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      Object.assign(new Error('AccessDenied'), { $metadata: { httpStatusCode: 403 } })
+    );
+    const result = await testConnection(config);
+    expect(result.ok === false && result.code).toBe('FORBIDDEN');
+  });
+
+  it('maps HTTP 404 to NOT_FOUND', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      Object.assign(new Error('NoSuchBucket'), { $metadata: { httpStatusCode: 404 } })
+    );
+    const result = await testConnection(config);
+    expect(result.ok === false && result.code).toBe('NOT_FOUND');
+    expect(result.ok === false && result.error).toBe('Bucket not found or not accessible.');
+  });
+
+  it('maps network failures to NETWORK_ERROR', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(
+      new TypeError('fetch failed: socket hang up')
+    );
+    const result = await testConnection(config);
+    expect(result.ok === false && result.code).toBe('NETWORK_ERROR');
+    expect(result.ok === false && result.error).toBe('Could not reach the storage endpoint.');
+  });
+});
