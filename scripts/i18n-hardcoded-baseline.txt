@@ -90,8 +90,6 @@ src/routes/about.tsx:30
 src/routes/about.tsx:37
 src/routes/about.tsx:39
 src/routes/about.tsx:48
-src/routes/auth/v2/sign-in/index.tsx:20
-src/routes/auth/v2/sign-up/index.tsx:20
 src/routes/dashboard/customers.tsx:156
 src/routes/dashboard/employees.index.tsx:169
 src/routes/dashboard/users.tsx:169
