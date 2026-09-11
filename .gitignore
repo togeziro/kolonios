@@ -14,6 +14,8 @@ src/routeTree.gen.ts
 # Environment variables
 .env
 .env*.local
+# Wizard-generated production env (contains secrets)
+deploy/kolonios.prod.env
 
 # IDEs and editors
 .vscode/*

@@ -284,6 +284,18 @@ bun run build
 bun run start    # serves the built app from .output/server/index.mjs
 ```
 
+### First-time provisioning
+
+Run the guided wizard from the repo root to provision a host, write the
+production env (`deploy/kolonios.prod.env`, gitignored), and set the CI deploy
+secrets:
+
+```bash
+bash scripts/prod-setup.sh
+```
+
+See [docs/DEPLOY.md](./docs/DEPLOY.md) for the full runbook.
+
 ### Other Platforms
 
 To target a different host, change the Nitro preset in `vite.config.ts`:

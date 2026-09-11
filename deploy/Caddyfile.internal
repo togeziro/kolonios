@@ -1,0 +1,26 @@
+# Kolonios reverse proxy for an internal / air-gapped VM (no public domain).
+# Caddy issues a self-signed certificate with `tls internal`, so browsers will
+# warn until the CA is trusted. Prefer this over the public-domain Caddyfile
+# when the VM is only reachable on the internal network.
+#
+#   DOMAIN=kolonios.internal caddy run --config deploy/Caddyfile.internal
+#
+# `DOMAIN` may be a hostname that resolves on your network, or the VM's IP.
+
+{$DOMAIN} {
+	tls internal
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3000 {
+		health_uri /api/v1/health
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
