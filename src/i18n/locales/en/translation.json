@@ -364,7 +364,7 @@
     "alreadyHaveAccount": "Already have an account?",
     "brand": "TanStack Dashboard",
     "confirmPassword": "Confirm Password",
-    "copyright": "© {{year}}, TanStack Dashboard.",
+    "copyright": "© {{year}}, {{name}}.",
     "createAccount": "Create an account",
     "createAccountSubtitle": "Enter your details to get started.",
     "createAccountTitle": "Create an account",

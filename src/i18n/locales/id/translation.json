@@ -364,7 +364,7 @@
     "alreadyHaveAccount": "Sudah punya akun?",
     "brand": "TanStack Dashboard",
     "confirmPassword": "Konfirmasi Kata Sandi",
-    "copyright": "© {{year}}, TanStack Dashboard.",
+    "copyright": "© {{year}}, {{name}}.",
     "createAccount": "Buat akun",
     "createAccountSubtitle": "Masukkan detail Anda untuk memulai.",
     "createAccountTitle": "Buat akun",

@@ -29,7 +29,9 @@ export default function AuthCard({
         <div className='space-y-2 text-center'>
           {branding?.name && (
             <div className='flex items-center justify-center gap-2'>
-              {branding?.logoLight && <BrandLogo className='h-12 w-12' />}
+              {branding?.logoLight || branding?.logoDark ? (
+                <BrandLogo className='h-12 w-12' />
+              ) : null}
               <span className='text-xl font-semibold'>{branding.name}</span>
             </div>
           )}
@@ -49,7 +51,12 @@ export default function AuthCard({
       </div>
 
       <div className='absolute bottom-5 flex w-full justify-between px-10'>
-        <div className='text-sm'>{t('auth.copyright', { year: new Date().getFullYear() })}</div>
+        <div className='text-sm'>
+          {t('auth.copyright', {
+            year: new Date().getFullYear(),
+            name: branding?.name ?? t('auth.brand')
+          })}
+        </div>
         <div className='flex items-center gap-1 text-sm'>
           <IconWorld className='size-4 text-muted-foreground' />
           {i18n.language.toUpperCase()}

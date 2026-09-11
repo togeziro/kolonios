@@ -89,7 +89,7 @@ src/routes/about.tsx:30
 src/routes/about.tsx:37
 src/routes/about.tsx:39
 src/routes/about.tsx:48
-src/routes/auth/v2.tsx:27
+src/routes/auth/v2.tsx:45
 src/routes/auth/v2/sign-in/index.tsx:20
 src/routes/auth/v2/sign-up/index.tsx:20
 src/routes/dashboard/customers.tsx:156
