@@ -1,14 +1,9 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo, BrandName } from '@/features/branding/components/brand-logo';
 import { usePublicBranding } from '@/features/branding/api/public-queries';
 
-export const Route = createFileRoute('/auth/v2')({
-  component: V2AuthLayout
-});
-
 /**
- * Company identity header for the auth promo panel. Shows the uploaded
+ * Company identity header for the sign-up brand panel. Shows the uploaded
  * logo + company name, falling back to the product brand when no branding
  * is set. The light tile keeps any uploaded artwork contrast-safe on the
  * primary panel; `text-primary` keeps the fallback icon visible on it
@@ -33,17 +28,27 @@ export function V2BrandHeader() {
   );
 }
 
-function V2AuthLayout() {
+export function BrandPanelPattern() {
   return (
-    <main>
-      <div className='grid h-dvh justify-center p-2 lg:grid-cols-2'>
-        <div className='relative order-2 hidden h-full rounded-3xl bg-primary lg:flex'>
-          <V2BrandHeader />
-        </div>
-        <div className='relative order-1 flex h-full'>
-          <Outlet />
-        </div>
-      </div>
-    </main>
+    <div className='pointer-events-none absolute inset-0 overflow-hidden rounded-3xl'>
+      <svg
+        className='absolute inset-0 h-full w-full opacity-[0.08]'
+        xmlns='http://www.w3.org/2000/svg'
+        aria-hidden
+      >
+        <defs>
+          <pattern id='sign-up-grid' width='32' height='32' patternUnits='userSpaceOnUse'>
+            <path d='M 32 0 L 0 0 0 32' fill='none' stroke='currentColor' strokeWidth='1' />
+          </pattern>
+        </defs>
+        <rect
+          width='100%'
+          height='100%'
+          fill='url(#sign-up-grid)'
+          className='text-primary-foreground'
+        />
+      </svg>
+      <div className='absolute -right-24 -bottom-24 size-96 rounded-full bg-primary-foreground/10 blur-3xl' />
+    </div>
   );
 }

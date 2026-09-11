@@ -27,6 +27,10 @@ const IGNORED_ATTRS = new Set([
   'step',
   'side',
   'to',
+  // AuthCard's alias for a router `to` — always a route path, never copy.
+  'linkTo',
+  // Component variant props — machine tokens selecting a style, never copy.
+  'tone',
   'form',
   'asChild',
   'htmlFor',
@@ -66,7 +70,14 @@ for (const file of files) {
   const source = readFileSync(file, 'utf8');
   if (source.includes(SKIP_DIRECTIVE)) continue;
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const walkAst = (node: ts.Node) => {
+  // SVG subtrees are presentation/coordinate machine tokens by spec, so
+  // attribute strings inside <svg> bypass the check. User-facing SVG copy
+  // lives in <text> nodes, which are still checked as JsxText below.
+  const walkAst = (node: ts.Node, inSvg = false) => {
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = ts.isJsxElement(node) ? node.openingElement.tagName : node.tagName;
+      if (tag.getText(sf) === 'svg') inSvg = true;
+    }
     if (ts.isJsxText(node)) {
       const text = node.text.trim();
       if (text.length > 0 && !/^[\d\s,.%+-]+$/.test(text)) {
@@ -74,7 +85,12 @@ for (const file of files) {
         found.set(`${file}:${line + 1}`, `hardcoded JSX text "${text}" — use useTranslation()`);
       }
     }
-    if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) {
+    if (
+      !inSvg &&
+      ts.isJsxAttribute(node) &&
+      node.initializer &&
+      ts.isStringLiteral(node.initializer)
+    ) {
       const name = ts.isJsxNamespacedName(node.name) ? node.name.name.text : node.name.text;
       const value = node.initializer.text.trim();
       if (
@@ -90,7 +106,7 @@ for (const file of files) {
         );
       }
     }
-    ts.forEachChild(node, walkAst);
+    ts.forEachChild(node, (child) => walkAst(child, inSvg));
   };
   walkAst(sf);
 }

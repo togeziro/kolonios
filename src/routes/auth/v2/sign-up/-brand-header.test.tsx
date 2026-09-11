@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
-import { V2BrandHeader } from './v2';
+import { V2BrandHeader } from './-brand-panel';
 
 const { brandingMock } = vi.hoisted(() => ({
   brandingMock: vi.fn()
