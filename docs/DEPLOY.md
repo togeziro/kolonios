@@ -59,10 +59,10 @@ sudo ufw allow OpenSSH
 sudo ufw allow 80,443/tcp        # skip if an edge proxy already terminates TLS
 sudo ufw --force enable
 
-# Bun 1.4.0 (must match CI — see .github/actions/setup/action.yml)
-curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+# Bun 1.4.2 (must match CI — see .github/actions/setup/action.yml)
+curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"
 sudo install -m 755 "$HOME/.bun/bin/bun" /usr/local/bin/bun
-bun --version                    # expect 1.4.0
+bun --version                    # expect 1.4.2
 
 # Requires a SIMD-capable CPU: verified 2026-09-12 that Bun 1.3.14 and 1.4.x
 # hang in a userspace spin on ANY file read via an absolute path ≥ ~32 chars
