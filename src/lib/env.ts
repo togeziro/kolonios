@@ -51,6 +51,16 @@ export function resolveDatabaseUrl(): string {
 }
 
 /**
+ * Whether public self-registration is open. Fail-closed: anything other
+ * than the literal string 'true' keeps sign-up disabled, so production
+ * stays closed unless the operator explicitly opens it (see
+ * ALLOW_PUBLIC_SIGNUP in .env.example). Sign-in is unaffected.
+ */
+export function isPublicSignupEnabled(): boolean {
+  return process.env.ALLOW_PUBLIC_SIGNUP === 'true';
+}
+
+/**
  * Validates required production environment variables. No-op outside
  * production. Accepts either BETTER_AUTH_SECRET or the legacy AUTH_SECRET
  * because better-auth reads both.

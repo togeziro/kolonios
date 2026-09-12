@@ -44,47 +44,16 @@
 - **Multi-theme support** — 13 OKLCH themes (all input/border tokens ≥3:1 WCAG contrast) with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
 - **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
-- **Testing** — 653+ Vitest unit/integration tests (holiday-calendar tests added) + Playwright E2E tests; CI runs lint, typecheck, tests, and build
+- **Testing** — 198 Vitest test files + 8 Playwright E2E specs; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
-| Page                                                           | Description                                                                                                                                                                                                                    |
-| :------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Dashboard Overview](/dashboard/overview)                      | Cards with Recharts graphs, Suspense-bound loading. Dark technician dashboard (attendance, My Work, Available Jobs, performance) for `role === 'technician'`.                                                                  |
-| [Attendance](/dashboard/attendance)                            | Check-in/out with geo-fencing validation, today's status, attendance history table.                                                                                                                                            |
-| [Locations](/dashboard/admin/attendance/locations)             | Manage work locations with geofence radius, GPS/selfie policy, and a locate button (MapLibre map + manual coordinate inputs).                                                                                                  |
-| [Schedules](/dashboard/admin/attendance/schedules)             | Create shifts with per-weekday rules.                                                                                                                                                                                          |
-| [Assignments](/dashboard/admin/attendance/assignments)         | Assign schedules to employees (individual/bulk) and create day offs.                                                                                                                                                           |
-| [Reports](/dashboard/admin/attendance/reports)                 | Daily detail filtered by date/location/shift/status; export CSV, Excel, PDF.                                                                                                                                                   |
-| [Leave](/dashboard/leave)                                      | Leave request form with type/date selection and leave history list.                                                                                                                                                            |
-| [My Work](/dashboard/my-work)                                  | Technician/SPV tabs: In Progress / Available / Completed + pending approval (dark mobile shell).                                                                                                                               |
-| [Achievements](/dashboard/achievements)                        | Technician streak card, weekly targets, and badges grid (Profile sub-page).                                                                                                                                                    |
-| [Available Jobs](/dashboard/jobs)                              | Eligibility-gated open-ticket pool with Take action (bottom-nav "Office"); Location/Priority filter chips + "Leg x of y" relay badges.                                                                                         |
-| [New Ticket](/dashboard/tickets/new)                           | Create a ticket: type/channel, customer, asset, location, priority, estafet legs.                                                                                                                                              |
-| [Ticket Detail](/dashboard/tickets/$ticketId)                  | Ticket header, leg progress + timeline, Take/Start/Complete actions; rework rejection banner.                                                                                                                                  |
-| [En Route](/dashboard/en-route/$ticketId)                      | MapLibre preview map: live-GPS blue device marker, orange destination pin, dashed guide line, fitBounds, TurfJS distance to destination, Open Maps handoff, "I've Arrived". Deep-dive: [docs/EN_ROUTE.md](./docs/EN_ROUTE.md). |
-| [Work Session](/dashboard/work-session/$ticketId)              | In-progress ticket working view: completion photos (camera + S3 upload), materials ±qty steppers, notes, Finish & Submit.                                                                                                      |
-| [Ticket Completed](/dashboard/tickets/$ticketId/completed)     | Success summary: rating, materials, photo grid, full leg timeline.                                                                                                                                                             |
-| [Settings](/dashboard/settings)                                | Mobile settings hub: profile card + edit link, live Language and Light/Dark theme rows, Change Password link, About (app version), Log Out.                                                                                    |
-| [Change Password](/dashboard/change-password)                  | Current/new/confirm fields with visibility toggles, strength meter, inline validation; changes the password via Better Auth.                                                                                                   |
-| [Edit Profile](/dashboard/edit-profile)                        | Display name save + avatar upload (initials fallback when storage is unconfigured); email locked ("contact HR"); work info read-only.                                                                                          |
-| [SPV Review Queue](/dashboard/spv/review)                      | Submitted Daily Checklist review: count strip, context-rich cards, Approve/Reject (stub toast); gated by `checklist.approve`.                                                                                                  |
-| [Review Ticket](/dashboard/spv/review/$ticketId)               | SPV evidence audit for a submitted ticket: summary, leg progress bar, engineer, photos, work summary, materials, SOP pill.                                                                                                     |
-| [Leave Approvals](/dashboard/spv/leave-approvals)              | Leave request queue: summary chips, Pending/Approved/Rejected tabs, Paid/Unpaid flags with deduction hint; gated by `spv_review.view`.                                                                                         |
-| [Customer Portal](/portal)                                     | Customer self-service portal (placeholder shell; billing/wifi/tickets coming later).                                                                                                                                           |
-| [Customers](/dashboard/customers)                              | Customer CRUD with search, filter & pagination.                                                                                                                                                                                |
-| [Employees](/dashboard/employees)                              | Employee CRUD with department joins and filtering.                                                                                                                                                                             |
-| [Departments](/dashboard/admin/departments)                    | CRUD management for company departments.                                                                                                                                                                                       |
-| [Job Titles](/dashboard/admin/designations)                    | CRUD for designations with department assignment and base salary.                                                                                                                                                              |
-| [Role Groups](/dashboard/admin/role-groups)                    | RBAC group management: per-module permission toggles for each role group.                                                                                                                                                      |
-| [Users (Table)](/dashboard/users)                              | Users table with React Query + URL state pattern.                                                                                                                                                                              |
-| [Notifications](/dashboard/notifications)                      | Notification center with bell badge, popover preview, and full page with tabs.                                                                                                                                                 |
-| [Holiday Calendar](/dashboard/admin/holiday-calendar)          | CRUD national/company holidays, API import, calendar view, admin settings.                                                                                                                                                     |
-| [Holiday Settings](/dashboard/admin/holiday-calendar/settings) | Holiday API provider configuration (Nager.Date / OpenHolidays / Custom REST).                                                                                                                                                  |
-| [Storage Settings](/dashboard/admin/storage-settings)          | S3-compatible object storage config: provider presets, endpoint/region/bucket, access keys, Test Connection.                                                                                                                   |
-| [Payroll](/dashboard/admin/payroll)                            | Admin payroll dashboard: overview, components, periods, generate/review, records, reports.                                                                                                                                     |
-| [My Payslips](/dashboard/payroll/payslips)                     | Employee self-service: payslip history with PDF download.                                                                                                                                                                      |
-| [Not Found](/notfound)                                         | Custom 404 page via TanStack Router's `defaultNotFoundComponent`.                                                                                                                                                              |
+The route tree is file-based (`src/routes/`): `/auth/sign-in` (+ `/auth/sign-up`
+while public registration is open), `/dashboard/*` (overview, attendance,
+checklist, tickets, payroll, customers, employees, admin, profile), and
+`/portal` (customer self-service). Entry points per role are decided by the
+shell registry — see [docs/UI_SHELLS.md](./docs/UI_SHELLS.md); module
+deep-dives live in [`docs/`](./docs/) (table below).
 
 ## Feature-based Organization
 
@@ -123,32 +92,17 @@ src/
 │
 ├── lib/                           # Core utilities
 │   ├── shells/                    # Shell registry (config + resolveShell/resolveHomePath, pure)
-│   ├── portal/                    # Customer portal access classifier (pure)
 │   ├── api/                       # API helpers
 │   ├── auth/                      # Better Auth client + server config
-│   ├── db/                        # Drizzle ORM connection, schema, migrations, server-only data access
-│   │   ├── utils.ts               # Shared DB utilities (pagination, sorting, conditions)
-│   │   ├── schema/                # Drizzle schema definitions
-│   │   ├── customers.ts           # Customer CRUD (uses utils)
-│   │   ├── employees.ts           # Employee CRUD with joins (uses utils)
-│   │   ├── masterdata.ts          # Department/designation CRUD (uses utils)
-│   │   ├── attendance.ts          # Attendance CRUD with Haversine (uses utils)
-│   │   ├── achievements.ts        # Achievement aggregates: streak, monthly stats, ticket counts (uses utils)
-│   │   ├── payroll.ts             # Payroll data access (effective-date resolution + PTKP/JKK tables live in lib/payroll/engine.ts)
-│   │   ├── audit.ts               # Audit log (uses utils)
-│   │   └── tickets.ts               # Ticket/leg system (replaces tasks.ts, uses utils)
-│   ├── payroll/                   # Pure payroll-domain engine (ADR-0001): effective-date resolution, PTKP/JKK tables
-│   │   └── engine.ts              # Pure rules (no DB, no IO, no clock); see engine.test.ts for the 22-case contract
+│   ├── db/                        # Drizzle ORM: connection, schema, migrations,
+│   │                              #   server-only data access (customers, employees,
+│   │                              #   masterdata, attendance, achievements, payroll,
+│   │                              #   audit, tickets) — see src/lib/db/utils.ts
+│   ├── payroll/                   # Pure payroll-domain engine (ADR-0001, no DB/IO/clock)
 │   ├── errors.ts                  # DomainError + mapDbError
 │   ├── logger.ts                  # structured pino logger
-│   ├── parsers.ts                 # sort/filter parsers
 │   ├── rate-limit.ts              # rate limiter (returns HTTP 429 on exhaustion)
-│   ├── storage/                   # Server-only S3 layer: presign client, key builders, provider presets
-│   │   ├── types.ts               # StorageProvider / StorageConfig types
-│   │   ├── keys.ts                # Object key builders (attendance/customers/tickets)
-│   │   ├── config.ts              # Provider presets + deriveStorageConfig from company_settings
-│   │   ├── presign.ts             # buildStorageClient, presigned PUT/GET URLs, testConnection
-│   │   └── upload-client.ts       # Client-side uploadSelfie helper (presigned direct upload)
+│   ├── storage/                   # Server-only S3 layer (presign, keys, presets)
 │   └── query-client.ts            # React Query client config
 ├── hooks/                         # Custom hooks (use-data-table, use-mobile, etc.)
 ├── config/                        # Navigation, infobar, data table config
@@ -211,7 +165,8 @@ bun run dev
 
 Access the app at **http://localhost:3000**.
 
-Log in with a seeded demo account:
+Log in with a seeded demo account (local development only — the seed never
+runs in production, so these accounts do not exist there):
 
 | Email                    | Password       | Role       |
 | ------------------------ | -------------- | ---------- |
@@ -309,6 +264,19 @@ nitro({ preset: 'vercel' }); // Vercel
 
 > **Note:** Vercel/Cloudflare/Netlify presets are supported by Nitro but not the default build target. The maintained, tested path is the `bun` preset.
 
+## Production
+
+The maintained target is a standalone Bun server behind an edge TLS proxy:
+systemd unit + self-hosted PostgreSQL 17, manual deploys over SSH. No
+hostnames, IPs, or secrets live in this repo — the production env file
+(`deploy/kolonios.prod.env`) is gitignored and the runbook uses placeholders.
+
+- Runbook: [docs/DEPLOY.md](./docs/DEPLOY.md) (provisioning, deploy, backup)
+- Health endpoint: `/api/v1/health`
+- Public self-registration is **disabled by default** (`ALLOW_PUBLIC_SIGNUP`
+  fail-closed); the first admin is created via the temporary-open procedure in
+  the runbook, never via the seed
+
 ## Security
 
 The server-function RPC boundary is hardened at every endpoint:
@@ -325,25 +293,25 @@ The server-function RPC boundary is hardened at every endpoint:
 
 Detailed docs live in [`docs/`](./docs/):
 
-| Doc                                                                                                                                  | Contents                                                                 |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [docs/PRD.md](./docs/PRD.md)                                                                                                         | Product requirements, features, security, roadmap                        |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                                                                       | Tech stack, data flow, patterns                                          |
-| [docs/API.md](./docs/API.md)                                                                                                         | Server function & auth reference                                         |
-| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                                                                             | Notable changes                                                          |
-| [docs/TODO.md](./docs/TODO.md)                                                                                                       | Task tracking                                                            |
-| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                                                                           | Attendance module deep-dive                                              |
-| [docs/MOBILE.md](./docs/MOBILE.md)                                                                                                   | Mobile staff dashboard                                                   |
-| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                                                                             | Shell registry + customer portal architecture 🆕                         |
-| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                                                                 | Payroll module deep-dive 🆕                                              |
-| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                                                               | Kerjoo payroll requirement reference (finish-payroll scope) 🆕           |
-| [docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list (archived) 🆕 |
-| [docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md](./docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (archived) 🆕                               |
-| [docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios comparison (archived) 🆕                              |
-| [docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md](./docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan (archived) 🆕                                |
-| [docs/TICKETS.md](./docs/TICKETS.md)                                                                                                 | Ticket system + field ops (design spec) 🆕                               |
-| [docs/EN_ROUTE.md](./docs/EN_ROUTE.md)                                                                                               | En Route navigation deep-dive: data flow, fix validation, testing 🆕     |
-| [docs/audit/](./docs/audit/)                                                                                                         | Repository audit + implementation summary                                |
+| Doc                                                                                                                                  | Contents                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| [docs/PRD.md](./docs/PRD.md)                                                                                                         | Product requirements, features, security, roadmap                     |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                                                                       | Tech stack, data flow, patterns                                       |
+| [docs/API.md](./docs/API.md)                                                                                                         | Server function & auth reference                                      |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                                                                             | Notable changes                                                       |
+| [docs/TODO.md](./docs/TODO.md)                                                                                                       | Task tracking                                                         |
+| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                                                                           | Attendance module deep-dive                                           |
+| [docs/MOBILE.md](./docs/MOBILE.md)                                                                                                   | Mobile staff dashboard                                                |
+| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                                                                             | Shell registry + customer portal architecture                         |
+| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                                                                 | Payroll module deep-dive                                              |
+| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                                                               | Kerjoo payroll requirement reference (finish-payroll scope)           |
+| [docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list (archived) |
+| [docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md](./docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (archived)                               |
+| [docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios comparison (archived)                              |
+| [docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md](./docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan (archived)                                |
+| [docs/TICKETS.md](./docs/TICKETS.md)                                                                                                 | Ticket system + field ops (design spec)                               |
+| [docs/EN_ROUTE.md](./docs/EN_ROUTE.md)                                                                                               | En Route navigation deep-dive: data flow, fix validation, testing     |
+| [docs/audit/](./docs/audit/)                                                                                                         | Repository audit + implementation summary                             |
 
 ## Code Quality & Architecture
 

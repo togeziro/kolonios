@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { tanstackStartCookies } from 'better-auth/tanstack-start';
 import { db } from '@/lib/db';
+import { isPublicSignupEnabled } from '@/lib/env';
 import { AUTH_RATE_LIMIT_DEFAULTS } from '@/lib/constants';
 
 const DEV_TRUSTED_ORIGINS = [
@@ -50,7 +51,10 @@ export const auth = betterAuth({
     provider: 'pg'
   }),
   emailAndPassword: {
-    enabled: true
+    enabled: true,
+    // Fail-closed: public self-registration stays off unless
+    // ALLOW_PUBLIC_SIGNUP=true (see src/lib/env.ts).
+    disableSignUp: !isPublicSignupEnabled()
   },
   plugins: [admin(), tanstackStartCookies()],
   rateLimit: {

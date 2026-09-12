@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { BrandLogo, BrandName } from '@/features/branding/components/brand-logo';
 import { usePublicBranding } from '@/features/branding/api/public-queries';
 import UserAuthForm from '@/features/auth/components/user-auth-form';
+import { getPublicAuthConfigFn } from '@/features/auth/api/public';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeModeToggle } from '@/components/themes/theme-mode-toggle';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,8 @@ export const Route = createFileRoute('/auth/sign-in/')({
   head: () => ({
     meta: [{ title: 'Sign In' }]
   }),
+  // Drives the register-link visibility below (no new copy when closed).
+  loader: async () => getPublicAuthConfigFn(),
   component: SignInPage
 });
 
@@ -104,6 +107,8 @@ function BrandMark({ tone }: { tone: 'onLight' | 'onPrimary' }) {
 
 function TopRightLink() {
   const { t } = useTranslation();
+  const { signupEnabled } = Route.useLoaderData();
+  if (!signupEnabled) return null;
   return (
     <div className='absolute top-5 left-0 right-0 z-10 px-6 sm:px-10'>
       <div className='flex justify-end text-sm'>

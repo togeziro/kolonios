@@ -151,8 +151,21 @@ sudo -u kolonios APP_DIR=/opt/kolonios bash deploy/deploy.sh
 curl -k https://app.example.com/api/v1/health   # -k for the self-signed internal cert
 ```
 
-Register the first account at `/auth/v2/sign-in`, then grant it full access
+Public self-registration is disabled by default (`ALLOW_PUBLIC_SIGNUP`
+anything other than `'true'` keeps `/auth/sign-up` redirecting to sign-in;
+enforcement is server-side via better-auth `disableSignUp`). To create the
+first account, temporarily open registration, register, then close it again
 (never rely on the seed):
+
+```bash
+sudo sed -i 's/^ALLOW_PUBLIC_SIGNUP=.*/ALLOW_PUBLIC_SIGNUP=true/' /etc/kolonios/kolonios.env
+sudo systemctl restart kolonios
+# register at /auth/sign-up, then:
+sudo sed -i 's/^ALLOW_PUBLIC_SIGNUP=.*/ALLOW_PUBLIC_SIGNUP=false/' /etc/kolonios/kolonios.env
+sudo systemctl restart kolonios
+```
+
+Then grant the account full access:
 
 ```bash
 set -a; source /etc/kolonios/kolonios.env; set +a

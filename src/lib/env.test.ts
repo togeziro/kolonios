@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { assertProductionEnv, DEFAULT_DEV_DATABASE_URL, resolveDatabaseUrl } from './env';
+import {
+  assertProductionEnv,
+  DEFAULT_DEV_DATABASE_URL,
+  isPublicSignupEnabled,
+  resolveDatabaseUrl
+} from './env';
 
 const MANAGED_KEYS = [
   'NODE_ENV',
@@ -7,7 +12,8 @@ const MANAGED_KEYS = [
   'BETTER_AUTH_URL',
   'STORAGE_ENCRYPTION_KEY',
   'BETTER_AUTH_SECRET',
-  'AUTH_SECRET'
+  'AUTH_SECRET',
+  'ALLOW_PUBLIC_SIGNUP'
 ] as const;
 
 let saved: Record<string, string | undefined> = {};
@@ -73,5 +79,21 @@ describe('assertProductionEnv', () => {
     process.env.STORAGE_ENCRYPTION_KEY = 'a'.repeat(64);
     process.env.AUTH_SECRET = 'b'.repeat(64);
     expect(() => assertProductionEnv()).not.toThrow();
+  });
+});
+
+describe('isPublicSignupEnabled', () => {
+  it('is fail-closed when unset', () => {
+    expect(isPublicSignupEnabled()).toBe(false);
+  });
+
+  it('opens only on the literal string true', () => {
+    process.env.ALLOW_PUBLIC_SIGNUP = 'true';
+    expect(isPublicSignupEnabled()).toBe(true);
+  });
+
+  it.each(['1', 'yes', 'TRUE', ''])('stays closed for %j', (value) => {
+    process.env.ALLOW_PUBLIC_SIGNUP = value;
+    expect(isPublicSignupEnabled()).toBe(false);
   });
 });
