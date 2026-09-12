@@ -64,12 +64,14 @@ curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.7"
 sudo install -m 755 "$HOME/.bun/bin/bun" /usr/local/bin/bun
 bun --version                    # expect 1.3.7
 
-# Do NOT upgrade past 1.3.7 on this VM. Verified 2026-09-12: Bun 1.3.14 and
-# 1.4.x hang in a userspace spin on ANY file read via an absolute path
+# Do NOT upgrade past 1.3.7 without a reason. Verified 2026-09-12: Bun 1.3.14
+# and 1.4.x hang in a userspace spin on ANY file read via an absolute path
 # ≥ ~32 chars when the CPU exposes no SIMD flags (`Common KVM processor`
 # in /proc/cpuinfo). 1.3.7 is the newest verified-good release (regression
-# range 1.3.7 → 1.3.14). If a newer Bun is ever required, first try changing
-# the Proxmox CPU type to `host` (unverified), or check upstream oven-sh/bun.
+# range 1.3.7 → 1.3.14). Switching the Proxmox CPU type to `host`
+# (Intel i7-8700, AVX/AVX2) was later verified to fix Bun 1.4.0 reads, so a
+# newer Bun is possible on this VM now — but 1.3.7 stays until a 1.4 feature
+# is actually needed. Upstream: oven-sh/bun (file-read hang on no-SIMD KVM).
 
 # PostgreSQL (distro package; check the version: psql --version)
 sudo apt install -y postgresql postgresql-contrib
