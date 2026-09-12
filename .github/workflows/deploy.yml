@@ -34,7 +34,24 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
+      # GitHub-hosted runners cannot reach private/internal hosts (e.g. a
+      # Proxmox VM on 172.17.x.x). Skip gracefully with a notice instead of
+      # failing — those hosts are deployed manually over SSH (docs/DEPLOY.md).
+      - name: Check host reachability
+        id: reach
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          if timeout 10 bash -c "</dev/tcp/${DEPLOY_HOST}/${DEPLOY_PORT:-22}" 2>/dev/null; then
+            echo "reachable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "reachable=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DEPLOY_HOST $DEPLOY_HOST unreachable from GitHub runners — skipping automatic deploy; deploy manually via SSH (docs/DEPLOY.md)."
+          fi
+
       - name: Deploy
+        if: steps.reach.outputs.reachable == 'true'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}

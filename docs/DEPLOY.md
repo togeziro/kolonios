@@ -181,6 +181,15 @@ out, and runs `deploy/deploy.sh` (install → build → migrate `--no-seed` →
 restart → health check). Because the work runs as `kolonios`, the repo must be
 writable by it (it is, from §1).
 
+VMs on a private network (unreachable from GitHub runners, e.g. `172.17.x.x`)
+are skipped by the workflow with a notice — deploy those manually over SSH:
+
+```bash
+ssh -i ~/.ssh/kolonios_deploy kolonios@<DEPLOY_HOST>
+cd /opt/kolonios && git fetch --all --prune && git checkout --force main \
+  && APP_DIR=/opt/kolonios bash deploy/deploy.sh
+```
+
 ## 5. Backups
 
 ```bash
