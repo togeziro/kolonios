@@ -59,10 +59,17 @@ sudo ufw allow OpenSSH
 sudo ufw allow 80,443/tcp        # skip if an edge proxy already terminates TLS
 sudo ufw --force enable
 
-# Bun 1.4.0 (must match CI — see .github/actions/setup/action.yml)
-curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+# Bun 1.3.7 (must match CI — see .github/actions/setup/action.yml)
+curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.7"
 sudo install -m 755 "$HOME/.bun/bin/bun" /usr/local/bin/bun
-bun --version                    # expect 1.4.0
+bun --version                    # expect 1.3.7
+
+# Do NOT upgrade past 1.3.7 on this VM. Verified 2026-09-12: Bun 1.3.14 and
+# 1.4.x hang in a userspace spin on ANY file read via an absolute path
+# ≥ ~32 chars when the CPU exposes no SIMD flags (`Common KVM processor`
+# in /proc/cpuinfo). 1.3.7 is the newest verified-good release (regression
+# range 1.3.7 → 1.3.14). If a newer Bun is ever required, first try changing
+# the Proxmox CPU type to `host` (unverified), or check upstream oven-sh/bun.
 
 # PostgreSQL (distro package; check the version: psql --version)
 sudo apt install -y postgresql postgresql-contrib
