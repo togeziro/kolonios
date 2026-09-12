@@ -59,19 +59,17 @@ sudo ufw allow OpenSSH
 sudo ufw allow 80,443/tcp        # skip if an edge proxy already terminates TLS
 sudo ufw --force enable
 
-# Bun 1.3.7 (must match CI — see .github/actions/setup/action.yml)
-curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.7"
+# Bun 1.4.0 (must match CI — see .github/actions/setup/action.yml)
+curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
 sudo install -m 755 "$HOME/.bun/bin/bun" /usr/local/bin/bun
-bun --version                    # expect 1.3.7
+bun --version                    # expect 1.4.0
 
-# Do NOT upgrade past 1.3.7 without a reason. Verified 2026-09-12: Bun 1.3.14
-# and 1.4.x hang in a userspace spin on ANY file read via an absolute path
-# ≥ ~32 chars when the CPU exposes no SIMD flags (`Common KVM processor`
-# in /proc/cpuinfo). 1.3.7 is the newest verified-good release (regression
-# range 1.3.7 → 1.3.14). Switching the Proxmox CPU type to `host`
-# (Intel i7-8700, AVX/AVX2) was later verified to fix Bun 1.4.0 reads, so a
-# newer Bun is possible on this VM now — but 1.3.7 stays until a 1.4 feature
-# is actually needed. Upstream: oven-sh/bun (file-read hang on no-SIMD KVM).
+# Requires a SIMD-capable CPU: verified 2026-09-12 that Bun 1.3.14 and 1.4.x
+# hang in a userspace spin on ANY file read via an absolute path ≥ ~32 chars
+# when the CPU exposes no SIMD flags (`Common KVM processor` in /proc/cpuinfo;
+# regression range 1.3.7 → 1.3.14). This VM uses Proxmox CPU type `host`
+# (Intel i7-8700, AVX/AVX2), where 1.4.0 is verified working. On a no-SIMD KVM
+# CPU, pin 1.3.7 instead. Upstream: oven-sh/bun (file-read hang on no-SIMD KVM).
 
 # PostgreSQL (distro package; check the version: psql --version)
 sudo apt install -y postgresql postgresql-contrib
