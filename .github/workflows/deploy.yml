@@ -32,7 +32,8 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Never fail here: an unreachable host is handled by the reachability gate below.
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       # GitHub-hosted runners cannot reach private/internal hosts (e.g. a
       # Proxmox VM on 172.17.x.x). Skip gracefully with a notice instead of
