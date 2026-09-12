@@ -11,7 +11,7 @@ import { usePublicBranding } from '@/features/branding/api/public-queries';
  * below the name only when configured — empty values hide the row
  * entirely rather than falling back to i18n defaults.
  */
-export function V2BrandHeader() {
+export function BrandHeader() {
   const { t } = useTranslation();
   const { data: branding } = usePublicBranding();
   const tagline = branding?.tagline?.trim();

@@ -21,7 +21,7 @@ export const Route = createFileRoute('/dashboard')({
       session = null;
     }
     if (!session) {
-      throw redirect({ to: '/auth/v2/sign-in' });
+      throw redirect({ to: '/auth/sign-in' });
     }
     if (session.user.role === 'customer') {
       throw redirect({ to: '/portal' });

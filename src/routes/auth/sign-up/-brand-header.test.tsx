@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
-import { V2BrandHeader } from './-brand-panel';
+import { BrandHeader } from './-brand-panel';
 
 const { brandingMock } = vi.hoisted(() => ({
   brandingMock: vi.fn()
@@ -25,7 +25,7 @@ function renderHeader() {
   return render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
-        <V2BrandHeader />
+        <BrandHeader />
       </QueryClientProvider>
     </I18nextProvider>
   );
@@ -35,7 +35,7 @@ beforeEach(() => {
   brandingMock.mockReset();
 });
 
-describe('V2BrandHeader', () => {
+describe('BrandHeader', () => {
   it('shows the company name and logo from branding', () => {
     brandingMock.mockReturnValue({
       data: {
@@ -70,7 +70,7 @@ describe('V2BrandHeader', () => {
     const { container } = render(
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={new QueryClient()}>
-          <V2BrandHeader />
+          <BrandHeader />
         </QueryClientProvider>
       </I18nextProvider>
     );

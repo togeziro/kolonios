@@ -19,14 +19,14 @@ test.describe('Theme font loading', () => {
   });
 
   test('login page renders with system fonts (no crash)', async ({ page }) => {
-    await page.goto('/auth/v2/sign-in');
+    await page.goto('/auth/sign-in');
     await expect(page.locator('body')).toBeVisible();
     // Page rendered without error — fonts fall back to system sans-serif/server provided
     expect(await page.evaluate(() => document.fonts.ready.then(() => true))).toBe(true);
   });
 
   test('theme-switch cookie is respected on reload', async ({ page }) => {
-    await page.goto('/auth/v2/sign-in');
+    await page.goto('/auth/sign-in');
     await page.evaluate(() => {
       document.cookie = 'active_theme=zen; path=/; max-age=31536000';
     });
@@ -38,7 +38,7 @@ test.describe('Theme font loading', () => {
   });
 
   test('zero-font theme (Claude) renders without error', async ({ page }) => {
-    await page.goto('/auth/v2/sign-in');
+    await page.goto('/auth/sign-in');
     await page.evaluate(() => {
       document.cookie = 'active_theme=claude; path=/; max-age=31536000';
     });
@@ -51,7 +51,7 @@ test.describe('Theme font loading', () => {
   });
 
   test('astro-vista theme loads its fonts', async ({ page }) => {
-    await page.goto('/auth/v2/sign-in');
+    await page.goto('/auth/sign-in');
     await page.evaluate(() => {
       document.cookie = 'active_theme=astro-vista; path=/; max-age=31536000';
     });

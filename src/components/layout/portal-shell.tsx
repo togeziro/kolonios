@@ -21,7 +21,7 @@ export function PortalShell() {
           className='flex items-center gap-1 text-sm'
           onClick={async () => {
             await authClient.signOut();
-            router.navigate({ to: '/auth/v2/sign-in' });
+            router.navigate({ to: '/auth/sign-in' });
           }}
         >
           <Icons.logout className='size-4' />

@@ -7,7 +7,7 @@ import { createRouter } from './router';
 
 function UseProbe() {
   // Triggers the same useQueryClient → "No QueryClient set" throw that
-  // blew up /auth/v2/sign-in SSR when the QueryClientProvider wasn't
+  // blew up /auth/sign-in SSR when the QueryClientProvider wasn't
   // installed around the app tree.
   useQuery({ queryKey: ['router-test'], queryFn: () => 'ok', retry: false });
   return createElement('span', { 'data-testid': 'ok' }, 'ok');
@@ -19,7 +19,7 @@ describe('createRouter SSR query integration', () => {
     expect(typeof router.options.Wrap).toBe('function');
     // When wrapQueryClient:false is passed, the integration leaves
     // router.options.Wrap untouched (i.e. unset or Fragment). Guard against
-    // that regressing — it caused /auth/v2/sign-in to return HTTP 500
+    // that regressing — it caused /auth/sign-in to return HTTP 500
     // because LocaleProvider's useQuery had no QueryClientProvider above it.
     expect(router.options.Wrap).not.toBe(Fragment);
   });

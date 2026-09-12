@@ -233,7 +233,7 @@ export default function AppSidebar() {
                 <DropdownMenuItem
                   onClick={async () => {
                     await authClient.signOut();
-                    router.navigate({ to: '/auth/v2/sign-in' });
+                    router.navigate({ to: '/auth/sign-in' });
                   }}
                 >
                   <Icons.logout className='mr-2 h-4 w-4' />

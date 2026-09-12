@@ -9,7 +9,7 @@ test.describe('Favicon link rendering', () => {
   test('login page exposes a <link rel="icon"> pointing at the branding endpoint', async ({
     page
   }) => {
-    await page.goto('/auth/v2/sign-in');
+    await page.goto('/auth/sign-in');
 
     const href = await page.evaluate(() => {
       const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');

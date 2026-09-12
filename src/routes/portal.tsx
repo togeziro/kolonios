@@ -8,7 +8,7 @@ export const Route = createFileRoute('/portal')({
     try {
       portal = await requirePortalSession();
     } catch {
-      throw redirect({ to: '/auth/v2/sign-in' });
+      throw redirect({ to: '/auth/sign-in' });
     }
     if (!portal.ok && portal.reason === 'not_customer') {
       throw redirect({ to: '/dashboard/overview', search: { denied: undefined } });

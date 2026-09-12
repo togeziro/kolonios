@@ -5,7 +5,7 @@ const AUTH_DIR = 'e2e/.auth';
 mkdirSync(AUTH_DIR, { recursive: true });
 
 async function loginAsTechnician(page: import('@playwright/test').Page) {
-  await page.goto('/auth/v2/sign-in');
+  await page.goto('/auth/sign-in');
   await page.waitForLoadState('networkidle');
   const submit = page.getByRole('button', { name: /Login|Masuk/i });
   await submit.waitFor({ state: 'visible' });

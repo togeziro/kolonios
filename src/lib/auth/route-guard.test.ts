@@ -152,7 +152,7 @@ describe('resolveRouteGuard', () => {
 
   it('returns null for non-dashboard paths (passthrough)', () => {
     expect(resolveRouteGuard('/portal')).toBeNull();
-    expect(resolveRouteGuard('/auth/v2/sign-in')).toBeNull();
+    expect(resolveRouteGuard('/auth/sign-in')).toBeNull();
     expect(resolveRouteGuard('/api/v1/auth/sign-in/email')).toBeNull();
     expect(resolveRouteGuard('/')).toBeNull();
   });

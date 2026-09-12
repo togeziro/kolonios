@@ -7,21 +7,20 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeModeToggle } from '@/components/themes/theme-mode-toggle';
 import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/auth/v2/sign-in/')({
+export const Route = createFileRoute('/auth/sign-in/')({
   head: () => ({
-    meta: [{ title: 'Sign In - V2' }]
+    meta: [{ title: 'Sign In' }]
   }),
-  component: SignInV2Page
+  component: SignInPage
 });
 
 /**
- * Editorial hero layout (picked from the 3-way
- * /auth/v2-signin-prototype comparison, Sep 2026): full-bleed branded
- * backdrop with the form in a floating card. Sign-up keeps the
- * split-screen layout, so each page owns its own full-bleed chrome —
- * there is no shared /auth/v2 parent.
+ * Editorial hero layout (picked from the 3-way sign-in prototype
+ * comparison, Sep 2026): full-bleed branded backdrop with the form in
+ * a floating card. Sign-up keeps the split-screen layout, so each page
+ * owns its own full-bleed chrome — there is no shared /auth parent.
  */
-function SignInV2Page() {
+function SignInPage() {
   const { t } = useTranslation();
   const { data: branding } = usePublicBranding();
   return (
@@ -111,7 +110,7 @@ function TopRightLink() {
         <span className='text-primary-foreground/80'>{t('auth.dontHaveAccount')}</span>{' '}
         <Link
           className='ml-1 text-primary-foreground underline-offset-4 hover:underline'
-          to='/auth/v2/sign-up'
+          to='/auth/sign-up'
         >
           {t('auth.register')}
         </Link>

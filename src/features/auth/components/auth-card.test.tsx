@@ -41,7 +41,7 @@ function renderCard() {
           title='Sign in title'
           subtitle='Sign in subtitle'
           linkLabel='Link label'
-          linkTo='/auth/v2/sign-up'
+          linkTo='/auth/sign-up'
           linkText='Link text'
         >
           <div>Child content</div>
@@ -139,7 +139,7 @@ describe('AuthCard header layout', () => {
             title='Sign in title'
             subtitle='Sign in subtitle'
             linkLabel='Link label'
-            linkTo='/auth/v2/sign-up'
+            linkTo='/auth/sign-up'
             linkText='Link text'
           >
             <div>Child content</div>
