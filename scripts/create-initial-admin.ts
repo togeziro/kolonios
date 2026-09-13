@@ -19,11 +19,21 @@
  *   # or: INITIAL_ADMIN_PASSWORD='<secret>' bun run scripts/create-initial-admin.ts \
  *   #   --email ops@example.com --name "Ops Admin"
  *
+ * Bootstrap mode (the default procedure for a fresh machine): one command,
+ * no password to invent or transfer. The script generates a unique random
+ * password per machine, prints it ONCE to stdout for the operator to copy,
+ * and flags the account for forced rotation — so the bootstrap password is
+ * a single-use ticket, never a standing credential:
+ *   bun run scripts/create-initial-admin.ts --bootstrap [--email <email> --name <name>]
+ *
  * Guards (fail-closed):
- * - refuses when the user table is non-empty unless --allow-existing
+ * - creating a NEW email refuses when the user table is non-empty unless
+ *   --allow-existing (reruns for an EXISTING email always succeed: grants
+ *   verified, password untouched, no password printed in bootstrap mode)
  * - refuses passwords shorter than 20 characters
+ * - --bootstrap refuses when combined with --password-stdin/$INITIAL_ADMIN_PASSWORD
  * - existing email → verifies admin grants, leaves the password untouched,
- *   exits 0 (idempotent reruns are safe)
+ *   exits 0 WITHOUT printing a password (idempotent reruns are safe)
  *
  * Every created account starts with must_change_password=true, so the
  * dashboard confines it to /dashboard/change-password until the owner sets
@@ -31,6 +41,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db, client as dbClient } from '../src/lib/db';
 import { auth } from '../src/lib/auth/auth.server';
@@ -40,12 +51,18 @@ import { userRoleGroups } from '../src/lib/db/schema/user-role-groups';
 
 const ADMIN_GROUP_ID = 'zzzrg-admin';
 const MIN_PASSWORD_LENGTH = 20;
+// Bootstrap defaults: the credential is always unique per machine (random),
+// so a fixed email/name pair here is safe — it is never a standing secret.
+const BOOTSTRAP_EMAIL = 'admin@kolonios.local';
+const BOOTSTRAP_NAME = 'Administrator';
+const BOOTSTRAP_PASSWORD_BYTES = 24; // 32 base64 chars, well above the minimum
 
 function usage(): never {
   console.error(
     [
       'Usage: bun run scripts/create-initial-admin.ts --email <email> --name <name> [--password-stdin] [--allow-existing]',
-      '  Password source (in order): --password-stdin | $INITIAL_ADMIN_PASSWORD',
+      '   or: bun run scripts/create-initial-admin.ts --bootstrap [--email <email> --name <name>] [--allow-existing]',
+      '  Password source (in order): --bootstrap (generated, printed once) | --password-stdin | $INITIAL_ADMIN_PASSWORD',
       `  Refuses passwords shorter than ${MIN_PASSWORD_LENGTH} characters.`
     ].join('\n')
   );
@@ -70,6 +87,10 @@ async function readPasswordStdin(): Promise<string> {
   return readFileSync(0, 'utf-8').trim();
 }
 
+function generateBootstrapPassword(): string {
+  return randomBytes(BOOTSTRAP_PASSWORD_BYTES).toString('base64');
+}
+
 async function ensureAdminGrants(userId: string): Promise<void> {
   await db
     .insert(roleGroups)
@@ -89,28 +110,63 @@ async function ensureAdminGrants(userId: string): Promise<void> {
 }
 
 async function main() {
-  const email = argValue('--email')?.trim();
-  const name = argValue('--name')?.trim();
+  const bootstrap = process.argv.includes('--bootstrap');
+  const email = argValue('--email')?.trim() || (bootstrap ? BOOTSTRAP_EMAIL : undefined);
+  const name = argValue('--name')?.trim() || (bootstrap ? BOOTSTRAP_NAME : undefined);
   const allowExisting = process.argv.includes('--allow-existing');
   if (!email || !name || !email.includes('@')) usage();
 
-  let password = '';
-  if (process.argv.includes('--password-stdin')) {
-    password = await readPasswordStdin();
-  } else if (process.env.INITIAL_ADMIN_PASSWORD) {
-    password = process.env.INITIAL_ADMIN_PASSWORD;
-  }
-  if (!password) {
-    console.error('Missing password: pipe it via --password-stdin or set $INITIAL_ADMIN_PASSWORD.');
+  if (
+    bootstrap &&
+    (process.argv.includes('--password-stdin') || process.env.INITIAL_ADMIN_PASSWORD)
+  ) {
+    console.error(
+      'Ambiguous password source: use either --bootstrap or an explicit password source, not both.'
+    );
     await dbClient?.end();
     process.exit(2);
   }
-  if (password.length < MIN_PASSWORD_LENGTH) {
+
+  // Bootstrap defers generation until after the existing-account check, so
+  // an idempotent rerun never prints a password that will not be used.
+  let password = '';
+  if (!bootstrap) {
+    if (process.argv.includes('--password-stdin')) {
+      password = await readPasswordStdin();
+    } else if (process.env.INITIAL_ADMIN_PASSWORD) {
+      password = process.env.INITIAL_ADMIN_PASSWORD;
+    }
+    if (!password) {
+      console.error(
+        'Missing password: pipe it via --password-stdin or set $INITIAL_ADMIN_PASSWORD.'
+      );
+      await dbClient?.end();
+      process.exit(2);
+    }
+  }
+  if (!bootstrap && password.length < MIN_PASSWORD_LENGTH) {
     console.error(
       `Refusing weak initial password (got ${password.length} chars, need >= ${MIN_PASSWORD_LENGTH}).`
     );
     await dbClient?.end();
     process.exit(1);
+  }
+
+  // Existing-account check FIRST: a rerun for the same email is always
+  // safe (grants verified, password untouched), even when the table is
+  // non-empty — so a lost bootstrap output never bricks the operator.
+  // The non-empty guard below only applies to creating a NEW email.
+  const existing = await db
+    .select({ id: user.id, role: user.role })
+    .from(user)
+    .where(eq(user.email, email!))
+    .limit(1);
+  if (existing.length > 0) {
+    await ensureAdminGrants(existing[0].id);
+    await db.update(user).set({ mustChangePassword: true }).where(eq(user.id, existing[0].id));
+    console.log(`User ${email} already exists — admin grants verified, password untouched.`);
+    await dbClient?.end();
+    return;
   }
 
   const countRows = await dbClient?.unsafe<{ count: string }[]>(
@@ -125,17 +181,10 @@ async function main() {
     process.exit(1);
   }
 
-  const existing = await db
-    .select({ id: user.id, role: user.role })
-    .from(user)
-    .where(eq(user.email, email!))
-    .limit(1);
-  if (existing.length > 0) {
-    await ensureAdminGrants(existing[0].id);
-    await db.update(user).set({ mustChangePassword: true }).where(eq(user.id, existing[0].id));
-    console.log(`User ${email} already exists — admin grants verified, password untouched.`);
-    await dbClient?.end();
-    return;
+  let bootstrapPassword: string | null = null;
+  if (bootstrap) {
+    bootstrapPassword = generateBootstrapPassword();
+    password = bootstrapPassword;
   }
 
   const created: any = await (auth.api as any).createUser({
@@ -163,6 +212,10 @@ async function main() {
   if (!hasCredential) {
     await dbClient?.end();
     process.exit(1);
+  }
+  if (bootstrapPassword) {
+    console.log('BOOTSTRAP PASSWORD (copy now — shown once, never stored):');
+    console.log(bootstrapPassword);
   }
   await dbClient?.end();
 }
