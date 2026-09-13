@@ -24,11 +24,11 @@
 
 ## Features
 
-- **Shell registry (backoffice / fieldops / portal)** — a pure `resolveShell(role, roleGroup)` in `src/lib/shells/` decides the UI layout per user: admin/HR get the sidebar, **technicians** get the field/ops shell (`MobileShell` on phones, sidebar on desktop), and all other staff (Employee, custom groups) keep the sidebar on mobile too. Customers get the `/portal` route tree. Single shared sign-in page redirects each role to its shell. See [docs/UI_SHELLS.md](./docs/UI_SHELLS.md).
+- **Shell registry (backoffice / fieldops / portal)** — a pure `resolveShell(role, roleGroup)` in `src/lib/shells/` decides the UI layout per user: admin/HR get the sidebar, **technicians** get the field/ops shell (`MobileShell` on phones, sidebar on desktop), and all other staff (Employee, custom groups) keep the sidebar on mobile too. Customers get the `/portal` route tree. Single shared sign-in page redirects each role to its shell.
 - **Customer portal (placeholder)** — `/portal` route tree with its own shell, guarded server-side by `requirePortalSession` (active customers only; blocked/inactive customers see a blocked message). Portal features (billing, wifi config, tickets) come later; customer accounts are admin-created.
 - **Field/ops mobile shell (dark, technician-only)** — bottom nav with 4 tabs (Home, My Work, Office, Profile) + a center QR **Check-In** FAB on a fixed 4-slot grid (never overlaps a tab); dark-first `.dark` scoped shell with a light/dark toggle synced to `next-themes`. Leave moved into My Work.
 - **Attendance module** — check-in/out with geo-fencing (Haversine), per-shift work schedules (weekday rules, date overrides, day offs), GPS & selfie policies, leave management, correction requests with admin approval, and admin reports with CSV/Excel/PDF export
-- **Daily Checklist** — one equipment-check form per technician per business day: lazily created on working days only (day-off/holiday/no-schedule aware), ok/issue/pending outcomes with notes + photos, submit-for-review gating (issues require notes), reviewer notifications + audit trail; see [docs/CHECKLIST.md](./docs/CHECKLIST.md)
+- **Daily Checklist** — one equipment-check form per technician per business day: lazily created on working days only (day-off/holiday/no-schedule aware), ok/issue/pending outcomes with notes + photos, submit-for-review gating (issues require notes), reviewer notifications + audit trail
 - **Holiday Calendar** — CRUD national/company holidays, API import from Nager.Date / OpenHolidays / Custom REST, calendar view, admin settings; feeds attendance day-off resolution
 - **Payroll module** — full payroll calculation engine (monthly/daily/hourly, fixed/percentage/per-attendance/manual components, configurable absence/late/unpaid-leave deductions, progressive + TER tax), payslip PDF generation, printable admin payslips (Kerjoo §6.5 letterhead/NPWP/signature slip), admin UI with TanStack Table, employee self-service; MVP excludes overtime calculation
 - **Ticket system** — `tasks` migrated to a full ticket system (`tickets` + estafet `ticket_legs`/`ticket_materials`/`ticket_photos`, code `T-{id}`): eligibility-gated Open Tickets pool (Take), Create Ticket with searchable customer picker, Ticket Detail (Estafet + Rework rejection banner) with leg timeline and Take/Start/Complete actions, **En Route navigation** (MapLibre map with live-GPS blue device marker, orange destination pin, dashed guide line, fitBounds, TurfJS distance readout, Open Maps handoff, arrival confirmation), Work Session (completion photos via S3, materials ±qty steppers, notes, Finish & Submit), Ticket Completed summary (rating + materials + photo grid), My Work tabs (In Progress / Available / Completed + pending approval), desktop Tickets nav group
@@ -44,7 +44,7 @@
 - **Multi-theme support** — 13 OKLCH themes (all input/border tokens ≥3:1 WCAG contrast) with easy switching
 - **Hardened server-function RPC boundary** — `requireSession()`/`requirePermission(module, action)` at the handler (single authorization model via role groups), Zod-validated inputs, `DomainError` + `mapDbError`, rate limiting (HTTP 429), structured `pino` logging, `/api/v1` versioning
 - **External integrations ready** — Tripay payment webhook handler with signature verification, MikroTik adapter scaffolding, integration layer at `src/integrations/`
-- **Testing** — 198 Vitest test files + 8 Playwright E2E specs; CI runs lint, typecheck, tests, and build
+- **Testing** — 201 Vitest test files + 8 Playwright E2E specs; CI runs lint, typecheck, tests, and build
 
 ## Pages
 
@@ -52,8 +52,7 @@ The route tree is file-based (`src/routes/`): `/auth/sign-in` (+ `/auth/sign-up`
 while public registration is open), `/dashboard/*` (overview, attendance,
 checklist, tickets, payroll, customers, employees, admin, profile), and
 `/portal` (customer self-service). Entry points per role are decided by the
-shell registry — see [docs/UI_SHELLS.md](./docs/UI_SHELLS.md); module
-deep-dives live in [`docs/`](./docs/) (table below).
+shell registry.
 
 ## Feature-based Organization
 
@@ -294,27 +293,13 @@ The server-function RPC boundary is hardened at every endpoint:
 
 ## Documentation
 
-Detailed docs live in [`docs/`](./docs/):
+Git-tracked runbooks (present in every clone):
 
-| Doc                                                                                                                                  | Contents                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| [docs/PRD.md](./docs/PRD.md)                                                                                                         | Product requirements, features, security, roadmap                     |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                                                                       | Tech stack, data flow, patterns                                       |
-| [docs/API.md](./docs/API.md)                                                                                                         | Server function & auth reference                                      |
-| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                                                                                             | Notable changes                                                       |
-| [docs/TODO.md](./docs/TODO.md)                                                                                                       | Task tracking                                                         |
-| [docs/ATTENDANCE.md](./docs/ATTENDANCE.md)                                                                                           | Attendance module deep-dive                                           |
-| [docs/MOBILE.md](./docs/MOBILE.md)                                                                                                   | Mobile staff dashboard                                                |
-| [docs/UI_SHELLS.md](./docs/UI_SHELLS.md)                                                                                             | Shell registry + customer portal architecture                         |
-| [docs/PAYROLL.md](./docs/PAYROLL.md)                                                                                                 | Payroll module deep-dive                                              |
-| [docs/KERJOO_PAYROLL_REFERENCE.md](./docs/KERJOO_PAYROLL_REFERENCE.md)                                                               | Kerjoo payroll requirement reference (finish-payroll scope)           |
-| [docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md](./docs/archive/kerjoo-2026-08/BUILD_LIST_FROM_KERJOO_DASHBOARD.md) | Competitive gap analysis vs Kerjoo: prioritized build list (archived) |
-| [docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md](./docs/archive/kerjoo-2026-08/KERJOO_FEATURES_COMPLETE.md)                 | Complete Kerjoo feature list (archived)                               |
-| [docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md](./docs/archive/kerjoo-2026-08/KERJOO_VS_KOLONIOS_COMPARISON.md)       | Kerjoo vs Kolonios comparison (archived)                              |
-| [docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md](./docs/archive/kerjoo-2026-08/MISSING_FEATURES_PRIORITIZED.md)         | Prioritized gap action plan (archived)                                |
-| [docs/TICKETS.md](./docs/TICKETS.md)                                                                                                 | Ticket system + field ops (design spec)                               |
-| [docs/EN_ROUTE.md](./docs/EN_ROUTE.md)                                                                                               | En Route navigation deep-dive: data flow, fix validation, testing     |
-| [docs/audit/](./docs/audit/)                                                                                                         | Repository audit + implementation summary                             |
+- [docs/DEPLOY.md](./docs/DEPLOY.md) — provisioning, deploy, backup, host prerequisites
+- [docs/INITIAL_LOGIN.md](./docs/INITIAL_LOGIN.md) — first-admin ceremony: `--bootstrap`, forced rotation, hardening
+
+Module deep-dives, design specs, and archived references live in the local
+`docs/` folder (untracked by design — see `.gitignore`).
 
 ## Code Quality & Architecture
 
