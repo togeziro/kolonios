@@ -27,6 +27,28 @@ export const Route = createFileRoute('/dashboard')({
       throw redirect({ to: '/portal' });
     }
 
+    // Forced password-rotation gate: accounts created with
+    // must_change_password (initial/ops admin) stay confined to the
+    // change-password page until the owner sets a fresh password.
+    // Fail-open with a warning on read errors — the session itself is
+    // already proven above, and bricking the shell on a transient DB
+    // failure would be worse than a delayed rotation. UI-shell hygiene
+    // only: per-module authorization below stays fail-closed regardless.
+    const { getPasswordGateFn, isPasswordGateExempt, PASSWORD_GATE_TARGET } =
+      await import('@/lib/auth/password-gate');
+    try {
+      const mustChange = await getPasswordGateFn();
+      if (mustChange && !isPasswordGateExempt(location.pathname)) {
+        throw redirect({ to: PASSWORD_GATE_TARGET });
+      }
+    } catch (e) {
+      if (e instanceof Response) throw e;
+      logger.warn(
+        { pathname: location.pathname, userId: session.user.id },
+        'password-gate: flag read failed, allowing through (fail-open)'
+      );
+    }
+
     // Centralized fail-closed route guard: every dashboard path is mapped to
     // a module.action via the registry; anything unregistered is denied with
     // a loud dev-mode warning. Per-route guards below remain as defence in

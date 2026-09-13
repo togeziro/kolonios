@@ -1699,6 +1699,7 @@
     },
     "showPassword": "Show password",
     "hidePassword": "Hide password",
+    "mustChangeNotice": "Your account is using an initial password. Set a new password to unlock the dashboard.",
     "submit": "Update Password",
     "submitting": "Updating…",
     "successToast": "Password updated successfully"

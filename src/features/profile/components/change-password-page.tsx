@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
-import { authClient } from '@/lib/auth/auth-client';
+import { getPasswordGateFn, rotatePasswordFn } from '@/lib/auth/password-gate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
@@ -107,6 +107,21 @@ export default function ChangePasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [gateRequired, setGateRequired] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPasswordGateFn()
+      .then((flag) => {
+        if (!cancelled) setGateRequired(flag);
+      })
+      .catch(() => {
+        if (!cancelled) setGateRequired(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,20 +142,19 @@ export default function ChangePasswordPage() {
 
     setIsSubmitting(true);
     try {
-      const { error: apiError } = await authClient.changePassword({
-        currentPassword,
-        newPassword
+      const result = await rotatePasswordFn({
+        data: { currentPassword, newPassword }
       });
-      if (apiError) {
-        const unauthorized =
-          apiError.status === 401 || /invalid|incorrect|wrong/i.test(apiError.message ?? '');
+      if (!result.ok) {
         setError(
-          unauthorized
+          result.code === 'WRONG_CURRENT'
             ? t('changePassword.errors.wrongCurrent')
             : t('changePassword.errors.generic')
         );
         return;
       }
+      // Success toast only after the verified rotation (password change +
+      // gate clear) completes — never before.
       toast.success(t('changePassword.successToast'));
       navigate({ to: '/dashboard/settings' });
     } catch {
@@ -154,13 +168,15 @@ export default function ChangePasswordPage() {
     <div className='flex min-h-screen flex-col'>
       <header className='dark:bg-zinc-950 dark:border-zinc-800 sticky top-0 z-50 border-b bg-white'>
         <div className='flex items-center gap-3 px-4 py-3'>
-          <button
-            type='button'
-            onClick={() => navigate({ to: '..' })}
-            className='dark:hover:bg-zinc-900 -ml-2 rounded-full p-2 transition-colors hover:bg-zinc-100'
-          >
-            <Icons.chevronLeft className='h-5 w-5' />
-          </button>
+          {!gateRequired && (
+            <button
+              type='button'
+              onClick={() => navigate({ to: '..' })}
+              className='dark:hover:bg-zinc-900 -ml-2 rounded-full p-2 transition-colors hover:bg-zinc-100'
+            >
+              <Icons.chevronLeft className='h-5 w-5' />
+            </button>
+          )}
           <h1 className='dark:text-zinc-100 text-lg font-bold tracking-tight'>
             {t('changePassword.title')}
           </h1>
@@ -168,6 +184,19 @@ export default function ChangePasswordPage() {
       </header>
 
       <main className='flex-1 space-y-6 px-4 py-6'>
+        {gateRequired && (
+          <div
+            role='status'
+            className='dark:border-amber-800/50 dark:bg-amber-950 flex items-start gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5'
+          >
+            <span className='dark:bg-amber-900 dark:text-amber-300 shrink-0 rounded-full bg-amber-100 p-2'>
+              <Icons.lock className='h-5 w-5' />
+            </span>
+            <p className='dark:text-amber-200 text-sm leading-relaxed font-medium text-amber-900'>
+              {t('changePassword.mustChangeNotice')}
+            </p>
+          </div>
+        )}
         <div className='dark:border-zinc-800/50 dark:bg-zinc-900 flex items-start gap-4 rounded-2xl border p-5'>
           <span className='dark:bg-zinc-800 dark:text-zinc-300 shrink-0 rounded-full p-2'>
             <Icons.lock className='h-5 w-5' />

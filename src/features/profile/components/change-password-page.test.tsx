@@ -5,10 +5,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
-const { navigateMock, changePasswordMock, toastMock } = vi.hoisted(() => ({
+const { navigateMock, toastMock, getGateMock, rotateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
-  changePasswordMock: vi.fn(),
-  toastMock: { success: vi.fn(), error: vi.fn() }
+  toastMock: { success: vi.fn(), error: vi.fn() },
+  getGateMock: vi.fn(async () => false),
+  rotateMock: vi.fn(
+    async (): Promise<{ ok: true } | { ok: false; code: 'WRONG_CURRENT' | 'GENERIC' }> => ({
+      ok: true
+    })
+  )
 }));
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -23,15 +28,9 @@ vi.mock('sonner', () => ({
   toast: toastMock
 }));
 
-vi.mock('@/lib/auth/auth-client', () => ({
-  authClient: {
-    changePassword: changePasswordMock,
-    updateUser: vi.fn()
-  },
-  signIn: vi.fn(),
-  signUp: vi.fn(),
-  signOut: vi.fn(),
-  useSession: () => ({ data: null, isPending: false })
+vi.mock('@/lib/auth/password-gate', () => ({
+  getPasswordGateFn: getGateMock,
+  rotatePasswordFn: rotateMock
 }));
 
 import ChangePasswordPage from './change-password-page';
@@ -53,10 +52,13 @@ async function submitForm() {
 }
 
 beforeEach(() => {
-  changePasswordMock.mockReset();
   navigateMock.mockReset();
   toastMock.success.mockReset();
   toastMock.error.mockReset();
+  getGateMock.mockReset();
+  getGateMock.mockResolvedValue(false);
+  rotateMock.mockReset();
+  rotateMock.mockResolvedValue({ ok: true as const });
 });
 
 describe('ChangePasswordPage', () => {
@@ -80,8 +82,7 @@ describe('ChangePasswordPage', () => {
     expect(screen.getByTestId('strength-label').textContent).toBe('Strong');
   });
 
-  it('calls changePassword with the expected args on valid submit and navigates back', async () => {
-    changePasswordMock.mockResolvedValue({ data: {}, error: null });
+  it('rotates with the expected args on valid submit and navigates back', async () => {
     renderPage();
 
     fillField('Current Password', 'OldPass1!');
@@ -90,9 +91,11 @@ describe('ChangePasswordPage', () => {
     await submitForm();
 
     await waitFor(() => {
-      expect(changePasswordMock).toHaveBeenCalledWith({
-        currentPassword: 'OldPass1!',
-        newPassword: 'NewPass1!'
+      expect(rotateMock).toHaveBeenCalledWith({
+        data: {
+          currentPassword: 'OldPass1!',
+          newPassword: 'NewPass1!'
+        }
       });
     });
     await waitFor(() => {
@@ -101,7 +104,17 @@ describe('ChangePasswordPage', () => {
     expect(navigateMock).toHaveBeenCalledWith({ to: '/dashboard/settings' });
   });
 
-  it('shows an inline mismatch error and does not call changePassword', async () => {
+  it('shows the must-change notice when the gate is active', async () => {
+    getGateMock.mockResolvedValue(true);
+    renderPage();
+
+    expect(await screen.findByRole('status')).toHaveProperty(
+      'textContent',
+      'Your account is using an initial password. Set a new password to unlock the dashboard.'
+    );
+  });
+
+  it('shows an inline mismatch error and does not rotate', async () => {
     renderPage();
 
     fillField('Current Password', 'OldPass1!');
@@ -112,10 +125,10 @@ describe('ChangePasswordPage', () => {
     expect(await screen.findByRole('alert').then((el) => el.textContent)).toBe(
       'New password and confirmation do not match.'
     );
-    expect(changePasswordMock).not.toHaveBeenCalled();
+    expect(rotateMock).not.toHaveBeenCalled();
   });
 
-  it('rejects weak passwords before calling auth', async () => {
+  it('rejects weak passwords before rotating', async () => {
     renderPage();
 
     fillField('Current Password', 'OldPass1!');
@@ -125,14 +138,11 @@ describe('ChangePasswordPage', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('too weak');
-    expect(changePasswordMock).not.toHaveBeenCalled();
+    expect(rotateMock).not.toHaveBeenCalled();
   });
 
-  it('maps an API failure (wrong current password) to an inline localized message', async () => {
-    changePasswordMock.mockResolvedValue({
-      data: null,
-      error: { message: 'Invalid password', status: 401 }
-    });
+  it('maps a wrong-current-password failure to an inline localized message', async () => {
+    rotateMock.mockResolvedValue({ ok: false as const, code: 'WRONG_CURRENT' as const });
     renderPage();
 
     fillField('Current Password', 'WrongPass1!');
@@ -142,6 +152,21 @@ describe('ChangePasswordPage', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe('Current password is incorrect.');
+    expect(toastMock.success).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('maps a generic rotation failure without toast or navigation', async () => {
+    rotateMock.mockResolvedValue({ ok: false as const, code: 'GENERIC' as const });
+    renderPage();
+
+    fillField('Current Password', 'OldPass1!');
+    fillField('New Password', 'NewPass1!');
+    fillField('Confirm New Password', 'NewPass1!');
+    await submitForm();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('Could not change password. Please try again.');
     expect(toastMock.success).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
   });

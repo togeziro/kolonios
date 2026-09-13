@@ -1699,6 +1699,7 @@
     },
     "showPassword": "Tampilkan kata sandi",
     "hidePassword": "Sembunyikan kata sandi",
+    "mustChangeNotice": "Akun Anda masih memakai kata sandi awal. Tetapkan kata sandi baru untuk membuka dashboard.",
     "submit": "Perbarui Kata Sandi",
     "submitting": "Memperbarui…",
     "successToast": "Kata sandi berhasil diperbarui"

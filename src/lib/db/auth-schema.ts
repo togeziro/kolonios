@@ -18,6 +18,12 @@ export const user = pgTable('user', {
   banned: boolean('banned').default(false),
   banReason: text('ban_reason'),
   banExpires: timestamp('ban_expires'),
+  // Forced-rotation gate for initial/ops accounts: when true the dashboard
+  // redirects every page to /dashboard/change-password until the owner sets
+  // a fresh password (see src/lib/auth/password-gate.ts). Set by
+  // scripts/create-initial-admin.ts; cleared only by the account owner via
+  // rotatePasswordFn (server-verified rotation, never a standalone clear).
+  mustChangePassword: boolean('must_change_password').default(false).notNull(),
   faceDescriptor: json('face_descriptor').$type<number[][]>(),
   faceRegisteredAt: timestamp('face_registered_at', { withTimezone: true })
 });
