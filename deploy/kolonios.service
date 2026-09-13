@@ -17,6 +17,13 @@ RestartSec=3
 TimeoutStopSec=30
 KillSignal=SIGTERM
 
+# Resource ceiling: one runaway process must not starve the co-located
+# PostgreSQL (4 GB / 4 vCPU host; app normally ~100 MB RSS). Tune from
+# observation; systemd will OOM-kill only this unit, never the database.
+MemoryMax=1G
+CPUQuota=150%
+LimitNOFILE=65536
+
 # Hardening. The app serves static assets from .output/ and holds no local
 # state; system paths stay read-only.
 NoNewPrivileges=true
