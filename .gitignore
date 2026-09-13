@@ -46,6 +46,11 @@ public/api-docs.html
 # Local development documentation (internal-only; not pushed)
 *.md
 !/README.md
+# Exception: prod-reproduction runbooks are public by design (placeholders
+# only — no live credentials, domains, or IPs). A fresh clone must contain
+# everything a human needs to deploy and provision without agent help.
+!/docs/DEPLOY.md
+!/docs/INITIAL_LOGIN.md
 
 # Testing
 coverage

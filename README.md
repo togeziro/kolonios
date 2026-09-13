@@ -249,7 +249,9 @@ secrets:
 bash scripts/prod-setup.sh
 ```
 
-See [docs/DEPLOY.md](./docs/DEPLOY.md) for the full runbook.
+See [docs/DEPLOY.md](./docs/DEPLOY.md) for the full runbook, and
+[docs/INITIAL_LOGIN.md](./docs/INITIAL_LOGIN.md) for the first-admin
+ceremony on a fresh machine (one-command `--bootstrap` + forced rotation).
 
 ### Other Platforms
 
@@ -272,6 +274,7 @@ hostnames, IPs, or secrets live in this repo — the production env file
 (`deploy/kolonios.prod.env`) is gitignored and the runbook uses placeholders.
 
 - Runbook: [docs/DEPLOY.md](./docs/DEPLOY.md) (provisioning, deploy, backup)
+- First admin: [docs/INITIAL_LOGIN.md](./docs/INITIAL_LOGIN.md) (bootstrap, rotation, hardening)
 - Health endpoint: `/api/v1/health`
 - Public self-registration is **disabled by default** (`ALLOW_PUBLIC_SIGNUP`
   fail-closed); the first admin is created via the temporary-open procedure in
