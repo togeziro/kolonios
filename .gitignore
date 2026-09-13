@@ -45,7 +45,7 @@ public/api-docs.html
 
 # Local development documentation (internal-only; not pushed)
 *.md
-!README.md
+!/README.md
 
 # Testing
 coverage
