@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { userSchema } from './user';
+import { userSchema, userCreateSchema } from './user';
 
 describe('user form validation', () => {
   const valid = {
@@ -29,5 +29,36 @@ describe('user form validation', () => {
 
   it('requires a status', () => {
     expect(userSchema.safeParse({ ...valid, status: '' }).success).toBe(false);
+  });
+
+  it('leaves password management to the create schema', () => {
+    expect(userSchema.safeParse({ ...valid, password: 's3cret!!pass' }).success).toBe(true);
+  });
+});
+
+describe('userCreateSchema', () => {
+  const valid = {
+    name: 'Ada Lovelace',
+    email: 'ada@example.com',
+    role: 'Developer',
+    status: 'Active',
+    password: 's3cret!!pass',
+    confirmPassword: 's3cret!!pass'
+  };
+
+  it('accepts matching passwords', () => {
+    expect(userCreateSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('requires a password of at least 8 chars', () => {
+    expect(userCreateSchema.safeParse({ ...valid, password: 'short' }).success).toBe(false);
+    const { password: _omitted, ...noPassword } = valid;
+    expect(userCreateSchema.safeParse(noPassword).success).toBe(false);
+  });
+
+  it('rejects mismatched confirmation', () => {
+    expect(userCreateSchema.safeParse({ ...valid, confirmPassword: 'different!!' }).success).toBe(
+      false
+    );
   });
 });

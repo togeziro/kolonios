@@ -36,7 +36,7 @@ describe('user mutations', () => {
 
   it('createUserMutation passes the payload through', () => {
     createUserMutation.mutationFn!(payload, undefined as never);
-    expect(createUserFn).toHaveBeenCalledWith({ data: payload });
+    expect(createUserFn).toHaveBeenCalledWith({ data: { values: payload } });
     expect(createUserMutation.onSuccess).toBeTypeOf('function');
   });
 

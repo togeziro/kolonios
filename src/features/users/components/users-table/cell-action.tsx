@@ -15,6 +15,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { UserFormSheet } from '../user-form-sheet';
+import { UserPasswordDialog } from '../user-password-dialog';
 
 interface CellActionProps {
   data: User;
@@ -24,6 +25,7 @@ export function CellAction({ data }: CellActionProps) {
   const { t } = useTranslation();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const deleteMutation = useMutation(
     mergeMutationCallbacks(deleteUserMutation, {
@@ -46,6 +48,7 @@ export function CellAction({ data }: CellActionProps) {
         loading={deleteMutation.isPending}
       />
       <UserFormSheet user={data} open={editOpen} onOpenChange={setEditOpen} />
+      <UserPasswordDialog user={data} open={passwordOpen} onOpenChange={setPasswordOpen} />
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger className='flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 focus:outline-none'>
           <span className='sr-only'>{t('common.openMenu')}</span>
@@ -55,6 +58,9 @@ export function CellAction({ data }: CellActionProps) {
           <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <Icons.edit className='mr-2 h-4 w-4' /> {t('common.update')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setPasswordOpen(true)}>
+            <Icons.lock className='mr-2 h-4 w-4' /> {t('user.replacePassword')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
             <Icons.trash className='mr-2 h-4 w-4' /> {t('common.delete')}

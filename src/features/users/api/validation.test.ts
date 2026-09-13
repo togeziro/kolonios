@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { userFiltersSchema, userIdSchema, userMutationSchema } from './validation';
+import {
+  userFiltersSchema,
+  userIdSchema,
+  userMutationSchema,
+  userCreateSchema,
+  setUserPasswordSchema
+} from './validation';
 
 describe('userFiltersSchema', () => {
   it('accepts an empty object', () => {
@@ -44,5 +50,43 @@ describe('userMutationSchema', () => {
     expect(userMutationSchema.safeParse({ ...valid, name: '' }).success).toBe(false);
     expect(userMutationSchema.safeParse({ ...valid, email: 'nope' }).success).toBe(false);
     expect(userMutationSchema.safeParse({ ...valid, status: '' }).success).toBe(false);
+  });
+
+  it('ignores password on update (managed via dedicated endpoint)', () => {
+    expect(userMutationSchema.safeParse({ ...valid, password: 's3cret!!' }).success).toBe(true);
+  });
+});
+
+describe('userCreateSchema', () => {
+  const valid = {
+    name: 'Sam',
+    email: 'sam@example.com',
+    role: 'employee',
+    status: 'active',
+    password: 's3cret!!pass'
+  };
+
+  it('accepts a valid create payload with password', () => {
+    expect(userCreateSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('requires a password of at least 8 chars', () => {
+    expect(userCreateSchema.safeParse({ ...valid, password: undefined }).success).toBe(false);
+    expect(userCreateSchema.safeParse({ ...valid, password: 'short' }).success).toBe(false);
+  });
+});
+
+describe('setUserPasswordSchema', () => {
+  it('accepts a user id and a new password', () => {
+    expect(
+      setUserPasswordSchema.safeParse({ userId: 'usr-1', newPassword: 'n3w!!pass' }).success
+    ).toBe(true);
+  });
+
+  it('rejects missing id or short password', () => {
+    expect(setUserPasswordSchema.safeParse({ newPassword: 'n3w!!pass' }).success).toBe(false);
+    expect(setUserPasswordSchema.safeParse({ userId: 'usr-1', newPassword: 'short' }).success).toBe(
+      false
+    );
   });
 });

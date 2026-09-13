@@ -1,11 +1,12 @@
 import { mutationOptions } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/query-client';
-import { createUserFn, updateUserFn, deleteUserFn } from './service';
+import { createUserFn, updateUserFn, deleteUserFn, setUserPasswordFn } from './service';
 import { userKeys } from './queries';
 import type { UserMutationPayload } from './types';
+import type { SetUserPasswordPayload } from './validation';
 
 export const createUserMutation = mutationOptions({
-  mutationFn: (data: UserMutationPayload) => createUserFn({ data }),
+  mutationFn: (values: UserMutationPayload) => createUserFn({ data: { values } }),
   onSuccess: () => {
     getQueryClient().invalidateQueries({ queryKey: userKeys.all });
   }
@@ -21,6 +22,13 @@ export const updateUserMutation = mutationOptions({
 
 export const deleteUserMutation = mutationOptions({
   mutationFn: (id: string) => deleteUserFn({ data: id }),
+  onSuccess: () => {
+    getQueryClient().invalidateQueries({ queryKey: userKeys.all });
+  }
+});
+
+export const setUserPasswordMutation = mutationOptions({
+  mutationFn: (data: SetUserPasswordPayload) => setUserPasswordFn({ data }),
   onSuccess: () => {
     getQueryClient().invalidateQueries({ queryKey: userKeys.all });
   }

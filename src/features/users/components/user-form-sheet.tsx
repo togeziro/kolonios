@@ -17,7 +17,9 @@ import type { User } from '../api/types';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import * as z from 'zod';
-import { userSchema, type UserFormValues } from '../schemas/user';
+import { MIN_PASSWORD_LENGTH } from '../api/validation';
+import { userSchema, userCreateSchema, type UserFormValues } from '../schemas/user';
+import type { UserCreateFormValues } from '../schemas/user';
 import { STATUS_OPTIONS } from './users-table/options';
 import { roleGroupsQueryOptions } from '@/features/role-groups/api/queries';
 
@@ -62,10 +64,11 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
       email: user?.email ?? '',
       role_group_id: user?.role_group_id ?? 'none',
       role: user?.role ?? '',
-      status: user?.status ?? 'Active'
+      status: user?.status ?? 'Active',
+      ...(isEdit ? {} : { password: '', confirmPassword: '' })
     } as UserFormValues,
     validators: {
-      onSubmit: userSchema
+      onSubmit: isEdit ? userSchema : userCreateSchema
     },
     onSubmit: async ({ value }) => {
       const payload = {
@@ -73,17 +76,27 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
         role_group_id: value.role_group_id === 'none' ? undefined : value.role_group_id
       };
       if (isEdit) {
-        await updateMutation.mutateAsync({ id: user.id, values: payload });
+        const {
+          password: _pw,
+          confirmPassword: _cpw,
+          ...updateValues
+        } = payload as Record<string, unknown>;
+        await updateMutation.mutateAsync({
+          id: user.id,
+          values: updateValues as UserFormValues
+        });
       } else {
-        await createMutation.mutateAsync(payload);
+        const { confirmPassword: _cpw, ...createValues } = payload as Record<string, unknown>;
+        await createMutation.mutateAsync(createValues as UserFormValues);
       }
     }
   });
 
-  const { FormTextField, FormSelectField } = useFormFields<UserFormValues>();
+  const { FormTextField, FormSelectField } = useFormFields<
+    UserFormValues & Partial<Pick<UserCreateFormValues, 'password' | 'confirmPassword'>>
+  >();
 
   const isPending = createMutation.isPending || updateMutation.isPending;
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='flex flex-col'>
@@ -125,6 +138,35 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
                 options={roleGroupOptions}
                 placeholder={t('user.selectAccessLevel')}
               />
+
+              {!isEdit && (
+                <>
+                  <FormTextField
+                    name='password'
+                    label={t('user.password')}
+                    required
+                    type='password'
+                    autoComplete='new-password'
+                    placeholder={t('user.passwordPlaceholder')}
+                    validators={{
+                      onBlur: z.string().min(MIN_PASSWORD_LENGTH, t('user.passwordMin'))
+                    }}
+                  />
+
+                  <FormTextField
+                    name='confirmPassword'
+                    label={t('user.confirmPassword')}
+                    required
+                    type='password'
+                    autoComplete='new-password'
+                    validators={{
+                      onBlur: z.string().min(1, t('user.passwordMismatch'))
+                    }}
+                  />
+
+                  <p className='text-muted-foreground text-sm'>{t('user.rotationNotice')}</p>
+                </>
+              )}
 
               <FormSelectField
                 name='status'

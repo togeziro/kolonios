@@ -35,4 +35,9 @@ export type UserMutationPayload = {
   role?: string;
   role_group_id?: string;
   status: string;
+  /**
+   * Admin-set password. Only honored by user creation (and the dedicated
+   * set-password endpoint); update ignores it. Never echoed back or audited.
+   */
+  password?: string;
 };

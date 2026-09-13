@@ -47,7 +47,6 @@
     "tickets": "Tickets",
     "availableJobs": "Available Jobs",
     "newTicket": "New Ticket",
-    "allTickets": "All Tickets",
     "allTickets": "All Tickets"
   },
   "common": {
@@ -358,7 +357,19 @@
     "roleTechnician": "Technician",
     "pageDescription": "Manage your organization members and their access.",
     "joinedDate": "Joined date",
-    "searchPlaceholder": "Search users..."
+    "searchPlaceholder": "Search users...",
+    "password": "Initial Password",
+    "passwordPlaceholder": "Min. 8 characters",
+    "confirmPassword": "Confirm Password",
+    "rotationNotice": "The new user must change this password on first sign-in.",
+    "setPassword": "Set Password",
+    "setPasswordDescription": "Set a new one-time password. The user must change it on next sign-in.",
+    "newPassword": "New Password",
+    "replacePassword": "Replace password",
+    "passwordReplaced": "Password replaced. Share it with the user out-of-band.",
+    "replaceFailed": "Failed to replace password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordMin": "Password must be at least 8 characters"
   },
   "auth": {
     "alreadyHaveAccount": "Already have an account?",

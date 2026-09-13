@@ -63,4 +63,24 @@ describe('user audit wiring', () => {
     expect(row.before).toBeNull();
     expect(row.after).toMatchObject({ id: 'new-user' });
   });
+
+  it('never stores a password in the audit trail', async () => {
+    await withAudit(
+      'audit-admin',
+      {
+        action: 'user.set_password',
+        entityType: 'user',
+        entityId: 'target-user',
+        before: null,
+        after: null
+      },
+      async () => ({})
+    );
+
+    const [row] = await db.select().from(auditLog);
+    expect(row.action).toBe('user.set_password');
+    // before/after carry no secret: the password itself must never be audited.
+    expect(row.before).toBeNull();
+    expect(row.after).toBeNull();
+  });
 });

@@ -47,7 +47,6 @@
     "tickets": "Tiket",
     "availableJobs": "Pekerjaan Tersedia",
     "newTicket": "Tiket Baru",
-    "allTickets": "Semua Tiket",
     "allTickets": "Semua Tiket"
   },
   "common": {
@@ -358,7 +357,19 @@
     "roleTechnician": "Teknisi",
     "pageDescription": "Kelola anggota organisasi dan akses mereka.",
     "joinedDate": "Tanggal bergabung",
-    "searchPlaceholder": "Cari pengguna..."
+    "searchPlaceholder": "Cari pengguna...",
+    "password": "Kata Sandi Awal",
+    "passwordPlaceholder": "Min. 8 karakter",
+    "confirmPassword": "Konfirmasi Kata Sandi",
+    "rotationNotice": "Pengguna baru wajib mengganti kata sandi ini saat pertama masuk.",
+    "setPassword": "Atur Kata Sandi",
+    "setPasswordDescription": "Tetapkan kata sandi sekali pakai yang baru. Pengguna wajib menggantinya saat masuk berikutnya.",
+    "newPassword": "Kata Sandi Baru",
+    "replacePassword": "Ganti kata sandi",
+    "passwordReplaced": "Kata sandi diganti. Sampaikan kepada pengguna di luar sistem.",
+    "replaceFailed": "Gagal mengganti kata sandi",
+    "passwordMismatch": "Kata sandi tidak cocok",
+    "passwordMin": "Kata sandi minimal 8 karakter"
   },
   "auth": {
     "alreadyHaveAccount": "Sudah punya akun?",

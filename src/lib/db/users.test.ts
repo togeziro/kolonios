@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { getUsers, createUser, updateUser, deleteUser } from './users';
+import { getUsers, createUser, updateUser, deleteUser, replaceUserPassword } from './users';
 import { resetAllTables, seedUser } from '@/test-utils/db';
 import { db } from '@/lib/db';
 import { user, session, account, verification } from './auth-schema';
@@ -13,13 +13,15 @@ vi.mock('@/lib/auth/auth.server', () => ({
   auth: {
     api: {
       createUser: vi.fn().mockResolvedValue({
-        id: 'created-usr-1',
-        name: 'New User',
-        email: 'new@test.com',
-        role: 'employee',
-        banned: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        user: {
+          id: 'created-usr-1',
+          name: 'New User',
+          email: 'new@test.com',
+          role: 'employee',
+          banned: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
       }),
       updateUser: vi.fn().mockResolvedValue({
         id: 'usr-a',
@@ -30,10 +32,23 @@ vi.mock('@/lib/auth/auth.server', () => ({
         createdAt: new Date(),
         updatedAt: new Date()
       }),
-      removeUser: vi.fn().mockResolvedValue({ success: true })
+      removeUser: vi.fn().mockResolvedValue({ success: true }),
+      setUserPassword: vi.fn().mockResolvedValue({ status: true })
     }
   }
 }));
+
+type MockFn = ReturnType<typeof vi.fn>;
+
+async function adminApiMocks() {
+  const { auth } = await import('@/lib/auth/auth.server');
+  return auth.api as unknown as {
+    createUser: MockFn;
+    updateUser: MockFn;
+    removeUser: MockFn;
+    setUserPassword: MockFn;
+  };
+}
 
 async function seedUsers() {
   await seedUser('usr-a', { name: 'Alice Admin', email: 'alice@test.com', role: 'admin' });
@@ -113,11 +128,60 @@ describe('users data access (integration)', () => {
       email: 'new@test.com',
       name: 'New User',
       role: 'employee',
-      status: 'Active'
+      status: 'Active',
+      password: 's3cret!!pass'
     });
     expect(res.success).toBe(true);
     expect(res.user?.id).toBe('created-usr-1');
     expect(res.user?.role).toBe('employee');
+    const mocks = await adminApiMocks();
+    expect(mocks.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ email: 'new@test.com', password: 's3cret!!pass' })
+      })
+    );
+  });
+
+  it('flags a created user for forced password rotation', async () => {
+    await seedUser('usr-flagged', {
+      name: 'Flag Ged',
+      email: 'flagged@test.com',
+      role: 'employee'
+    });
+    const mocks = await adminApiMocks();
+    (mocks.createUser as MockFn).mockResolvedValueOnce({
+      user: {
+        id: 'usr-flagged',
+        name: 'Flag Ged',
+        email: 'flagged@test.com',
+        role: 'employee',
+        banned: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+    const res = await createUser({
+      email: 'flagged@test.com',
+      name: 'Flag Ged',
+      role: 'employee',
+      status: 'Active',
+      password: 's3cret!!pass'
+    });
+    expect(res.success).toBe(true);
+    const rows = await db.select().from(user).where(eq(user.id, 'usr-flagged'));
+    expect(rows[0]?.mustChangePassword).toBe(true);
+  });
+
+  it('replaces a user password through the auth admin api', async () => {
+    const res = await replaceUserPassword('usr-a', 'n3w!!passw0rd');
+    expect(res.success).toBe(true);
+    const mocks = await adminApiMocks();
+    expect(mocks.setUserPassword).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: { userId: 'usr-a', newPassword: 'n3w!!passw0rd' }
+    });
+    const rows = await db.select().from(user).where(eq(user.id, 'usr-a'));
+    expect(rows[0]?.mustChangePassword).toBe(true);
   });
 
   it('updates a user name and status through the auth admin api', async () => {

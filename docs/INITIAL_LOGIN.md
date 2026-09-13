@@ -73,6 +73,13 @@ sudo -E -u kolonios bun run scripts/create-initial-admin.ts --bootstrap
 3. **S3:** Admin → Storage Settings → test connection + one real upload.
 4. **Daily ops user:** create a non-admin account for everyday work; the
    initial admin is for administration only.
+5. **Onboarding later users (UI):** Users → Add User — the admin sets an
+   initial password (min 8 chars) and hands it over out-of-band. Every
+   created/replaced password is a one-time credential: the account is
+   flagged `must_change_password` and confined to change-password until the
+   owner sets their own. Replacing a password is a row action (`…` →
+   Replace password, `users.edit`); it is audited as `user.set_password`
+   with `before/after: null` — the password itself is never audited.
 
 ## 5. Contingency
 
