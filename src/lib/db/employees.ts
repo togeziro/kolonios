@@ -242,9 +242,12 @@ export async function getMyEmployee(
 }
 
 type AuthUserRecord = { id: string; role?: string };
-type AuthApi = {
+type AdminAuthApi = {
   createUser: (opts: { body: Record<string, unknown> }) => Promise<AuthUserRecord>;
-  updateUser: (opts: { body: Record<string, unknown> }) => Promise<unknown>;
+  adminUpdateUser: (opts: {
+    headers: Headers;
+    body: { userId: string; data: Record<string, unknown> };
+  }) => Promise<unknown>;
   removeUser: (opts: {
     headers: Headers;
     body: { userId: string };
@@ -292,7 +295,7 @@ export async function createEmployee(data: EmployeeMutationPayload & { created_b
       // mustChangePassword flag stays whatever it is on the existing row.
     } else {
       const { auth } = await import('@/lib/auth/auth.server');
-      const created = await (auth.api as unknown as AuthApi).createUser({
+      const created = await (auth.api as unknown as AdminAuthApi).createUser({
         body: {
           email: dataEmail,
           name: data.full_name,
@@ -353,7 +356,7 @@ export async function createEmployee(data: EmployeeMutationPayload & { created_b
       try {
         const { getRequestHeaders } = await import('@tanstack/react-start/server');
         const { auth } = await import('@/lib/auth/auth.server');
-        await (auth.api as unknown as AuthApi).removeUser({
+        await (auth.api as unknown as AdminAuthApi).removeUser({
           headers: getRequestHeaders(),
           body: { userId: createdUserId }
         });
@@ -383,16 +386,32 @@ export async function updateEmployee(
     }
 
     if (data.full_name !== existing.full_name || data.email !== existing.email) {
+      const { getRequestHeaders } = await import('@tanstack/react-start/server');
       const { auth } = await import('@/lib/auth/auth.server');
-      try {
-        await (auth.api as unknown as AuthApi).updateUser({
-          body: {
-            id,
+      // Use the admin plugin's `/admin/update-user` endpoint (adminUpdateUser)
+      // — the `updateUser` member on `auth.api` is the SELF-profile endpoint
+      // that targets the session owner, not `id`. From a server context with
+      // no session it would 401; even with a session it would silently update
+      // the wrong row. The admin endpoint is keyed by `userId` and runs behind
+      // adminMiddleware, so it requires the caller's headers.
+      //
+      // Deliberately NOT wrapped in a local try/catch: a failure here must
+      // abort the whole update (the employees row must never drift out of
+      // sync with user.email). The function's outer catch maps the error.
+      await (auth.api as unknown as AdminAuthApi).adminUpdateUser({
+        headers: getRequestHeaders(),
+        body: {
+          userId: id,
+          data: {
             name: data.full_name,
+            // Better Auth requires user:set-email to change email. The admin
+            // plugin's middleware enforces that permission; without it this
+            // throws FORBIDDEN (never silently dropped), which `mapDbError`
+            // converts into a DomainError so the UI surfaces it.
             email: data.email
           }
-        });
-      } catch {}
+        }
+      });
     }
 
     // Dual-write path for the Career Timeline. Any change to one of the

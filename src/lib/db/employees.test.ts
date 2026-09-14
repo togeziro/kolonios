@@ -14,6 +14,7 @@ import { resetAllTables, seedUser, seedDepartment, seedDesignation } from '@/tes
 import { db } from '@/lib/db';
 import { employees } from './schema/employees';
 import { user } from './auth-schema';
+import { DomainError } from '@/lib/errors';
 
 const MOCK_AUTH_USER_ID = 'mock-auth-user-id';
 
@@ -40,6 +41,7 @@ vi.mock('@/lib/auth/auth.server', async () => {
             .onConflictDoNothing();
           return { id: MOCK_AUTH_USER_ID };
         }),
+        adminUpdateUser: vi.fn().mockResolvedValue({ id: MOCK_AUTH_USER_ID }),
         updateUser: vi.fn().mockResolvedValue(undefined),
         removeUser: vi.fn().mockResolvedValue({ success: true })
       }
@@ -443,6 +445,92 @@ describe('employees data access (integration)', () => {
         join_date: '2024-01-01'
       });
       expect(res.success).toBe(false);
+    });
+
+    it('calls auth.api.adminUpdateUser with userId+data when name or email changes', async () => {
+      const { auth } = await import('@/lib/auth/auth.server');
+      const adminUpdateUser = (auth.api as unknown as { adminUpdateUser: ReturnType<typeof vi.fn> })
+        .adminUpdateUser;
+      adminUpdateUser.mockClear();
+
+      await seedUser(TEST_EMP_USER_ID, { email: 'orig@test.com', name: 'Original' });
+      await seedEmployee(TEST_EMP_USER_ID, { full_name: 'Original', email: 'orig@test.com' });
+
+      await updateEmployee(TEST_EMP_USER_ID, {
+        full_name: 'Renamed',
+        email: 'renamed@test.com',
+        birth_date: '1990-01-01',
+        department_id: deptId,
+        designation_id: desigId,
+        join_date: '2024-01-01'
+      });
+
+      expect(adminUpdateUser).toHaveBeenCalledTimes(1);
+      expect(adminUpdateUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            userId: TEST_EMP_USER_ID,
+            data: expect.objectContaining({
+              name: 'Renamed',
+              email: 'renamed@test.com'
+            })
+          })
+        })
+      );
+    });
+
+    it('skips auth.api.adminUpdateUser when name and email are unchanged', async () => {
+      const { auth } = await import('@/lib/auth/auth.server');
+      const adminUpdateUser = (auth.api as unknown as { adminUpdateUser: ReturnType<typeof vi.fn> })
+        .adminUpdateUser;
+      adminUpdateUser.mockClear();
+
+      await seedUser(TEST_EMP_USER_ID, { email: 'same@test.com', name: 'Same' });
+      await seedEmployee(TEST_EMP_USER_ID, { full_name: 'Same', email: 'same@test.com' });
+
+      await updateEmployee(TEST_EMP_USER_ID, {
+        full_name: 'Same',
+        email: 'same@test.com',
+        birth_date: '1990-01-01',
+        department_id: deptId,
+        designation_id: desigId,
+        join_date: '2024-01-01'
+      });
+
+      expect(adminUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('aborts updateEmployee when auth.api.adminUpdateUser rejects (no employee drift)', async () => {
+      const { auth } = await import('@/lib/auth/auth.server');
+      const adminUpdateUser = (auth.api as unknown as { adminUpdateUser: ReturnType<typeof vi.fn> })
+        .adminUpdateUser;
+      adminUpdateUser.mockRejectedValueOnce(new Error('FORBIDDEN user:set-email'));
+
+      await seedUser(TEST_EMP_USER_ID, { email: 'orig@test.com', name: 'Original' });
+      await seedEmployee(TEST_EMP_USER_ID, { full_name: 'Original', email: 'orig@test.com' });
+
+      // The auth failure must surface as a thrown DomainError (mapDbError
+      // wraps unknown errors in a generic DomainError). The employees row
+      // must stay at the original email — never drift out of sync with
+      // user.email.
+      await expect(
+        updateEmployee(TEST_EMP_USER_ID, {
+          full_name: 'Renamed',
+          email: 'renamed@test.com',
+          birth_date: '1990-01-01',
+          department_id: deptId,
+          designation_id: desigId,
+          join_date: '2024-01-01'
+        })
+      ).rejects.toBeInstanceOf(DomainError);
+
+      const [persisted] = await db
+        .select({ email: employees.email, full_name: employees.full_name })
+        .from(employees)
+        .where(eq(employees.id, TEST_EMP_USER_ID))
+        .limit(1);
+      expect(persisted?.email).toBe('orig@test.com');
+      expect(persisted?.full_name).toBe('Original');
     });
   });
 
