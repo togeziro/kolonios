@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from './index';
 import { roleGroups } from './schema/role-groups';
 import { userRoleGroups } from './schema/user-role-groups';
-import { mapDbError } from '../errors';
+import { DomainError, mapDbError } from '../errors';
 import { generateId } from '../utils';
 import type { Permissions } from './schema/role-groups';
 
@@ -155,6 +155,12 @@ export async function getUserRoleGroup(userId: string) {
 }
 
 export async function setUserRoleGroup(userId: string, roleGroupId: string) {
+  // Reject blank ids before touching the DB: Drizzle renders an undefined id
+  // as `default`, and user_id is NOT NULL — without this guard a bad caller
+  // surfaces as a 500 + Sentry noise instead of a clear validation error.
+  if (!userId?.trim()) throw new DomainError('User id is required.', 'USER_ID_REQUIRED');
+  if (!roleGroupId?.trim())
+    throw new DomainError('Role group id is required.', 'ROLE_GROUP_ID_REQUIRED');
   try {
     await db
       .insert(userRoleGroups)

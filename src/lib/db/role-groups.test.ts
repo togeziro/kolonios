@@ -204,6 +204,42 @@ describe('role-groups data access (integration)', () => {
     await db.delete(userRoleGroups).where(eq(userRoleGroups.user_id, testId));
     await db.delete(user).where(eq(user.id, testId));
   });
+
+  it('rejects blank user id without touching the database', async () => {
+    const created = await createRoleGroup({
+      name: 'Technician',
+      description: 'Tech',
+      permissions: {},
+      is_admin: false
+    });
+    if (!created.success) throw new Error('Expected success');
+
+    // Must throw DomainError (a validation error the caller can surface),
+    // never a raw DB constraint violation.
+    await expect(setUserRoleGroup('', created.role_group!.id)).rejects.toMatchObject({
+      name: 'DomainError',
+      code: 'USER_ID_REQUIRED'
+    });
+    await expect(setUserRoleGroup('   ', created.role_group!.id)).rejects.toMatchObject({
+      name: 'DomainError',
+      code: 'USER_ID_REQUIRED'
+    });
+    await expect(
+      setUserRoleGroup(undefined as unknown as string, created.role_group!.id)
+    ).rejects.toMatchObject({ name: 'DomainError', code: 'USER_ID_REQUIRED' });
+  });
+
+  it('rejects blank role group id without touching the database', async () => {
+    const testId = uid();
+    await seedUser(testId);
+
+    await expect(setUserRoleGroup(testId, '')).rejects.toMatchObject({
+      name: 'DomainError',
+      code: 'ROLE_GROUP_ID_REQUIRED'
+    });
+
+    await db.delete(user).where(eq(user.id, testId));
+  });
 });
 
 describe('mapRoleGroupToLegacyRole', () => {
