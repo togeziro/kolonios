@@ -288,6 +288,13 @@
       "when": 1789382685111,
       "tag": "0040_prod_baseline_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1789383496421,
+      "tag": "0041_hr_operation_attendance_scope",
+      "breakpoints": true
     }
   ]
 }
