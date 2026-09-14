@@ -184,8 +184,10 @@ const ROLE_NAME_TO_LEGACY: Record<string, string> = {
   admin: 'admin',
   hr: 'hr',
   employee: 'employee',
-  technician: 'technician',
   staff: 'employee',
+  technician: 'technician',
+  operation: 'technician',
+  spv: 'technician',
   user: 'user',
   customer: 'user'
 };

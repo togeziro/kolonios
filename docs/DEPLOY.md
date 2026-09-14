@@ -198,7 +198,7 @@ Then grant the account full access:
 set -a; source /etc/kolonios/kolonios.env; set +a
 psql "$DATABASE_URL" <<'SQL'
 INSERT INTO role_groups (id,name,description,permissions,is_admin)
-VALUES ('zzzrg-admin','Administrator','Full system access','{}'::jsonb,true)
+VALUES ('zzzrg-admin','Admin','Full system access','{}'::jsonb,true)
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO user_role_groups (user_id,role_group_id)
 SELECT id,'zzzrg-admin' FROM "user" WHERE email='you@example.com'
@@ -236,6 +236,39 @@ ssh -i ~/.ssh/kolonios_deploy kolonios@<DEPLOY_HOST>
 cd /opt/kolonios && git fetch --all --prune && git checkout --force main \
   && APP_DIR=/opt/kolonios bash deploy/deploy.sh
 ```
+
+### Pre-handover / internal VM (no Caddy, no backups)
+
+Before handover to end users, the VM runs without Caddy (the app listens
+on `0.0.0.0:3000` via `HOST=0.0.0.0` in the env file, reached directly as
+`http://<host>:3000`) and without the backup cron (§5 starts at handover).
+`deploy.sh` itself needs neither — it only installs, builds, migrates
+`--no-seed`, restarts, and health-checks — so the manual command above is
+already the whole procedure; just skip the Caddy and backup sections.
+
+### Ownership rule: never deploy as root
+
+`deploy.sh`, `bun install`, and `bun run build` must run as `kolonios`.
+One root-run build (incident 2026-09-14) leaves root-owned artifacts
+(`.output/`, `node_modules/.nitro/`,
+`/var/backups/kolonios/last-good-sha`) that break every later deploy as
+`kolonios` with `EACCES: permission denied`. When SSHing in as another
+user (e.g. `kermit`), prefix git/deploy commands with `sudo -u kolonios`
+— a bare `git` fails with "dubious ownership", which is the cue to switch
+user, not to add a `safe.directory` exception. Repair after an accidental
+root run:
+
+```bash
+sudo find /opt/kolonios /var/backups/kolonios -user root \
+  -exec chown kolonios:kolonios {} +
+```
+
+Two bookkeeping notes: checking out the target revision _before_
+`deploy.sh` makes `pre-deploy-sha` record the new SHA instead of the
+previous one — after a version jump, reset the rollback target explicitly
+(`echo <previous-good-sha> | sudo -u kolonios tee
+/var/backups/kolonios/pre-deploy-sha`). A detached `HEAD` from
+`checkout --force origin/main` is expected (same as what CD checks out).
 
 ## 5. Backups
 

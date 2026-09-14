@@ -969,11 +969,13 @@ async function seedAchievementsDemo() {
 }
 
 async function seedRoleGroups() {
+  // Ids/names/permissions mirror migration 0040_prod_baseline_seed so dev
+  // (seed) and prod (migrate) converge on the same 5 role groups.
   const adminId = 'zzzrg-admin';
   const techId = 'zzzrg-technician';
-  const spvId = 'zzzrg-spv';
+  const operationId = 'zzzrg-operation';
   const hrId = 'zzzrg-hr';
-  const employeeId = 'zzzrg-employee';
+  const staffId = 'zzzrg-staff';
 
   const coreModules = {
     overview: { view: true },
@@ -992,7 +994,7 @@ async function seedRoleGroups() {
     .values([
       {
         id: adminId,
-        name: 'Administrator',
+        name: 'Admin',
         description: 'Full system access',
         permissions: {},
         is_admin: true
@@ -1024,9 +1026,9 @@ async function seedRoleGroups() {
         is_admin: false
       },
       {
-        id: employeeId,
-        name: 'Employee',
-        description: 'Standard employee access',
+        id: staffId,
+        name: 'Staff',
+        description: 'Standard staff access',
         permissions: {
           ...coreModules,
           jobs: { view: true },
@@ -1051,9 +1053,9 @@ async function seedRoleGroups() {
         is_admin: false
       },
       {
-        id: spvId,
-        name: 'SPV',
-        description: 'Supervisor — field ops with review & leave approval',
+        id: operationId,
+        name: 'Operation',
+        description: 'Field operations - review and leave approval',
         permissions: {
           ...coreModules,
           jobs: { view: true },
@@ -1074,11 +1076,11 @@ async function seedRoleGroups() {
   const byEmail = new Map(users.map((u) => [u.email, u.id]));
 
   const assignments = [
-    [byEmail.get('admin@example.com'), adminId, 'Administrator', 'admin@example.com'],
+    [byEmail.get('admin@example.com'), adminId, 'Admin', 'admin@example.com'],
     [byEmail.get('hr@example.com'), hrId, 'HR', 'hr@example.com'],
-    [byEmail.get('employee@example.com'), employeeId, 'Employee', 'employee@example.com'],
+    [byEmail.get('employee@example.com'), staffId, 'Staff', 'employee@example.com'],
     [byEmail.get('technician@example.com'), techId, 'Technician', 'technician@example.com'],
-    [byEmail.get('spv@example.com'), spvId, 'SPV', 'spv@example.com']
+    [byEmail.get('spv@example.com'), operationId, 'Operation', 'spv@example.com']
   ] as const;
 
   for (const [userId, roleGroupId, name, email] of assignments) {

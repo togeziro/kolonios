@@ -245,9 +245,13 @@ describe('role-groups data access (integration)', () => {
 describe('mapRoleGroupToLegacyRole', () => {
   it('maps known names to legacy roles', () => {
     expect(mapRoleGroupToLegacyRole('Administrator')).toBe('admin');
+    expect(mapRoleGroupToLegacyRole('Admin')).toBe('admin');
     expect(mapRoleGroupToLegacyRole('HR')).toBe('hr');
     expect(mapRoleGroupToLegacyRole('Employee')).toBe('employee');
+    expect(mapRoleGroupToLegacyRole('Staff')).toBe('employee');
     expect(mapRoleGroupToLegacyRole('Technician')).toBe('technician');
+    expect(mapRoleGroupToLegacyRole('Operation')).toBe('technician');
+    expect(mapRoleGroupToLegacyRole('SPV')).toBe('technician');
   });
 
   it('falls back to employee for custom role names', () => {

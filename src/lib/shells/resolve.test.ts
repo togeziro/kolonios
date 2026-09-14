@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveHomePath, resolveShell } from './resolve';
 
 const group = (overrides: Partial<{ name: string; is_admin: boolean }> = {}) => ({
-  name: 'Employee',
+  name: 'Staff',
   is_admin: false,
   ...overrides
 });
@@ -14,6 +14,9 @@ describe('resolveShell', () => {
 
   it('maps admin role group (is_admin) to backoffice', () => {
     expect(
+      resolveShell({ role: 'admin', roleGroup: group({ name: 'Admin', is_admin: true }) })
+    ).toBe('backoffice');
+    expect(
       resolveShell({ role: 'admin', roleGroup: group({ name: 'Administrator', is_admin: true }) })
     ).toBe('backoffice');
   });
@@ -22,7 +25,10 @@ describe('resolveShell', () => {
     expect(resolveShell({ role: 'hr', roleGroup: group({ name: 'HR' }) })).toBe('backoffice');
   });
 
-  it('maps Technician role group to fieldops and Employee to backoffice', () => {
+  it('maps Technician role group to fieldops and Staff to backoffice', () => {
+    expect(resolveShell({ role: 'employee', roleGroup: group({ name: 'Staff' }) })).toBe(
+      'backoffice'
+    );
     expect(resolveShell({ role: 'employee', roleGroup: group({ name: 'Employee' }) })).toBe(
       'backoffice'
     );
@@ -31,7 +37,10 @@ describe('resolveShell', () => {
     );
   });
 
-  it('maps SPV role group to fieldops', () => {
+  it('maps Operation (and legacy SPV) role group to fieldops', () => {
+    expect(resolveShell({ role: 'technician', roleGroup: group({ name: 'Operation' }) })).toBe(
+      'fieldops'
+    );
     expect(resolveShell({ role: 'technician', roleGroup: group({ name: 'SPV' }) })).toBe(
       'fieldops'
     );
