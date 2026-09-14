@@ -152,8 +152,6 @@ export const getScheduleGridFn = createServerFn({ method: 'GET' })
         .offset(offset)
     ]);
 
-    const userIds = employeeRows.map((e) => e.id);
-
     // Department name lookup — fetch only the divisions we actually need.
     const deptIds = Array.from(
       new Set(employeeRows.map((e) => e.departmentId).filter((id): id is number => id != null))

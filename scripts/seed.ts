@@ -37,8 +37,7 @@ import {
   payrollRecords,
   payrollPeriods,
   salaryComponents,
-  taxSettings,
-  employeeCareerEvents
+  taxSettings
 } from '../src/lib/db/schema';
 import { user } from '../src/lib/db/auth-schema';
 import {

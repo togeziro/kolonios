@@ -299,7 +299,6 @@ describe('employees data access (integration)', () => {
   describe('updateEmployee — dual-write to career timeline (regression for ticket 04)', () => {
     it('produces exactly one matching employee_career_events row when department_id changes', async () => {
       const { findCareerEventsFor } = await import('./career-timeline');
-      const { departments } = await import('./schema/masterdata');
       const { seedDepartment } = await import('@/test-utils/db');
 
       await seedUser(TEST_EMP_USER_ID);

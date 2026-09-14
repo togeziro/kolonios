@@ -88,7 +88,7 @@ export function CareerTimelineSubTab({ employee }: { employee: Employee }) {
 
       {activeCategory && (
         <CareerEventDialog
-          open={activeCategory !== null}
+          open
           onOpenChange={(open) => {
             if (!open) setActiveCategory(null);
           }}

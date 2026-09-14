@@ -160,7 +160,7 @@ export function ShiftListing() {
       {editingShiftId !== null && (
         <ShiftFormSheet
           shiftId={editingShiftId}
-          open={editingShiftId !== null}
+          open
           onOpenChange={(open) => !open && setEditingShiftId(null)}
         />
       )}

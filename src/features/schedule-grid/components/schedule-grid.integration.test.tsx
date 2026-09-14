@@ -618,7 +618,11 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     // Pre-seed the cell in the "unassigned" state (post-Day-Off-clear).
     currentGrid = makeGridResponse([makeAssignedRow(), makeUnassignedRow()]);
     const clearedCell = getRowByUserId('u1').cells.find((c) => c.date === '2026-09-02')!;
+    // Pre-condition: the cell starts assigned; `clearCellOverride` mutates the
+    // same object in place, so assert the strip on the same reference.
+    expect(clearedCell.shiftId).not.toBeNull();
     clearCellOverride('u1', '2026-09-02');
+    expect(clearedCell.shiftId).toBeNull();
 
     renderPage();
     await waitForGridSettled();

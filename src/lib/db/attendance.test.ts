@@ -486,7 +486,6 @@ describe('attendance data access (integration)', () => {
 
       const { readFile } = await import('node:fs/promises');
       const { fileURLToPath } = await import('node:url');
-      const { resolve } = await import('node:path');
       const migrationPath = fileURLToPath(
         new URL('./migrations/0032_gorgeous_mother_askani.sql', import.meta.url)
       );
