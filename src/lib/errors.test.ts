@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { DomainError, getErrorMessage, mapDbError } from './errors';
 
 vi.mock('./logger', () => ({
-  logger: { error: vi.fn() }
+  logger: { error: vi.fn(), warn: vi.fn() }
 }));
 
 vi.mock('./sentry', () => ({
@@ -53,6 +53,45 @@ describe('mapDbError', () => {
       context: 'ctx',
       requestId: ''
     });
+  });
+
+  it('passes expected auth errors through with their code and skips Sentry', () => {
+    const authError = Object.assign(new Error('User already exists. Use another email.'), {
+      name: 'APIError',
+      statusCode: 400,
+      body: {
+        code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+        message: 'User already exists. Use another email.'
+      }
+    });
+    expect(() => mapDbError(authError, 'users.createUser')).toThrowError(
+      expect.objectContaining({
+        name: 'DomainError',
+        code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+        message: 'User already exists. Use another email.'
+      })
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: 'users.createUser',
+        code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
+      }),
+      expect.stringContaining('USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL')
+    );
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(captureError).not.toHaveBeenCalled();
+  });
+
+  it('still sends unknown auth error codes to Sentry', () => {
+    const authError = Object.assign(new Error('Something broke.'), {
+      name: 'APIError',
+      statusCode: 500,
+      body: { code: 'SOME_NEW_CODE' }
+    });
+    expect(() => mapDbError(authError, 'ctx')).toThrowError(
+      expect.objectContaining({ code: 'INTERNAL_ERROR' })
+    );
+    expect(captureError).toHaveBeenCalled();
   });
 });
 

@@ -13,10 +13,29 @@ export class DomainError extends Error {
   }
 }
 
+// Better Auth client errors are expected business outcomes — e.g. creating a
+// user with a duplicate email — not application bugs. They must stay visible
+// (warn log + original message to the caller) but out of Sentry. Matched by
+// the machine-readable body.code; anything unlisted keeps the old path.
+const EXPECTED_AUTH_ERROR_CODES = new Set(['USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL']);
+
+function getAuthErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const body = (error as { body?: unknown }).body;
+  if (typeof body !== 'object' || body === null) return undefined;
+  const code = (body as { code?: unknown }).code;
+  return typeof code === 'string' ? code : undefined;
+}
+
 export const mapDbError: (error: unknown, context: string) => never = createServerOnlyFn(
   (error, context) => {
     if (error instanceof DomainError) throw error;
     const requestId = getRequestId();
+    const expectedCode = getAuthErrorCode(error);
+    if (expectedCode && EXPECTED_AUTH_ERROR_CODES.has(expectedCode)) {
+      logger.warn({ context, requestId, code: expectedCode }, `[db:${context}] ${expectedCode}`);
+      throw new DomainError(getErrorMessage(error) ?? 'Request failed.', expectedCode);
+    }
     logger.error({ context, requestId, err: error }, `[db:${context}]`);
     captureError(error, { context, requestId: requestId ?? '' });
     throw new DomainError('An internal error occurred. Please try again.', 'INTERNAL_ERROR');
