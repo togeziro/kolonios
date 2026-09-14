@@ -4,6 +4,8 @@ import { getUsers, createUser, updateUser, deleteUser, replaceUserPassword } fro
 import { resetAllTables, seedUser } from '@/test-utils/db';
 import { db } from '@/lib/db';
 import { user, session, account, verification } from './auth-schema';
+import { roleGroups } from './schema/role-groups';
+import { userRoleGroups } from './schema/user-role-groups';
 
 vi.mock('@tanstack/react-start/server', () => ({
   getRequestHeaders: () => new Headers()
@@ -23,7 +25,7 @@ vi.mock('@/lib/auth/auth.server', () => ({
           updatedAt: new Date()
         }
       }),
-      updateUser: vi.fn().mockResolvedValue({
+      adminUpdateUser: vi.fn().mockResolvedValue({
         id: 'usr-a',
         name: 'Alice Updated',
         email: 'alice@test.com',
@@ -44,7 +46,7 @@ async function adminApiMocks() {
   const { auth } = await import('@/lib/auth/auth.server');
   return auth.api as unknown as {
     createUser: MockFn;
-    updateUser: MockFn;
+    adminUpdateUser: MockFn;
     removeUser: MockFn;
     setUserPassword: MockFn;
   };
@@ -193,11 +195,172 @@ describe('users data access (integration)', () => {
     });
     expect(res.success).toBe(true);
     expect(res.user?.name).toBe('Alice Updated');
+    // Regression: /admin/update-user runs behind adminMiddleware — the
+    // caller's session headers are mandatory or Better Auth throws
+    // APIError UNAUTHORIZED.
+    const mocks = await adminApiMocks();
+    expect(mocks.adminUpdateUser).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: {
+        userId: 'usr-a',
+        data: {
+          name: 'Alice Updated',
+          email: 'alice@test.com',
+          role: 'admin',
+          banned: false,
+          banReason: null,
+          banExpires: null
+        }
+      }
+    });
+  });
+
+  it('preserves the current role when the update omits role and role group', async () => {
+    const mocks = await adminApiMocks();
+    mocks.adminUpdateUser.mockClear();
+    const res = await updateUser('usr-b', {
+      name: 'Bob Renamed',
+      email: 'bob@test.com',
+      status: 'Active'
+    });
+    expect(res.success).toBe(true);
+    // usr-b is seeded with role 'employee' — no literal 'user' downgrade.
+    expect(mocks.adminUpdateUser).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: {
+        userId: 'usr-b',
+        data: {
+          name: 'Bob Renamed',
+          email: 'bob@test.com',
+          role: 'employee',
+          banned: false,
+          banReason: null,
+          banExpires: null
+        }
+      }
+    });
+  });
+
+  it('sends the ban reason on deactivation and clears it on reactivation', async () => {
+    const mocks = await adminApiMocks();
+    mocks.adminUpdateUser.mockClear();
+    await updateUser('usr-b', {
+      name: 'Bob Employee',
+      email: 'bob@test.com',
+      status: 'Inactive'
+    });
+    expect(mocks.adminUpdateUser).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: {
+        userId: 'usr-b',
+        data: {
+          name: 'Bob Employee',
+          email: 'bob@test.com',
+          role: 'employee',
+          banned: true,
+          banReason: 'Deactivated by admin'
+        }
+      }
+    });
+  });
+
+  it('compensates a partial create by removing the orphaned account', async () => {
+    await seedUser('usr-orphan', {
+      name: 'Orphan User',
+      email: 'orphan@test.com',
+      role: 'employee'
+    });
+    await db.insert(roleGroups).values({
+      id: 'rg-admin-x',
+      name: 'Administrator',
+      description: 'Admins',
+      permissions: {},
+      is_admin: true
+    });
+    const mocks = await adminApiMocks();
+    (mocks.createUser as MockFn).mockResolvedValueOnce({
+      user: {
+        id: 'usr-orphan',
+        name: 'Orphan User',
+        email: 'orphan@test.com',
+        role: 'employee',
+        banned: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+    // Role sync (adminUpdateUser) fails AFTER the account exists.
+    (mocks.adminUpdateUser as MockFn).mockRejectedValueOnce(new Error('sync boom'));
+    mocks.removeUser.mockClear();
+    await expect(
+      createUser({
+        email: 'orphan@test.com',
+        name: 'Orphan User',
+        role_group_id: 'rg-admin-x',
+        status: 'Active',
+        password: 's3cret!!pass'
+      })
+    ).rejects.toThrow();
+    // Best-effort compensation deletes the orphan with session headers.
+    expect(mocks.removeUser).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: { userId: 'usr-orphan' }
+    });
+  });
+
+  it('syncs the legacy role with headers when creation picks a role group', async () => {
+    await seedUser('usr-rg', {
+      name: 'Rg User',
+      email: 'rg@test.com',
+      role: 'employee'
+    });
+    await db.insert(roleGroups).values({
+      id: 'rg-admin',
+      name: 'Administrator',
+      description: 'Admins',
+      permissions: {},
+      is_admin: true
+    });
+    const mocks = await adminApiMocks();
+    (mocks.createUser as MockFn).mockResolvedValueOnce({
+      user: {
+        id: 'usr-rg',
+        name: 'Rg User',
+        email: 'rg@test.com',
+        role: 'employee',
+        banned: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+    const res = await createUser({
+      email: 'rg@test.com',
+      name: 'Rg User',
+      role_group_id: 'rg-admin',
+      status: 'Active',
+      password: 's3cret!!pass'
+    });
+    expect(res.success).toBe(true);
+    expect(res.user?.role).toBe('admin');
+    // Regression: the role-sync call after createUser needs the same
+    // session headers (this exact call threw UNAUTHORIZED in production).
+    expect(mocks.adminUpdateUser).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: { userId: 'usr-rg', data: { role: 'admin' } }
+    });
+    const rows = await db.select().from(userRoleGroups).where(eq(userRoleGroups.user_id, 'usr-rg'));
+    expect(rows[0]?.role_group_id).toBe('rg-admin');
   });
 
   it('deletes a user through the auth admin api', async () => {
     const res = await deleteUser('usr-a');
     expect(res.success).toBe(true);
+    // Regression: /admin/remove-user also runs behind adminMiddleware.
+    const mocks = await adminApiMocks();
+    expect(mocks.removeUser).toHaveBeenCalledWith({
+      headers: expect.any(Headers),
+      body: { userId: 'usr-a' }
+    });
   });
 
   it('resolves related records through the auth schema relations', async () => {

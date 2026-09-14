@@ -1,6 +1,6 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth.server';
-import { mapDbError } from '../errors';
+import { DomainError, mapDbError } from '../errors';
 import { db } from './index';
 import { user } from './auth-schema';
 import { userRoleGroups } from './schema/user-role-groups';
@@ -38,20 +38,28 @@ type AdminAuthApi = {
       role: string;
     };
   }) => Promise<AdminUser | { user: AdminUser }>;
-  updateUser: (opts: {
+  /**
+   * Admin plugin's `/admin/update-user` endpoint (named `adminUpdateUser`
+   * server-side; `updateUser` is the core self-profile endpoint — a different
+   * route that updates the session owner, not the target user). Body shape is
+   * `{ userId, data }` and the row is returned unwrapped. Runs behind
+   * adminMiddleware, so the caller's session headers are mandatory — without
+   * them it throws APIError UNAUTHORIZED (never a validation error).
+   */
+  adminUpdateUser: (opts: {
+    headers: Headers;
     body: {
-      name?: string;
-      role: string;
-      banned?: boolean;
-      banReason?: string;
+      userId: string;
+      data: Record<string, unknown>;
     };
-    params: { userId: string };
   }) => Promise<AdminUser>;
   setUserPassword: (opts: {
     headers: Headers;
     body: { userId: string; newPassword: string };
   }) => Promise<{ status: boolean }>;
-  removeUser: (opts: { body: { userId: string } }) => Promise<{ success: boolean }>;
+  removeUser: (opts: { headers: Headers; body: { userId: string } }) => Promise<{
+    success: boolean;
+  }>;
 };
 
 const adminApi = auth.api as unknown as AdminAuthApi;
@@ -112,18 +120,18 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
     const userIds = rows.map((u) => u.id);
     const rgMap = new Map<string, { id: string; name: string }>();
     if (userIds.length > 0) {
-      const allRows = await db
+      // Filter in the DB — never full-scan the join table then filter in memory.
+      const rgRows = await db
         .select({
           user_id: userRoleGroups.user_id,
           id: roleGroups.id,
           name: roleGroups.name
         })
         .from(userRoleGroups)
-        .innerJoin(roleGroups, eq(userRoleGroups.role_group_id, roleGroups.id));
-      for (const row of allRows) {
-        if (userIds.includes(row.user_id)) {
-          rgMap.set(row.user_id, { id: row.id, name: row.name });
-        }
+        .innerJoin(roleGroups, eq(userRoleGroups.role_group_id, roleGroups.id))
+        .where(inArray(userRoleGroups.user_id, userIds));
+      for (const row of rgRows) {
+        rgMap.set(row.user_id, { id: row.id, name: row.name });
       }
     }
 
@@ -142,6 +150,9 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
 }
 
 export async function createUser(data: UserMutationPayload) {
+  // Tracks the created row so a failure AFTER creation can compensate
+  // (delete the orphan) instead of leaving a half-provisioned account.
+  let createdUserId: string | null = null;
   try {
     const legacyRole = data.role || (data.role_group_id ? 'employee' : 'user');
     const raw = await adminApi.createUser({
@@ -177,6 +188,7 @@ export async function createUser(data: UserMutationPayload) {
     if (!resolved) throw new Error('users.createUser: created row not found');
 
     const userId = resolved.id;
+    createdUserId = userId;
     await setMustChangePassword(userId);
 
     if (data.role_group_id) {
@@ -186,9 +198,13 @@ export async function createUser(data: UserMutationPayload) {
         await setUserRoleGroup(userId, data.role_group_id);
         const syncedRole = mapRoleGroupToLegacyRole(rg.role_group!.name);
         if (syncedRole !== legacyRole) {
-          await adminApi.updateUser({
-            body: { role: syncedRole },
-            params: { userId }
+          // Same admin-middleware gate as updateUser below: the caller's
+          // session headers are mandatory, otherwise Better Auth throws
+          // APIError UNAUTHORIZED even though createUser itself succeeded.
+          const { getRequestHeaders } = await import('@tanstack/react-start/server');
+          await adminApi.adminUpdateUser({
+            headers: getRequestHeaders(),
+            body: { userId, data: { role: syncedRole } }
           });
         }
         resolved.role = syncedRole;
@@ -197,6 +213,25 @@ export async function createUser(data: UserMutationPayload) {
 
     return { success: true, message: 'User created successfully', user: toUser(resolved) };
   } catch (e) {
+    // A failure after creation (role sync, flag, group assignment) leaves an
+    // orphan account: compensate with a best-effort delete so the next retry
+    // doesn't hit "user already exists". Never mask a compensation failure —
+    // the original error is what the caller must see.
+    if (createdUserId) {
+      try {
+        const { getRequestHeaders } = await import('@tanstack/react-start/server');
+        await adminApi.removeUser({
+          headers: getRequestHeaders(),
+          body: { userId: createdUserId }
+        });
+      } catch (compensateError) {
+        const { logger } = await import('@/lib/logger');
+        logger.error(
+          { userId: createdUserId, err: compensateError },
+          '[db:users.createUser] orphan compensation failed'
+        );
+      }
+    }
     mapDbError(e, 'users.createUser');
   }
 }
@@ -204,10 +239,12 @@ export async function createUser(data: UserMutationPayload) {
 export async function updateUser(id: string, data: UserMutationPayload) {
   try {
     const { getRequestHeaders } = await import('@tanstack/react-start/server');
-    getRequestHeaders();
+    const headers = getRequestHeaders();
 
-    let finalRole = data.role || 'user';
-
+    // Resolve the role explicitly: an omitted role must preserve the current
+    // row instead of downgrading to a literal default (data.role is optional
+    // in UserMutationPayload and the user form doesn't even render it).
+    let finalRole: string | undefined = data.role?.trim() || undefined;
     if (data.role_group_id) {
       await setUserRoleGroup(id, data.role_group_id);
       const { getRoleGroupById } = await import('./role-groups');
@@ -216,15 +253,31 @@ export async function updateUser(id: string, data: UserMutationPayload) {
         finalRole = mapRoleGroupToLegacyRole(rg.role_group!.name);
       }
     }
+    if (!finalRole) {
+      const [current] = await db.select({ role: user.role }).from(user).where(eq(user.id, id));
+      finalRole = current?.role ?? undefined;
+    }
+    if (!finalRole) {
+      throw new DomainError('Cannot determine role for user update', 'ROLE_UNRESOLVED');
+    }
 
-    const updated = await adminApi.updateUser({
+    const updated = await adminApi.adminUpdateUser({
+      headers,
       body: {
-        name: data.name,
-        role: finalRole,
-        banned: data.status === 'Inactive' || undefined,
-        banReason: data.status === 'Inactive' ? 'Deactivated by admin' : undefined
-      },
-      params: { userId: id }
+        userId: id,
+        data: {
+          name: data.name,
+          // Better Auth requires user:set-email to change email; without it
+          // this throws FORBIDDEN (never silently dropped). Non-admin role
+          // groups don't hold that permission, so HR edits keep names/roles
+          // only — email change is an explicit admin action.
+          email: data.email,
+          role: finalRole,
+          ...(data.status === 'Inactive'
+            ? { banned: true, banReason: 'Deactivated by admin' }
+            : { banned: false, banReason: null, banExpires: null })
+        }
+      }
     });
 
     return { success: true, message: 'User updated successfully', user: toUser(updated) };
@@ -236,8 +289,7 @@ export async function updateUser(id: string, data: UserMutationPayload) {
 export async function deleteUser(id: string) {
   try {
     const { getRequestHeaders } = await import('@tanstack/react-start/server');
-    getRequestHeaders();
-    await adminApi.removeUser({ body: { userId: id } });
+    await adminApi.removeUser({ headers: getRequestHeaders(), body: { userId: id } });
     return { success: true, message: 'User deleted successfully' };
   } catch (e) {
     mapDbError(e, 'users.deleteUser');
@@ -250,9 +302,10 @@ export async function deleteUser(id: string) {
  * confined to change-password until they set their own. Never audit the
  * password — the caller must exclude it from the audit payload.
  *
- * Unlike createUser (which tolerates a header-less server call), the admin
- * setUserPassword endpoint runs behind adminMiddleware and requires the
- * caller's session headers — forwarded here from the server function.
+ * Contract: every admin endpoint runs behind adminMiddleware — always forward
+ * `getRequestHeaders()`; never rely on header-less calls. (createUser is the
+ * deliberate exception: Better Auth's /admin/create-user has no
+ * adminMiddleware and tolerates a header-less server call.)
  */
 export async function replaceUserPassword(userId: string, newPassword: string) {
   try {

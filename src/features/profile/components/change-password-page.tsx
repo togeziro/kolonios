@@ -20,6 +20,7 @@ const tierStyles: Record<PasswordTier, { bar: string; text: string }> = {
 
 function PasswordField({
   id,
+  name,
   label,
   value,
   onChange,
@@ -27,6 +28,8 @@ function PasswordField({
   describedBy
 }: {
   id: string;
+  /** Native field name: password-manager/autofill heuristic + FormData. */
+  name: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -44,8 +47,11 @@ function PasswordField({
       <div className='relative'>
         <Input
           id={id}
+          name={name}
           type={visible ? 'text' : 'password'}
           value={value}
+          required
+          minLength={8}
           autoComplete={autoComplete}
           aria-describedby={describedBy}
           onChange={(e) => onChange(e.target.value)}
@@ -210,33 +216,39 @@ export default function ChangePasswordPage() {
           <div className='dark:border-zinc-800/50 dark:bg-zinc-900 space-y-5 rounded-2xl border p-5'>
             <PasswordField
               id='current-password'
+              name='current-password'
               label={t('changePassword.fields.current')}
               value={currentPassword}
               onChange={setCurrentPassword}
               autoComplete='current-password'
+              describedBy={error ? 'change-password-error' : undefined}
             />
 
             <div>
               <PasswordField
                 id='new-password'
+                name='new-password'
                 label={t('changePassword.fields.new')}
                 value={newPassword}
                 onChange={setNewPassword}
                 autoComplete='new-password'
+                describedBy={error ? 'change-password-error' : undefined}
               />
               <StrengthMeter value={newPassword} />
             </div>
 
             <PasswordField
               id='confirm-password'
+              name='confirm-password'
               label={t('changePassword.fields.confirm')}
               value={confirmPassword}
               onChange={setConfirmPassword}
               autoComplete='new-password'
+              describedBy={error ? 'change-password-error' : undefined}
             />
 
             {error && (
-              <p role='alert' className='text-destructive text-sm'>
+              <p id='change-password-error' role='alert' className='text-destructive text-sm'>
                 {error}
               </p>
             )}

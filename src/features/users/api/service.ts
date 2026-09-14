@@ -42,19 +42,40 @@ export const createUserFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('users', 'add');
     await checkRateLimit(`write:${session.user.id}`);
     const { createUser } = await import('@/lib/db/users');
-    const created = await createUser(values);
-    await withAudit(
-      session.user.id,
-      {
-        action: 'user.create',
+    try {
+      const created = await createUser(values);
+      await withAudit(
+        session.user.id,
+        {
+          action: 'user.create',
+          entityType: 'user',
+          entityId: created.user.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
+    } catch (error) {
+      // createUser compensates partial creates (deletes the orphan), so a
+      // throw here means no account survives — but the ATTEMPT itself must
+      // stay visible: record a create_failed trail keyed by email, otherwise
+      // failed provisioning leaves zero trace (the exact gap hit in prod).
+      const { getErrorMessage } = await import('@/lib/errors');
+      const { insertAuditRow } = await import('@/lib/db/audit');
+      const { getRequestId } = await import('@/lib/request-id.server');
+      await insertAuditRow({
+        actorUserId: session.user.id,
+        action: 'user.create_failed',
         entityType: 'user',
-        entityId: created.user.id,
+        entityId: values.email,
         before: null,
-        after: created
-      },
-      async () => undefined
-    );
-    return created;
+        // Email + failure reason only — never the password.
+        after: { email: values.email, name: values.name, error: getErrorMessage(error) },
+        requestId: getRequestId() ?? null
+      });
+      throw error;
+    }
   });
 
 export const updateUserFn = createServerFn({ method: 'POST' })
