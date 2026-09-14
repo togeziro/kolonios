@@ -7,6 +7,11 @@
       "type": "local",
       "command": ["codegraph", "serve", "--mcp"],
       "enabled": true
+    },
+    "sentry": {
+      "type": "remote",
+      "url": "https://mcp.sentry.dev/mcp/koloni-qw",
+      "oauth": {}
     }
   },
   "compaction": {
