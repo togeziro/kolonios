@@ -57,15 +57,7 @@ src/features/overview/components/pie-graph.tsx:73
 src/features/overview/components/pie-graph.tsx:80
 src/features/overview/components/pie-graph.tsx:81
 src/features/overview/components/pie-graph.tsx:84
-src/features/role-groups/components/role-group-columns.tsx:116
-src/features/role-groups/components/role-group-columns.tsx:119
-src/features/role-groups/components/role-group-columns.tsx:120
-src/features/role-groups/components/role-group-columns.tsx:124
-src/features/role-groups/components/role-group-columns.tsx:125
-src/features/role-groups/components/role-group-columns.tsx:130
-src/features/role-groups/components/role-group-columns.tsx:84
-src/features/role-groups/components/role-group-listing.tsx:115
-src/features/role-groups/components/role-group-listing.tsx:57
+src/features/role-groups/components/role-group-listing.tsx:143
 src/features/schedule-grid/components/assign-shift-dialog.tsx:212
 src/features/schedule-grid/components/assign-shift-dialog.tsx:262
 src/features/schedule/components/my-schedule-page.tsx:29
