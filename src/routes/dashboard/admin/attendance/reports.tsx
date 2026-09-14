@@ -5,7 +5,7 @@ import { AdminAttendanceReport } from '@/features/attendance/components/admin-at
 export const Route = createFileRoute('/dashboard/admin/attendance/reports')({
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
-    await requirePermissionRpc({ data: 'attendance.edit' });
+    await requirePermissionRpc({ data: 'attendance_admin.edit' });
   },
   head: () => ({ meta: [{ title: 'Dashboard: Attendance Reports' }] }),
   component: ReportsPage

@@ -160,7 +160,7 @@ export const getAttendanceSummaryFn = createServerFn({ method: 'GET' }).handler(
 export const createLocationFn = createServerFn({ method: 'POST' })
   .validator(locationCreateSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { createLocation } = await import('@/lib/db/attendance');
     const result = await createLocation({ ...data, createdBy: session.user.id });
@@ -183,7 +183,7 @@ export const createLocationFn = createServerFn({ method: 'POST' })
 export const updateLocationFn = createServerFn({ method: 'POST' })
   .validator(locationUpdateSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { updateLocation } = await import('@/lib/db/attendance');
     const { id, ...patch } = data;
@@ -207,7 +207,7 @@ export const updateLocationFn = createServerFn({ method: 'POST' })
 export const deleteLocationFn = createServerFn({ method: 'POST' })
   .validator(locationDeleteSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'delete');
+    const session = await requirePermission('attendance_admin', 'delete');
     await checkRateLimit(`write:${session.user.id}`);
     const { deleteLocation } = await import('@/lib/db/attendance');
     const result = await deleteLocation(data.id);
@@ -238,7 +238,7 @@ export const getSchedulesFn = createServerFn({ method: 'GET' }).handler(async ()
 // --- Shift master CRUD (admin) ---
 
 export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () => {
-  await requirePermission('attendance', 'edit');
+  await requirePermission('attendance_admin', 'edit');
   const { listShifts } = await import('@/lib/db/attendance');
   return listShifts();
 });
@@ -246,7 +246,7 @@ export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () =
 export const getShiftByIdFn = createServerFn({ method: 'GET' })
   .validator(z.object({ id: z.number().int().positive() }))
   .handler(async ({ data }) => {
-    await requirePermission('attendance', 'edit');
+    await requirePermission('attendance_admin', 'edit');
     const { getShiftById } = await import('@/lib/db/attendance');
     return getShiftById(data.id);
   });
@@ -254,7 +254,7 @@ export const getShiftByIdFn = createServerFn({ method: 'GET' })
 export const createShiftFn = createServerFn({ method: 'POST' })
   .validator(shiftCreateSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { createSchedule } = await import('@/lib/db/attendance');
     const result = await createSchedule(data);
@@ -277,7 +277,7 @@ export const createShiftFn = createServerFn({ method: 'POST' })
 export const updateShiftFn = createServerFn({ method: 'POST' })
   .validator(shiftUpdateSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { updateSchedule } = await import('@/lib/db/attendance');
     const { id, ...patch } = data;
@@ -301,7 +301,7 @@ export const updateShiftFn = createServerFn({ method: 'POST' })
 export const deleteShiftFn = createServerFn({ method: 'POST' })
   .validator(shiftDeleteSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { deleteShift } = await import('@/lib/db/attendance');
     const result = await deleteShift(data.id);
@@ -326,7 +326,7 @@ export const deleteShiftFn = createServerFn({ method: 'POST' })
 export const getScheduleAssignmentsFn = createServerFn({ method: 'GET' })
   .validator(assignmentFiltersSchema)
   .handler(async ({ data: filters }) => {
-    await requirePermission('attendance', 'edit');
+    await requirePermission('attendance_admin', 'edit');
     const { listScheduleAssignments } = await import('@/lib/db/attendance');
     return listScheduleAssignments(filters);
   });
@@ -334,7 +334,7 @@ export const getScheduleAssignmentsFn = createServerFn({ method: 'GET' })
 export const assignScheduleFn = createServerFn({ method: 'POST' })
   .validator(scheduleAssignmentSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { createScheduleAssignment } = await import('@/lib/db/attendance');
     const result = await createScheduleAssignment({
@@ -363,7 +363,7 @@ export const assignScheduleFn = createServerFn({ method: 'POST' })
 export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
   .validator(bulkAssignmentSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { bulkAssignSchedule } = await import('@/lib/db/attendance');
     const result = await bulkAssignSchedule(data.assignments, session.user.id);
@@ -388,7 +388,7 @@ export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
 export const createScheduleOverrideFn = createServerFn({ method: 'POST' })
   .validator(dateOverrideSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { db } = await import('@/lib/db');
     const { dateOverrides } = await import('@/lib/db/schema/attendance');
@@ -418,7 +418,7 @@ export const createScheduleOverrideFn = createServerFn({ method: 'POST' })
 export const createDayOffFn = createServerFn({ method: 'POST' })
   .validator(dayOffSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { createDayOff } = await import('@/lib/db/attendance');
     const result = await createDayOff({
@@ -445,7 +445,7 @@ export const createDayOffFn = createServerFn({ method: 'POST' })
 export const deleteDayOffFn = createServerFn({ method: 'POST' })
   .validator(dayOffDeleteSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'delete');
+    const session = await requirePermission('attendance_admin', 'delete');
     await checkRateLimit(`write:${session.user.id}`);
     const { deleteDayOff } = await import('@/lib/db/attendance');
     const result = await deleteDayOff(data.id);
@@ -479,7 +479,7 @@ export const requestAttendanceCorrectionFn = createServerFn({ method: 'POST' })
 export const reviewAttendanceCorrectionFn = createServerFn({ method: 'POST' })
   .validator(correctionReviewSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { reviewAttendanceCorrection } = await import('@/lib/db/attendance');
     const result = await reviewAttendanceCorrection(session.user.id, data);
@@ -504,7 +504,7 @@ export const reviewAttendanceCorrectionFn = createServerFn({ method: 'POST' })
 export const getAdminAttendanceReportFn = createServerFn({ method: 'GET' })
   .validator(reportFiltersSchema)
   .handler(async ({ data: filters }) => {
-    await requirePermission('attendance', 'edit');
+    await requirePermission('attendance_admin', 'edit');
     const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
     return getAdminAttendanceReport(filters);
   });
@@ -556,7 +556,7 @@ function toCsv(records: Array<Record<string, unknown>>): string {
 export const exportAttendanceReportFn = createServerFn({ method: 'POST' })
   .validator(exportReportSchema)
   .handler(async ({ data }) => {
-    await requirePermission('attendance', 'edit');
+    await requirePermission('attendance_admin', 'edit');
     const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
     const { filters, format } = data;
 

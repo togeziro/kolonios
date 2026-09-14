@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 export const Route = createFileRoute('/dashboard/admin/attendance/face-settings')({
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
-    await requirePermissionRpc({ data: 'attendance.edit' });
+    await requirePermissionRpc({ data: 'attendance_admin.edit' });
   },
   component: AdminFaceSettingsPage
 });

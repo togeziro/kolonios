@@ -64,6 +64,7 @@ export const updateRoleGroupFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     const { updateRoleGroup, getRoleGroupById } = await import('@/lib/db/role-groups');
     const before = await getRoleGroupById(id);
+    if (before.role_group?.is_admin) throw new Error('Forbidden: system roles cannot be modified');
     const updated = await updateRoleGroup(id, values);
     if (!updated.success) throw new Error(updated.message);
     await withAudit(
@@ -87,7 +88,9 @@ export const deleteRoleGroupFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     const { deleteRoleGroup, getRoleGroupById } = await import('@/lib/db/role-groups');
     const before = await getRoleGroupById(id);
+    if (before.role_group?.is_admin) throw new Error('Forbidden: system roles cannot be deleted');
     const deleted = await deleteRoleGroup(id);
+    if (!deleted.success) throw new Error(deleted.message);
     await withAudit(
       session.user.id,
       {
