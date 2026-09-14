@@ -9,6 +9,7 @@ import { mapRoleGroupToLegacyRole, setUserRoleGroup } from './role-groups';
 import { buildConditions, buildOrderBy, buildPagination, buildSearchCondition } from './utils';
 import type { UserFilters, UsersResponse, UserMutationPayload } from '@/lib/domain/users';
 import { generateTemporaryPassword } from '../auth/password';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 
 type AdminUser = {
   id: string;
@@ -155,10 +156,23 @@ export async function createUser(data: UserMutationPayload) {
   let createdUserId: string | null = null;
   try {
     const legacyRole = data.role || (data.role_group_id ? 'employee' : 'user');
+    // Blank admin input means "generate for me": the server creates the
+    // one-time credential and returns it ONCE below — the UI shows it in a
+    // copy dialog (never stored, never audited). A provided-but-weak
+    // password is rejected, never silently replaced.
+    const provided = data.password?.trim() || '';
+    if (provided && provided.length < MIN_PASSWORD_LENGTH) {
+      throw new DomainError(
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+        'WEAK_PASSWORD'
+      );
+    }
+    const generated = !provided;
+    const initialPassword = generated ? generateTemporaryPassword() : provided;
     const raw = await adminApi.createUser({
       body: {
         email: data.email,
-        password: data.password ?? generateTemporaryPassword(),
+        password: initialPassword,
         name: data.name,
         role: legacyRole
       }
@@ -191,6 +205,10 @@ export async function createUser(data: UserMutationPayload) {
     createdUserId = userId;
     await setMustChangePassword(userId);
 
+    // Carried into toUser so the create response (and its audit snapshot)
+    // reflects the assigned group — the Better Auth row knows nothing of it.
+    let createdRoleGroup: { id: string; name: string } | null = null;
+
     if (data.role_group_id) {
       const { getRoleGroupById } = await import('./role-groups');
       const rg = await getRoleGroupById(data.role_group_id);
@@ -208,10 +226,18 @@ export async function createUser(data: UserMutationPayload) {
           });
         }
         resolved.role = syncedRole;
+        createdRoleGroup = { id: data.role_group_id, name: rg.role_group!.name };
       }
     }
 
-    return { success: true, message: 'User created successfully', user: toUser(resolved) };
+    return {
+      success: true,
+      message: 'User created successfully',
+      user: toUser(resolved, createdRoleGroup),
+      // Single-use handoff for the generated-password dialog — present only
+      // when the admin left the password blank.
+      ...(generated ? { generatedPassword: initialPassword } : {})
+    };
   } catch (e) {
     // A failure after creation (role sync, flag, group assignment) leaves an
     // orphan account: compensate with a best-effort delete so the next retry
@@ -308,6 +334,14 @@ export async function deleteUser(id: string) {
  * adminMiddleware and tolerates a header-less server call.)
  */
 export async function replaceUserPassword(userId: string, newPassword: string) {
+  // Defense-in-depth: the service schema validates first, but direct DB
+  // callers bypass it — reject weak passwords here too.
+  if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new DomainError(
+      `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+      'WEAK_PASSWORD'
+    );
+  }
   try {
     const { getRequestHeaders } = await import('@tanstack/react-start/server');
     await adminApi.setUserPassword({

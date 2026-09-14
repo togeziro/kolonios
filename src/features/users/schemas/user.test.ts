@@ -50,10 +50,16 @@ describe('userCreateSchema', () => {
     expect(userCreateSchema.safeParse(valid).success).toBe(true);
   });
 
-  it('requires a password of at least 8 chars', () => {
+  it('accepts blank passwords (server auto-generates)', () => {
+    const { password: _pw, confirmPassword: _cpw, ...noPasswords } = valid;
+    expect(userCreateSchema.safeParse(noPasswords).success).toBe(true);
+    expect(
+      userCreateSchema.safeParse({ ...valid, password: '', confirmPassword: '' }).success
+    ).toBe(true);
+  });
+
+  it('rejects a provided-but-weak password', () => {
     expect(userCreateSchema.safeParse({ ...valid, password: 'short' }).success).toBe(false);
-    const { password: _omitted, ...noPassword } = valid;
-    expect(userCreateSchema.safeParse(noPassword).success).toBe(false);
   });
 
   it('rejects mismatched confirmation', () => {

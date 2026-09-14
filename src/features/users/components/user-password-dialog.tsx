@@ -17,7 +17,7 @@ import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { setUserPasswordMutation } from '../api/mutations';
-import { MIN_PASSWORD_LENGTH } from '../api/validation';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import { assessPasswordStrength } from '@/features/profile/lib/password-strength';
 import type { User } from '../api/types';
 

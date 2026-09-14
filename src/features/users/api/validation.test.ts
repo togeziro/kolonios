@@ -70,8 +70,13 @@ describe('userCreateSchema', () => {
     expect(userCreateSchema.safeParse(valid).success).toBe(true);
   });
 
-  it('requires a password of at least 8 chars', () => {
-    expect(userCreateSchema.safeParse({ ...valid, password: undefined }).success).toBe(false);
+  it('accepts a blank password (server auto-generates)', () => {
+    const { password: _omitted, ...noPassword } = valid;
+    expect(userCreateSchema.safeParse(noPassword).success).toBe(true);
+    expect(userCreateSchema.safeParse({ ...valid, password: '' }).success).toBe(true);
+  });
+
+  it('rejects a provided-but-weak password', () => {
     expect(userCreateSchema.safeParse({ ...valid, password: 'short' }).success).toBe(false);
   });
 });

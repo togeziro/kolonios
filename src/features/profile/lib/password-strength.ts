@@ -1,3 +1,5 @@
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
+
 export type PasswordTier = 'weak' | 'fair' | 'good' | 'strong';
 
 export interface PasswordStrength {
@@ -16,10 +18,9 @@ export interface PasswordStrength {
  *  - contains a digit
  *  - contains a symbol (non-alphanumeric)
  *
- * Gate: length >= 8 is the Better Auth minimum — anything shorter scores 0.
- * Tier mapping: 0-1 weak, 2 fair, 3 good, 4 strong.
+ * Gate: length >= MIN_PASSWORD_LENGTH is the Better Auth minimum — anything
+ * shorter scores 0. Tier mapping: 0-1 weak, 2 fair, 3 good, 4 strong.
  */
-const MIN_LENGTH = 8;
 const LONG_LENGTH = 12;
 
 const TIER_LABEL_KEYS: Record<PasswordTier, string> = {
@@ -37,7 +38,7 @@ function tierForScore(score: number): PasswordTier {
 }
 
 export function assessPasswordStrength(password: string): PasswordStrength {
-  if (password.length < MIN_LENGTH) {
+  if (password.length < MIN_PASSWORD_LENGTH) {
     return { score: 0, tier: 'weak', labelKey: TIER_LABEL_KEYS.weak };
   }
 

@@ -83,4 +83,42 @@ describe('user audit wiring', () => {
     expect(row.before).toBeNull();
     expect(row.after).toBeNull();
   });
+
+  it('strips a generated one-time password before auditing user.create', async () => {
+    // Mirrors service.ts: the create response carries generatedPassword once
+    // for the admin's copy dialog — the audit snapshot must exclude it.
+    const created = {
+      success: true as const,
+      message: 'User created successfully',
+      user: {
+        id: 'new-user',
+        name: 'New User',
+        email: 'new@test.com',
+        status: 'Active',
+        role: 'employee',
+        role_group_id: 'rg-1',
+        role_group_name: 'Employee',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      generatedPassword: 't3mp!!passw0rd'
+    };
+    const { generatedPassword: _secret, ...auditable } = created;
+    await withAudit(
+      'audit-admin',
+      {
+        action: 'user.create',
+        entityType: 'user',
+        entityId: created.user.id,
+        before: null,
+        after: auditable
+      },
+      async () => ({})
+    );
+
+    const [row] = await db.select().from(auditLog);
+    expect(row.action).toBe('user.create');
+    expect(JSON.stringify(row.after)).not.toContain('t3mp!!passw0rd');
+    expect(row.after).toMatchObject({ user: { id: 'new-user' } });
+  });
 });

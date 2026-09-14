@@ -125,7 +125,25 @@ describe('users data access (integration)', () => {
     expect(res.users[0].email).toBe('alice@test.com');
   });
 
-  it('creates a user through the auth admin api', async () => {
+  it('generates and returns a one-time password when the admin leaves it blank', async () => {
+    const res = await createUser({
+      email: 'new@test.com',
+      name: 'New User',
+      role: 'employee',
+      status: 'Active'
+    });
+    expect(res.success).toBe(true);
+    // Single-use handoff: the generated secret is returned once, min length met.
+    expect(res.generatedPassword).toMatch(/^.{8,}$/);
+    const mocks = await adminApiMocks();
+    expect(mocks.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ email: 'new@test.com', password: res.generatedPassword })
+      })
+    );
+  });
+
+  it('omits generatedPassword when the admin sets the password manually', async () => {
     const res = await createUser({
       email: 'new@test.com',
       name: 'New User',
@@ -134,14 +152,22 @@ describe('users data access (integration)', () => {
       password: 's3cret!!pass'
     });
     expect(res.success).toBe(true);
-    expect(res.user?.id).toBe('created-usr-1');
-    expect(res.user?.role).toBe('employee');
+    expect(res.generatedPassword).toBeUndefined();
+  });
+
+  it('rejects a provided-but-weak creation password instead of silently generating', async () => {
     const mocks = await adminApiMocks();
-    expect(mocks.createUser).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({ email: 'new@test.com', password: 's3cret!!pass' })
+    mocks.createUser.mockClear();
+    await expect(
+      createUser({
+        email: 'new@test.com',
+        name: 'New User',
+        role: 'employee',
+        status: 'Active',
+        password: 'short'
       })
-    );
+    ).rejects.toThrowError(expect.objectContaining({ code: 'WEAK_PASSWORD' }));
+    expect(mocks.createUser).not.toHaveBeenCalled();
   });
 
   it('flags a created user for forced password rotation', async () => {
@@ -184,6 +210,15 @@ describe('users data access (integration)', () => {
     });
     const rows = await db.select().from(user).where(eq(user.id, 'usr-a'));
     expect(rows[0]?.mustChangePassword).toBe(true);
+  });
+
+  it('rejects a weak replacement password before touching the auth api', async () => {
+    const mocks = await adminApiMocks();
+    mocks.setUserPassword.mockClear();
+    await expect(replaceUserPassword('usr-a', 'short')).rejects.toThrowError(
+      expect.objectContaining({ code: 'WEAK_PASSWORD' })
+    );
+    expect(mocks.setUserPassword).not.toHaveBeenCalled();
   });
 
   it('updates a user name and status through the auth admin api', async () => {

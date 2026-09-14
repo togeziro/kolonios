@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { MIN_PASSWORD_LENGTH } from '../api/validation';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 
 export const userSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -12,8 +12,10 @@ export const userSchema = z.object({
 export type UserFormValues = z.infer<typeof userSchema>;
 
 /**
- * Creation adds an admin-set initial password + confirmation. The account is
- * flagged for forced rotation server-side, so this is a one-time credential.
+ * Creation adds an optional admin-set initial password + confirmation.
+ * Both blank means "generate for me" (the server returns the one-time
+ * credential once). A provided password must meet the minimum and match.
+ * The account is flagged for forced rotation server-side either way.
  */
 export const userCreateSchema = userSchema
   .extend({
@@ -21,6 +23,8 @@ export const userCreateSchema = userSchema
     confirmPassword: z.string().optional()
   })
   .superRefine((values, ctx) => {
+    const provided = values.password?.trim() || values.confirmPassword?.trim();
+    if (!provided) return;
     if (!values.password || values.password.length < MIN_PASSWORD_LENGTH) {
       ctx.addIssue({
         code: 'custom',

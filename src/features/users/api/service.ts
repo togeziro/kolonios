@@ -44,6 +44,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
     const { createUser } = await import('@/lib/db/users');
     try {
       const created = await createUser(values);
+      const { generatedPassword: _secret, ...auditable } = created;
       await withAudit(
         session.user.id,
         {
@@ -51,7 +52,9 @@ export const createUserFn = createServerFn({ method: 'POST' })
           entityType: 'user',
           entityId: created.user.id,
           before: null,
-          after: created
+          // The one-time credential must never touch the audit trail — it
+          // lives only in the create response + the admin's copy dialog.
+          after: auditable
         },
         async () => undefined
       );

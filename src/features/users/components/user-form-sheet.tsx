@@ -9,6 +9,15 @@ import {
   SheetHeader,
   SheetTitle
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -17,13 +26,18 @@ import type { User } from '../api/types';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import * as z from 'zod';
-import { MIN_PASSWORD_LENGTH } from '../api/validation';
 import { userSchema, userCreateSchema, type UserFormValues } from '../schemas/user';
 import type { UserCreateFormValues } from '../schemas/user';
 import { STATUS_OPTIONS } from './users-table/options';
 import { roleGroupsQueryOptions } from '@/features/role-groups/api/queries';
 
 const NO_ROLE_GROUP = 'none';
+
+interface UserFormSheetProps {
+  user?: User;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
 export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) {
   const { t } = useTranslation();
@@ -37,11 +51,21 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
     ...roleGroupsList.map((rg) => ({ value: rg.id, label: rg.name }))
   ];
 
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+
   const createMutation = useMutation(
     mergeMutationCallbacks(createUserMutation, {
-      onSuccess: () => {
-        toast.success(t('user.created'));
-        onOpenChange(false);
+      // The server returns generatedPassword ONCE when the admin left the
+      // password blank — show it in a copy dialog instead of closing, so the
+      // one-time credential can be shared out-of-band before it vanishes.
+      onSuccess: (data) => {
+        const generated = (data as { generatedPassword?: string } | undefined)?.generatedPassword;
+        if (generated) {
+          setGeneratedPassword(generated);
+        } else {
+          toast.success(t('user.created'));
+          onOpenChange(false);
+        }
         form.reset();
       },
       onError: () => toast.error(t('user.createFailed'))
@@ -97,108 +121,152 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
   >();
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+
+  async function copyGenerated() {
+    if (!generatedPassword) return;
+    try {
+      await navigator.clipboard.writeText(generatedPassword);
+      toast.success(t('user.passwordCopied'));
+    } catch {
+      toast.error(t('user.passwordCopyFailed'));
+    }
+  }
+
+  function closeSheet(next: boolean) {
+    // The generated password is single-use: confirm the admin captured it
+    // before the dialog (and the secret) may go away.
+    if (!next) setGeneratedPassword(null);
+    onOpenChange(next);
+  }
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className='flex flex-col'>
-        <SheetHeader>
-          <SheetTitle>{isEdit ? t('user.edit') : t('user.new')}</SheetTitle>
-          <SheetDescription>
-            {isEdit ? t('user.editDescription') : t('user.newDescription')}
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Dialog
+        open={generatedPassword !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            toast.success(t('user.created'));
+            setGeneratedPassword(null);
+            onOpenChange(false);
+          }
+        }}
+      >
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle>{t('user.generatedPasswordTitle')}</DialogTitle>
+            <DialogDescription>{t('user.generatedPasswordDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className='flex items-center gap-2'>
+            <Input readOnly value={generatedPassword ?? ''} className='font-mono' />
+            <Button type='button' variant='outline' onClick={copyGenerated}>
+              <Icons.copy /> {t('user.copyPassword')}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button
+              type='button'
+              onClick={() => {
+                toast.success(t('user.created'));
+                setGeneratedPassword(null);
+                onOpenChange(false);
+              }}
+            >
+              <Icons.check /> {t('user.generatedPasswordDone')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Sheet open={open} onOpenChange={closeSheet}>
+        <SheetContent className='flex flex-col'>
+          <SheetHeader>
+            <SheetTitle>{isEdit ? t('user.edit') : t('user.new')}</SheetTitle>
+            <SheetDescription>
+              {isEdit ? t('user.editDescription') : t('user.newDescription')}
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className='flex-1 overflow-auto'>
-          <form.AppForm>
-            <form.Form id='user-form-sheet' className='space-y-4'>
-              <FormTextField
-                name='name'
-                label={t('user.name')}
-                required
-                placeholder={t('user.namePlaceholder')}
-                validators={{
-                  onBlur: z.string().min(2, t('user.nameMin'))
-                }}
-              />
+          <div className='flex-1 overflow-auto'>
+            <form.AppForm>
+              <form.Form id='user-form-sheet' className='space-y-4'>
+                <FormTextField
+                  name='name'
+                  label={t('user.name')}
+                  required
+                  placeholder={t('user.namePlaceholder')}
+                  validators={{
+                    onBlur: z.string().min(2, t('user.nameMin'))
+                  }}
+                />
 
-              <FormTextField
-                name='email'
-                label={t('user.email')}
-                required
-                type='email'
-                placeholder={t('user.johnEmail')}
-                validators={{
-                  onBlur: z.string().email(t('user.emailRequired'))
-                }}
-              />
+                <FormTextField
+                  name='email'
+                  label={t('user.email')}
+                  required
+                  type='email'
+                  placeholder={t('user.johnEmail')}
+                  validators={{
+                    onBlur: z.string().email(t('user.emailRequired'))
+                  }}
+                />
 
-              <FormSelectField
-                name='role_group_id'
-                label={t('user.accessLevel')}
-                required
-                options={roleGroupOptions}
-                placeholder={t('user.selectAccessLevel')}
-              />
+                <FormSelectField
+                  name='role_group_id'
+                  label={t('user.accessLevel')}
+                  required
+                  options={roleGroupOptions}
+                  placeholder={t('user.selectAccessLevel')}
+                />
 
-              {!isEdit && (
-                <>
-                  <FormTextField
-                    name='password'
-                    label={t('user.password')}
-                    required
-                    type='password'
-                    autoComplete='new-password'
-                    placeholder={t('user.passwordPlaceholder')}
-                    validators={{
-                      onBlur: z.string().min(MIN_PASSWORD_LENGTH, t('user.passwordMin'))
-                    }}
-                  />
+                {!isEdit && (
+                  <>
+                    <FormTextField
+                      name='password'
+                      label={t('user.password')}
+                      type='password'
+                      autoComplete='new-password'
+                      placeholder={t('user.passwordOptionalPlaceholder')}
+                    />
 
-                  <FormTextField
-                    name='confirmPassword'
-                    label={t('user.confirmPassword')}
-                    required
-                    type='password'
-                    autoComplete='new-password'
-                    validators={{
-                      onBlur: z.string().min(1, t('user.passwordMismatch'))
-                    }}
-                  />
+                    <FormTextField
+                      name='confirmPassword'
+                      label={t('user.confirmPassword')}
+                      type='password'
+                      autoComplete='new-password'
+                    />
 
-                  <p className='text-muted-foreground text-sm'>{t('user.rotationNotice')}</p>
-                </>
-              )}
+                    <p className='text-muted-foreground text-sm'>
+                      {t('user.optionalPasswordNotice')}
+                    </p>
+                    <p className='text-muted-foreground text-sm'>{t('user.rotationNotice')}</p>
+                  </>
+                )}
 
-              <FormSelectField
-                name='status'
-                label={t('user.status')}
-                required
-                options={STATUS_OPTIONS}
-                placeholder={t('user.selectStatus')}
-                validators={{
-                  onBlur: z.string().min(1, t('user.statusRequired'))
-                }}
-              />
-            </form.Form>
-          </form.AppForm>
-        </div>
+                <FormSelectField
+                  name='status'
+                  label={t('user.status')}
+                  required
+                  options={STATUS_OPTIONS}
+                  placeholder={t('user.selectStatus')}
+                  validators={{
+                    onBlur: z.string().min(1, t('user.statusRequired'))
+                  }}
+                />
+              </form.Form>
+            </form.AppForm>
+          </div>
 
-        <SheetFooter>
-          <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button type='submit' form='user-form-sheet' isLoading={isPending}>
-            <Icons.check /> {isEdit ? t('user.updateUser') : t('user.createUser')}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          <SheetFooter>
+            <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type='submit' form='user-form-sheet' isLoading={isPending}>
+              <Icons.check /> {isEdit ? t('user.updateUser') : t('user.createUser')}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </>
   );
-}
-
-interface UserFormSheetProps {
-  user?: User;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
 export function UserFormSheetTrigger() {

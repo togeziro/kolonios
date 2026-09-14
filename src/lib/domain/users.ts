@@ -36,8 +36,21 @@ export type UserMutationPayload = {
   role_group_id?: string;
   status: string;
   /**
-   * Admin-set password. Only honored by user creation (and the dedicated
-   * set-password endpoint); update ignores it. Never echoed back or audited.
+   * Admin-set initial password. Optional: when omitted, the server generates
+   * a temporary one and returns it ONCE in the create response so the admin
+   * can share it out-of-band. Update ignores it. Never echoed back afterwards
+   * and never audited.
    */
   password?: string;
+};
+
+export type CreatedUser = {
+  success: true;
+  message: string;
+  user: User;
+  /**
+   * Present only when the server generated the password (admin left the
+   * field blank). Single-use: shown once in the UI, never stored.
+   */
+  generatedPassword?: string;
 };
