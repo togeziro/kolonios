@@ -378,32 +378,67 @@ export async function replaceUserPassword(userId: string, newPassword: string) {
 export async function getMissingEmployeeProfiles(opts: { sampleLimit?: number } = {}) {
   const sampleLimit = opts.sampleLimit ?? 3;
   try {
-    const where = and(
-      eq(user.banned, false),
-      isNull(employees.id),
-      // Only workforce accounts: skip customers (shell = portal) so the banner
-      // doesn't nag the admin about customer-side accounts.
-      sql`${user.role} <> 'customer'`
-    );
+    const { total, rows } = await listMissingEmployeeProfiles({ limit: sampleLimit });
+    return {
+      success: true,
+      count: total,
+      sample: rows.map((r) => ({ email: r.email, name: r.name }))
+    };
+  } catch (e) {
+    mapDbError(e, 'users.getMissingEmployeeProfiles');
+  }
+}
+
+/**
+ * The single source of truth for the "workforce user without an employee
+ * profile" predicate: not banned, no `employees` row, and not a customer
+ * (customer accounts live in the portal shell, not the scheduling surface).
+ *
+ * Used by `getMissingEmployeeProfiles` (the assignments banner) and by the
+ * `db:list-missing-employees` / `db:backfill-missing-employees` scripts.
+ * Keeping the predicate here means the banner, the list, and the backfill
+ * can never disagree about who is missing a profile.
+ */
+export async function listMissingEmployeeProfiles(
+  opts: { limit?: number; includeCustomer?: boolean } = {}
+): Promise<{
+  total: number;
+  rows: Array<{
+    id: string;
+    email: string | null;
+    name: string | null;
+    role: string | null;
+    createdAt: Date;
+  }>;
+}> {
+  const limit = opts.limit ?? 50;
+  const conditions = [eq(user.banned, false), isNull(employees.id)];
+  if (!opts.includeCustomer) {
+    conditions.push(sql`${user.role} <> 'customer'`);
+  }
+  const where = and(...conditions);
+  try {
     const [countRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(user)
       .leftJoin(employees, eq(employees.id, user.id))
       .where(where);
-    const sampleRows = await db
-      .select({ email: user.email, name: user.name })
+    const rows = await db
+      .select({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        createdAt: user.createdAt
+      })
       .from(user)
       .leftJoin(employees, eq(employees.id, user.id))
       .where(where)
       .orderBy(asc(user.createdAt))
-      .limit(sampleLimit);
-    return {
-      success: true,
-      count: countRow?.count ?? 0,
-      sample: sampleRows.map((r) => ({ email: r.email, name: r.name }))
-    };
+      .limit(limit);
+    return { total: countRow?.count ?? 0, rows };
   } catch (e) {
-    mapDbError(e, 'users.getMissingEmployeeProfiles');
+    mapDbError(e, 'users.listMissingEmployeeProfiles');
   }
 }
 

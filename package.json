@@ -31,6 +31,8 @@
     "db:push": "drizzle-kit push",
     "db:seed": "bun run scripts/seed.ts",
     "db:reset": "bun run scripts/reset-db.ts",
+    "db:list-missing-employees": "bun run scripts/list-missing-employees.ts",
+    "db:backfill-missing-employees": "bun run scripts/backfill-missing-employees.ts",
     "db:studio": "drizzle-kit studio",
     "db:test:create": "bun run scripts/create-test-db.ts",
     "postinstall": "bun run scripts/postinstall.js",

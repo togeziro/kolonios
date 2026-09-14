@@ -1,7 +1,15 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { getUsers, createUser, updateUser, deleteUser, replaceUserPassword } from './users';
-import { resetAllTables, seedUser } from '@/test-utils/db';
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  replaceUserPassword,
+  getMissingEmployeeProfiles,
+  listMissingEmployeeProfiles
+} from './users';
+import { resetAllTables, seedUser, seedEmployee } from '@/test-utils/db';
 import { db } from '@/lib/db';
 import { user, session, account, verification } from './auth-schema';
 import { roleGroups } from './schema/role-groups';
@@ -473,5 +481,50 @@ describe('users data access (integration)', () => {
       .where(eq(verification.id, 'verif-1'))
       .returning();
     expect(v?.value).toBe('code-2');
+  });
+
+  describe('listMissingEmployeeProfiles / getMissingEmployeeProfiles', () => {
+    beforeEach(async () => {
+      await resetAllTables();
+      // Has a profile — must never appear in the missing list.
+      await seedEmployee('with-profile', { email: 'with@test.com', full_name: 'With Profile' });
+      // No profile, active, non-customer — the real provisioning gap.
+      await seedUser('lonely', { email: 'lonely@test.com', name: 'Lonely', role: 'employee' });
+      // Banned users are intentional state, not a gap.
+      await seedUser('banned-lonely', { email: 'banned@test.com', role: 'employee', banned: true });
+      // Customers live in the portal shell, not the scheduling surface.
+      await seedUser('customer-lonely', { email: 'cust@test.com', role: 'customer' });
+    });
+
+    it('returns only active, non-customer users without an employee row', async () => {
+      const { total, rows } = await listMissingEmployeeProfiles();
+      expect(total).toBe(1);
+      expect(rows.map((r) => r.id)).toEqual(['lonely']);
+      expect(rows[0].email).toBe('lonely@test.com');
+      expect(rows[0].role).toBe('employee');
+      expect(rows[0].createdAt).toBeInstanceOf(Date);
+    });
+
+    it('includeCustomer widens the set but still skips banned users', async () => {
+      const { total, rows } = await listMissingEmployeeProfiles({ includeCustomer: true });
+      expect(total).toBe(2);
+      expect(rows.map((r) => r.id).sort()).toEqual(['customer-lonely', 'lonely']);
+    });
+
+    it('getMissingEmployeeProfiles maps the list to count + email/name sample', async () => {
+      const res = await getMissingEmployeeProfiles({ sampleLimit: 5 });
+      expect(res.success).toBe(true);
+      expect(res.count).toBe(1);
+      expect(res.sample).toEqual([{ email: 'lonely@test.com', name: 'Lonely' }]);
+    });
+
+    it('listMissingEmployeeProfiles honours the limit without truncating the count', async () => {
+      const { total, rows } = await listMissingEmployeeProfiles({
+        includeCustomer: true,
+        limit: 1
+      });
+      expect(total).toBe(2);
+      expect(rows).toHaveLength(1);
+    });
   });
 });
