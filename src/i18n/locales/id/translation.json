@@ -170,6 +170,7 @@
     "created": "Karyawan berhasil dibuat",
     "updated": "Karyawan berhasil diperbarui",
     "createFailed": "Gagal membuat karyawan",
+    "createFailed.alreadyLinked": "Karyawan dengan email ini sudah terdaftar. Edit karyawan yang ada atau gunakan email lain.",
     "updateFailed": "Gagal memperbarui karyawan",
     "createEmployee": "Buat Karyawan",
     "updateEmployee": "Perbarui Karyawan",

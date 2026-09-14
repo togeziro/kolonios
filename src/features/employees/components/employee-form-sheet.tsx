@@ -17,6 +17,7 @@ import type { Employee } from '../api/types';
 import { mergeMutationCallbacks } from '@/lib/mutation-options';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { getErrorMessage } from '@/lib/errors';
 import { STATUS_OPTIONS, EMPLOYMENT_STATUS_OPTIONS } from './employee-tables/options';
 import {
   departmentsQueryOptions,
@@ -37,7 +38,17 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
         onOpenChange(false);
         form.reset();
       },
-      onError: () => toast.error(t('employee.createFailed'))
+      onError: (error) => {
+        const code = (error as { code?: unknown })?.code;
+        if (code === 'EMPLOYEE_ALREADY_LINKED') {
+          const keyed = 'employee.createFailed.alreadyLinked' as const;
+          const translated = t(keyed);
+          toast.error(translated === keyed ? t('employee.createFailed') : translated);
+          return;
+        }
+        const message = getErrorMessage(error) ?? t('employee.createFailed');
+        toast.error(message);
+      }
     })
   );
 

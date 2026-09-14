@@ -1,4 +1,7 @@
 import { randomInt } from 'node:crypto';
+import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { user } from '@/lib/db/auth-schema';
 
 const LOWERCASE = 'abcdefghjkmnpqrstuvwxyz';
 const UPPERCASE = 'ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -22,4 +25,17 @@ export function generateTemporaryPassword(): string {
     [chars[i], chars[j]] = [chars[j], chars[i]];
   }
   return chars.join('');
+}
+
+/**
+ * Flags an account for forced password rotation (one-time credential). The
+ * dashboard password gate confines the session to change-password until the
+ * owner sets a fresh password; the flag clears only via the verified rotation
+ * in password-gate.ts. Mirrors INITIAL_LOGIN.md's bootstrap flow.
+ *
+ * Shared by `src/lib/db/users.ts:createUser` and `src/lib/db/employees.ts:createEmployee`
+ * so the credential lifecycle stays identical for both provisioning paths.
+ */
+export async function setMustChangePassword(userId: string): Promise<void> {
+  await db.update(user).set({ mustChangePassword: true }).where(eq(user.id, userId));
 }

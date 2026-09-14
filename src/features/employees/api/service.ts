@@ -29,19 +29,40 @@ export const createEmployeeFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('employees', 'add');
     await checkRateLimit(`write:${session.user.id}`);
     const { createEmployee } = await import('@/lib/db/employees');
-    const created = await createEmployee({ ...data, created_by: session.user.id });
-    await withAudit(
-      session.user.id,
-      {
-        action: 'employee.create',
+    try {
+      const created = await createEmployee({ ...data, created_by: session.user.id });
+      await withAudit(
+        session.user.id,
+        {
+          action: 'employee.create',
+          entityType: 'employee',
+          entityId: created.employee.id,
+          before: null,
+          after: created
+        },
+        async () => undefined
+      );
+      return created;
+    } catch (error) {
+      // Mirror createUserFn: a throw here means no employee survives, but the
+      // ATTEMPT itself must stay visible — record a create_failed trail keyed
+      // by email, otherwise failed provisioning leaves zero trace (the exact
+      // gap hit in prod). DomainErrors like EMPLOYEE_ALREADY_LINKED propagate
+      // as-is; we only enrich the audit trail here, never wrap.
+      const { getErrorMessage } = await import('@/lib/errors');
+      const { insertAuditRow } = await import('@/lib/db/audit');
+      const { getRequestId } = await import('@/lib/request-id.server');
+      await insertAuditRow({
+        actorUserId: session.user.id,
+        action: 'employee.create_failed',
         entityType: 'employee',
-        entityId: created.employee.id,
+        entityId: data.email,
         before: null,
-        after: created
-      },
-      async () => undefined
-    );
-    return created;
+        after: { email: data.email, name: data.full_name, error: getErrorMessage(error) },
+        requestId: getRequestId() ?? null
+      });
+      throw error;
+    }
   });
 
 export const updateEmployeeFn = createServerFn({ method: 'POST' })

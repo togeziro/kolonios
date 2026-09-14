@@ -7,21 +7,48 @@ import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
-  EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR
+  EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR,
+  EMPLOYEE_ALREADY_LINKED
 } from './employees';
 import { resetAllTables, seedUser, seedDepartment, seedDesignation } from '@/test-utils/db';
 import { db } from '@/lib/db';
 import { employees } from './schema/employees';
+import { user } from './auth-schema';
 
 const MOCK_AUTH_USER_ID = 'mock-auth-user-id';
 
-vi.mock('@/lib/auth/auth.server', () => ({
-  auth: {
-    api: {
-      createUser: vi.fn().mockResolvedValue({ id: MOCK_AUTH_USER_ID }),
-      updateUser: vi.fn().mockResolvedValue(undefined)
+vi.mock('@/lib/auth/auth.server', async () => {
+  const { db: realDb } = await import('@/lib/db');
+  const { user: userTable } = await import('@/lib/db/auth-schema');
+  return {
+    auth: {
+      api: {
+        createUser: vi.fn().mockImplementation(async ({ body }) => {
+          // Mirror the real Better Auth createUser shape for tests: insert the
+          // `user` row so the email-lookup branch in createEmployee finds it.
+          // onConflictDoNothing keeps the existing-row pre-seeds (e.g. the
+          // legacy createEmployee test) from blowing up on a duplicate id.
+          await realDb
+            .insert(userTable)
+            .values({
+              id: MOCK_AUTH_USER_ID,
+              email: body.email,
+              name: body.name,
+              role: body.role,
+              emailVerified: false
+            })
+            .onConflictDoNothing();
+          return { id: MOCK_AUTH_USER_ID };
+        }),
+        updateUser: vi.fn().mockResolvedValue(undefined),
+        removeUser: vi.fn().mockResolvedValue({ success: true })
+      }
     }
-  }
+  };
+});
+
+vi.mock('@tanstack/react-start/server', () => ({
+  getRequestHeaders: () => new Headers()
 }));
 
 const TEST_EMP_USER_ID = 'test-emp-user-001';
@@ -262,6 +289,129 @@ describe('employees data access (integration)', () => {
       expect(res.employee).toBeDefined();
       expect(res.employee.full_name).toBe('New Employee');
       expect(res.employee.employee_code).toMatch(/^EMP-\d{4}$/);
+    });
+
+    it('links to an existing Better Auth user instead of recreating the account', async () => {
+      // Seed an auth user via the same Better Auth surface the dashboard uses
+      // for /dashboard/users — captures the id the createEmployee link branch
+      // must resolve to.
+      const { auth } = await import('@/lib/auth/auth.server');
+      const seeded = await (
+        auth.api as unknown as {
+          createUser: (opts: { body: Record<string, unknown> }) => Promise<{ id: string }>;
+        }
+      ).createUser({
+        body: {
+          email: 'link@example.com',
+          name: 'Link Test',
+          password: 'Password123!',
+          role: 'employee'
+        }
+      });
+      const capturedId = seeded.id;
+
+      const res = await createEmployee({
+        full_name: 'Link Test',
+        email: 'link@example.com',
+        birth_date: '1990-01-01',
+        department_id: deptId,
+        designation_id: desigId,
+        join_date: '2024-01-01',
+        created_by: TEST_EMP_USER_ID
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.employee.id).toBe(capturedId);
+
+      // Exactly one user row exists for that email — the link branch must NOT
+      // have called createUser a second time.
+      const rows = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, 'link@example.com'));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe(capturedId);
+    });
+
+    it('rejects a second createEmployee for an email whose employee row already exists', async () => {
+      const { auth } = await import('@/lib/auth/auth.server');
+      await (
+        auth.api as unknown as {
+          createUser: (opts: { body: Record<string, unknown> }) => Promise<{ id: string }>;
+        }
+      ).createUser({
+        body: {
+          email: 'linked@example.com',
+          name: 'Already Linked',
+          password: 'Password123!',
+          role: 'employee'
+        }
+      });
+
+      const first = await createEmployee({
+        full_name: 'Already Linked',
+        email: 'linked@example.com',
+        birth_date: '1990-01-01',
+        department_id: deptId,
+        designation_id: desigId,
+        join_date: '2024-01-01',
+        created_by: TEST_EMP_USER_ID
+      });
+      expect(first.success).toBe(true);
+
+      await expect(
+        createEmployee({
+          full_name: 'Already Linked',
+          email: 'linked@example.com',
+          birth_date: '1990-01-01',
+          department_id: deptId,
+          designation_id: desigId,
+          join_date: '2024-01-01',
+          created_by: TEST_EMP_USER_ID
+        })
+      ).rejects.toMatchObject({ code: EMPLOYEE_ALREADY_LINKED });
+    });
+
+    it('creates a fresh auth user, the employee row, and flags mustChangePassword', async () => {
+      // No prior user with this email — the createUser branch must run.
+      const { auth } = await import('@/lib/auth/auth.server');
+      const mocks = auth.api as unknown as {
+        createUser: ReturnType<typeof vi.fn>;
+      };
+      mocks.createUser.mockClear();
+
+      const res = await createEmployee({
+        full_name: 'Fresh Hire',
+        email: 'fresh@example.com',
+        birth_date: '1990-01-01',
+        department_id: deptId,
+        designation_id: desigId,
+        join_date: '2024-01-01',
+        created_by: TEST_EMP_USER_ID
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.employee.email).toBe('fresh@example.com');
+
+      // The fresh path must have called createUser exactly once.
+      expect(mocks.createUser).toHaveBeenCalledTimes(1);
+      expect(mocks.createUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            email: 'fresh@example.com',
+            role: 'employee'
+          })
+        })
+      );
+
+      // Exactly one user row exists for that email, and it is flagged for
+      // forced password rotation (mirrors users.ts:206).
+      const rows = await db
+        .select({ id: user.id, mustChangePassword: user.mustChangePassword })
+        .from(user)
+        .where(eq(user.email, 'fresh@example.com'));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].mustChangePassword).toBe(true);
     });
   });
 

@@ -2,8 +2,11 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from './index';
 import { DomainError, mapDbError } from '../errors';
 import { businessDateInTimeZone } from '@/lib/dates';
+import { logger } from '../logger';
+import { generateTemporaryPassword, setMustChangePassword } from '../auth/password';
 import { employees } from './schema/employees';
 import { departments, designations } from './schema/masterdata';
+import { user } from './auth-schema';
 import type {
   EmployeeFilters,
   EmployeesResponse,
@@ -11,7 +14,6 @@ import type {
   EmployeeMutationPayload
 } from '@/lib/domain/employees';
 import { buildPagination, buildOrderBy, buildSearchCondition, buildStatusCondition } from './utils';
-import { generateTemporaryPassword } from '../auth/password';
 
 const sortColumnMap = {
   employee_code: employees.employee_code,
@@ -243,21 +245,66 @@ type AuthUserRecord = { id: string; role?: string };
 type AuthApi = {
   createUser: (opts: { body: Record<string, unknown> }) => Promise<AuthUserRecord>;
   updateUser: (opts: { body: Record<string, unknown> }) => Promise<unknown>;
+  removeUser: (opts: {
+    headers: Headers;
+    body: { userId: string };
+  }) => Promise<{ success: boolean }>;
 };
 
 export async function createEmployee(data: EmployeeMutationPayload & { created_by: string }) {
+  // Track the auth-user id so a failure AFTER createUser can compensate
+  // (delete the orphan) instead of leaving a half-provisioned account. Only
+  // set in the "fresh user" branch — the "link existing user" branch must
+  // never rotate or delete a pre-existing account.
+  let createdUserId: string | null = null;
   try {
-    const { auth } = await import('@/lib/auth/auth.server');
-    const created = await (auth.api as unknown as AuthApi).createUser({
-      body: {
-        email: data.email,
-        name: data.full_name,
-        password: generateTemporaryPassword(),
-        role: 'employee'
-      }
-    });
+    const dataEmail = data.email.toLowerCase();
 
-    const userId = created.id as string;
+    // Look up an existing Better Auth user by email first — the employee form
+    // can be used to complete the profile of someone already provisioned via
+    // /dashboard/users (or any other path that writes to the `user` table).
+    // This avoids the `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL` race that
+    // otherwise surfaces as a generic toast with no audit trail.
+    const [existingUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, dataEmail))
+      .limit(1);
+
+    let userId: string;
+    if (existingUser) {
+      userId = existingUser.id;
+      // If the employee row already exists for this id, the account is
+      // already fully linked — surface a domain error so the UI can show
+      // a targeted message instead of a generic "something went wrong".
+      const [existingEmp] = await db
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.id, userId))
+        .limit(1);
+      if (existingEmp) {
+        throw new DomainError(
+          `Employee with email "${dataEmail}" is already registered`,
+          EMPLOYEE_ALREADY_LINKED
+        );
+      }
+      // Account already exists — do NOT rotate the credential. The
+      // mustChangePassword flag stays whatever it is on the existing row.
+    } else {
+      const { auth } = await import('@/lib/auth/auth.server');
+      const created = await (auth.api as unknown as AuthApi).createUser({
+        body: {
+          email: dataEmail,
+          name: data.full_name,
+          password: generateTemporaryPassword(),
+          role: 'employee'
+        }
+      });
+      userId = created.id as string;
+      createdUserId = userId;
+      await setMustChangePassword(userId);
+    }
+
     const employee_code = await generateEmployeeCode();
 
     const [inserted] = await db
@@ -267,7 +314,10 @@ export async function createEmployee(data: EmployeeMutationPayload & { created_b
         employee_code,
         full_name: data.full_name,
         nickname: data.nickname ?? '',
-        email: data.email,
+        // Lower-cased to match `user.email` (Better Auth forces lowercase on
+        // its side). Storing the mixed-case original here would let the two
+        // columns drift apart for queries that compare against lowercase.
+        email: dataEmail,
         phone: data.phone ?? '',
         birth_place: data.birth_place ?? '',
         birth_date: data.birth_date,
@@ -294,11 +344,32 @@ export async function createEmployee(data: EmployeeMutationPayload & { created_b
       })
     };
   } catch (e) {
+    // A failure after createUser (employee insert, etc.) leaves an orphan
+    // account: compensate with a best-effort delete so the next retry
+    // doesn't hit "user already exists". Never mask a compensation failure
+    // — the original error is what the caller must see. Mirrors the
+    // contract in `users.ts:246-260`.
+    if (createdUserId) {
+      try {
+        const { getRequestHeaders } = await import('@tanstack/react-start/server');
+        const { auth } = await import('@/lib/auth/auth.server');
+        await (auth.api as unknown as AuthApi).removeUser({
+          headers: getRequestHeaders(),
+          body: { userId: createdUserId }
+        });
+      } catch (compensateError) {
+        logger.error(
+          { userId: createdUserId, err: compensateError },
+          '[db:employees.createEmployee] orphan compensation failed'
+        );
+      }
+    }
     mapDbError(e, 'employees.createEmployee');
   }
 }
 
 export const EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR = 'EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR';
+export const EMPLOYEE_ALREADY_LINKED = 'EMPLOYEE_ALREADY_LINKED';
 
 export async function updateEmployee(
   id: string,

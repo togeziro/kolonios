@@ -8,7 +8,7 @@ import { roleGroups } from './schema/role-groups';
 import { mapRoleGroupToLegacyRole, setUserRoleGroup } from './role-groups';
 import { buildConditions, buildOrderBy, buildPagination, buildSearchCondition } from './utils';
 import type { UserFilters, UsersResponse, UserMutationPayload } from '@/lib/domain/users';
-import { generateTemporaryPassword } from '../auth/password';
+import { generateTemporaryPassword, setMustChangePassword } from '../auth/password';
 import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 
 type AdminUser = {
@@ -64,16 +64,6 @@ type AdminAuthApi = {
 };
 
 const adminApi = auth.api as unknown as AdminAuthApi;
-
-/**
- * Flags an account for forced password rotation (one-time credential).
- * The dashboard password gate confines the session to change-password until
- * the owner sets a fresh password; the flag clears only via the verified
- * rotation in password-gate.ts. Mirrors INITIAL_LOGIN.md's bootstrap flow.
- */
-async function setMustChangePassword(userId: string) {
-  await db.update(user).set({ mustChangePassword: true }).where(eq(user.id, userId));
-}
 
 function toUser(betterUser: AdminUser, roleGroup?: { id: string; name: string } | null) {
   return {

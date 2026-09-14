@@ -170,6 +170,7 @@
     "created": "Employee created successfully",
     "updated": "Employee updated successfully",
     "createFailed": "Failed to create employee",
+    "createFailed.alreadyLinked": "Employee with this email is already registered. Edit the existing employee or use a different email.",
     "updateFailed": "Failed to update employee",
     "createEmployee": "Create Employee",
     "updateEmployee": "Update Employee",
