@@ -331,6 +331,18 @@ export const getScheduleAssignmentsFn = createServerFn({ method: 'GET' })
     return listScheduleAssignments(filters);
   });
 
+/**
+ * Surface workforce accounts that have no `employees` row yet — they cannot
+ * receive a schedule assignment (the bulk-assign dropdown reads `employees`),
+ * so the admin needs to know they exist and direct them to
+ * `/dashboard/employees` to complete the profile.
+ */
+export const getMissingEmployeeProfilesFn = createServerFn({ method: 'GET' }).handler(async () => {
+  await requirePermission('attendance_admin', 'edit');
+  const { getMissingEmployeeProfiles } = await import('@/lib/db/users');
+  return getMissingEmployeeProfiles();
+});
+
 export const assignScheduleFn = createServerFn({ method: 'POST' })
   .validator(scheduleAssignmentSchema)
   .handler(async ({ data }) => {

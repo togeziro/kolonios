@@ -64,11 +64,11 @@ src/features/schedule/components/my-schedule-page.tsx:29
 src/features/schedule/components/my-schedule-page.tsx:31
 src/features/schedule/components/today-shift-card.tsx:82
 src/features/tickets/components/ticket-list-page.tsx:73
-src/features/users/components/users-table/columns.tsx:107
-src/features/users/components/users-table/columns.tsx:23
-src/features/users/components/users-table/columns.tsx:49
-src/features/users/components/users-table/columns.tsx:73
-src/features/users/components/users-table/columns.tsx:96
+src/features/users/components/users-table/columns.tsx:117
+src/features/users/components/users-table/columns.tsx:26
+src/features/users/components/users-table/columns.tsx:52
+src/features/users/components/users-table/columns.tsx:76
+src/features/users/components/users-table/columns.tsx:99
 src/features/users/components/users-table/index.tsx:131
 src/features/users/components/users-table/index.tsx:152
 src/routes/__root.tsx:136

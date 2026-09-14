@@ -9,6 +9,7 @@ const base: User = {
   role: 'admin',
   role_group_id: null,
   role_group_name: null,
+  has_employee_profile: false,
   status: 'Active',
   created_at: '2026-01-02T03:04:05.000Z',
   updated_at: '2026-01-02T03:04:05.000Z'

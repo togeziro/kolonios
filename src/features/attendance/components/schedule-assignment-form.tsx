@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Icons } from '@/components/icons';
+import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
-import { schedulesQueryOptions } from '../api/queries';
+import { schedulesQueryOptions, missingEmployeeProfilesQueryOptions } from '../api/queries';
 import { assignScheduleFn, bulkAssignScheduleFn, createDayOffFn } from '../api/service';
 
 export function ScheduleAssignmentForm() {
@@ -17,9 +20,11 @@ export function ScheduleAssignmentForm() {
   // Bulk assignment covers up to the configured employee list limit (100).
   const { data: employees } = useQuery(employeesQueryOptions({ limit: 100 }));
   const { data: schedules } = useQuery(schedulesQueryOptions());
+  const { data: missing } = useQuery(missingEmployeeProfilesQueryOptions());
 
   const employeeRows = employees?.employees ?? [];
   const scheduleRows = schedules?.shifts ?? [];
+  const missingCount = missing?.count ?? 0;
 
   const [userId, setUserId] = useState('');
   const [shiftId, setShiftId] = useState('');
@@ -96,6 +101,32 @@ export function ScheduleAssignmentForm() {
         <CardDescription>{t('attendanceAdmin.assignmentsDescription')}</CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
+        {missingCount > 0 && (
+          <Alert>
+            <Icons.alertCircle />
+            <AlertTitle>
+              {t('attendanceAdmin.missingProfilesAlertTitle', { count: missingCount })}
+            </AlertTitle>
+            <AlertDescription>
+              <p className='mb-2'>{t('attendanceAdmin.missingProfilesAlertBody')}</p>
+              {missing && missing.sample.length > 0 && (
+                <ul className='mb-2 list-disc space-y-1 pl-5 text-sm'>
+                  {missing.sample.map((u) => (
+                    <li key={u.email ?? u.name}>
+                      <div className='font-medium'>{u.name || u.email}</div>
+                      {u.name && u.email ? (
+                        <div className='text-muted-foreground text-xs'>{u.email}</div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Button asChild variant='outline' size='sm'>
+                <Link to='/dashboard/employees'>{t('attendanceAdmin.openEmployees')}</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className='grid gap-4 sm:grid-cols-3'>
           <div className='space-y-2'>
             <Label htmlFor='as-employee'>{t('attendanceAdmin.employee')}</Label>

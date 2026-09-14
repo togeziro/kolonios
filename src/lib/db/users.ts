@@ -1,10 +1,11 @@
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth.server';
 import { DomainError, mapDbError } from '../errors';
 import { db } from './index';
 import { user } from './auth-schema';
 import { userRoleGroups } from './schema/user-role-groups';
 import { roleGroups } from './schema/role-groups';
+import { employees } from './schema/employees';
 import { mapRoleGroupToLegacyRole, setUserRoleGroup } from './role-groups';
 import { buildConditions, buildOrderBy, buildPagination, buildSearchCondition } from './utils';
 import type { UserFilters, UsersResponse, UserMutationPayload } from '@/lib/domain/users';
@@ -65,7 +66,11 @@ type AdminAuthApi = {
 
 const adminApi = auth.api as unknown as AdminAuthApi;
 
-function toUser(betterUser: AdminUser, roleGroup?: { id: string; name: string } | null) {
+function toUser(
+  betterUser: AdminUser,
+  roleGroup?: { id: string; name: string } | null,
+  hasEmployeeProfile: boolean = false
+) {
   return {
     id: betterUser.id,
     name: betterUser.name || '',
@@ -74,6 +79,7 @@ function toUser(betterUser: AdminUser, roleGroup?: { id: string; name: string } 
     role: betterUser.role || 'user',
     role_group_id: roleGroup?.id ?? null,
     role_group_name: roleGroup?.name ?? null,
+    has_employee_profile: hasEmployeeProfile,
     created_at: betterUser.createdAt.toISOString(),
     updated_at: betterUser.updatedAt.toISOString()
   };
@@ -101,14 +107,24 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
     const orderBy = buildOrderBy(filters, userSortColumnMap) ?? asc(user.createdAt);
 
     const [rows, countRows] = await Promise.all([
-      db.select().from(user).where(where).orderBy(orderBy).limit(limit).offset(offset),
+      db
+        .select({
+          user,
+          hasEmployeeProfile: sql<boolean>`(${employees.id} IS NOT NULL)`.as('has_employee_profile')
+        })
+        .from(user)
+        .leftJoin(employees, eq(employees.id, user.id))
+        .where(where)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset),
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(user)
         .where(where)
     ]);
 
-    const userIds = rows.map((u) => u.id);
+    const userIds = rows.map((u) => u.user.id);
     const rgMap = new Map<string, { id: string; name: string }>();
     if (userIds.length > 0) {
       // Filter in the DB — never full-scan the join table then filter in memory.
@@ -133,7 +149,9 @@ export async function getUsers(filters: UserFilters): Promise<UsersResponse> {
       total_users: countRows[0]?.count ?? 0,
       offset,
       limit,
-      users: rows.map((u) => toUser(u as unknown as AdminUser, rgMap.get(u.id) ?? null))
+      users: rows.map((r) =>
+        toUser(r.user as unknown as AdminUser, rgMap.get(r.user.id) ?? null, r.hasEmployeeProfile)
+      )
     };
   } catch (e) {
     mapDbError(e, 'users.getUsers');
@@ -342,6 +360,50 @@ export async function replaceUserPassword(userId: string, newPassword: string) {
     return { success: true, message: 'User password replaced successfully' };
   } catch (e) {
     mapDbError(e, 'users.replaceUserPassword');
+  }
+}
+
+/**
+ * Lightweight summary for the attendance-admin surface: count + a few sample
+ * emails of users that have no `employees` row yet. Backs the
+ * "/dashboard/admin/attendance/assignments" banner that warns the admin when
+ * bulk-assigning shifts would silently skip those users (the assignments
+ * dropdown only reads `employees`).
+ *
+ * Excludes banned accounts — a banned user without an employee row is not a
+ * provisioning gap, it's intentional state. Customers and other non-employee
+ * `role` rows are excluded for the same reason: the bulk-assign surface is
+ * about workforce scheduling, not about every auth account.
+ */
+export async function getMissingEmployeeProfiles(opts: { sampleLimit?: number } = {}) {
+  const sampleLimit = opts.sampleLimit ?? 3;
+  try {
+    const where = and(
+      eq(user.banned, false),
+      isNull(employees.id),
+      // Only workforce accounts: skip customers (shell = portal) so the banner
+      // doesn't nag the admin about customer-side accounts.
+      sql`${user.role} <> 'customer'`
+    );
+    const [countRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(user)
+      .leftJoin(employees, eq(employees.id, user.id))
+      .where(where);
+    const sampleRows = await db
+      .select({ email: user.email, name: user.name })
+      .from(user)
+      .leftJoin(employees, eq(employees.id, user.id))
+      .where(where)
+      .orderBy(asc(user.createdAt))
+      .limit(sampleLimit);
+    return {
+      success: true,
+      count: countRow?.count ?? 0,
+      sample: sampleRows.map((r) => ({ email: r.email, name: r.name }))
+    };
+  } catch (e) {
+    mapDbError(e, 'users.getMissingEmployeeProfiles');
   }
 }
 

@@ -6,6 +6,15 @@ export type User = {
   role: string;
   role_group_id: string | null;
   role_group_name: string | null;
+  /**
+   * True when an `employees` row exists for this `user.id`. `users` and
+   * `employees` are separate tables by design (identity vs HR profile);
+   * users created via `/dashboard/users` have no employee row until an
+   * admin completes the profile in `/dashboard/employees`. Used by the
+   * users table to flag gaps and by the assignments page to surface a
+   * warning when bulk-assigning would silently skip those users.
+   */
+  has_employee_profile: boolean;
   created_at: string;
   updated_at: string;
 };

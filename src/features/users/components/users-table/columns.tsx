@@ -2,7 +2,10 @@ import { DataTableColumnHeader } from '@/components/ui/table/data-table-column-h
 import { InitialChip } from '@/components/ui/initial-chip';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Link } from '@tanstack/react-router';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import type { User } from '../../api/types';
 import { Column, ColumnDef } from '@tanstack/react-table';
 import type { AppFeatures } from '@/lib/table-features';
@@ -101,6 +104,13 @@ export const columns: ColumnDef<AppFeatures, User>[] = [
     }
   },
   {
+    id: 'has_employee_profile',
+    accessorKey: 'has_employee_profile',
+    enableSorting: false,
+    header: () => <EmployeeProfileHeader />,
+    cell: ({ row }) => <EmployeeProfileCell user={row.original} />
+  },
+  {
     id: 'created_at',
     accessorFn: (row) => new Date(row.created_at).getTime(),
     header: ({ column }: { column: Column<AppFeatures, User, unknown> }) => (
@@ -122,3 +132,28 @@ export const columns: ColumnDef<AppFeatures, User>[] = [
     cell: ({ row }) => <CellAction data={row.original} />
   }
 ];
+
+function EmployeeProfileHeader() {
+  const { t } = useTranslation();
+  return <span className='text-sm font-medium'>{t('user.employeeProfile')}</span>;
+}
+
+function EmployeeProfileCell({ user }: { user: User }) {
+  const { t } = useTranslation();
+  if (user.has_employee_profile) {
+    return (
+      <span className='inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'>
+        {t('user.employeeProfileYes')}
+      </span>
+    );
+  }
+  return (
+    <Link
+      to='/dashboard/employees'
+      className='inline-flex items-center gap-2'
+      title={t('user.employeeProfileMissingHint')}
+    >
+      <Badge variant='secondary'>{t('user.employeeProfileNo')}</Badge>
+    </Link>
+  );
+}

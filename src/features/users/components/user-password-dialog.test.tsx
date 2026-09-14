@@ -33,6 +33,7 @@ const demoUser: User = {
   role: 'admin',
   role_group_id: null,
   role_group_name: null,
+  has_employee_profile: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString()
 };
