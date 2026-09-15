@@ -185,6 +185,20 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
       distanceToOffice = gps.distanceToOffice;
     }
 
+    // Face verification: locations that do NOT require a selfie relax
+    // face-match — check-in passes without a verified face, but the photo
+    // is still stored as the audit artefact (selfie gate below still
+    // applies when the policy requires one). Locations with the normal
+    // policy reject unverified check-ins; the caller proves verification
+    // via a prior successful verifyFaceFn call.
+    if (!policy.selfieRequired && !payload.faceVerified) {
+      return {
+        success: false,
+        code: 'FACE_VERIFICATION_REQUIRED',
+        message: 'Face verification is required to check in at this location'
+      };
+    }
+
     // Selfie requirement
     if (policy.selfieRequired && !payload.photo) {
       return {

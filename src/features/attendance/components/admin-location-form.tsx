@@ -231,7 +231,12 @@ export function LocationForm({ initial }: { initial?: Partial<LocationFormState>
             />
           </div>
           <div className='flex items-center justify-between rounded-md border p-3'>
-            <Label>{t('attendanceAdmin.selfieRequired')}</Label>
+            <div>
+              <Label>{t('attendanceAdmin.selfieRequired')}</Label>
+              <p className='text-xs text-muted-foreground'>
+                {t('attendanceAdmin.selfieRequiredHint')}
+              </p>
+            </div>
             <Switch
               checked={form.selfieRequired}
               onCheckedChange={(v) => set('selfieRequired', v)}

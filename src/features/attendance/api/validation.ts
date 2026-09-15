@@ -11,7 +11,8 @@ export const attendanceCheckInSchema = z.object({
   capturedAt: z.number().int().positive().optional(),
   lateDuration: z.number().min(0).optional(),
   photo: z.string().optional(),
-  note: z.string().max(500).optional()
+  note: z.string().max(500).optional(),
+  faceVerified: z.boolean().optional()
 });
 
 export const attendanceCheckOutSchema = z.object({

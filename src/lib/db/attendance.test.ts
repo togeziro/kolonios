@@ -805,7 +805,7 @@ describe('check-in validation with schedules and policies', () => {
       selfie_required: false
     });
 
-    const res = await checkIn(TEST_USER_ID, { locationId: loc.id });
+    const res = await checkIn(TEST_USER_ID, { locationId: loc.id, faceVerified: true });
     expect(res.success).toBe(true);
     expect(res.attendance!.gps_validation_enabled).toBe(false);
     expect(res.attendance!.validation_state).toBe('disabled');
@@ -825,7 +825,8 @@ describe('check-in validation with schedules and policies', () => {
       latitude: -6.2,
       longitude: 106.85,
       accuracy: 10,
-      capturedAt: Date.now()
+      capturedAt: Date.now(),
+      faceVerified: true
     });
     expect(res.success).toBe(true);
     expect(res.attendance!.check_in_latitude).toBe(-6.2);
@@ -846,7 +847,7 @@ describe('check-in validation with schedules and policies', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     try {
       vi.setSystemTime(new Date('2026-09-15T08:14:52Z'));
-      const res = await checkIn(TEST_USER_ID, { locationId: loc.id });
+      const res = await checkIn(TEST_USER_ID, { locationId: loc.id, faceVerified: true });
       expect(res.success).toBe(true);
       expect(res.attendance!.check_in_time).toBe('15:14:52');
     } finally {
@@ -959,6 +960,58 @@ describe('check-in validation with schedules and policies', () => {
     });
     expect(res.success).toBe(true);
     expect(res.attendance!.check_in_photo).toBe('data:image/jpeg;base64,selfie');
+  });
+
+  it('rejects check-in without face verification at a normal location', async () => {
+    await seedActiveSchedule();
+    const loc = await seedLocation({ gps_validation_enabled: true, selfie_required: false });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: 40.7128,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now(),
+      photo: 'data:image/jpeg;base64,selfie'
+    });
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('FACE_VERIFICATION_REQUIRED');
+  });
+
+  it('accepts check-in with face verification at a normal location', async () => {
+    await seedActiveSchedule();
+    const loc = await seedLocation({ gps_validation_enabled: true, selfie_required: false });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: 40.7128,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now(),
+      photo: 'data:image/jpeg;base64,selfie',
+      faceVerified: true
+    });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.selfie_required).toBe(false);
+    expect(res.attendance!.validation_state).toBe('valid');
+  });
+
+  it('accepts check-in without face verification at a relaxed location and stores the photo', async () => {
+    await seedActiveSchedule();
+    const loc = await seedLocation({ gps_validation_enabled: true, selfie_required: true });
+
+    const res = await checkIn(TEST_USER_ID, {
+      locationId: loc.id,
+      latitude: 40.7128,
+      longitude: -74.006,
+      accuracy: 10,
+      capturedAt: Date.now(),
+      photo: 'data:image/jpeg;base64,selfie'
+    });
+    expect(res.success).toBe(true);
+    expect(res.attendance!.check_in_photo).toBe('data:image/jpeg;base64,selfie');
+    expect(res.attendance!.selfie_required).toBe(true);
+    expect(res.attendance!.validation_state).toBe('valid');
   });
 });
 

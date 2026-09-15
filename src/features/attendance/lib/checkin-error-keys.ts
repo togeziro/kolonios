@@ -7,6 +7,7 @@ export const CHECKIN_ERROR_I18N_KEYS: Record<string, string> = {
   OUTSIDE_RADIUS: 'attendanceAdmin.errOutsideRadius',
   NO_SCHEDULE: 'attendanceAdmin.errNoSchedule',
   SELFIE_REQUIRED: 'attendanceAdmin.errSelfieRequired',
+  FACE_VERIFICATION_REQUIRED: 'attendanceAdmin.errFaceVerificationRequired',
   NO_CHECK_IN: 'attendanceAdmin.errNoCheckIn',
   ALREADY_CHECKED_OUT: 'attendanceAdmin.errAlreadyCheckedOut'
 };

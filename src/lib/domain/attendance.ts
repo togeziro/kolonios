@@ -40,6 +40,9 @@ export type AttendanceCheckInPayload = {
   lateDuration?: number;
   photo?: string;
   note?: string;
+  // Set by the caller after a successful server-side verifyFaceFn call.
+  // Locations that relax face verification allow check-in without it.
+  faceVerified?: boolean;
 };
 
 export type AttendanceCheckOutPayload = {
