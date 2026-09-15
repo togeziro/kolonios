@@ -108,16 +108,6 @@ export function ShiftFormSheet({ shiftId, open, onOpenChange }: ShiftFormSheetPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailQuery.dataUpdatedAt, detailQuery.data?.shift?.id, form, isEdit]);
 
-  const setRule = (index: number, patch: Partial<ShiftWeekdayRuleFormValues>) => {
-    const current = form.getFieldValue('weekdayRules');
-    form.setFieldValue(
-      'weekdayRules',
-      current.map((r: ShiftWeekdayRuleFormValues, i: number) =>
-        i === index ? { ...r, ...patch } : r
-      )
-    );
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className='flex w-full flex-col sm:max-w-md'>
@@ -255,13 +245,17 @@ export function ShiftFormSheet({ shiftId, open, onOpenChange }: ShiftFormSheetPr
                     </div>
                   </div>
 
-                  <div className='space-y-2'>
-                    <Label>{t('attendanceAdmin.shiftColor')}</Label>
-                    <ColorPalette
-                      value={form.getFieldValue('color') ?? null}
-                      onChange={(hex) => form.setFieldValue('color', hex)}
-                    />
-                  </div>
+                  <form.AppField name='color'>
+                    {(field) => (
+                      <div className='space-y-2'>
+                        <Label>{t('attendanceAdmin.shiftColor')}</Label>
+                        <ColorPalette
+                          value={field.state.value ?? null}
+                          onChange={(hex) => field.handleChange(hex)}
+                        />
+                      </div>
+                    )}
+                  </form.AppField>
 
                   <div className='grid grid-cols-2 gap-3'>
                     <form.AppField name='lateToleranceMinutes'>
@@ -362,38 +356,57 @@ export function ShiftFormSheet({ shiftId, open, onOpenChange }: ShiftFormSheetPr
                     <p className='text-muted-foreground text-xs'>
                       {t('attendanceAdmin.shiftWeekdayRulesDescription')}
                     </p>
-                    {form
-                      .getFieldValue('weekdayRules')
-                      .map((rule: ShiftWeekdayRuleFormValues, i: number) => (
-                        <div
-                          key={rule.dayOfWeek}
-                          className='flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm'
-                        >
-                          <label className='flex w-20 items-center gap-2'>
-                            <Checkbox
-                              checked={rule.isWorkingDay}
-                              onCheckedChange={(checked) => setRule(i, { isWorkingDay: !!checked })}
-                            />
-                            <span className='text-sm'>{t(DAY_KEYS[rule.dayOfWeek])}</span>
-                          </label>
-                          <Input
-                            type='time'
-                            className='h-8 w-28'
-                            value={rule.startTime}
-                            onChange={(e) => setRule(i, { startTime: e.target.value })}
-                            disabled={!rule.isWorkingDay}
-                            aria-label={`${t(DAY_KEYS[rule.dayOfWeek])} ${t('attendanceAdmin.shiftDayStart')}`}
-                          />
-                          <Input
-                            type='time'
-                            className='h-8 w-28'
-                            value={rule.endTime}
-                            onChange={(e) => setRule(i, { endTime: e.target.value })}
-                            disabled={!rule.isWorkingDay}
-                            aria-label={`${t(DAY_KEYS[rule.dayOfWeek])} ${t('attendanceAdmin.shiftDayEnd')}`}
-                          />
-                        </div>
-                      ))}
+                    <form.AppField name='weekdayRules' mode='array'>
+                      {(field) => {
+                        const rules = field.state.value;
+                        const setRule = (
+                          index: number,
+                          patch: Partial<ShiftWeekdayRuleFormValues>
+                        ) => {
+                          field.handleChange(
+                            rules.map((r: ShiftWeekdayRuleFormValues, i: number) =>
+                              i === index ? { ...r, ...patch } : r
+                            )
+                          );
+                        };
+                        return (
+                          <>
+                            {rules.map((rule: ShiftWeekdayRuleFormValues, i: number) => (
+                              <div
+                                key={rule.dayOfWeek}
+                                className='flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm'
+                              >
+                                <label className='flex w-20 items-center gap-2'>
+                                  <Checkbox
+                                    checked={rule.isWorkingDay}
+                                    onCheckedChange={(checked) =>
+                                      setRule(i, { isWorkingDay: !!checked })
+                                    }
+                                  />
+                                  <span className='text-sm'>{t(DAY_KEYS[rule.dayOfWeek])}</span>
+                                </label>
+                                <Input
+                                  type='time'
+                                  className='h-8 w-28'
+                                  value={rule.startTime}
+                                  onChange={(e) => setRule(i, { startTime: e.target.value })}
+                                  disabled={!rule.isWorkingDay}
+                                  aria-label={`${t(DAY_KEYS[rule.dayOfWeek])} ${t('attendanceAdmin.shiftDayStart')}`}
+                                />
+                                <Input
+                                  type='time'
+                                  className='h-8 w-28'
+                                  value={rule.endTime}
+                                  onChange={(e) => setRule(i, { endTime: e.target.value })}
+                                  disabled={!rule.isWorkingDay}
+                                  aria-label={`${t(DAY_KEYS[rule.dayOfWeek])} ${t('attendanceAdmin.shiftDayEnd')}`}
+                                />
+                              </div>
+                            ))}
+                          </>
+                        );
+                      }}
+                    </form.AppField>
                   </CollapsibleContent>
                 </Collapsible>
               </form.Form>

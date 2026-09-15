@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -151,5 +151,31 @@ describe('ShiftFormSheet — weekday rules', () => {
       Fri: true,
       Sat: false
     });
+  });
+
+  it('toggles a weekday checkbox and disables its time inputs', () => {
+    useQueryMock.mockReturnValue({ data: undefined, isLoading: false, isPending: false });
+    renderSheet();
+
+    const friCheckbox = screen.getByRole('checkbox', { name: 'Fri' });
+    expect(friCheckbox.getAttribute('aria-checked')).toBe('true');
+
+    fireEvent.click(friCheckbox);
+
+    expect(friCheckbox.getAttribute('aria-checked')).toBe('false');
+    expect((screen.getByLabelText(/Fri Day Start/i) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText(/Fri Day End/i) as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('selects a color preset', () => {
+    useQueryMock.mockReturnValue({ data: undefined, isLoading: false, isPending: false });
+    renderSheet();
+
+    const sky = screen.getByRole('button', { name: 'Sky' });
+    expect(sky.className).toContain('border-transparent');
+
+    fireEvent.click(sky);
+
+    expect(sky.className).toContain('border-foreground');
   });
 });
