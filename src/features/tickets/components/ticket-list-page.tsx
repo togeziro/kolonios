@@ -25,7 +25,7 @@ const statusOptions: { value: TicketStatus | undefined; labelKey: string; fallba
   { value: undefined, fallback: 'All', labelKey: 'common.all' },
   { value: 'open', fallback: 'Open', labelKey: 'ticket.open' },
   { value: 'assigned', fallback: 'Assigned', labelKey: 'enRoute.title' },
-  { value: 'in_progress', fallback: 'In Progress', labelKey: 'ticket.inProgressCount' },
+  { value: 'in_progress', fallback: 'In Progress', labelKey: 'ticket.inProgress' },
   { value: 'submitted', fallback: 'Submitted', labelKey: 'ticket.submitted' },
   { value: 'completed', fallback: 'Completed', labelKey: 'ticket.completed' }
 ];
