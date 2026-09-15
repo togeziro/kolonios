@@ -1630,7 +1630,7 @@ describe('shift master CRUD (integration)', () => {
     const workingDays = rulesRes.rules
       .filter((r) => r.is_working_day)
       .map((r) => r.day_of_week)
-      .sort();
+      .toSorted();
     expect(workingDays).toEqual([1, 2, 3, 4, 5]);
   });
 
@@ -1649,7 +1649,7 @@ describe('shift master CRUD (integration)', () => {
     const offDays = rulesRes.rules
       .filter((r) => !r.is_working_day)
       .map((r) => r.day_of_week)
-      .sort();
+      .toSorted();
     expect(offDays).toEqual([0, 6]);
   });
 
@@ -1722,7 +1722,7 @@ describe('shift master CRUD (integration)', () => {
     const res = await listShifts();
     expect(res.success).toBe(true);
     if (!res.success) throw new Error('list failed');
-    expect(res.shifts.map((s) => s.name).sort()).toEqual(['Inactive', 'S1', 'S2']);
+    expect(res.shifts.map((s) => s.name).toSorted()).toEqual(['Inactive', 'S1', 'S2']);
     expect(res.shifts.every((s) => s.used === false)).toBe(true);
   });
 
