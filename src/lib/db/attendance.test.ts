@@ -835,18 +835,22 @@ describe('check-in validation with schedules and policies', () => {
   });
 
   it('stores the WIB wall-clock time, not the server timezone time', async () => {
+    // Freeze the clock BEFORE seeding: seedActiveSchedule derives the
+    // working weekday from the real clock, while checkIn uses the frozen
+    // clock. After midnight WIB the two dates fall on different weekdays
+    // and the lookup misses (flake). Freezing first keeps them in sync.
+    // Fake Date only: the pg driver needs real timers for its sockets.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-15T08:14:52Z'));
     await seedActiveSchedule();
     const loc = await seedLocation({
       gps_validation_enabled: false,
       selfie_required: false
     });
 
-    // Freeze the clock at 2026-09-15T08:14:52Z == 15:14:52 WIB. On a UTC
-    // server the old `toLocaleTimeString` code stored '08:14:52'.
-    // Fake Date only: the pg driver needs real timers for its sockets.
-    vi.useFakeTimers({ toFake: ['Date'] });
+    // 2026-09-15T08:14:52Z == 15:14:52 WIB. On a UTC server the old
+    // `toLocaleTimeString` code stored '08:14:52'.
     try {
-      vi.setSystemTime(new Date('2026-09-15T08:14:52Z'));
       const res = await checkIn(TEST_USER_ID, { locationId: loc.id, faceVerified: true });
       expect(res.success).toBe(true);
       expect(res.attendance!.check_in_time).toBe('15:14:52');

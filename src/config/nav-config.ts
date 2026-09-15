@@ -72,7 +72,7 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Attendance',
-    url: '/dashboard/attendance',
+    url: '/dashboard/attendance/check-in',
     icon: 'clock',
     isActive: false,
     shortcut: ['a', 'a'],

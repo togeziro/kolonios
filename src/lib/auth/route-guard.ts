@@ -195,7 +195,6 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
     module: 'attendance',
     action: 'view'
   },
-  { pattern: /^\/dashboard\/attendance$/, module: 'attendance', action: 'view' },
 
   // Personal pages
   { pattern: /^\/dashboard\/leave$/, module: 'leave', action: 'view' },

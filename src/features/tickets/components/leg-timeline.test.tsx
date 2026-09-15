@@ -6,7 +6,7 @@ import type { TicketLeg } from '../api/types';
 
 // Note: no shared i18n test harness exists (src/test-utils/ has only db.ts) —
 // assert raw strings; component tests here follow the pure-helper pattern
-// (see attendance-check-card.test.tsx).
+// (see check-in-scan.test.tsx).
 
 function leg(status: TicketLeg['status']): TicketLeg {
   return {

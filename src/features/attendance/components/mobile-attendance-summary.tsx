@@ -78,7 +78,7 @@ export default function MobileAttendanceSummary() {
             </div>
           </div>
           <Link
-            to='/dashboard/attendance'
+            to='/dashboard/attendance/check-in'
             className='flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-bold tracking-tight text-primary-foreground transition-transform active:scale-95 dark:bg-white dark:text-black'
           >
             {isCheckedOut
