@@ -94,9 +94,14 @@ export function FaceSettings({ onSave }: FaceSettingsProps) {
               <RadioGroupItem value='realtime' id='mode-realtime' />
               <Label htmlFor='mode-realtime'>{t('faceSettings.realtime')}</Label>
             </div>
-            <div className='flex items-center gap-2'>
-              <RadioGroupItem value='background' id='mode-background' />
-              <Label htmlFor='mode-background'>{t('faceSettings.background')}</Label>
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <RadioGroupItem value='background' id='mode-background' />
+                <Label htmlFor='mode-background'>{t('faceSettings.background')}</Label>
+              </div>
+              <p className='pl-6 text-xs text-muted-foreground'>
+                {t('faceSettings.backgroundNote')}
+              </p>
             </div>
           </RadioGroup>
         </div>

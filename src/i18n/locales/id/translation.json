@@ -506,7 +506,15 @@
     "photoUploadFailed": "Gagal mengunggah foto",
     "failed": "Check-in gagal",
     "faceNotEnrolledError": "Anda belum mendaftarkan wajah. Silakan daftar di Pengaturan Wajah terlebih dahulu.",
-    "faceVerificationFailed": "Verifikasi wajah gagal. Silakan coba lagi."
+    "faceVerificationFailed": "Verifikasi wajah gagal. Silakan coba lagi.",
+    "selectLocationTitle": "Lokasi kerja",
+    "selectShiftTitle": "Shift",
+    "selectLocationFirst": "Pilih lokasi kerja dulu",
+    "noLocationsConfigured": "Belum ada lokasi kerja. Hubungi admin.",
+    "noShiftsConfigured": "Belum ada shift. Hubungi admin.",
+    "enrollToCheckIn": "Daftarkan wajah untuk check-in",
+    "enrollmentGateHint": "Check-in wajah butuh satu kali pendaftaran dulu. Sekitar 2–3 menit.",
+    "goToEnrollment": "Ke pendaftaran wajah"
   },
   "faceCapture": {
     "startVerification": "Mulai verifikasi wajah",
@@ -530,6 +538,7 @@
     "validationMode": "Validasi Wajah Absensi",
     "realtime": "Realtime sebelum absensi disimpan",
     "background": "Sistem latar belakang setelah absensi disimpan",
+    "backgroundNote": "Belum berlaku — check-in selalu diverifikasi secara realtime.",
     "accuracyLevel": "Akurasi Validasi Wajah Absensi"
   },
   "faceEnrollment": {

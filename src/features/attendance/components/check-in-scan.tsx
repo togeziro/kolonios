@@ -1,25 +1,38 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Link } from '@tanstack/react-router';
 import { Icons } from '@/components/icons';
 import { LocationMap } from './location-map';
 import { FaceCapture } from './face-capture';
 import { useTranslation } from 'react-i18next';
 
+export interface CheckInLocationOption {
+  id: number;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  radius: number | null;
+}
+
+export interface CheckInShiftOption {
+  id: number;
+  name: string;
+  start_time: string;
+  end_time: string;
+}
+
 interface CheckInScanProps {
-  location: {
-    id: number;
-    name: string;
-    latitude: number | null;
-    longitude: number | null;
-    radius: number | null;
-  } | null;
-  shift: {
-    id: number;
-    name: string;
-    start_time: string;
-    end_time: string;
-  } | null;
+  locations: CheckInLocationOption[];
+  shifts: CheckInShiftOption[];
+  selectedLocationId: number | null;
+  selectedShiftId: number | null;
+  onSelectLocation: (id: number) => void;
+  onSelectShift: (id: number) => void;
+  location: CheckInLocationOption | null;
+  shift: CheckInShiftOption | null;
+  noLocationSelected: boolean;
+  faceError: string | null;
   isCheckedIn: boolean;
   elapsedTime?: string;
   accuracyLevel: 'loose' | 'medium' | 'tight';
@@ -36,8 +49,16 @@ interface CheckInScanProps {
 }
 
 export function CheckInScan({
+  locations,
+  shifts,
+  selectedLocationId,
+  selectedShiftId,
+  onSelectLocation,
+  onSelectShift,
   location,
-  shift,
+  shift: _shift,
+  noLocationSelected,
+  faceError,
   isCheckedIn,
   elapsedTime,
   accuracyLevel,
@@ -57,6 +78,8 @@ export function CheckInScan({
   ) => {
     onCheckIn(descriptor, photo, antiSpoofScore, livenessScore);
   };
+
+  const showEnrollmentGate = !faceEnrollmentPending && !faceEnrolled;
 
   return (
     <div className='space-y-4 p-4'>
@@ -83,6 +106,55 @@ export function CheckInScan({
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardContent className='space-y-3 p-4'>
+          <p className='text-sm font-medium'>{t('checkIn.selectLocationTitle')}</p>
+          {locations.length > 0 ? (
+            <div className='flex flex-wrap gap-2'>
+              {locations.map((loc) => (
+                <Button
+                  key={loc.id}
+                  variant={selectedLocationId === loc.id ? 'default' : 'outline'}
+                  size='sm'
+                  onClick={() => onSelectLocation(loc.id)}
+                >
+                  <Icons.globe className='mr-1 h-4 w-4' />
+                  {loc.name}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className='text-sm text-muted-foreground'>{t('checkIn.noLocationsConfigured')}</p>
+          )}
+          {noLocationSelected && (
+            <p className='text-sm text-destructive'>{t('checkIn.selectLocationFirst')}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className='space-y-3 p-4'>
+          <p className='text-sm font-medium'>{t('checkIn.selectShiftTitle')}</p>
+          {shifts.length > 0 ? (
+            <div className='flex flex-wrap gap-2'>
+              {shifts.map((s) => (
+                <Button
+                  key={s.id}
+                  variant={selectedShiftId === s.id ? 'default' : 'outline'}
+                  size='sm'
+                  onClick={() => onSelectShift(s.id)}
+                >
+                  <Icons.clock className='mr-1 h-4 w-4' />
+                  {`${s.name} (${s.start_time} – ${s.end_time})`}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className='text-sm text-muted-foreground'>{t('checkIn.noShiftsConfigured')}</p>
+          )}
+        </CardContent>
+      </Card>
 
       {location && (
         <Card>
@@ -134,8 +206,18 @@ export function CheckInScan({
             <Badge variant='outline'>{accuracyLevel}</Badge>
           </div>
         </CardHeader>
-        <CardContent>
-          <FaceCapture onCapture={handleCapture} onRetake={onRetake} />
+        <CardContent className='space-y-3'>
+          {faceError && <p className='text-center text-sm text-destructive'>{faceError}</p>}
+          {showEnrollmentGate ? (
+            <div className='space-y-3 text-center'>
+              <p className='text-sm text-muted-foreground'>{t('checkIn.enrollmentGateHint')}</p>
+              <Button asChild className='w-full'>
+                <Link to='/dashboard/attendance/face-settings'>{t('checkIn.goToEnrollment')}</Link>
+              </Button>
+            </div>
+          ) : (
+            <FaceCapture onCapture={handleCapture} onRetake={onRetake} />
+          )}
         </CardContent>
       </Card>
     </div>

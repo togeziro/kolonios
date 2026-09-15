@@ -506,7 +506,15 @@
     "photoUploadFailed": "Photo upload failed",
     "failed": "Check-in failed",
     "faceNotEnrolledError": "You have not enrolled your face yet. Please enroll in Face Settings first.",
-    "faceVerificationFailed": "Face verification failed. Please try again."
+    "faceVerificationFailed": "Face verification failed. Please try again.",
+    "selectLocationTitle": "Work location",
+    "selectShiftTitle": "Shift",
+    "selectLocationFirst": "Select your work location first",
+    "noLocationsConfigured": "No work locations configured. Contact your admin.",
+    "noShiftsConfigured": "No shifts configured. Contact your admin.",
+    "enrollToCheckIn": "Enroll your face to check in",
+    "enrollmentGateHint": "Face check-in needs one enrollment first. It takes about 2–3 minutes.",
+    "goToEnrollment": "Go to face enrollment"
   },
   "faceCapture": {
     "startVerification": "Start face verification",
@@ -530,6 +538,7 @@
     "validationMode": "Attendance Face Validation",
     "realtime": "Realtime before attendance is saved",
     "background": "System background after attendance is saved",
+    "backgroundNote": "Not yet in effect — check-ins always verify in realtime.",
     "accuracyLevel": "Attendance Face Validation Accuracy"
   },
   "faceEnrollment": {

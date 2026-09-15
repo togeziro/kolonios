@@ -10,6 +10,7 @@ import { CheckInScan } from '@/features/attendance/components/check-in-scan';
 import { CheckInSuccess } from '@/features/attendance/components/check-in-success';
 import { PHOTO_UPLOAD_FAILED, uploadSelfie } from '@/lib/storage/upload-client';
 import { getCurrentLocation } from '@/features/attendance/utils/geolocation';
+import { businessTimeInTimeZone } from '@/lib/dates';
 import {
   myFaceEnrollmentQueryOptions,
   faceSettingsQueryOptions
@@ -21,6 +22,9 @@ import { CHECKIN_ERROR_I18N_KEYS } from '@/features/attendance/lib/checkin-error
 
 // Sentinel so onError knows a specific toast was already shown.
 const GPS_UNAVAILABLE = 'GPS_UNAVAILABLE';
+// Sentinel for the select-location guard: no toast shown (inline hint in the
+// picker card), so onError must stay silent too.
+const LOCATION_NOT_SELECTED = 'LOCATION_NOT_SELECTED';
 
 export function CheckInPage() {
   const { t } = useTranslation();
@@ -28,7 +32,10 @@ export function CheckInPage() {
   const [step, setStep] = useState<'scan' | 'success'>('scan');
   const [checkInTime, setCheckInTime] = useState('');
   const [checkInLocation, setCheckInLocation] = useState('');
-  const [, setFaceError] = useState<string | null>(null);
+  const [faceError, setFaceError] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  const [noLocationSelected, setNoLocationSelected] = useState(false);
 
   const { data: todayData } = useQuery(myAttendanceQueryOptions());
   const { data: locationsData, isPending: locationsPending } = useQuery(locationsQueryOptions());
@@ -43,12 +50,21 @@ export function CheckInPage() {
   const attendance = todayData?.attendance;
   const isCheckedIn = attendance && attendance.attendance?.check_in_time;
   const isCheckedOut = attendance && attendance.attendance?.check_out_time;
+  const dataReady = !locationsPending && !shiftsPending;
+  const locations = dataReady ? (locationsData?.locations ?? []) : [];
+  const shifts = dataReady ? (shiftsData?.shifts ?? []) : [];
   // Query data is client-only: rendering location/shift cards from it during
   // hydration would mismatch the server HTML (SSR renders without the data).
   // Defer those cards until the queries resolve after mount.
-  const location =
-    !locationsPending && !shiftsPending ? (locationsData?.locations?.[0] ?? null) : null;
-  const shift = !locationsPending && !shiftsPending ? (shiftsData?.shifts?.[0] ?? null) : null;
+  // Single-site convenience: with exactly one work location there is nothing
+  // to choose, so preselect it — otherwise check-in submits without a
+  // locationId.
+  const effectiveLocationId =
+    selectedLocationId ?? (locations.length === 1 ? locations[0].id : null);
+  const location = locations.find((l) => l.id === effectiveLocationId) ?? null;
+  const shift =
+    shifts.find((s) => s.id === selectedShiftId) ??
+    (!dataReady ? null : (shiftsData?.shifts?.[0] ?? null));
 
   const accuracyLevel = faceSettings?.accuracyLevel ?? 'medium';
 
@@ -64,6 +80,14 @@ export function CheckInPage() {
       antiSpoofScore: number | null;
       livenessScore: number | null;
     }) => {
+      // No hardcoded fallback: without an explicit choice (or a single-site
+      // preselect) the geofence is undefined, so stop with an inline hint
+      // instead of submitting a location-less check-in.
+      if (effectiveLocationId == null) {
+        setNoLocationSelected(true);
+        throw new Error(LOCATION_NOT_SELECTED);
+      }
+      setNoLocationSelected(false);
       // Server-side face verification (matching + anti-spoof/liveness gate).
       // The client never decides "matched" — only the server does.
       const verify = await verifyFaceFn({
@@ -109,7 +133,7 @@ export function CheckInPage() {
 
       return checkInFn({
         data: {
-          locationId: location?.id,
+          locationId: effectiveLocationId,
           shiftId: shift?.id,
           latitude: deviceLocation.latitude,
           longitude: deviceLocation.longitude,
@@ -122,7 +146,10 @@ export function CheckInPage() {
     onSuccess: (res) => {
       if (res?.success) {
         queryClient.invalidateQueries({ queryKey: ['attendance'] });
-        setCheckInTime(new Date().toLocaleTimeString());
+        // WIB wall-clock for the success badge — toLocaleTimeString without
+        // an explicit timeZone stores the server/runtime TZ (UTC in prod),
+        // which reads 7 hours early next to the WIB business date.
+        setCheckInTime(businessTimeInTimeZone(new Date()));
         setCheckInLocation(location?.name ?? '');
         setStep('success');
       } else {
@@ -132,6 +159,10 @@ export function CheckInPage() {
     },
     onError: (err) => {
       const message = err instanceof Error ? err.message : '';
+      if (message === LOCATION_NOT_SELECTED) {
+        // Inline hint already shown in the picker card — stay silent.
+        return;
+      }
       if (message === 'FACE_NOT_ENROLLED') {
         setFaceError(t('checkIn.faceNotEnrolledError'));
       } else if (message === 'FACE_VERIFICATION_FAILED') {
@@ -170,8 +201,19 @@ export function CheckInPage() {
 
   return (
     <CheckInScan
+      locations={locations}
+      shifts={shifts}
+      selectedLocationId={effectiveLocationId}
+      selectedShiftId={selectedShiftId ?? shift?.id ?? null}
+      onSelectLocation={(id) => {
+        setSelectedLocationId(id);
+        setNoLocationSelected(false);
+      }}
+      onSelectShift={setSelectedShiftId}
       location={location}
       shift={shift}
+      noLocationSelected={noLocationSelected}
+      faceError={faceError}
       isCheckedIn={!!isCheckedIn && !isCheckedOut}
       accuracyLevel={accuracyLevel}
       faceEnrolled={faceEnrollment?.enrolled ?? false}
