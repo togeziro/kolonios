@@ -425,13 +425,9 @@ export function CalculatePage() {
                         <TableHead className='min-w-[160px]'>
                           {t('payroll.baseSalary', { defaultValue: 'Base Salary' })}
                         </TableHead>
-                        <TableHead className='min-w-[180px]'>
-                          {t('payroll.bankAccount', { defaultValue: 'Rekening Bank' })}
-                        </TableHead>
+                        <TableHead className='min-w-[180px]'>{t('payroll.bankAccount')}</TableHead>
                         <TableHead className='whitespace-nowrap'>
-                          {t('payroll.totalWorkOvertime', {
-                            defaultValue: 'Total Work & Overtime'
-                          })}
+                          {t('payroll.totalWorkOvertime')}
                         </TableHead>
                         <TableHead className='text-right whitespace-nowrap'>
                           {t('payroll.thp')}

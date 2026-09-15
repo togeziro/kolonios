@@ -1054,6 +1054,8 @@
     "addBpjsEnrollment": "Add BPJS enrollment",
     "percentageBase": "Percentage base",
     "baseSalary": "Base salary",
+    "bankAccount": "Bank Account",
+    "totalWorkOvertime": "Total Work & Overtime",
     "grossSalary": "Gross salary",
     "attendanceMetric": "Attendance metric",
     "lateCount": "Late count",
