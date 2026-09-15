@@ -35,11 +35,34 @@ vi.mock('maplibre-gl', () => ({
   NavigationControl: MockNavigationControl
 }));
 
-const { uploadSelfieMock, checkInFnMock, checkOutFnMock, toastMock } = vi.hoisted(() => ({
+type MockAttendance = {
+  attendance: {
+    attendance: {
+      id: number;
+      check_in_time: string | null;
+      check_out_time: string | null;
+      attendance_status: string;
+      lock_location: number | null;
+    };
+    shift: null;
+    location: null;
+  } | null;
+};
+
+const {
+  uploadSelfieMock,
+  checkInFnMock,
+  checkOutFnMock,
+  toastMock,
+  getCurrentLocationMock,
+  attendanceState
+} = vi.hoisted(() => ({
   uploadSelfieMock: vi.fn(),
   checkInFnMock: vi.fn(),
   checkOutFnMock: vi.fn(),
-  toastMock: { error: vi.fn() }
+  toastMock: { error: vi.fn() },
+  getCurrentLocationMock: vi.fn(),
+  attendanceState: { value: null as MockAttendance['attendance'] }
 }));
 
 vi.mock('@/lib/storage/upload-client', () => ({
@@ -59,7 +82,7 @@ vi.mock('../api/service', () => ({
 vi.mock('../api/queries', () => ({
   myAttendanceQueryOptions: () => ({
     queryKey: ['attendance', 'today'],
-    queryFn: async () => ({ attendance: null })
+    queryFn: async () => ({ attendance: attendanceState.value })
   }),
   locationsQueryOptions: () => ({
     queryKey: ['attendance', 'locations'],
@@ -69,6 +92,10 @@ vi.mock('../api/queries', () => ({
     queryKey: ['attendance', 'shifts'],
     queryFn: async () => ({ shifts: [] })
   })
+}));
+
+vi.mock('../utils/geolocation', () => ({
+  getCurrentLocation: getCurrentLocationMock
 }));
 
 vi.mock('./location-map', () => ({
@@ -86,6 +113,13 @@ vi.mock('./selfie-capture', () => ({
   )
 }));
 
+const GPS_FIX = {
+  latitude: -6.29785,
+  longitude: 107.01686,
+  accuracy: 17.9,
+  capturedAt: Date.now()
+};
+
 function renderCard() {
   const queryClient = new QueryClient();
   render(
@@ -97,11 +131,36 @@ function renderCard() {
   );
 }
 
+function setCheckedIn() {
+  attendanceState.value = {
+    attendance: {
+      id: 1,
+      check_in_time: '07:43:56',
+      check_out_time: null,
+      attendance_status: 'present',
+      lock_location: 2
+    },
+    shift: null,
+    location: null
+  };
+}
+
+async function acquireLocation() {
+  getCurrentLocationMock.mockResolvedValue({ status: 'success', location: GPS_FIX });
+  fireEvent.click(screen.getByRole('button', { name: 'Get Location' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Refresh Location' })).toBeDefined()
+  );
+}
+
 beforeEach(() => {
   uploadSelfieMock.mockReset();
   checkInFnMock.mockReset();
   checkOutFnMock.mockReset();
   toastMock.error.mockReset();
+  getCurrentLocationMock.mockReset();
+  getCurrentLocationMock.mockResolvedValue({ status: 'unavailable' });
+  attendanceState.value = null;
 });
 
 describe('clearSelfieAfterSuccess (checkout success handler)', () => {
@@ -146,10 +205,23 @@ describe('clearSelfieAfterSuccess (checkout success handler)', () => {
 });
 
 describe('AttendanceCheckCard check-in with selfie upload', () => {
+  it('asks for location instead of calling the server when no fix was acquired', async () => {
+    renderCard();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check In' }));
+
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledTimes(1));
+    expect(toastMock.error).toHaveBeenCalledWith(
+      'Could not get your location. Check GPS permissions.'
+    );
+    expect(checkInFnMock).not.toHaveBeenCalled();
+  });
+
   it('shows only the upload-failed toast when the selfie upload fails', async () => {
     uploadSelfieMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
 
     renderCard();
+    await acquireLocation();
 
     fireEvent.click(screen.getByTestId('capture-selfie'));
     fireEvent.click(screen.getByRole('button', { name: 'Check In' }));
@@ -166,6 +238,7 @@ describe('AttendanceCheckCard check-in with selfie upload', () => {
     checkInFnMock.mockRejectedValue(new Error('network down'));
 
     renderCard();
+    await acquireLocation();
 
     fireEvent.click(screen.getByTestId('capture-selfie'));
     fireEvent.click(screen.getByRole('button', { name: 'Check In' }));
@@ -174,5 +247,50 @@ describe('AttendanceCheckCard check-in with selfie upload', () => {
     expect(toastMock.error).toHaveBeenCalledWith(
       'Could not get your location. Check GPS permissions.'
     );
+  });
+});
+
+describe('AttendanceCheckCard checkout location', () => {
+  it('offers location acquisition in the checkout view', async () => {
+    setCheckedIn();
+    renderCard();
+
+    expect(await screen.findByRole('button', { name: 'Check Out' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Get Location' })).toBeDefined();
+  });
+
+  it('asks for location instead of calling the server on checkout without a fix', async () => {
+    setCheckedIn();
+    renderCard();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Check Out' }));
+
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledTimes(1));
+    expect(toastMock.error).toHaveBeenCalledWith(
+      'Could not get your location. Check GPS permissions.'
+    );
+    expect(checkOutFnMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the acquired coordinates on checkout', async () => {
+    checkOutFnMock.mockResolvedValue({ success: true, message: 'Check-out successful' });
+    setCheckedIn();
+    renderCard();
+
+    expect(await screen.findByRole('button', { name: 'Check Out' })).toBeDefined();
+    await acquireLocation();
+    fireEvent.click(screen.getByRole('button', { name: 'Check Out' }));
+
+    await waitFor(() => expect(checkOutFnMock).toHaveBeenCalledTimes(1));
+    expect(checkOutFnMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        attendanceId: 1,
+        latitude: GPS_FIX.latitude,
+        longitude: GPS_FIX.longitude,
+        accuracy: GPS_FIX.accuracy,
+        capturedAt: GPS_FIX.capturedAt
+      })
+    });
+    expect(toastMock.error).not.toHaveBeenCalled();
   });
 });

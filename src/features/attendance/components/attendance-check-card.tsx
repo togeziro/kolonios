@@ -18,6 +18,10 @@ import { SelfieCapture } from './selfie-capture';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
+// Sentinel so onError knows a specific toast was already shown and must not
+// double-toast the generic GPS message.
+const GPS_UNAVAILABLE = 'GPS_UNAVAILABLE';
+
 export function clearSelfieAfterSuccess(
   res: { success?: boolean; code?: string; message?: string } | null | undefined,
   setCheckOutSelfie: (selfie: string | null) => void,
@@ -82,6 +86,14 @@ export default function AttendanceCheckCard() {
 
   const checkInMutation = useMutation({
     mutationFn: async () => {
+      // GPS-first: never hit the server (or upload a selfie) without
+      // coordinates — the server would reject with GPS_REQUIRED and each
+      // attempt spams the audit log. Stale/inaccurate fixes are still
+      // submitted so the server can reject them precisely.
+      if (!deviceLocation) {
+        toast.error(t('attendanceAdmin.gpsUnavailable'));
+        throw new Error(GPS_UNAVAILABLE);
+      }
       let photoKey: string | undefined;
       if (selfie) {
         try {
@@ -111,7 +123,11 @@ export default function AttendanceCheckCard() {
       }
     },
     onError: (err) => {
-      if (err instanceof Error && err.message !== PHOTO_UPLOAD_FAILED) {
+      if (
+        err instanceof Error &&
+        err.message !== PHOTO_UPLOAD_FAILED &&
+        err.message !== GPS_UNAVAILABLE
+      ) {
         toast.error(t('attendanceAdmin.gpsUnavailable'));
       }
     }
@@ -119,6 +135,13 @@ export default function AttendanceCheckCard() {
 
   const checkOutMutation = useMutation({
     mutationFn: async () => {
+      // Same GPS-first guard as check-in: the server validates checkout
+      // against the locked check-in policy, so missing coordinates would
+      // always fail with GPS_REQUIRED.
+      if (!deviceLocation) {
+        toast.error(t('attendanceAdmin.gpsUnavailable'));
+        throw new Error(GPS_UNAVAILABLE);
+      }
       let photoKey: string | undefined;
       if (checkOutSelfie) {
         try {
@@ -145,7 +168,11 @@ export default function AttendanceCheckCard() {
       }
     },
     onError: (err) => {
-      if (err instanceof Error && err.message !== PHOTO_UPLOAD_FAILED) {
+      if (
+        err instanceof Error &&
+        err.message !== PHOTO_UPLOAD_FAILED &&
+        err.message !== GPS_UNAVAILABLE
+      ) {
         toast.error(t('attendanceAdmin.gpsUnavailable'));
       }
     }
@@ -165,6 +192,63 @@ export default function AttendanceCheckCard() {
       : deviceLocation
         ? { lat: deviceLocation.latitude, lng: deviceLocation.longitude }
         : null;
+
+  // The checkout view validates against the location locked at check-in,
+  // so its map centers on that geofence (falling back to the device fix).
+  const checkoutLocationObj =
+    locationsData?.locations?.find((l) => l.id === attendance?.attendance?.lock_location) ?? null;
+  const checkoutMapCoordinates =
+    checkoutLocationObj?.latitude != null && checkoutLocationObj?.longitude != null
+      ? { lat: checkoutLocationObj.latitude, lng: checkoutLocationObj.longitude }
+      : deviceLocation
+        ? { lat: deviceLocation.latitude, lng: deviceLocation.longitude }
+        : null;
+
+  // Shared location-acquisition box. It used to exist only in the check-in
+  // branch, so after a reload the checkout branch sent no coordinates and
+  // every checkout failed with GPS_REQUIRED.
+  const renderLocationBox = (mapCoords: { lat: number; lng: number } | null, radius: number) => (
+    <div className='space-y-2 rounded-md border p-3'>
+      <div className='flex items-center justify-between'>
+        <span className='text-sm font-medium'>{t('attendanceAdmin.currentLocation')}</span>
+        <Button
+          variant={deviceLocation ? 'outline' : 'default'}
+          size='sm'
+          onClick={() => void fetchLocation()}
+          disabled={locating}
+        >
+          <Icons.location className='mr-1 h-4 w-4' />
+          {deviceLocation ? t('attendanceAdmin.refreshLocation') : t('attendanceAdmin.getLocation')}
+        </Button>
+      </div>
+
+      {deviceLocation && (
+        <>
+          <LocationMap
+            coordinates={mapCoords}
+            radius={radius}
+            readOnly
+            deviceLocation={{
+              lat: deviceLocation.latitude,
+              lng: deviceLocation.longitude,
+              accuracy: deviceLocation.accuracy
+            }}
+            height={200}
+          />
+          <p className='text-xs text-muted-foreground'>
+            {deviceLocation.latitude.toFixed(5)}, {deviceLocation.longitude.toFixed(5)} {'\u00b7'}{' '}
+            {'\u00b1'}
+            {deviceLocation.accuracy}
+            {t('attendanceAdmin.meters')}
+          </p>
+        </>
+      )}
+
+      {locationStatus && locationStatus !== 'success' && (
+        <p className='text-xs text-destructive'>{t('attendanceAdmin.gpsRefreshNeeded')}</p>
+      )}
+    </div>
+  );
 
   return (
     <Card>
@@ -241,48 +325,7 @@ export default function AttendanceCheckCard() {
               </div>
             )}
 
-            <div className='space-y-2 rounded-md border p-3'>
-              <div className='flex items-center justify-between'>
-                <span className='text-sm font-medium'>{t('attendanceAdmin.currentLocation')}</span>
-                <Button
-                  variant={deviceLocation ? 'outline' : 'default'}
-                  size='sm'
-                  onClick={() => void fetchLocation()}
-                  disabled={locating}
-                >
-                  <Icons.location className='mr-1 h-4 w-4' />
-                  {deviceLocation
-                    ? t('attendanceAdmin.refreshLocation')
-                    : t('attendanceAdmin.getLocation')}
-                </Button>
-              </div>
-
-              {deviceLocation && (
-                <>
-                  <LocationMap
-                    coordinates={mapCoordinates}
-                    radius={selectedLocationObj?.radius ?? 100}
-                    readOnly
-                    deviceLocation={{
-                      lat: deviceLocation.latitude,
-                      lng: deviceLocation.longitude,
-                      accuracy: deviceLocation.accuracy
-                    }}
-                    height={200}
-                  />
-                  <p className='text-xs text-muted-foreground'>
-                    {deviceLocation.latitude.toFixed(5)}, {deviceLocation.longitude.toFixed(5)}{' '}
-                    {'\u00b7'} {'\u00b1'}
-                    {deviceLocation.accuracy}
-                    {t('attendanceAdmin.meters')}
-                  </p>
-                </>
-              )}
-
-              {locationStatus && locationStatus !== 'success' && (
-                <p className='text-xs text-destructive'>{t('attendanceAdmin.gpsRefreshNeeded')}</p>
-              )}
-            </div>
+            {renderLocationBox(mapCoordinates, selectedLocationObj?.radius ?? 100)}
 
             <SelfieCapture
               required={false}
@@ -294,7 +337,7 @@ export default function AttendanceCheckCard() {
             <Button
               className='w-full'
               onClick={() => checkInMutation.mutate()}
-              disabled={checkInMutation.isPending}
+              disabled={checkInMutation.isPending || locating}
             >
               {checkInMutation.isPending ? (
                 <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
@@ -308,6 +351,8 @@ export default function AttendanceCheckCard() {
 
         {isCheckedIn && !isCheckedOut && (
           <div className='space-y-3'>
+            {renderLocationBox(checkoutMapCoordinates, checkoutLocationObj?.radius ?? 100)}
+
             <SelfieCapture
               required={false}
               disabled={checkOutMutation.isPending}
@@ -319,7 +364,7 @@ export default function AttendanceCheckCard() {
               className='w-full'
               variant='secondary'
               onClick={() => checkOutMutation.mutate()}
-              disabled={checkOutMutation.isPending}
+              disabled={checkOutMutation.isPending || locating}
             >
               {checkOutMutation.isPending ? (
                 <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
