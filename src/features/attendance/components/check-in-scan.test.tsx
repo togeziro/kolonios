@@ -24,6 +24,20 @@ vi.mock('./location-map', () => ({
   LocationMap: () => <div data-testid='location-map' />
 }));
 
+// SelfieCapture needs the camera — stub it: the checkout card gets a capture
+// button driving onCapture directly, like a taken selfie.
+vi.mock('./selfie-capture', () => ({
+  SelfieCapture: ({ onCapture }: { onCapture: (selfie: string) => void }) => (
+    <button
+      type='button'
+      data-testid='checkout-selfie-capture'
+      onClick={() => onCapture('data:image/jpeg;base64,checkout')}
+    >
+      {'checkout-selfie-capture'}
+    </button>
+  )
+}));
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <a data-testid='enrollment-link' href={to}>
@@ -141,5 +155,32 @@ describe('CheckInScan enrollment gate', () => {
   it('renders the face error text (NOT_ENROLLED / NO_MATCH) instead of swallowing it', () => {
     renderScan({ faceError: 'You have not enrolled your face yet.' });
     expect(screen.getByText('You have not enrolled your face yet.')).toBeTruthy();
+  });
+});
+
+describe('CheckInScan checkout card (ticket 03)', () => {
+  it('hides the checkout card when not checked in', () => {
+    renderScan({ isCheckedIn: false });
+    expect(screen.queryByTestId('checkout-selfie-capture')).toBeNull();
+    expect(screen.queryByRole('button', { name: /check out/i })).toBeNull();
+  });
+
+  it('shows selfie capture + checkout button when checked in', () => {
+    renderScan({ isCheckedIn: true });
+    expect(screen.getByTestId('checkout-selfie-capture')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /check out/i })).toBeTruthy();
+  });
+
+  it('passes the captured selfie to onCheckOut on submit', () => {
+    const props = renderScan({ isCheckedIn: true });
+    fireEvent.click(screen.getByTestId('checkout-selfie-capture'));
+    fireEvent.click(screen.getByRole('button', { name: /check out/i }));
+    expect(props.onCheckOut).toHaveBeenCalledWith('data:image/jpeg;base64,checkout');
+  });
+
+  it('submits a null selfie when checkout runs without a photo', () => {
+    const props = renderScan({ isCheckedIn: true });
+    fireEvent.click(screen.getByRole('button', { name: /check out/i }));
+    expect(props.onCheckOut).toHaveBeenCalledWith(null);
   });
 });

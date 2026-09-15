@@ -505,6 +505,8 @@
     "faceStatusLoading": "Checking…",
     "photoUploadFailed": "Photo upload failed",
     "failed": "Check-in failed",
+    "checkoutFailed": "Check-out failed",
+    "checkoutSuccess": "Check-out successful",
     "faceNotEnrolledError": "You have not enrolled your face yet. Please enroll in Face Settings first.",
     "faceVerificationFailed": "Face verification failed. Please try again.",
     "selectLocationTitle": "Work location",

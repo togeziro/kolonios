@@ -505,6 +505,8 @@
     "faceStatusLoading": "Memeriksa…",
     "photoUploadFailed": "Gagal mengunggah foto",
     "failed": "Check-in gagal",
+    "checkoutFailed": "Check-out gagal",
+    "checkoutSuccess": "Check-out berhasil",
     "faceNotEnrolledError": "Anda belum mendaftarkan wajah. Silakan daftar di Pengaturan Wajah terlebih dahulu.",
     "faceVerificationFailed": "Verifikasi wajah gagal. Silakan coba lagi.",
     "selectLocationTitle": "Lokasi kerja",

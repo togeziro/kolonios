@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Link } from '@tanstack/react-router';
 import { Icons } from '@/components/icons';
 import { LocationMap } from './location-map';
 import { FaceCapture } from './face-capture';
+import { SelfieCapture } from './selfie-capture';
 import { useTranslation } from 'react-i18next';
 
 export interface CheckInLocationOption {
@@ -44,7 +46,8 @@ interface CheckInScanProps {
     antiSpoofScore: number | null,
     livenessScore: number | null
   ) => void;
-  onCheckOut: () => void;
+  onCheckOut: (photo: string | null) => void;
+  checkOutPending?: boolean;
   onRetake?: () => void;
 }
 
@@ -66,9 +69,11 @@ export function CheckInScan({
   faceEnrollmentPending = false,
   onCheckIn,
   onCheckOut,
+  checkOutPending = false,
   onRetake
 }: CheckInScanProps) {
   const { t } = useTranslation();
+  const [checkOutSelfie, setCheckOutSelfie] = useState<string | null>(null);
 
   const handleCapture = (
     descriptor: number[],
@@ -92,15 +97,41 @@ export function CheckInScan({
 
       {isCheckedIn && (
         <Card>
-          <CardContent className='flex items-center justify-between p-4'>
-            <div className='flex items-center gap-2'>
-              <div className='h-2 w-2 rounded-full bg-green-500' />
-              <div>
-                <p className='text-sm font-medium'>{t('checkIn.onShift')}</p>
-                <p className='text-xs text-zinc-400'>{elapsedTime}</p>
+          <CardContent className='space-y-3 p-4'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <div className='h-2 w-2 rounded-full bg-green-500' />
+                <div>
+                  <p className='text-sm font-medium'>{t('checkIn.onShift')}</p>
+                  <p className='text-xs text-zinc-400'>{elapsedTime}</p>
+                </div>
               </div>
             </div>
-            <Button variant='outline' size='sm' onClick={onCheckOut}>
+            {/* Check-out is validated against the geofence locked at check-in
+                (lock_location) by the unchanged server contract: the selected
+                checkout location card shows that geofence, GPS is acquired on
+                submit, and out-of-fence attempts fail with a clear reason. */}
+            {location && location.latitude != null && location.longitude != null && (
+              <LocationMap
+                coordinates={{ lat: location.latitude, lng: location.longitude }}
+                radius={location.radius ?? 100}
+                readOnly
+                height={120}
+              />
+            )}
+            <SelfieCapture
+              required={false}
+              disabled={checkOutPending}
+              onCapture={setCheckOutSelfie}
+              onClear={() => setCheckOutSelfie(null)}
+            />
+            <Button
+              variant='outline'
+              size='sm'
+              className='w-full'
+              disabled={checkOutPending}
+              onClick={() => onCheckOut(checkOutSelfie)}
+            >
               {t('checkIn.checkOut')}
             </Button>
           </CardContent>

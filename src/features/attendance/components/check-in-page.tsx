@@ -5,9 +5,11 @@ import {
   locationsQueryOptions,
   shiftsQueryOptions
 } from '@/features/attendance/api/queries';
-import { checkInFn } from '@/features/attendance/api/service';
+import { checkInFn, checkOutFn } from '@/features/attendance/api/service';
 import { CheckInScan } from '@/features/attendance/components/check-in-scan';
 import { CheckInSuccess } from '@/features/attendance/components/check-in-success';
+import AttendanceHistory from '@/features/attendance/components/attendance-history';
+import { AttendanceCorrectionForm } from '@/features/attendance/components/attendance-correction-form';
 import { PHOTO_UPLOAD_FAILED, uploadSelfie } from '@/lib/storage/upload-client';
 import { getCurrentLocation } from '@/features/attendance/utils/geolocation';
 import { businessTimeInTimeZone } from '@/lib/dates';
@@ -48,6 +50,7 @@ export function CheckInPage() {
   );
 
   const attendance = todayData?.attendance;
+  const attendanceId = attendance?.attendance?.id;
   const isCheckedIn = attendance && attendance.attendance?.check_in_time;
   const isCheckedOut = attendance && attendance.attendance?.check_out_time;
   const dataReady = !locationsPending && !shiftsPending;
@@ -195,31 +198,104 @@ export function CheckInPage() {
     setStep('scan');
   }, []);
 
+  const checkOutMutation = useMutation({
+    mutationFn: async ({ photo }: { photo: string | null }) => {
+      if (attendanceId == null) {
+        toast.error(t('checkIn.checkoutFailed'));
+        throw new Error(GPS_UNAVAILABLE);
+      }
+      // GPS-first, like the legacy card: never hit the server (or upload a
+      // selfie) without coordinates — the server validates checkout against
+      // the policy locked at check-in and would reject with GPS_REQUIRED.
+      // Stale/inaccurate fixes are still submitted so the server can reject
+      // them precisely (OUTSIDE_RADIUS etc. carry a clear reason).
+      const loc = await getCurrentLocation({ timeoutMs: 20_000 });
+      const deviceLocation =
+        loc.status === 'success' || loc.status === 'stale' || loc.status === 'inaccurate'
+          ? loc.location
+          : null;
+      if (!deviceLocation) {
+        toast.error(t('attendanceAdmin.gpsUnavailable'));
+        throw new Error(GPS_UNAVAILABLE);
+      }
+      if (loc.status !== 'success') {
+        toast.error(t('attendanceAdmin.gpsRefreshNeeded'));
+      }
+      let photoKey: string | undefined;
+      if (photo) {
+        try {
+          photoKey = await uploadSelfie(photo, 'attendance');
+        } catch {
+          toast.error(t('checkIn.photoUploadFailed'));
+          throw new Error(PHOTO_UPLOAD_FAILED);
+        }
+      }
+      // Contract: owner+date+id lookup, policy from lock_location, GPS+selfie
+      // rules — validated server-side, unchanged here.
+      return checkOutFn({
+        data: {
+          attendanceId,
+          latitude: deviceLocation.latitude,
+          longitude: deviceLocation.longitude,
+          accuracy: deviceLocation.accuracy,
+          capturedAt: deviceLocation.capturedAt,
+          photo: photoKey
+        }
+      });
+    },
+    onSuccess: (res) => {
+      if (res?.success) {
+        queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      } else {
+        const key = res?.code ? CHECKIN_ERROR_I18N_KEYS[res.code] : undefined;
+        toast.error(key ? t(key) : (res?.message ?? t('checkIn.checkoutFailed')));
+      }
+    },
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : '';
+      if (message !== GPS_UNAVAILABLE && message !== PHOTO_UPLOAD_FAILED) {
+        toast.error(t('checkIn.checkoutFailed'));
+      }
+    }
+  });
+
+  const handleCheckOut = useCallback(
+    (photo: string | null) => {
+      checkOutMutation.mutate({ photo });
+    },
+    [checkOutMutation]
+  );
+
   if (step === 'success') {
     return <CheckInSuccess time={checkInTime} locationName={checkInLocation} onDone={handleDone} />;
   }
 
   return (
-    <CheckInScan
-      locations={locations}
-      shifts={shifts}
-      selectedLocationId={effectiveLocationId}
-      selectedShiftId={selectedShiftId ?? shift?.id ?? null}
-      onSelectLocation={(id) => {
-        setSelectedLocationId(id);
-        setNoLocationSelected(false);
-      }}
-      onSelectShift={setSelectedShiftId}
-      location={location}
-      shift={shift}
-      noLocationSelected={noLocationSelected}
-      faceError={faceError}
-      isCheckedIn={!!isCheckedIn && !isCheckedOut}
-      accuracyLevel={accuracyLevel}
-      faceEnrolled={faceEnrollment?.enrolled ?? false}
-      faceEnrollmentPending={faceEnrollmentPending || faceSettingsPending}
-      onCheckIn={handleCheckIn}
-      onCheckOut={() => {}}
-    />
+    <div className='space-y-4'>
+      <CheckInScan
+        locations={locations}
+        shifts={shifts}
+        selectedLocationId={effectiveLocationId}
+        selectedShiftId={selectedShiftId ?? shift?.id ?? null}
+        onSelectLocation={(id) => {
+          setSelectedLocationId(id);
+          setNoLocationSelected(false);
+        }}
+        onSelectShift={setSelectedShiftId}
+        location={location}
+        shift={shift}
+        noLocationSelected={noLocationSelected}
+        faceError={faceError}
+        isCheckedIn={!!isCheckedIn && !isCheckedOut}
+        accuracyLevel={accuracyLevel}
+        faceEnrolled={faceEnrollment?.enrolled ?? false}
+        faceEnrollmentPending={faceEnrollmentPending || faceSettingsPending}
+        onCheckIn={handleCheckIn}
+        onCheckOut={handleCheckOut}
+        checkOutPending={checkOutMutation.isPending}
+      />
+      {attendanceId != null && <AttendanceCorrectionForm attendanceId={attendanceId} />}
+      <AttendanceHistory />
+    </div>
   );
 }

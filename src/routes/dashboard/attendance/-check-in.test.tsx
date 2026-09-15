@@ -11,9 +11,13 @@ import { CheckInPage } from '@/features/attendance/components/check-in-page';
 // The stub keeps the picker + enrollment-gate contract surface (selection
 // buttons, guard hint, gate link, face error) so page-level tests can assert
 // the ticket-01 wiring without the real camera stack.
+// The page stub keeps the check-in contract surface (faceError, gate link,
+// location guard) and now also the checkout path: onCheckOut receives the
+// checkout selfie captured in the scan card.
 vi.mock('@/features/attendance/components/check-in-scan', () => ({
   CheckInScan: ({
     onCheckIn,
+    onCheckOut,
     locations,
     shifts,
     selectedLocationId,
@@ -23,7 +27,8 @@ vi.mock('@/features/attendance/components/check-in-scan', () => ({
     noLocationSelected,
     faceError,
     faceEnrolled,
-    faceEnrollmentPending
+    faceEnrollmentPending,
+    isCheckedIn
   }: {
     onCheckIn: (
       descriptor: number[],
@@ -31,6 +36,7 @@ vi.mock('@/features/attendance/components/check-in-scan', () => ({
       antiSpoofScore: number | null,
       livenessScore: number | null
     ) => void;
+    onCheckOut: (photo: string | null) => void;
     locations: { id: number; name: string }[];
     shifts: { id: number; name: string }[];
     selectedLocationId: number | null;
@@ -41,6 +47,7 @@ vi.mock('@/features/attendance/components/check-in-scan', () => ({
     faceError: string | null;
     faceEnrolled: boolean;
     faceEnrollmentPending: boolean;
+    isCheckedIn: boolean;
   }) => (
     <div>
       <div data-testid='check-in-locations'>
@@ -82,6 +89,14 @@ vi.mock('@/features/attendance/components/check-in-scan', () => ({
         aria-label={'trigger-check-in'}
         onClick={() => onCheckIn([0.1, 0.2, 0.3], 'data:image/jpeg;base64,xx', 0.9, 0.9)}
       />
+      {isCheckedIn && (
+        <button
+          type='button'
+          data-testid='check-out-trigger'
+          aria-label={'trigger-check-out'}
+          onClick={() => onCheckOut('data:image/jpeg;base64,checkout')}
+        />
+      )}
     </div>
   )
 }));
@@ -90,14 +105,35 @@ vi.mock('@/features/attendance/components/check-in-success', () => ({
   CheckInSuccess: () => <div data-testid='check-in-success' />
 }));
 
-const { getCurrentLocationMock, uploadSelfieMock, checkInFnMock, verifyFaceFnMock, toastMock } =
-  vi.hoisted(() => ({
-    getCurrentLocationMock: vi.fn(),
-    uploadSelfieMock: vi.fn(),
-    checkInFnMock: vi.fn(),
-    verifyFaceFnMock: vi.fn(),
-    toastMock: { error: vi.fn() }
-  }));
+// History + correction sections render in the single flow, but their server
+// queries are out of scope here — stub them so page tests focus on the
+// checkout mutation wiring (contract: owner+date+id, lock_location policy,
+// GPS+selfie via checkOutFn).
+vi.mock('@/features/attendance/components/attendance-history', () => ({
+  default: () => <div data-testid='attendance-history-section' />
+}));
+
+vi.mock('@/features/attendance/components/attendance-correction-form', () => ({
+  AttendanceCorrectionForm: ({ attendanceId }: { attendanceId: number }) => (
+    <div data-testid='attendance-correction-section' data-attendance-id={attendanceId} />
+  )
+}));
+
+const {
+  getCurrentLocationMock,
+  uploadSelfieMock,
+  checkInFnMock,
+  checkOutFnMock,
+  verifyFaceFnMock,
+  toastMock
+} = vi.hoisted(() => ({
+  getCurrentLocationMock: vi.fn(),
+  uploadSelfieMock: vi.fn(),
+  checkInFnMock: vi.fn(),
+  checkOutFnMock: vi.fn(),
+  verifyFaceFnMock: vi.fn(),
+  toastMock: { error: vi.fn() }
+}));
 
 vi.mock('@/features/attendance/utils/geolocation', () => ({
   getCurrentLocation: getCurrentLocationMock
@@ -113,7 +149,8 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('@/features/attendance/api/service', () => ({
-  checkInFn: checkInFnMock
+  checkInFn: checkInFnMock,
+  checkOutFn: checkOutFnMock
 }));
 
 vi.mock('@/features/face/api/service', () => ({
@@ -123,7 +160,7 @@ vi.mock('@/features/face/api/service', () => ({
 vi.mock('@/features/attendance/api/queries', () => ({
   myAttendanceQueryOptions: () => ({
     queryKey: ['attendance', 'today'],
-    queryFn: async () => ({ attendance: null })
+    queryFn: async () => ({ attendance: attendanceState.value })
   }),
   locationsQueryOptions: () => ({
     queryKey: ['attendance', 'locations'],
@@ -144,6 +181,14 @@ vi.mock('@/features/attendance/api/queries', () => ({
 
 const ENROLLED_STATE = { enrolled: true, count: 1, registeredAt: null };
 let enrollmentState = ENROLLED_STATE;
+
+// Checked-in record state for the checkout flow: the page derives
+// attendanceId + isCheckedIn from myAttendanceQueryOptions.
+const attendanceState: {
+  value: {
+    attendance: { id: number; check_in_time: string; check_out_time: string | null };
+  } | null;
+} = { value: null };
 
 vi.mock('@/features/face/api/queries', () => ({
   myFaceEnrollmentQueryOptions: () => ({
@@ -184,11 +229,13 @@ function triggerCheckIn() {
 
 beforeEach(() => {
   enrollmentState = ENROLLED_STATE;
+  attendanceState.value = null;
   getCurrentLocationMock
     .mockReset()
     .mockResolvedValue({ status: 'success', location: DEVICE_LOCATION });
   uploadSelfieMock.mockReset().mockResolvedValue('attendance/u/1.jpg');
   checkInFnMock.mockReset().mockResolvedValue({ success: true });
+  checkOutFnMock.mockReset().mockResolvedValue({ success: true });
   verifyFaceFnMock.mockReset().mockResolvedValue({ verified: true, reason: 'MATCH' });
   toastMock.error.mockReset();
 });
@@ -384,5 +431,105 @@ describe('CheckInPage location + shift picker and enrollment gate (ticket 01)', 
     expect(getCurrentLocationMock).not.toHaveBeenCalled();
     expect(uploadSelfieMock).not.toHaveBeenCalled();
     expect(checkInFnMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('CheckInPage checkout + history/correction sections (ticket 03)', () => {
+  function setCheckedIn() {
+    attendanceState.value = {
+      attendance: { id: 41, check_in_time: '07:43:56', check_out_time: null }
+    };
+  }
+
+  it('sends attendanceId + GPS fix + uploaded selfie photo to checkOutFn', async () => {
+    setCheckedIn();
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+
+    await waitFor(() => expect(checkOutFnMock).toHaveBeenCalledTimes(1));
+    expect(checkOutFnMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        attendanceId: 41,
+        latitude: DEVICE_LOCATION.latitude,
+        longitude: DEVICE_LOCATION.longitude,
+        accuracy: DEVICE_LOCATION.accuracy,
+        capturedAt: DEVICE_LOCATION.capturedAt,
+        photo: 'attendance/u/1.jpg'
+      })
+    });
+    // GPS acquired before the upload, like check-in.
+    expect(getCurrentLocationMock.mock.invocationCallOrder[0]).toBeLessThan(
+      uploadSelfieMock.mock.invocationCallOrder[0]
+    );
+    expect(toastMock.error).not.toHaveBeenCalled();
+  });
+
+  it('maps OUTSIDE_RADIUS to the localized toast (checkout from the wrong fence)', async () => {
+    checkOutFnMock.mockResolvedValue({
+      success: false,
+      code: 'OUTSIDE_RADIUS',
+      message: 'You are far away'
+    });
+    setCheckedIn();
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith(
+        'You are outside the geofence radius. Move closer to the office and refresh your location.'
+      )
+    );
+    expect(toastMock.error).not.toHaveBeenCalledWith('You are far away');
+  });
+
+  it('aborts checkout before any upload when GPS is unavailable', async () => {
+    getCurrentLocationMock.mockResolvedValue({ status: 'permission-denied' });
+    setCheckedIn();
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith(
+        'Could not get your location. Check GPS permissions.'
+      )
+    );
+    expect(uploadSelfieMock).not.toHaveBeenCalled();
+    expect(checkOutFnMock).not.toHaveBeenCalled();
+  });
+
+  it('aborts checkout when the selfie upload fails (PHOTO_UPLOAD_FAILED)', async () => {
+    uploadSelfieMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
+    setCheckedIn();
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Photo upload failed'));
+    expect(checkOutFnMock).not.toHaveBeenCalled();
+    expect(toastMock.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the history section on the single page', async () => {
+    renderPage();
+
+    expect(await screen.findByTestId('attendance-history-section')).toBeTruthy();
+  });
+
+  it('renders the correction form wired to today\u2019s record once checked in', async () => {
+    setCheckedIn();
+    renderPage();
+
+    const section = await screen.findByTestId('attendance-correction-section');
+    expect(section.getAttribute('data-attendance-id')).toBe('41');
+  });
+
+  it('hides the correction form when there is no record today', async () => {
+    renderPage();
+    await screen.findByTestId('attendance-history-section');
+
+    expect(screen.queryByTestId('attendance-correction-section')).toBeNull();
   });
 });
