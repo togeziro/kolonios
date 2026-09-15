@@ -1282,6 +1282,7 @@
     "errSelfieRequired": "Foto selfie diperlukan untuk check-in",
     "errNoCheckIn": "Tidak ada catatan check-in untuk hari ini",
     "errAlreadyCheckedOut": "Sudah check-out hari ini",
+    "selectLocationFirst": "Pilih lokasi kerja dulu",
     "addAttendanceButton": "Tambah Kehadiran",
     "addAttendanceTitle": "Tambah Kehadiran",
     "addAttendanceDescription": "Catat entri kehadiran secara manual untuk karyawan",

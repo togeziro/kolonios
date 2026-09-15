@@ -49,20 +49,30 @@ type MockAttendance = {
   } | null;
 };
 
+type MockLocation = {
+  id: number;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  radius: number | null;
+};
+
 const {
   uploadSelfieMock,
   checkInFnMock,
   checkOutFnMock,
   toastMock,
   getCurrentLocationMock,
-  attendanceState
+  attendanceState,
+  locationsState
 } = vi.hoisted(() => ({
   uploadSelfieMock: vi.fn(),
   checkInFnMock: vi.fn(),
   checkOutFnMock: vi.fn(),
   toastMock: { error: vi.fn() },
   getCurrentLocationMock: vi.fn(),
-  attendanceState: { value: null as MockAttendance['attendance'] }
+  attendanceState: { value: null as MockAttendance['attendance'] },
+  locationsState: { value: [] as MockLocation[] }
 }));
 
 vi.mock('@/lib/storage/upload-client', () => ({
@@ -86,7 +96,7 @@ vi.mock('../api/queries', () => ({
   }),
   locationsQueryOptions: () => ({
     queryKey: ['attendance', 'locations'],
-    queryFn: async () => ({ locations: [] })
+    queryFn: async () => ({ locations: locationsState.value })
   }),
   shiftsQueryOptions: () => ({
     queryKey: ['attendance', 'shifts'],
@@ -161,6 +171,7 @@ beforeEach(() => {
   getCurrentLocationMock.mockReset();
   getCurrentLocationMock.mockResolvedValue({ status: 'unavailable' });
   attendanceState.value = null;
+  locationsState.value = [];
 });
 
 describe('clearSelfieAfterSuccess (checkout success handler)', () => {
@@ -218,6 +229,9 @@ describe('AttendanceCheckCard check-in with selfie upload', () => {
   });
 
   it('shows only the upload-failed toast when the selfie upload fails', async () => {
+    locationsState.value = [
+      { id: 2, name: 'Alamanda', latitude: -6.2978225, longitude: 107.01668, radius: 100 }
+    ];
     uploadSelfieMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
 
     renderCard();
@@ -234,6 +248,9 @@ describe('AttendanceCheckCard check-in with selfie upload', () => {
   });
 
   it('still shows the GPS toast when check-in fails for another reason', async () => {
+    locationsState.value = [
+      { id: 2, name: 'Alamanda', latitude: -6.2978225, longitude: 107.01668, radius: 100 }
+    ];
     uploadSelfieMock.mockResolvedValue('attendance/u/1.jpg');
     checkInFnMock.mockRejectedValue(new Error('network down'));
 
@@ -247,6 +264,44 @@ describe('AttendanceCheckCard check-in with selfie upload', () => {
     expect(toastMock.error).toHaveBeenCalledWith(
       'Could not get your location. Check GPS permissions.'
     );
+  });
+
+  it('asks to select a location when several exist and none is chosen', async () => {
+    locationsState.value = [
+      { id: 2, name: 'Alamanda', latitude: -6.2978225, longitude: 107.01668, radius: 100 },
+      { id: 3, name: 'Cabang', latitude: -6.3, longitude: 107.02, radius: 100 }
+    ];
+
+    renderCard();
+    await acquireLocation();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check In' }));
+
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledTimes(1));
+    expect(toastMock.error).toHaveBeenCalledWith('Select your work location first');
+    expect(checkInFnMock).not.toHaveBeenCalled();
+  });
+
+  it('preselects the only location so check-in carries a locationId', async () => {
+    locationsState.value = [
+      { id: 2, name: 'Alamanda', latitude: -6.2978225, longitude: 107.01668, radius: 100 }
+    ];
+    checkInFnMock.mockResolvedValue({ success: true, message: 'Check-in successful' });
+
+    renderCard();
+    await acquireLocation();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check In' }));
+
+    await waitFor(() => expect(checkInFnMock).toHaveBeenCalledTimes(1));
+    expect(checkInFnMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        locationId: 2,
+        latitude: GPS_FIX.latitude,
+        longitude: GPS_FIX.longitude
+      })
+    });
+    expect(toastMock.error).not.toHaveBeenCalled();
   });
 });
 

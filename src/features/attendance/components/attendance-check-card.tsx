@@ -94,6 +94,13 @@ export default function AttendanceCheckCard() {
         toast.error(t('attendanceAdmin.gpsUnavailable'));
         throw new Error(GPS_UNAVAILABLE);
       }
+      // A missing locationId fails server-side with the same GPS_REQUIRED
+      // code, so catch it here with a message that tells the user what to
+      // do (tap the work-location button) instead.
+      if (selectedLocation == null) {
+        toast.error(t('attendanceAdmin.selectLocationFirst'));
+        throw new Error(GPS_UNAVAILABLE);
+      }
       let photoKey: string | undefined;
       if (selfie) {
         try {
@@ -180,6 +187,22 @@ export default function AttendanceCheckCard() {
 
   const locations = locationsData?.locations ?? [];
   const shifts = shiftsData?.shifts ?? [];
+
+  // Single-site convenience: with exactly one work location there is nothing
+  // to choose, so preselect it — otherwise check-in submits without a
+  // locationId and fails with GPS_REQUIRED (seen on prod with user Dhani,
+  // whose employee record carries no default location).
+  // Adjust-state-during-render pattern (same as LocationForm); the key is a
+  // primitive so a fresh locations array identity alone never retriggers it.
+  const locationKey =
+    locations.length === 1 ? `single:${locations[0].id}` : `multi:${locations.length}`;
+  const [prevLocationKey, setPrevLocationKey] = useState(locationKey);
+  if (locationKey !== prevLocationKey) {
+    setPrevLocationKey(locationKey);
+    if (selectedLocation == null && locations.length === 1) {
+      setSelectedLocation(locations[0].id);
+    }
+  }
 
   // The map centers on the SELECTED location's geofence; the device position
   // is drawn separately as the blue marker. Falls back to the device position

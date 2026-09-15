@@ -1282,6 +1282,7 @@
     "errSelfieRequired": "A selfie photo is required to check in",
     "errNoCheckIn": "No check-in record found for today",
     "errAlreadyCheckedOut": "Already checked out today",
+    "selectLocationFirst": "Select your work location first",
     "addAttendanceButton": "Add Attendance",
     "addAttendanceTitle": "Add Attendance",
     "addAttendanceDescription": "Record an attendance entry manually for an employee",
