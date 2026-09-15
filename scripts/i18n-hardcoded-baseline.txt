@@ -63,7 +63,7 @@ src/features/schedule-grid/components/assign-shift-dialog.tsx:262
 src/features/schedule/components/my-schedule-page.tsx:29
 src/features/schedule/components/my-schedule-page.tsx:31
 src/features/schedule/components/today-shift-card.tsx:82
-src/features/tickets/components/ticket-list-page.tsx:73
+src/features/tickets/components/ticket-list-page.tsx:74
 src/features/users/components/users-table/columns.tsx:117
 src/features/users/components/users-table/columns.tsx:26
 src/features/users/components/users-table/columns.tsx:52

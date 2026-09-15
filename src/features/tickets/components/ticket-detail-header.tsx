@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useAppLocale } from '@/lib/locale';
 import { formatDue } from './ticket-card';
+import { ticketStatusLabelKey } from './status-label';
 import type { TicketStatus, TicketDetail } from '../api/types';
 
 const statusBadge: Partial<
@@ -43,7 +44,7 @@ export default function TicketDetailHeader({
           variant={statusBadge[ticket.status]}
           className='dark:bg-zinc-800 h-6 rounded-full px-3 text-[11px] font-bold dark:text-zinc-300'
         >
-          {ticket.status.replace('_', ' ')}
+          {t(ticketStatusLabelKey[ticket.status])}
         </Badge>
       </div>
       {ticket.description && (

@@ -1,0 +1,78 @@
+// @vitest-environment jsdom
+// i18n:skip
+import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+import i18n from '@/i18n/config';
+import TicketCard from './ticket-card';
+import { ticketStatusLabelKey } from './status-label';
+import type { Ticket, TicketStatus } from '../api/types';
+
+const STATUSES: TicketStatus[] = [
+  'open',
+  'assigned',
+  'in_progress',
+  'submitted',
+  'approved',
+  'rejected',
+  'rework',
+  'completed',
+  'cancelled'
+];
+
+function makeTicket(status: TicketStatus): Ticket {
+  return {
+    id: 1,
+    ticketCode: 'T-001',
+    title: 'Install OLT',
+    description: '',
+    channel: 'field',
+    customer: null,
+    assetName: 'OLT-1',
+    taskType: 'installation',
+    domain: 'field',
+    status,
+    priority: 'high',
+    location: { id: 1, name: 'Jakarta Office' },
+    dueAt: null,
+    estimatedMinutes: null,
+    requiredSkills: [],
+    assignedTo: null,
+    takenBy: null,
+    takenByName: null,
+    takenAt: null,
+    rating: null,
+    reviewNote: null,
+    reviewedBy: null,
+    completedAt: null,
+    createdByName: null,
+    createdAt: new Date().toISOString()
+  };
+}
+
+// Regression: ISSUE-003 — ticket status badges rendered the raw lowercase enum
+// Found by /qa on 2026-09-15
+// Report: .gstack/qa-reports/qa-report-localhost-2026-09-15.md
+describe('ticket status labels', () => {
+  it('maps every status to an existing translated label', () => {
+    for (const status of STATUSES) {
+      const key = ticketStatusLabelKey[status];
+      for (const lng of ['en', 'id'] as const) {
+        const label = i18n.getFixedT(lng)(key);
+        expect(label).not.toBe(key);
+        expect(label).not.toMatch(/_/);
+        expect(label.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('renders a translated badge instead of the raw enum', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <TicketCard task={makeTicket('in_progress')} />
+      </I18nextProvider>
+    );
+    expect(screen.getByText('In Progress')).toBeTruthy();
+    expect(screen.queryByText('in progress')).toBeNull();
+  });
+});

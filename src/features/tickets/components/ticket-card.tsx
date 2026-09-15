@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { formatDate } from '@/lib/format';
 import { getAppLocale, useAppLocale } from '@/lib/locale';
+import { ticketStatusLabelKey } from './status-label';
 import type { Ticket, TicketPriority, TicketStatus } from '../api/types';
 const priorityLabel: Record<TicketPriority, string> = {
   low: 'dark:text-zinc-500 text-muted-foreground',
@@ -60,7 +61,7 @@ export default function TicketCard({
             variant={statusBadge[task.status]}
             className='dark:bg-zinc-800 h-5 rounded px-2 text-[10px] font-bold dark:text-zinc-400'
           >
-            {task.status.replace('_', ' ')}
+            {t(ticketStatusLabelKey[task.status])}
           </Badge>
         )}
       </div>

@@ -1394,6 +1394,17 @@
     "comingSoon": "Siaran segera hadir."
   },
   "ticket": {
+    "status": {
+      "open": "Terbuka",
+      "assigned": "Dalam Perjalanan",
+      "inProgress": "Sedang Berjalan",
+      "submitted": "Terkirim",
+      "approved": "Disetujui",
+      "rejected": "Ditolak",
+      "rework": "Perbaikan",
+      "completed": "Selesai",
+      "cancelled": "Dibatalkan"
+    },
     "availableJobs": "Pekerjaan Tersedia",
     "availableJobsCount": "Pekerjaan Tersedia ({{count}})",
     "seeAll": "Lihat semua",

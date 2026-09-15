@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { listTicketsQueryOptions } from '../api/queries';
+import { ticketStatusLabelKey } from './status-label';
 import type { TicketStatus, Ticket } from '../api/types';
 
 const statusBadge: Record<TicketStatus, 'outline' | 'secondary' | 'default' | 'destructive'> = {
@@ -23,11 +24,11 @@ const statusBadge: Record<TicketStatus, 'outline' | 'secondary' | 'default' | 'd
 
 const statusOptions: { value: TicketStatus | undefined; labelKey: string; fallback: string }[] = [
   { value: undefined, fallback: 'All', labelKey: 'common.all' },
-  { value: 'open', fallback: 'Open', labelKey: 'ticket.open' },
-  { value: 'assigned', fallback: 'Assigned', labelKey: 'enRoute.title' },
-  { value: 'in_progress', fallback: 'In Progress', labelKey: 'ticket.inProgress' },
-  { value: 'submitted', fallback: 'Submitted', labelKey: 'ticket.submitted' },
-  { value: 'completed', fallback: 'Completed', labelKey: 'ticket.completed' }
+  { value: 'open', fallback: 'Open', labelKey: ticketStatusLabelKey.open },
+  { value: 'assigned', fallback: 'Assigned', labelKey: ticketStatusLabelKey.assigned },
+  { value: 'in_progress', fallback: 'In Progress', labelKey: ticketStatusLabelKey.in_progress },
+  { value: 'submitted', fallback: 'Submitted', labelKey: ticketStatusLabelKey.submitted },
+  { value: 'completed', fallback: 'Completed', labelKey: ticketStatusLabelKey.completed }
 ];
 
 function TicketRow({ ticket }: { ticket: Ticket }) {
@@ -57,7 +58,7 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
             variant={statusBadge[ticket.status]}
             className='shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold'
           >
-            {ticket.status === 'assigned' ? t('enRoute.title') : ticket.status.replace('_', ' ')}
+            {t(ticketStatusLabelKey[ticket.status])}
           </Badge>
         </div>
         <div className='flex flex-wrap gap-2 text-[11px] text-muted-foreground'>

@@ -1394,6 +1394,17 @@
     "comingSoon": "Broadcast is coming soon."
   },
   "ticket": {
+    "status": {
+      "open": "Open",
+      "assigned": "En Route",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "rework": "Rework",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
     "availableJobs": "Available Jobs",
     "availableJobsCount": "Available Jobs ({{count}})",
     "seeAll": "See all",
