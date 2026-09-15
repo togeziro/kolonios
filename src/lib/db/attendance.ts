@@ -2,7 +2,7 @@ import { and, eq, or, gte, lte, sql, desc, asc } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm';
 import { db } from './index';
 import { DomainError, mapDbError } from '../errors';
-import { businessDateInTimeZone } from '@/lib/dates';
+import { businessDateInTimeZone, businessTimeInTimeZone } from '@/lib/dates';
 import {
   employeeShifts,
   locations,
@@ -145,9 +145,15 @@ export async function getAttendanceHistory(
 
 export async function checkIn(userId: string, payload: AttendanceCheckInPayload) {
   try {
-    const today = businessDateInTimeZone(new Date());
-    const now = new Date().toLocaleTimeString('en-US', { hour12: false });
-    const nowTime = new Date().toTimeString().slice(0, 5); // HH:MM
+    // Single instant for both: the business date and the wall-clock time must
+    // come from the same moment, or a check-in on the WIB midnight boundary
+    // could store one day's date with the other day's time.
+    const nowInstant = new Date();
+    const today = businessDateInTimeZone(nowInstant);
+    // WIB wall-clock time (not the server timezone): the business date above
+    // is WIB, and lateness math compares this clock time against WIB shifts.
+    const now = businessTimeInTimeZone(nowInstant);
+    const nowTime = now.slice(0, 5); // HH:MM
 
     // Resolve effective schedule
     const effectiveSchedule = await getEffectiveEmployeeSchedule(userId, today);
@@ -231,8 +237,10 @@ export async function checkIn(userId: string, payload: AttendanceCheckInPayload)
 
 export async function checkOut(userId: string, payload: AttendanceCheckOutPayload) {
   try {
-    const today = businessDateInTimeZone(new Date());
-    const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+    const nowInstant = new Date();
+    const today = businessDateInTimeZone(nowInstant);
+    // WIB wall-clock time (not the server timezone) — see checkIn above.
+    const now = businessTimeInTimeZone(nowInstant);
 
     const [existing] = await db
       .select()

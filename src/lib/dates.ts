@@ -19,6 +19,27 @@ export function businessDateInTimeZone(
 }
 
 /**
+ * Clock time (`HH:MM:SS`, 24-hour) in the business timezone. Server runtimes
+ * report UTC, so `toLocaleTimeString` without an explicit `timeZone` stores
+ * UTC clock times while the business date next to it is WIB — check-in/out
+ * times then read 7 hours early and lateness math compares UTC against WIB
+ * schedules. Always use this where a WIB wall-clock time is stored.
+ */
+export function businessTimeInTimeZone(
+  now: Date | number | string,
+  timeZone: string = DEFAULT_BUSINESS_TIME_ZONE
+): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    hourCycle: 'h23'
+  }).format(new Date(now));
+}
+
+/**
  * Number of days in a `YYYY-MM` month (28/29/30/31), shared by the
  * schedule grid export (`schedule-grid/utils/date-utils.ts` re-exports
  * this) and the technician month grid. Day 0 of the following month =
