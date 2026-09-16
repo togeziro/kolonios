@@ -72,20 +72,84 @@ export default defineConfig({
         process.env.DATABASE_URL || 'postgres://tanstack:tanstack@localhost:5432/kolonios_test'
     },
     globals: true,
-    environment: 'node',
-    // Run all test files in a single worker so they don't race against each
-    // other on the shared test database (each file truncates/reseeds in
-    // beforeEach). Tests within a file already run sequentially.
-    maxWorkers: 1,
-    setupFiles: ['./vitest.setup.ts'],
     // Vitest bundles its own Vite 7, which predates resolve.tsconfigPaths
     // (a Vite 8 feature used above), so mirror the app's `@` alias here for
     // the test pipeline only.
     alias: {
       '@': srcDir
     },
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/.output/**', 'e2e/**'],
+    // Two projects split the suite by DB dependency:
+    //   unit        - pure functions + components, no DB; 4 workers parallel,
+    //                 isolate off (node env without side effects, docs-perf).
+    //   integration - DB-bound (resets/resets per file); single worker to
+    //                 avoid races against the shared test schema.
+    // Run a single project with --project <name>, or both with `bun run test`.
+    projects: [
+      {
+        // Inherit the root's alias (`@` -> srcDir) + globals. Without
+        // `extends: true`, Vitest 4 inline projects have no test.env, no
+        // globals, and no aliases -- that breaks `import { ... } from '@/...'`
+        // and the rarely-used `process.env` setup globals.
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'node',
+          // 185 of 207 test files; includes all *.test.ts(x) EXCEPT
+          //   - src/lib/db/*.test.ts   (always reset/truncate against PG)
+          //   - **/*.integration.test.* (5 explicit integration files)
+          include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.ts'],
+          exclude: [
+            '**/node_modules/**',
+            '**/dist/**',
+            '**/.output/**',
+            'e2e/**',
+            'src/lib/db/**/*.test.ts',
+            '**/*.integration.test.ts',
+            '**/*.integration.test.tsx',
+            // DB-bound tests that are NOT under src/lib/db/ and don't follow
+            // the *.integration.test.ts naming convention; they reset/seed
+            // the shared test schema and must run in the `integration` project.
+            'src/features/employees/api/career-events.test.ts',
+            'src/features/schedule-grid/api/export-service.test.ts',
+            'src/features/schedule-grid/api/import-service.test.ts'
+          ],
+          // Per Vitest `guide/improving-performance`, `isolate: false` only
+          // helps when files don't leak module state. Several unit tests use
+          // `vi.mock(...)` at module scope (i18n, BrandLogo, react-query
+          // client providers) - sharing a worker lets one file's mock leak
+          // into the next. Keep isolation ON; we still parallelize across
+          // files via maxWorkers.
+          isolate: true,
+          fileParallelism: true,
+          pool: 'threads',
+          maxWorkers: 4
+        }
+      },
+      {
+        // Inherit root alias (`@` -> srcDir) + env (DATABASE_URL).
+        extends: true,
+        test: {
+          name: 'integration',
+          environment: 'node',
+          // DB seam; setupFiles kept on the project (was on the root before)
+          setupFiles: ['./vitest.setup.ts'],
+          include: [
+            'src/lib/db/**/*.test.ts',
+            'src/**/*.integration.test.ts',
+            'src/**/*.integration.test.tsx',
+            // DB-bound tests that don't follow the *.integration.test.ts
+            // naming convention (they reset/seed the shared test schema).
+            'src/features/employees/api/career-events.test.ts',
+            'src/features/schedule-grid/api/export-service.test.ts',
+            'src/features/schedule-grid/api/import-service.test.ts'
+          ],
+          exclude: ['**/node_modules/**', '**/dist/**', '**/.output/**', 'e2e/**'],
+          // Shared postgres test DB -> one worker serializes file execution.
+          pool: 'threads',
+          maxWorkers: 1
+        }
+      }
+    ],
     coverage: {
       provider: 'v8',
       include: ['src/lib/**', 'src/features/**/schemas/**', 'src/features/**/api/**'],

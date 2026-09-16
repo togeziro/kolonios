@@ -31,7 +31,48 @@ jobs:
         run: bun run format:check
 
   build-test:
-    name: Build, migrations & tests
+    name: Build + migrations + typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: Build (generates route tree)
+        # CI uses `build:app` to skip api:docs: it only feeds the static docs
+        # site (~13s on PR runners) and is regenerated nightly. Local dev runs
+        # `bun run build` which keeps the convenience of bundled docs.
+        run: bun run build:app
+
+      - name: Typecheck
+        run: bun run typecheck
+
+  test-unit:
+    name: Unit tests (no DB)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: Unit tests (vitest --project unit)
+        # 183 files pure unit/component, 4 workers parallel; no DB or
+        # migrations needed. Coverage runs in coverage-nightly.yml once a
+        # day so the thresholds in vite.config.ts gate merges.
+        run: bun run test:unit
+
+  test-integration:
+    name: Integration tests + drift check
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -59,20 +100,13 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: Build (generates route tree)
-        # CI uses `build:app` to skip api:docs: it only feeds the static docs
-        # site (~13s on PR runners) and is regenerated nightly. Local dev runs
-        # `bun run build` which keeps the convenience of bundled docs.
-        run: bun run build:app
+      - name: Check schema/migrations drift
+        run: bun run db:check
 
       - name: Set up test database
         run: bun run db:test:create
 
-      - name: Check schema/migrations drift
-        run: bun run db:check
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Unit & integration tests (with coverage)
-        run: bun run test:coverage
+      - name: Integration tests (vitest --project integration)
+        # Single worker on the shared test schema (each file resets/reseeds
+        # in beforeEach). 24 files, ~56s locally.
+        run: bun run test:integration

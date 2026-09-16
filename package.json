@@ -41,6 +41,8 @@
     "prepare": "simple-git-hooks",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
