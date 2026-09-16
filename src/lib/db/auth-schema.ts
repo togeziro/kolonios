@@ -54,7 +54,12 @@ export const account = pgTable(
     id: text('id').primaryKey(),
     accountId: text('account_id').notNull(),
     providerId: text('provider_id').notNull(),
-    issuer: text('issuer').notNull(),
+    // Nullable since Better Auth 1.7.4: the account schema reverted to the
+    // 1.6 key model (providerId, accountId) and the runtime no longer writes
+    // `issuer`, so a NOT NULL column rejects every sign-up/account link
+    // (SCHEMA_MISMATCH "never writes"). Legacy rows from 1.7.0-1.7.2 keep
+    // their backfilled 'local:credential' values; see the 1.7 upgrade guide.
+    issuer: text('issuer'),
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
