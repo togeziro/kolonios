@@ -34,7 +34,7 @@
 import { and, desc, gte, inArray, lte, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { getHolidaysInRange } from '@/lib/db/attendance';
+import { getHolidaysInRange, scheduleAssignmentRangeValid } from '@/lib/db/attendance';
 import {
   dateOverrides,
   dayOffs,
@@ -113,7 +113,12 @@ export async function resolveScheduleGridCells(args: {
       or(
         sql`${scheduleAssignments.effective_to} IS NULL`,
         gte(scheduleAssignments.effective_to, startDate)
-      )
+      ),
+      // Exclude inverted rows (`effective_from > effective_to`): the
+      // overlap-only filters above still match an empty range, and without
+      // this it would win the per-date most-recent pick below (prod
+      // incident: dhani 2026-09-14 → 2026-09-07).
+      scheduleAssignmentRangeValid()
     );
 
     const [assignmentResult, overrideResult, dayOffResult] = await Promise.all([
@@ -249,8 +254,14 @@ export async function resolveScheduleGridCells(args: {
 
     for (const date of windowDates) {
       // Pick the most recent assignment whose range covers this date.
+      // The `effective_from <= effective_to` conjunct mirrors the SQL
+      // predicate above so a pre-existing inverted row can never win here
+      // even if it reaches this function through another path.
       const matching = userAssignments.find(
-        (a) => a.effective_from <= date && (a.effective_to == null || a.effective_to >= date)
+        (a) =>
+          a.effective_from <= date &&
+          (a.effective_to == null || a.effective_to >= date) &&
+          (a.effective_to == null || a.effective_from <= a.effective_to)
       );
       const assignment: EngineAssignment | null = matching
         ? {

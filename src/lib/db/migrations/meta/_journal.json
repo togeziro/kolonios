@@ -302,6 +302,13 @@
       "when": 1789541261113,
       "tag": "0042_ambiguous_tarot",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1789568425458,
+      "tag": "0043_first_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

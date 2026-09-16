@@ -8,7 +8,8 @@ import {
   integer,
   real,
   boolean,
-  uniqueIndex
+  uniqueIndex,
+  check
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -201,7 +202,14 @@ export const scheduleAssignments = pgTable(
     // At most one open-ended assignment per employee
     uniqueIndex('schedule_assignments_one_active_unique')
       .on(t.user_id)
-      .where(sql`${t.effective_to} IS NULL`)
+      .where(sql`${t.effective_to} IS NULL`),
+    // Opsi B: inverted ranges (`effective_from > effective_to`) are empty
+    // ranges that still match overlap-only filters and win
+    // `ORDER BY effective_from DESC` picks — reject them at the DB level.
+    check(
+      'schedule_assignments_effective_range_check',
+      sql`${t.effective_to} IS NULL OR ${t.effective_from} <= ${t.effective_to}`
+    )
   ]
 );
 

@@ -150,6 +150,12 @@ function AssignShiftDialogBody({
       if (!result.success) {
         if (result.error === 'effectiveToBeforeFrom') {
           toast.error(t('scheduleGrid.assignDialog.errorEffectiveToBeforeFrom'));
+        } else if (result.error === 'closeWouldInvertRange') {
+          toast.error(
+            t('scheduleGrid.assignDialog.errorCloseWouldInvertRange', {
+              conflictingFrom: result.conflictingFrom
+            })
+          );
         } else {
           toast.error(t('scheduleGrid.assignDialog.errorGeneric'));
         }

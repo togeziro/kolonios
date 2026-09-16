@@ -1886,6 +1886,7 @@
       "success": "Shift assigned",
       "policyWarning": "Shift saved but the row may render blank until the policy is filled in Shift Master.",
       "errorEffectiveToBeforeFrom": "To date must be after From date.",
+      "errorCloseWouldInvertRange": "From date must be after the current assignment's start ({{conflictingFrom}}). Pick a later From date or end the current assignment first.",
       "errorGeneric": "Couldn't assign the shift. Please try again."
     },
     "cell": {
