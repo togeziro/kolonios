@@ -74,7 +74,5 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Unit & integration tests
-        # Coverage runs nightly in coverage-nightly.yml (~130s overhead saved
-        # per PR); thresholds still enforced on nightly so merge gating holds.
-        run: bun run test:run
+      - name: Unit & integration tests (with coverage)
+        run: bun run test:coverage
