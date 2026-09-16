@@ -106,12 +106,18 @@ export default defineConfig({
             'src/lib/db/**/*.test.ts',
             '**/*.integration.test.ts',
             '**/*.integration.test.tsx',
-            // DB-bound tests that are NOT under src/lib/db/ and don't follow
-            // the *.integration.test.ts naming convention; they reset/seed
-            // the shared test schema and must run in the `integration` project.
+            // Server-fn tests that drive a `?tss-serverfn-split` handler.
+            // Even when DB modules are vi.mock'd, the import-time chain
+            // transitively touches lib/db at module-evaluation time and
+            // races with parallel workers on the shared test DB. They run
+            // in the `integration` project under a single worker instead.
+            'src/features/tickets/api/service.test.ts',
             'src/features/employees/api/career-events.test.ts',
+            'src/features/employees/api/service.test.ts',
+            'src/features/checklist/api/service.test.ts',
             'src/features/schedule-grid/api/export-service.test.ts',
-            'src/features/schedule-grid/api/import-service.test.ts'
+            'src/features/schedule-grid/api/import-service.test.ts',
+            'src/lib/auth/password-gate.test.ts'
           ],
           // Per Vitest `guide/improving-performance`, `isolate: false` only
           // helps when files don't leak module state. Several unit tests use
@@ -138,10 +144,15 @@ export default defineConfig({
             'src/**/*.integration.test.ts',
             'src/**/*.integration.test.tsx',
             // DB-bound tests that don't follow the *.integration.test.ts
-            // naming convention (they reset/seed the shared test schema).
+            // naming convention (they reset/seed the shared test schema
+            // OR drive `?tss-serverfn-split` handlers that touch the DB).
+            'src/features/tickets/api/service.test.ts',
             'src/features/employees/api/career-events.test.ts',
+            'src/features/employees/api/service.test.ts',
+            'src/features/checklist/api/service.test.ts',
             'src/features/schedule-grid/api/export-service.test.ts',
-            'src/features/schedule-grid/api/import-service.test.ts'
+            'src/features/schedule-grid/api/import-service.test.ts',
+            'src/lib/auth/password-gate.test.ts'
           ],
           exclude: ['**/node_modules/**', '**/dist/**', '**/.output/**', 'e2e/**'],
           // Shared postgres test DB -> one worker serializes file execution.
