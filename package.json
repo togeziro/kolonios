@@ -160,7 +160,7 @@
     "zod-openapi": "^6.0.2"
   },
   "overrides": {
-    "@tanstack/router-core": "1.171.29",
+    "@tanstack/router-core": "1.171.30",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
   },
