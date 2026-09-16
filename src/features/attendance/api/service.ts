@@ -20,11 +20,8 @@ import {
   assignmentFiltersSchema,
   scheduleAssignmentSchema,
   bulkAssignmentSchema,
-  dateOverrideSchema,
   dayOffSchema,
-  dayOffDeleteSchema,
   correctionRequestSchema,
-  correctionReviewSchema,
   reportFiltersSchema,
   exportReportSchema,
   attendanceManualRecordSchema
@@ -323,14 +320,6 @@ export const deleteShiftFn = createServerFn({ method: 'POST' })
 
 // --- Assignments ---
 
-export const getScheduleAssignmentsFn = createServerFn({ method: 'GET' })
-  .validator(assignmentFiltersSchema)
-  .handler(async ({ data: filters }) => {
-    await requirePermission('attendance_admin', 'edit');
-    const { listScheduleAssignments } = await import('@/lib/db/attendance');
-    return listScheduleAssignments(filters);
-  });
-
 /**
  * Surface workforce accounts that have no `employees` row yet — they cannot
  * receive a schedule assignment (the bulk-assign dropdown reads `employees`),
@@ -414,36 +403,6 @@ export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
 
 // --- Overrides and day offs ---
 
-export const createScheduleOverrideFn = createServerFn({ method: 'POST' })
-  .validator(dateOverrideSchema)
-  .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
-    await checkRateLimit(`write:${session.user.id}`);
-    const { db } = await import('@/lib/db');
-    const { dateOverrides } = await import('@/lib/db/schema/attendance');
-    const [record] = await db
-      .insert(dateOverrides)
-      .values({
-        user_id: data.userId,
-        date: data.date,
-        shift_id: data.shiftId,
-        created_by: session.user.id
-      })
-      .returning();
-    await withAudit(
-      session.user.id,
-      {
-        action: 'attendance.override.create',
-        entityType: 'date_override',
-        entityId: String(record.id),
-        before: null,
-        after: record
-      },
-      async () => undefined
-    );
-    return { success: true, override: record };
-  });
-
 export const createDayOffFn = createServerFn({ method: 'POST' })
   .validator(dayOffSchema)
   .handler(async ({ data }) => {
@@ -471,29 +430,6 @@ export const createDayOffFn = createServerFn({ method: 'POST' })
     return result;
   });
 
-export const deleteDayOffFn = createServerFn({ method: 'POST' })
-  .validator(dayOffDeleteSchema)
-  .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'delete');
-    await checkRateLimit(`write:${session.user.id}`);
-    const { deleteDayOff } = await import('@/lib/db/attendance');
-    const result = await deleteDayOff(data.id);
-    if (result.success) {
-      await withAudit(
-        session.user.id,
-        {
-          action: 'attendance.day_off.delete',
-          entityType: 'day_off',
-          entityId: String(data.id),
-          before: null,
-          after: null
-        },
-        async () => undefined
-      );
-    }
-    return result;
-  });
-
 // --- Corrections ---
 
 export const requestAttendanceCorrectionFn = createServerFn({ method: 'POST' })
@@ -503,29 +439,6 @@ export const requestAttendanceCorrectionFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     const { requestAttendanceCorrection } = await import('@/lib/db/attendance');
     return requestAttendanceCorrection(session.user.id, data);
-  });
-
-export const reviewAttendanceCorrectionFn = createServerFn({ method: 'POST' })
-  .validator(correctionReviewSchema)
-  .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
-    await checkRateLimit(`write:${session.user.id}`);
-    const { reviewAttendanceCorrection } = await import('@/lib/db/attendance');
-    const result = await reviewAttendanceCorrection(session.user.id, data);
-    if (result.success) {
-      await withAudit(
-        session.user.id,
-        {
-          action: 'attendance.correction.review',
-          entityType: 'attendance',
-          entityId: String(data.attendanceId),
-          before: null,
-          after: result.attendance
-        },
-        async () => undefined
-      );
-    }
-    return result;
   });
 
 // --- Admin reports and export ---

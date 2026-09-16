@@ -9,7 +9,7 @@ import { FaceCapture } from './face-capture';
 import { SelfieCapture } from './selfie-capture';
 import { useTranslation } from 'react-i18next';
 
-export interface CheckInLocationOption {
+interface CheckInLocationOption {
   id: number;
   name: string;
   latitude: number | null;
@@ -17,7 +17,7 @@ export interface CheckInLocationOption {
   radius: number | null;
 }
 
-export interface CheckInShiftOption {
+interface CheckInShiftOption {
   id: number;
   name: string;
   start_time: string;

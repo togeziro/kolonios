@@ -1,1 +1,1 @@
-export type { User, UserFilters, UsersResponse, UserMutationPayload } from '@/lib/domain/users';
+export type { User, UserFilters, UserMutationPayload } from '@/lib/domain/users';

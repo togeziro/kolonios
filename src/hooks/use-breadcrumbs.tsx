@@ -7,7 +7,7 @@ type BreadcrumbItem = {
   link: string;
 };
 
-export const breadcrumbSegmentKeys: Record<string, string> = {
+const breadcrumbSegmentKeys: Record<string, string> = {
   dashboard: 'navigation.dashboard',
   overview: 'navigation.overview',
   customers: 'navigation.customers',

@@ -19,7 +19,7 @@ export type AuditLogListItem = {
   entityId: string | null;
 };
 
-export type AuditLogListResponse = {
+type AuditLogListResponse = {
   total: number;
   rows: AuditLogListItem[];
 };

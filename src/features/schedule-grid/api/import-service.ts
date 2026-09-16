@@ -43,7 +43,7 @@ const IMPORT_WRITE_FAILED = 'writeFailed' as const;
 const IMPORT_UNKNOWN_SHIFT_CODE = 'unknownShiftCode' as const;
 const IMPORT_UNKNOWN_EMPLOYEE = 'unknownEmployee' as const;
 
-export const importMonthSchema = z.object({
+const importMonthSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Month must be YYYY-MM'),
   fileBase64: z.string().min(1).max(MAX_BASE64_LENGTH, 'File too large')
 });

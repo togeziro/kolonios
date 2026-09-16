@@ -32,7 +32,7 @@ function dailyRate(input: Pick<PayrollCalculationInput, 'salary' | 'attendance'>
     : 0;
 }
 
-export function calculateBaseSalary(input: PayrollCalculationInput): Money {
+function calculateBaseSalary(input: PayrollCalculationInput): Money {
   const { salary, attendance, attendancePolicy } = input;
   if (salary.type === 'daily')
     return roundMoney(salary.amount * nonNegative(attendance.payableDays));
@@ -107,7 +107,7 @@ function stableGrossBase(
   return roundMoney(componentBase + manualBonuses.reduce((sum, item) => sum + item.amount, 0));
 }
 
-export function calculateAllowances(
+function calculateAllowances(
   components: SalaryComponentInput[],
   baseSalary: Money,
   attendance: AttendanceTotals,
@@ -128,7 +128,7 @@ export function calculateAllowances(
   return { total: roundMoney(items.reduce((sum, item) => sum + item.amount, 0)), items };
 }
 
-export function calculateDeductions(
+function calculateDeductions(
   components: SalaryComponentInput[],
   manualAdjustments: ManualAdjustment[],
   baseSalary: Money,
@@ -159,7 +159,7 @@ export function calculateDeductions(
   return { total: roundMoney(items.reduce((sum, item) => sum + item.amount, 0)), items };
 }
 
-export function calculateAttendanceDeductions(
+function calculateAttendanceDeductions(
   input: Pick<PayrollCalculationInput, 'salary' | 'attendance' | 'attendancePolicy'>
 ): { total: Money; items: PayrollLineItem[] } {
   const { salary, attendance, attendancePolicy } = input;
@@ -236,7 +236,7 @@ function applyTerRate(income: Money, brackets: { upTo: Money | null; rate: numbe
   return { amount: roundMoney((income * selected.rate) / 100), bracket: String(index) };
 }
 
-export function calculateProgressiveTax(income: Money, profile: TaxProfile): TaxResult {
+function calculateProgressiveTax(income: Money, profile: TaxProfile): TaxResult {
   const taxableIncome = nonNegative(roundMoney(income - profile.ptkp));
   const applied = applyBrackets(taxableIncome, profile.settings?.progressive ?? []);
   return {
@@ -248,7 +248,7 @@ export function calculateProgressiveTax(income: Money, profile: TaxProfile): Tax
   };
 }
 
-export function calculateTerTax(income: Money, profile: TaxProfile): TaxResult {
+function calculateTerTax(income: Money, profile: TaxProfile): TaxResult {
   const taxableIncome = nonNegative(roundMoney(income));
   const category = profile.category ?? 'default';
   const applied = applyTerRate(taxableIncome, profile.settings?.ter?.[category] ?? []);
@@ -262,7 +262,7 @@ export function calculateTerTax(income: Money, profile: TaxProfile): TaxResult {
   };
 }
 
-export function calculateTax(income: Money, profile: TaxProfile): TaxResult {
+function calculateTax(income: Money, profile: TaxProfile): TaxResult {
   if (profile.method === 'progressive') return calculateProgressiveTax(income, profile);
   if (profile.method === 'ter') return calculateTerTax(income, profile);
   return {
@@ -273,7 +273,7 @@ export function calculateTax(income: Money, profile: TaxProfile): TaxResult {
   };
 }
 
-export function grossUpTax(taxableBase: Money, profile: TaxProfile): TaxResult {
+function grossUpTax(taxableBase: Money, profile: TaxProfile): TaxResult {
   let tax = 0;
   let previous = -1;
   for (let index = 0; index < 10 && tax !== previous; index += 1) {
@@ -283,11 +283,11 @@ export function grossUpTax(taxableBase: Money, profile: TaxProfile): TaxResult {
   return calculateTax(taxableBase + tax, profile);
 }
 
-export function calculateOvertime(): OvertimeResult {
+function calculateOvertime(): OvertimeResult {
   return { hours: 0, amount: 0, source: 'mvp-disabled' };
 }
 
-export function calculateBpjs(input: Pick<PayrollCalculationInput, 'bpjs'>): {
+function calculateBpjs(input: Pick<PayrollCalculationInput, 'bpjs'>): {
   deductions: PayrollLineItem[];
   employerCosts: EmployerCost[];
 } {

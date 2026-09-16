@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { getObjectUrlFn } from '@/features/storage/api/service';
 import { getMyEmployeeFn } from './service';
 
-export const profileKeys = {
+const profileKeys = {
   all: ['profile'] as const,
   avatar: (key: string) => [...profileKeys.all, 'avatar', key] as const,
   workInfo: ['profile', 'work-info'] as const

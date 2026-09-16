@@ -1213,44 +1213,6 @@ async function isShiftUsed(shiftId: number): Promise<boolean> {
   return Boolean(checklist);
 }
 
-export async function listScheduleAssignments(filters: {
-  page?: number;
-  limit?: number;
-  userId?: string;
-  shiftId?: number;
-}) {
-  try {
-    const { limit, offset } = buildPagination(filters);
-    const where = buildConditions([
-      filters.userId ? eq(scheduleAssignments.user_id, filters.userId) : undefined,
-      filters.shiftId ? eq(scheduleAssignments.shift_id, filters.shiftId) : undefined
-    ]);
-
-    const [rows, [{ count }]] = await Promise.all([
-      db
-        .select({
-          assignment: scheduleAssignments,
-          shift: shifts
-        })
-        .from(scheduleAssignments)
-        .leftJoin(shifts, eq(scheduleAssignments.shift_id, shifts.id))
-        .where(where)
-        .orderBy(desc(scheduleAssignments.created_at))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(scheduleAssignments)
-        .where(where)
-    ]);
-
-    return { success: true, total: count, offset, limit, records: rows };
-  } catch (e) {
-    mapDbError(e, 'attendance.listScheduleAssignments');
-    return { success: false, total: 0, offset: 0, limit: 0, records: [] };
-  }
-}
-
 export async function bulkAssignSchedule(
   entries: Array<{
     userId: string;
@@ -1291,16 +1253,6 @@ export async function bulkAssignSchedule(
     return { success: true, count: created.length, assignments: created };
   } catch (e) {
     mapDbError(e, 'attendance.bulkAssignSchedule');
-    return { success: false };
-  }
-}
-
-export async function deleteDayOff(id: number) {
-  try {
-    await db.delete(dayOffs).where(eq(dayOffs.id, id));
-    return { success: true };
-  } catch (e) {
-    mapDbError(e, 'attendance.deleteDayOff');
     return { success: false };
   }
 }

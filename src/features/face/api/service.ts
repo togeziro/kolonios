@@ -14,8 +14,8 @@ import {
   type FaceSettingsInput
 } from './validation';
 
-export const MIN_ANTI_SPOOF_SCORE = 0.5;
-export const MIN_LIVENESS_SCORE = 0.5;
+const MIN_ANTI_SPOOF_SCORE = 0.5;
+const MIN_LIVENESS_SCORE = 0.5;
 
 // --- Enrollment (self-service) ---
 

@@ -6,7 +6,7 @@ import { maskSecret, deriveStorageConfig } from '@/lib/storage/config';
 import type { StorageConfig } from '@/lib/storage/types';
 import { storageSettingsSchema, testStorageConnectionSchema } from './validation';
 
-export { getUploadUrlFn, getObjectUrlFn } from '@/lib/storage/upload-fns';
+export { getObjectUrlFn } from '@/lib/storage/upload-fns';
 
 // Masked places are shown in the UI as hints; submitting that text means
 // "keep the stored value" was misunderstood and must never overwrite a real

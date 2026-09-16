@@ -11,9 +11,9 @@ export const DEFAULT_LATE_TOLERANCE_MINUTES = 5;
 export const DEFAULT_ABSENCE_CUTOFF_MINUTES = 120;
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 export const WEEKDAY_RANGE = { min: 1, max: 5 } as const;
-export const MAX_DAY_INDEX = 6;
-export const MAX_SHIFT_NAME_LENGTH = 200;
-export const MAX_SHIFT_NOTE_LENGTH = 1000;
+const MAX_DAY_INDEX = 6;
+const MAX_SHIFT_NAME_LENGTH = 200;
+const MAX_SHIFT_NOTE_LENGTH = 1000;
 
 function isWeekday(dayOfWeek: number): boolean {
   return dayOfWeek >= WEEKDAY_RANGE.min && dayOfWeek <= WEEKDAY_RANGE.max;
@@ -21,7 +21,7 @@ function isWeekday(dayOfWeek: number): boolean {
 
 const timeString = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:MM format');
 
-export const shiftWeekdayRuleFormSchema = z.object({
+const shiftWeekdayRuleFormSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(MAX_DAY_INDEX),
   isWorkingDay: z.boolean(),
   startTime: z.string(),

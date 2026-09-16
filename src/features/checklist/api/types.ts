@@ -1,8 +1,8 @@
 import type { ChecklistItemOutcome, DailyChecklistStatus } from '@/lib/db/schema/checklists';
 
-export type { ChecklistItemOutcome, DailyChecklistStatus };
+export type { ChecklistItemOutcome };
 
-export type ChecklistDayStatus = 'working' | 'no_schedule' | 'day_off' | 'holiday';
+type ChecklistDayStatus = 'working' | 'no_schedule' | 'day_off' | 'holiday';
 
 export type DailyChecklist = {
   id: number;

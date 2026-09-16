@@ -7,7 +7,7 @@ export const rateLimitSettingsKeys = {
   policy: () => [...rateLimitSettingsKeys.all, 'policy'] as const
 };
 
-export const rateLimitSettingsQueryOptions = () =>
+const rateLimitSettingsQueryOptions = () =>
   queryOptions({
     queryKey: rateLimitSettingsKeys.policy(),
     queryFn: () => getRateLimitSettingsFn()

@@ -1,1 +1,1 @@
-export { parseKeyFolder, canViewKey, type KeyFolder } from '@/lib/storage/access';
+export { parseKeyFolder, canViewKey } from '@/lib/storage/access';

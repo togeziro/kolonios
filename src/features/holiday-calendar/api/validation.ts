@@ -55,7 +55,7 @@ export const importHolidaysSchema = z.object({
 });
 
 // Holiday API provider enum
-export const holidayApiProviderSchema = z.enum(['nager_date', 'openholidays', 'custom']);
+const holidayApiProviderSchema = z.enum(['nager_date', 'openholidays', 'custom']);
 
 // Update holiday API settings schema
 export const updateHolidayApiSettingsSchema = z.object({
@@ -82,10 +82,4 @@ export const updateHolidayApiSettingsSchema = z.object({
 });
 
 // Types derived from schemas
-export type CreateNationalHolidayInput = z.infer<typeof createNationalHolidaySchema>;
-export type UpdateNationalHolidayInput = z.infer<typeof updateNationalHolidaySchema>;
-export type DeleteNationalHolidayInput = z.infer<typeof deleteNationalHolidaySchema>;
-export type GetNationalHolidaysInput = z.infer<typeof getNationalHolidaysSchema>;
-export type ImportHolidaysInput = z.infer<typeof importHolidaysSchema>;
 export type HolidayApiProvider = z.infer<typeof holidayApiProviderSchema>;
-export type UpdateHolidayApiSettingsInput = z.infer<typeof updateHolidayApiSettingsSchema>;

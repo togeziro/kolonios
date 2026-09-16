@@ -60,7 +60,7 @@ import type { ScheduleGridCell } from './types';
  * `cell.shiftName`, which is null on a day-off / non-working day — survives
  * across the whole window, so it cannot be recovered from `cells` alone.
  */
-export type ResolvedUserWindow = {
+type ResolvedUserWindow = {
   cells: Map<string, ScheduleGridCell>;
   activeShiftName: string | null;
 };

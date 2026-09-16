@@ -21,7 +21,7 @@ function StatusDot({ cell }: { cell: MonthGridCell }) {
   return null;
 }
 
-export function WeekGridLegend() {
+function WeekGridLegend() {
   const { t } = useTranslation();
   return (
     <div className='mt-2 flex items-center justify-center gap-4 text-[10px] text-muted-foreground'>

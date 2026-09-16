@@ -29,7 +29,7 @@ export type SalaryDetail = {
   billing_basis: 'per_month' | 'per_attendance';
 };
 
-export type ProfileComponent = {
+type ProfileComponent = {
   component: {
     id: number;
     assignment_id: number;
@@ -45,7 +45,7 @@ export type ProfileComponent = {
   definition: { id: number; name: string; type: 'allowance' | 'deduction' };
 };
 
-export type TaxProfile = {
+type TaxProfile = {
   id: number;
   tax_setting_id: number | null;
   tax_identifier: string | null;
@@ -60,7 +60,7 @@ export type TaxProfile = {
   effective_to: string | null;
 };
 
-export type Benefit = {
+type Benefit = {
   id: number;
   benefit_code: string;
   benefit_name: string;
@@ -70,7 +70,7 @@ export type Benefit = {
   status: string;
 };
 
-export type BankAccount = {
+type BankAccount = {
   id: number;
   bank_name: string;
   account_name: string;
@@ -145,7 +145,7 @@ export type DraftState = {
   newBankDraft: BankDraft | null;
 };
 
-export function shallowEqual(
+function shallowEqual(
   a: Record<string, unknown> | null | undefined,
   b: Record<string, unknown> | null | undefined
 ): boolean {
@@ -159,7 +159,7 @@ export function shallowEqual(
   return true;
 }
 
-export function mapEqual<T extends object>(a: Record<number, T>, b: Record<number, T>): boolean {
+function mapEqual<T extends object>(a: Record<number, T>, b: Record<number, T>): boolean {
   const aKeys = Object.keys(a);
   if (aKeys.length !== Object.keys(b).length) return false;
   for (const key of aKeys) {

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { zodValidator } from '@tanstack/zod-adapter';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { lengthOfService, type CareerEventRow } from '@/lib/career-timeline/engine';
+import { lengthOfService } from '@/lib/career-timeline/engine';
 import type { CareerEvent as DbCareerEvent } from '@/lib/db/schema/employee-career-events';
 import { ISO_DATE_REGEX } from '@/lib/dates';
 
@@ -158,7 +158,7 @@ function serialize(row: DbCareerEvent): CareerTimelineEvent {
   };
 }
 
-export const careerEventsKeys = {
+const careerEventsKeys = {
   all: ['careerEvents'] as const,
   timeline: (employeeId: string) => [...careerEventsKeys.all, 'timeline', employeeId] as const
 };
@@ -216,8 +216,3 @@ export function useDeleteCareerEvent() {
     }
   });
 }
-
-// Re-export the engine row type so feature consumers have one name to
-// reach for; the wire boundary uses `CareerTimelineEvent` (Date fields
-// ISO-stringified) but the engine also accepts the raw DB row shape.
-export type { CareerEventRow as CareerEvent };

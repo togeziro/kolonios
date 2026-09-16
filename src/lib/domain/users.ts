@@ -52,14 +52,3 @@ export type UserMutationPayload = {
    */
   password?: string;
 };
-
-export type CreatedUser = {
-  success: true;
-  message: string;
-  user: User;
-  /**
-   * Present only when the server generated the password (admin left the
-   * field blank). Single-use: shown once in the UI, never stored.
-   */
-  generatedPassword?: string;
-};

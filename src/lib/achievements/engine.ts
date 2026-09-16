@@ -2,10 +2,10 @@
 // and completed-ticket badges. Every function takes its data (and the
 // business date) as input — no DB, no clock — so each rule is unit-testable
 // without fixtures.
-export const STREAK_WINDOW_DAYS = 90;
+const STREAK_WINDOW_DAYS = 90;
 export const FAST_FINISH_MINUTES = 30;
-export const EARLY_CHECK_IN_TIME = '07:00';
-export const NIGHT_OWL_CHECK_OUT_TIME = '20:00';
+const EARLY_CHECK_IN_TIME = '07:00';
+const NIGHT_OWL_CHECK_OUT_TIME = '20:00';
 
 export type AttendanceDayRow = {
   date: string;

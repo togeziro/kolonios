@@ -1,9 +1,9 @@
 /** Integer minor units, e.g. 100.00 in storage becomes 10_000 here. */
 export type Money = number;
-export type SalaryType = 'monthly' | 'daily' | 'hourly';
-export type ComponentType = 'allowance' | 'deduction';
-export type ComponentMode = 'fixed' | 'percentage' | 'per-attendance';
-export type TaxMethod = 'none' | 'progressive' | 'ter';
+type SalaryType = 'monthly' | 'daily' | 'hourly';
+type ComponentType = 'allowance' | 'deduction';
+type ComponentMode = 'fixed' | 'percentage' | 'per-attendance';
+type TaxMethod = 'none' | 'progressive' | 'ter';
 export type BpjsProgram = 'jkk' | 'jkm' | 'jht' | 'jp' | 'kesehatan';
 import type { JkkRiskCategory } from '@/lib/domain/payroll';
 export type { JkkRiskCategory } from '@/lib/domain/payroll';
@@ -79,7 +79,7 @@ export interface PayrollReportResult {
   componentTotals: Array<{ name: string; type: string; amount: number }>;
 }
 
-export interface SalaryProfile {
+interface SalaryProfile {
   type: SalaryType;
   amount: Money;
   dailyHours?: number;
@@ -123,17 +123,17 @@ export interface ManualAdjustment {
   taxable?: boolean;
 }
 
-export interface ProgressiveTaxBracket {
+interface ProgressiveTaxBracket {
   upTo: Money | null;
   rate: number;
 }
 
-export interface TerTaxBracket {
+interface TerTaxBracket {
   upTo: Money | null;
   rate: number;
 }
 
-export interface TaxSettings {
+interface TaxSettings {
   progressive?: ProgressiveTaxBracket[];
   ter?: Record<string, TerTaxBracket[]>;
 }
@@ -179,7 +179,7 @@ export interface TaxResult {
   amount: Money;
 }
 
-export interface PayrollCalculationSnapshot {
+interface PayrollCalculationSnapshot {
   input: PayrollCalculationInput;
   baseSalary: Money;
   allowanceTotal: Money;
@@ -207,7 +207,7 @@ export interface PayrollCalculationResult {
   employerCosts: EmployerCost[];
 }
 
-export interface BpjsEnrollmentInput {
+interface BpjsEnrollmentInput {
   program: BpjsProgram;
   registeredWage: Money;
   jkkCategoryOverride?: JkkRiskCategory;

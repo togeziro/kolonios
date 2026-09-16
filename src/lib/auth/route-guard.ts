@@ -5,7 +5,7 @@ import type { PermissionAction } from './session';
  * for the user to open a given dashboard path. Mirrors the `module.action`
  * shape the permission matrix already speaks (`hasModulePermission`).
  */
-export type RouteGuard = { module: string; action: PermissionAction };
+type RouteGuard = { module: string; action: PermissionAction };
 
 /**
  * Result of resolving a pathname against the registry:

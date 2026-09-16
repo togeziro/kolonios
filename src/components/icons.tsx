@@ -67,7 +67,6 @@ import {
   IconPizza,
   IconPlayerPlay,
   IconPlus,
-  IconProps,
   IconQrcode,
   IconRefresh,
   IconRosetteDiscountCheck,
@@ -97,10 +96,6 @@ import {
   IconCrown,
   IconX
 } from '@tabler/icons-react';
-
-export type Icon = React.ComponentType<IconProps>;
-
-export type IconStyle = 'currentColor' | 'copilot' | 'muted';
 
 export const Icons = {
   // General

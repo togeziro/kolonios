@@ -31,10 +31,9 @@ import {
 import { buildEmployeeWhere, resolveWeekForEmployees, type ScheduleEmployeeRow } from './service';
 import type { ScheduleGridCell } from './types';
 
-export const EXPORT_MIME =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' as const;
+const EXPORT_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' as const;
 
-export const exportMonthSchema = z.object({
+const exportMonthSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Month must be YYYY-MM'),
   divisionId: z.string().nullable().optional(),
   query: z.string().nullable().optional()
@@ -54,7 +53,7 @@ export type ExportMonthResult = {
  * vocabulary: the shift name when one resolves, `OFF` for day offs,
  * `HOLIDAY` for national holidays (incl. over unassigned days), else `—`.
  */
-export function cellToExportValue(cell: ScheduleGridCell): string {
+function cellToExportValue(cell: ScheduleGridCell): string {
   if (cell.shiftName) return cell.shiftName;
   if (cell.isDayOff) return EXPORT_VALUE_OFF;
   if (cell.isHoliday) return EXPORT_VALUE_HOLIDAY;
@@ -62,7 +61,7 @@ export function cellToExportValue(cell: ScheduleGridCell): string {
 }
 
 /** All YYYY-MM-DD strings inside a month, in calendar order. */
-export function datesInMonth(month: string): string[] {
+function datesInMonth(month: string): string[] {
   const count = daysInMonth(month);
   const out: string[] = [];
   for (let i = 0; i < count; i += 1) {

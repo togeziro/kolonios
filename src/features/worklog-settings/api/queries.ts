@@ -7,7 +7,7 @@ export const worklogSettingsKeys = {
   policy: () => [...worklogSettingsKeys.all, 'policy'] as const
 };
 
-export const worklogSettingsQueryOptions = () =>
+const worklogSettingsQueryOptions = () =>
   queryOptions({
     queryKey: worklogSettingsKeys.policy(),
     queryFn: () => getWorklogSettingsFn()

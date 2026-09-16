@@ -6,8 +6,6 @@
 const nodeEnv = process.env.NODE_ENV;
 
 export const isDev = nodeEnv === 'development';
-export const isProd = nodeEnv === 'production';
-export const isTest = nodeEnv === 'test';
 
 export const DEFAULT_DEV_DATABASE_URL = 'postgres://tanstack:tanstack@localhost:5432/kolonios';
 
@@ -24,14 +22,6 @@ const PRODUCTION_REQUIRED_ENV = [
 
 export function getEnv(key: string, defaultValue?: string): string | undefined {
   return process.env[key] ?? defaultValue;
-}
-
-export function getRequiredEnv(key: string): string {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-  return value;
 }
 
 /**

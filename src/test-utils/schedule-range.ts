@@ -15,7 +15,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 
 /** Drop the Opsi B range check (no-op when the migration has not run yet). */
-export async function dropScheduleRangeCheck(): Promise<void> {
+async function dropScheduleRangeCheck(): Promise<void> {
   await db.execute(
     sql`ALTER TABLE "schedule_assignments" DROP CONSTRAINT IF EXISTS "schedule_assignments_effective_range_check"`
   );
@@ -25,7 +25,7 @@ export async function dropScheduleRangeCheck(): Promise<void> {
  * Delete any leftover inverted rows and (re-)add the Opsi B range check.
  * Mirrors the constraint definition added by migration `0043`.
  */
-export async function restoreScheduleRangeCheck(): Promise<void> {
+async function restoreScheduleRangeCheck(): Promise<void> {
   await db.execute(
     sql`DELETE FROM "schedule_assignments" WHERE "effective_to" IS NOT NULL AND "effective_from" > "effective_to"`
   );

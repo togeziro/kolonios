@@ -1,6 +1,6 @@
 export type ChecklistEntryVariant = 'card' | 'chip';
 
-export type ChecklistEntryTone = 'action' | 'info';
+type ChecklistEntryTone = 'action' | 'info';
 
 export type ChecklistEntryDecision = {
   visible: boolean;

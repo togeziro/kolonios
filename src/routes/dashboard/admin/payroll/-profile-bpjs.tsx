@@ -30,7 +30,7 @@ export type BpjsFamilyMember = {
   is_core: boolean;
 };
 
-export type BpjsEnrollment = {
+type BpjsEnrollment = {
   id: number;
   employee_id: string;
   program: string;

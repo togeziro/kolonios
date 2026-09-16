@@ -1,7 +1,1 @@
-export type {
-  Customer,
-  CustomerFilters,
-  CustomersResponse,
-  CustomerByIdResponse,
-  CustomerMutationPayload
-} from '@/lib/domain/customers';
+export type { Customer, CustomerFilters, CustomerMutationPayload } from '@/lib/domain/customers';

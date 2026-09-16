@@ -1,17 +1,8 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
-export interface PublicBranding {
-  logoLight: string | null;
-  logoDark: string | null;
-  name: string | null;
-  tagline: string | null;
-  copyrightYear: number | null;
-  updatedAt: string;
-}
-
 export const PUBLIC_BRANDING_KEY = ['branding', 'public'] as const;
 
-export const publicBrandingQueryOptions = () =>
+const publicBrandingQueryOptions = () =>
   queryOptions({
     queryKey: PUBLIC_BRANDING_KEY,
     queryFn: async () => {

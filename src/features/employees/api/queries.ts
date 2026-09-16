@@ -1,8 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { listEmployeesFn, getEmployeeByIdFn } from './service';
-import type { EmployeeFilters, Employee } from './types';
-
-export type { Employee };
+import type { EmployeeFilters } from './types';
 
 export const employeeKeys = {
   all: ['employees'] as const,

@@ -7,7 +7,7 @@ export const storageKeys = {
   settings: () => [...storageKeys.all, 'settings'] as const
 };
 
-export const storageSettingsQueryOptions = () =>
+const storageSettingsQueryOptions = () =>
   queryOptions({
     queryKey: storageKeys.settings(),
     queryFn: () => getStorageSettingsFn()
