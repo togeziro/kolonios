@@ -233,9 +233,35 @@ are skipped by the workflow with a notice — deploy those manually over SSH:
 
 ```bash
 ssh -i ~/.ssh/kolonios_deploy kolonios@<DEPLOY_HOST>
-cd /opt/kolonios && git fetch --all --prune && git checkout --force main \
-  && APP_DIR=/opt/kolonios bash deploy/deploy.sh
 ```
+
+`deploy.sh` records the current HEAD as `pre-deploy-sha` before it runs,
+which is only useful for rollback if that SHA is the one currently
+_deployed_ — not the target you're about to land on. The snippet below
+anchors the running version FIRST, then rebuilds HEAD on the remote tip,
+so a later rollback target is intact even if the local `main` ref was
+lost to a prior detached `git checkout` (e.g. to lock a specific SHA for
+testing). `git reset --hard origin/main` does not depend on the local
+`main` branch tracking `origin/main`; always lands on the remote tip:
+
+```bash
+sudo -u kolonios bash <<'INNER'
+  cd /opt/kolonios
+  git rev-parse HEAD \
+    | sudo -u kolonios tee /var/backups/kolonios/previous-deploy-sha >/dev/null
+  git fetch --all --prune
+  git branch --set-upstream-to=origin/main main 2>/dev/null \
+    || git branch -f main origin/main
+  git reset --hard origin/main
+INNER
+APP_DIR=/opt/kolonios bash deploy/deploy.sh
+```
+
+> Use this pattern for any future manual deploy. Do not rely on
+> `git checkout --force main` (the previous recommendation) — branch
+> tracking can be broken by intermediate detached checkouts and the
+> command will then land on a stale `main` tip instead of
+> `origin/main` (incident 2026-09-16).
 
 ### Pre-handover / internal VM (no Caddy, no backups)
 
@@ -263,12 +289,13 @@ sudo find /opt/kolonios /var/backups/kolonios -user root \
   -exec chown kolonios:kolonios {} +
 ```
 
-Two bookkeeping notes: checking out the target revision _before_
-`deploy.sh` makes `pre-deploy-sha` record the new SHA instead of the
-previous one — after a version jump, reset the rollback target explicitly
-(`echo <previous-good-sha> | sudo -u kolonios tee
-/var/backups/kolonios/pre-deploy-sha`). A detached `HEAD` from
-`checkout --force origin/main` is expected (same as what CD checks out).
+Two bookkeeping notes: `deploy.sh` records the new HEAD as
+`pre-deploy-sha` _before_ running — that's the target you're checking
+out, not the version you're about to replace. The anchor block above
+records the real previous version into `previous-deploy-sha` so a
+rollback can target it without archeology. A detached `HEAD` after
+`reset --hard origin/main` is fine; it lands on the same byte-for-byte
+tree as `origin/main`'s tip.
 
 ## 5. Backups
 

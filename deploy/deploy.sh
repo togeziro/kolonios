@@ -38,6 +38,30 @@ set -a
 source "$ENV_FILE"
 set +a
 
+# Safety: refuse to deploy if HEAD is on a fork that isn't reachable from
+# origin/main (typically means the wrong ref was checked out). A detached
+# HEAD pointing at an ancestor of origin/main is allowed — it covers CD
+# races where a newer commit landed after CI green, and deploy.sh treats
+# such cases as in-progress deploys. Skip with FORCE_DEPLOY=1 if you
+# really mean to deploy an off-tree SHA (e.g. cherry-picked hotfix).
+if [[ "${FORCE_DEPLOY:-0}" == "1" ]]; then
+  echo "note: FORCE_DEPLOY=1; skipping origin/main tree check"
+elif origin_sha="$(git rev-parse --verify --quiet origin/main)"; then
+  head_sha="$(git rev-parse HEAD)"
+  if ! git merge-base --is-ancestor "$head_sha" "$origin_sha"; then
+    echo "ERROR: HEAD ($head_sha) is not reachable from origin/main ($origin_sha)." >&2
+    echo "       Refusing to deploy from an off-tree branch." >&2
+    echo "       Run: git fetch --all --prune && git reset --hard origin/main" >&2
+    exit 1
+  fi
+  if [[ "$head_sha" != "$origin_sha" ]]; then
+    lag="$(git rev-list --count "$head_sha..$origin_sha")"
+    echo "note: HEAD lags origin/main by $lag commits; proceeding (CD race or in-progress deploy)"
+  fi
+else
+  echo "note: no origin/main ref (offline provision?); skipping tree check"
+fi
+
 echo "==> Installing dependencies (frozen lockfile)"
 bun install --frozen-lockfile
 
