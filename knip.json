@@ -10,7 +10,7 @@
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,js}", "e2e/**/*.{ts,tsx}"],
   "ignore": ["src/integrations/**", "src/i18n/types.ts"],
   "ignoreDependencies": ["tailwindcss", "tw-animate-css", "pino-pretty"],
-  "ignoreUnresolved": ["^/src/"],
+  "ignoreUnresolved": ["^/src/", "^\\./routeTree\\.gen$"],
   "ignoreIssues": {
     "src/components/ui/**": ["exports", "types"],
     "src/features/employees/api/career-events.ts": ["exports"],
