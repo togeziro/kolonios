@@ -103,6 +103,11 @@ export function resolveEffectiveSchedule(input: {
 
   if (!assignment) return null;
 
+  // Assignment date-range guard: the row only covers [effectiveFrom, effectiveTo].
+  // YYYY-MM-DD lex compare is chronological, no parsing needed.
+  if (date < assignment.effectiveFrom) return null;
+  if (assignment.effectiveTo && date > assignment.effectiveTo) return null;
+
   // Day-off takes precedence
   if (dayOffs.includes(date)) return null;
 

@@ -102,4 +102,99 @@ describe('buildMonthGrid', () => {
     const monday = cells.find((c) => c.date === '2026-08-03');
     expect(monday?.lateToleranceMinutes).toBe(0);
   });
+
+  it('dates before assignment.effectiveFrom resolve to no-schedule (green dot gone)', () => {
+    const cells = buildMonthGrid('2026-09', {
+      assignment: {
+        shiftId: 1,
+        effectiveFrom: '2026-09-14',
+        effectiveTo: null,
+        shiftName: 'S1'
+      },
+      weekdayRules: [
+        {
+          dayOfWeek: 1,
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '17:00'
+        },
+        {
+          dayOfWeek: 2,
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '17:00'
+        },
+        {
+          dayOfWeek: 3,
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '17:00'
+        },
+        {
+          dayOfWeek: 4,
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '17:00'
+        },
+        {
+          dayOfWeek: 5,
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '17:00'
+        }
+      ],
+      shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
+      overrides: [],
+      dayOffs: [],
+      holidays: []
+    });
+    // Sept 1 (Tue, before effective_from) → not working, no shift times
+    const before = cells.find((c) => c.date === '2026-09-01')!;
+    expect(before.isWorkingDay).toBe(false);
+    expect(before.startTime).toBeNull();
+    expect(before.endTime).toBeNull();
+    // Sept 14 (Mon) onward → working
+    const on = cells.find((c) => c.date === '2026-09-14')!;
+    expect(on.isWorkingDay).toBe(true);
+    expect(on.startTime).toBe('08:00');
+    expect(on.endTime).toBe('17:00');
+    const after = cells.find((c) => c.date === '2026-09-15')!;
+    expect(after.isWorkingDay).toBe(true);
+  });
+
+  it('dates after assignment.effectiveTo resolve to no-schedule', () => {
+    const cells = buildMonthGrid('2026-09', {
+      assignment: {
+        shiftId: 1,
+        effectiveFrom: '2026-09-01',
+        effectiveTo: '2026-09-21',
+        shiftName: 'S1'
+      },
+      weekdayRules: [
+        {
+          dayOfWeek: 1,
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '17:00'
+        },
+        {
+          dayOfWeek: 2,
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '17:00'
+        }
+      ],
+      shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
+      overrides: [],
+      dayOffs: [],
+      holidays: []
+    });
+    // Sept 21 (Mon) is the last in-range day → working
+    const lastInRange = cells.find((c) => c.date === '2026-09-21')!;
+    expect(lastInRange.isWorkingDay).toBe(true);
+    // Sept 22 (Tue) is one day past effective_to → not working
+    const outOfRange = cells.find((c) => c.date === '2026-09-22')!;
+    expect(outOfRange.isWorkingDay).toBe(false);
+    expect(outOfRange.startTime).toBeNull();
+  });
 });

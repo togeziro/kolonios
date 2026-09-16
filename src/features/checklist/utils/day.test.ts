@@ -71,4 +71,36 @@ describe('resolveChecklistDay', () => {
     const res = resolveChecklistDay(base({ date: '2026-08-16' })); // Sunday
     expect(res.status).toBe('no_schedule');
   });
+
+  it('dates before assignment.effectiveFrom resolve to no_schedule', () => {
+    const res = resolveChecklistDay(
+      base({
+        date: '2026-08-12',
+        assignment: { shiftId: 1, effectiveFrom: '2026-08-20', effectiveTo: null }
+      })
+    );
+    expect(res.status).toBe('no_schedule');
+    expect(res.schedule).toBeNull();
+  });
+
+  it('dates after assignment.effectiveTo resolve to no_schedule', () => {
+    const res = resolveChecklistDay(
+      base({
+        date: '2026-08-12',
+        assignment: { shiftId: 1, effectiveFrom: '2026-08-01', effectiveTo: '2026-08-10' }
+      })
+    );
+    expect(res.status).toBe('no_schedule');
+    expect(res.schedule).toBeNull();
+  });
+
+  it('dates inside the assignment range still resolve normally', () => {
+    const res = resolveChecklistDay(
+      base({
+        date: '2026-08-12',
+        assignment: { shiftId: 1, effectiveFrom: '2026-08-01', effectiveTo: '2026-08-20' }
+      })
+    );
+    expect(res.status).toBe('working');
+  });
 });
