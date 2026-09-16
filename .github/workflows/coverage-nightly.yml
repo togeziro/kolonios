@@ -1,0 +1,60 @@
+name: Coverage & API docs
+
+on:
+  schedule:
+    # 02:00 UTC daily (10 AM Jakarta) — off-peak, after dependabot window.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Coverage + API docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tanstack
+          POSTGRES_PASSWORD: tanstack
+          POSTGRES_DB: kolonios
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://tanstack:tanstack@localhost:5432/kolonios_test
+      NODE_OPTIONS: '--max-old-space-size=4096'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: Generate API docs (openapi.json + api-docs.html)
+        # Public/openapi.json + api-docs.html are gitignored, so the daily
+        # `public/openapi.json` snapshot must be regenerated before shipping
+        # the docs site. Cheap (~13s), no DB needed.
+        run: bun run build:docs
+
+      - name: Build (server bundle, no docs)
+        run: bun run build:app
+
+      - name: Set up test database
+        run: bun run db:test:create
+
+      - name: Coverage thresholds (gate)
+        # Same command CI used to run; thresholds in vite.config.ts must hold.
+        run: bun run test:coverage

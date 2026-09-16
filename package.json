@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "NODE_ENV=development vite dev",
     "build": "bun run api:docs && NODE_OPTIONS='--max-old-space-size=4096' vite build",
+    "build:app": "NODE_OPTIONS='--max-old-space-size=4096' vite build",
+    "build:docs": "bun run api:generate && redocly build-docs public/openapi.json -o public/api-docs.html",
     "start": "bun run .output/server/index.mjs",
     "lint": "oxlint && bun run lint:i18n && bun run scripts/check-layering.ts",
     "lint:fix": "oxlint --fix",

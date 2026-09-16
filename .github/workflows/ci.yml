@@ -60,7 +60,10 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Build (generates route tree)
-        run: bun run build
+        # CI uses `build:app` to skip api:docs: it only feeds the static docs
+        # site (~13s on PR runners) and is regenerated nightly. Local dev runs
+        # `bun run build` which keeps the convenience of bundled docs.
+        run: bun run build:app
 
       - name: Set up test database
         run: bun run db:test:create
@@ -71,5 +74,7 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Unit & integration tests (with coverage)
-        run: bun run test:coverage
+      - name: Unit & integration tests
+        # Coverage runs nightly in coverage-nightly.yml (~130s overhead saved
+        # per PR); thresholds still enforced on nightly so merge gating holds.
+        run: bun run test:run
