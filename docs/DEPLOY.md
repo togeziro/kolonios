@@ -82,17 +82,20 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --d
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update && sudo apt install -y caddy
 
-# Deploy/service account: login-capable for CD, key-only in practice
-sudo useradd --system --home-dir /opt/kolonios --shell /bin/bash kolonios
-sudo mkdir -p /opt/kolonios /etc/kolonios /var/backups/kolonios
+# Deploy/service account: login-capable for CD, key-only in practice.
+# NOTE: $HOME is /home/kolonios, NOT the app dir. SSH keys live in
+# /home/kolonios/.ssh; /opt/kolonios is the git checkout only.
+sudo useradd --system --home-dir /home/kolonios --shell /bin/bash kolonios
+sudo mkdir -p /opt/kolonios /etc/kolonios /var/backups/kolonios /home/kolonios
+sudo chown kolonios:kolonios /home/kolonios && sudo chmod 700 /home/kolonios
 sudo git clone <repo-url> /opt/kolonios
 sudo chown -R kolonios:kolonios /opt/kolonios
 
 # Authorize the deploy public key for SSH (CI + occasional ops)
-sudo install -d -m 700 -o kolonios -g kolonios /opt/kolonios/.ssh
-echo '<deploy-public-key>' | sudo tee /opt/kolonios/.ssh/authorized_keys
-sudo chown kolonios:kolonios /opt/kolonios/.ssh/authorized_keys
-sudo chmod 600 /opt/kolonios/.ssh/authorized_keys
+sudo install -d -m 700 -o kolonios -g kolonios /home/kolonios/.ssh
+echo '<deploy-public-key>' | sudo tee /home/kolonios/.ssh/authorized_keys
+sudo chown kolonios:kolonios /home/kolonios/.ssh/authorized_keys
+sudo chmod 600 /home/kolonios/.ssh/authorized_keys
 ```
 
 ## 2. Configure secrets
@@ -215,13 +218,13 @@ Log in, then confirm S3 uploads work from Admin → Storage Settings.
 successfully on `main`. Add these repository secrets (Settings → Secrets →
 Actions) and a `production` environment:
 
-| Secret           | Example                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------ |
-| `DEPLOY_HOST`    | `203.0.113.10`                                                                       |
-| `DEPLOY_USER`    | `kolonios`                                                                           |
-| `DEPLOY_PORT`    | `22`                                                                                 |
-| `DEPLOY_SSH_KEY` | private key of a deploy keypair (public key in `/opt/kolonios/.ssh/authorized_keys`) |
-| `DEPLOY_PATH`    | `/opt/kolonios`                                                                      |
+| Secret           | Example                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `DEPLOY_HOST`    | `203.0.113.10`                                                                        |
+| `DEPLOY_USER`    | `kolonios`                                                                            |
+| `DEPLOY_PORT`    | `22`                                                                                  |
+| `DEPLOY_SSH_KEY` | private key of a deploy keypair (public key in `/home/kolonios/.ssh/authorized_keys`) |
+| `DEPLOY_PATH`    | `/opt/kolonios`                                                                       |
 
 The workflow SSHes in as `kolonios`, fetches the CI-green commit, checks it
 out, and runs `deploy/deploy.sh` (install → build → migrate `--no-seed` →
@@ -367,13 +370,13 @@ Per-secret notes (generate replacements with `openssl rand -hex 32`):
 
 ## Troubleshooting
 
-| Symptom                                                  | Likely cause                                                                                     |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `cannot read /etc/kolonios/kolonios.env` on deploy       | Env is `600`; make it `640 root:kolonios` (§2)                                                   |
-| Boot fails with "Missing required environment variables" | `/etc/kolonios/kolonios.env` incomplete; check `journalctl -u kolonios`                          |
-| `caddy` reload fails / empty site address                | No `EnvironmentFile` drop-in for `{$DOMAIN}` (§2)                                                |
-| CD says `Permission denied (publickey)`                  | Deploy public key not in `/opt/kolonios/.ssh/authorized_keys`, or `DEPLOY_USER` isn't `kolonios` |
-| Sign-in fails with origin/CSRF error                     | `BETTER_AUTH_URL`/`BETTER_AUTH_TRUSTED_ORIGINS` not the URL users visit                          |
-| Health returns 503                                       | Postgres down or `DATABASE_URL` wrong                                                            |
-| Migration exits on drift                                 | Database was managed with `db:push`; reconcile with `bun run db:baseline`                        |
-| Demo users appear                                        | A migration ran without `--no-seed`; rotate those passwords immediately                          |
+| Symptom                                                  | Likely cause                                                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `cannot read /etc/kolonios/kolonios.env` on deploy       | Env is `600`; make it `640 root:kolonios` (§2)                                                    |
+| Boot fails with "Missing required environment variables" | `/etc/kolonios/kolonios.env` incomplete; check `journalctl -u kolonios`                           |
+| `caddy` reload fails / empty site address                | No `EnvironmentFile` drop-in for `{$DOMAIN}` (§2)                                                 |
+| CD says `Permission denied (publickey)`                  | Deploy public key not in `/home/kolonios/.ssh/authorized_keys`, or `DEPLOY_USER` isn't `kolonios` |
+| Sign-in fails with origin/CSRF error                     | `BETTER_AUTH_URL`/`BETTER_AUTH_TRUSTED_ORIGINS` not the URL users visit                           |
+| Health returns 503                                       | Postgres down or `DATABASE_URL` wrong                                                             |
+| Migration exits on drift                                 | Database was managed with `db:push`; reconcile with `bun run db:baseline`                         |
+| Demo users appear                                        | A migration ran without `--no-seed`; rotate those passwords immediately                           |
