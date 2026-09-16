@@ -533,10 +533,10 @@ describe('payroll data access (integration)', () => {
       type: 'allowance',
       is_active: false
     });
-    expect(
+    await expect(
       listSalaryComponents().then((rows) => rows.some((c) => c.id === inactive.id))
     ).resolves.toBe(false);
-    expect(
+    await expect(
       listSalaryComponents(true).then((rows) => rows.some((c) => c.id === inactive.id))
     ).resolves.toBe(true);
 
