@@ -135,7 +135,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.63.0",
     "@redocly/cli": "^2.52.1",
     "@tanstack/react-query-devtools": "^5.102.8",
     "@tanstack/react-router-devtools": "^1.167.1",
