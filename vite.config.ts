@@ -117,7 +117,15 @@ export default defineConfig({
             'src/features/checklist/api/service.test.ts',
             'src/features/schedule-grid/api/export-service.test.ts',
             'src/features/schedule-grid/api/import-service.test.ts',
-            'src/lib/auth/password-gate.test.ts'
+            'src/lib/auth/password-gate.test.ts',
+            // Tests that read company_settings / open a real postgres
+            // connection without mocking the DB module:
+            //   - rate-limit.test.ts calls checkRateLimit() which queries
+            //     `company_settings` to resolve limits
+            //   - create-initial-admin.test.ts spawns a bun subprocess
+            //     that CREATEs / DROPs a throwaway DB
+            'src/lib/rate-limit.test.ts',
+            'scripts/create-initial-admin.test.ts'
           ],
           // Per Vitest `guide/improving-performance`, `isolate: false` only
           // helps when files don't leak module state. Several unit tests use
@@ -152,7 +160,9 @@ export default defineConfig({
             'src/features/checklist/api/service.test.ts',
             'src/features/schedule-grid/api/export-service.test.ts',
             'src/features/schedule-grid/api/import-service.test.ts',
-            'src/lib/auth/password-gate.test.ts'
+            'src/lib/auth/password-gate.test.ts',
+            'src/lib/rate-limit.test.ts',
+            'scripts/create-initial-admin.test.ts'
           ],
           exclude: ['**/node_modules/**', '**/dist/**', '**/.output/**', 'e2e/**'],
           // Shared postgres test DB -> one worker serializes file execution.
