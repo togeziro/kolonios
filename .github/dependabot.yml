@@ -32,6 +32,10 @@ updates:
       radix-ui:
         patterns:
           - '@radix-ui/*'
+    # Auto-rebase dependabot PRs whenever main advances (it does, weekly -
+    # dependabot bumps ride the lockfile resolution on rebase instead of
+    # blocking on human review).
+    rebase-strategy: 'auto'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
