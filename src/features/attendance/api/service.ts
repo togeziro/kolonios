@@ -348,6 +348,14 @@ export const assignScheduleFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
+    // Cross-field rule lives here (NOT in zod) per repo convention, so the
+    // form can keep field-level `required` markers. Matches
+    // `createAssignmentInlineFn`'s tuple shape. Note the `<=`: a single-day
+    // range (`effectiveTo === effectiveFrom`) is intentionally rejected too —
+    // assignments must be multi-day or open-ended.
+    if (data.effectiveTo && data.effectiveTo <= data.effectiveFrom) {
+      return { success: false as const, error: 'effectiveToBeforeFrom' as const };
+    }
     const { createScheduleAssignment } = await import('@/lib/db/attendance');
     const result = await createScheduleAssignment({
       userId: data.userId,
@@ -377,6 +385,15 @@ export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
+    // Same cross-field rule as `assignScheduleFn`: reject the whole batch
+    // when any entry is inverted (the lib insert loop is a single
+    // transaction with no partial-failure concept). `<=` also rejects
+    // single-day ranges (`effectiveTo === effectiveFrom`).
+    for (const entry of data.assignments) {
+      if (entry.effectiveTo && entry.effectiveTo <= entry.effectiveFrom) {
+        return { success: false as const, error: 'effectiveToBeforeFrom' as const };
+      }
+    }
     const { bulkAssignSchedule } = await import('@/lib/db/attendance');
     const result = await bulkAssignSchedule(data.assignments, session.user.id);
     if (result.success) {

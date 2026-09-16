@@ -1,4 +1,4 @@
-import { and, eq, or, gte, lte, sql, desc, asc } from 'drizzle-orm';
+import { and, eq, or, gte, lte, sql, desc, asc, isNull } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm';
 import { db } from './index';
 import { DomainError, mapDbError } from '../errors';
@@ -47,6 +47,27 @@ import { validateGpsLocation } from '@/lib/attendance/geo';
 async function getLocationById(id: number) {
   const [location] = await db.select().from(locations).where(eq(locations.id, id)).limit(1);
   return location ?? null;
+}
+
+/**
+ * Non-inverted-range predicate for `schedule_assignments` overlap selection.
+ *
+ * An inverted row (`effective_from > effective_to`) is an empty range, but
+ * the overlap-only filters (`from <= end AND (to IS NULL OR to >= start)`)
+ * still match it, and it can then win `ORDER BY effective_from DESC LIMIT 1`
+ * picks (prod incident: dhani 2026-09-14 → 2026-09-07). Every overlap
+ * selection over `schedule_assignments` must AND this in. YYYY-MM-DD lex
+ * compare is chronological; column-to-column `lte` keeps it index-friendly.
+ *
+ * Exported so feature call sites (schedule-grid cell resolver, payroll
+ * scheduled-days) reuse one definition instead of hand-inlining it
+ * (features→lib is ADR-0001-legal).
+ */
+export function scheduleAssignmentRangeValid() {
+  return or(
+    isNull(scheduleAssignments.effective_to),
+    lte(scheduleAssignments.effective_from, scheduleAssignments.effective_to)
+  );
 }
 
 export async function getLocations() {
@@ -499,7 +520,8 @@ export async function getEffectiveEmployeeSchedule(
         and(
           eq(scheduleAssignments.user_id, userId),
           sql`${scheduleAssignments.effective_from} <= ${date}`,
-          sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${date})`
+          sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${date})`,
+          scheduleAssignmentRangeValid()
         )
       )
       .orderBy(desc(scheduleAssignments.effective_from))
@@ -656,7 +678,8 @@ export async function getMonthlyScheduleData(
         and(
           eq(scheduleAssignments.user_id, userId),
           sql`${scheduleAssignments.effective_from} <= ${monthEnd}`,
-          sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${monthStart})`
+          sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${monthStart})`,
+          scheduleAssignmentRangeValid()
         )
       )
       .orderBy(desc(scheduleAssignments.effective_from))
@@ -820,6 +843,16 @@ export async function createScheduleAssignment(input: {
   effectiveTo?: string | null;
   createdBy?: string;
 }) {
+  // Defense-in-depth: the cross-field rule `effectiveTo > effectiveFrom`
+  // lives in the server fns per repo convention, but the lib fn must never
+  // write an inverted range either (an inverted row is an empty range that
+  // can still win `ORDER BY effective_from DESC` overlap picks).
+  // YYYY-MM-DD lex compare is chronological, no parsing needed. `<=` also
+  // rejects single-day ranges (`effectiveTo === effectiveFrom`) — must be
+  // multi-day or open-ended.
+  if (input.effectiveTo && input.effectiveTo <= input.effectiveFrom) {
+    return { success: false, error: 'effectiveToBeforeFrom' as const };
+  }
   try {
     const [record] = await db
       .insert(scheduleAssignments)
@@ -1227,6 +1260,16 @@ export async function bulkAssignSchedule(
   }>,
   actorId: string
 ) {
+  // Defense-in-depth (see createScheduleAssignment): reject the whole batch
+  // when any entry carries an inverted range. The insert loop below runs in
+  // a single transaction with no partial-failure concept, so fail-fast here
+  // keeps the batch atomic instead of half-written. `<=` also rejects
+  // single-day ranges (`effectiveTo === effectiveFrom`).
+  for (const entry of entries) {
+    if (entry.effectiveTo && entry.effectiveTo <= entry.effectiveFrom) {
+      return { success: false, error: 'effectiveToBeforeFrom' as const };
+    }
+  }
   try {
     const created = await db.transaction(async (tx) => {
       const inserted = [];

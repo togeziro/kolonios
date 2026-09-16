@@ -36,6 +36,11 @@ export function ScheduleAssignmentForm() {
     queryClient.invalidateQueries({ queryKey: ['attendance', 'assignments'] });
   };
 
+  // NOTE: both mutations below create open-ended rows only — they never send
+  // `effectiveTo`. The `effectiveTo <= effectiveFrom` guards in
+  // `assignScheduleFn` / `bulkAssignScheduleFn` are therefore unreachable from
+  // this UI and exist for API/other-caller safety (see the tuple convention in
+  // `src/features/attendance/api/service.ts`).
   const assignMutation = useMutation({
     mutationFn: () =>
       assignScheduleFn({

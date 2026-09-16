@@ -198,7 +198,15 @@ export const getScheduleGridFn = createServerFn({ method: 'GET' })
  * Behavior:
  *   - Auto-closes any pre-existing open-ended assignment
  *     (`effective_to IS NULL`) for the same user by setting
- *     `effective_to = effectiveFrom - 1 day` (admin is GOD MODE — no 422).
+ *     `effective_to = effectiveFrom - 1 day` (admin is GOD MODE — no 422),
+ *     EXCEPT when that would write an inverted range (`effectiveFrom` on or
+ *     before the old row's start): the whole request is rejected with
+ *     `{ success: false, error: 'closeWouldInvertRange' }` and nothing is
+ *     written. Silently skipping the close is NOT an option — the old row
+ *     would stay open-ended and the new open-ended row would violate the
+ *     `schedule_assignments_one_active_unique` partial unique index
+ *     (proven by probe), while a bounded new row would leave two
+ *     overlapping assignments behind.
  *   - Wraps the close + insert in a single DB transaction so a partial
  *     state can never be observed.
  *   - Cross-field rule `effectiveTo > effectiveFrom` is enforced here
@@ -214,6 +222,8 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
 
+    // `<=` also rejects single-day ranges (`effectiveTo === effectiveFrom`) —
+    // assignments must be multi-day or open-ended.
     if (data.effectiveTo && data.effectiveTo <= data.effectiveFrom) {
       return {
         success: false as const,
@@ -221,9 +231,18 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
       };
     }
 
+    // Inverted-range hazard (prod incident: dhani 2026-09-14 →
+    // 2026-09-07): when the new effectiveFrom is on or before the old
+    // open-ended row's effective_from, `closingDate` would predate the old
+    // row's start and the UPDATE would write an empty range that still wins
+    // `ORDER BY effective_from DESC` overlap picks. Reject instead of
+    // writing — the admin picks a From date after the old row's start (the
+    // normal path below then closes it cleanly). YYYY-MM-DD lex compare is
+    // chronological, no parsing needed. The lookup + reject + write stay in
+    // one transaction so the check cannot race a concurrent close.
     try {
       const result = await db.transaction(async (tx) => {
-        const openEnded = await tx
+        const [openEnded] = await tx
           .select()
           .from(scheduleAssignments)
           .where(
@@ -235,13 +254,20 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
           .orderBy(desc(scheduleAssignments.effective_from))
           .limit(1);
 
+        if (openEnded && addDays(data.effectiveFrom, -1) < openEnded.effective_from) {
+          return {
+            rejected: true as const,
+            conflictingFrom: openEnded.effective_from
+          };
+        }
+
         let closedAssignment: typeof scheduleAssignments.$inferSelect | null = null;
-        if (openEnded[0]) {
+        if (openEnded) {
           const closingDate = addDays(data.effectiveFrom, -1);
           const [updated] = await tx
             .update(scheduleAssignments)
             .set({ effective_to: closingDate, updated_at: new Date() })
-            .where(eq(scheduleAssignments.id, openEnded[0].id))
+            .where(eq(scheduleAssignments.id, openEnded.id))
             .returning();
           closedAssignment = updated ?? null;
         }
@@ -259,6 +285,14 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
 
         return { assignment, closedAssignment };
       });
+
+      if ('rejected' in result) {
+        return {
+          success: false as const,
+          error: 'closeWouldInvertRange' as const,
+          conflictingFrom: result.conflictingFrom
+        };
+      }
 
       return {
         success: true as const,

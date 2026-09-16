@@ -212,6 +212,38 @@ describe('AssignShiftDialog', () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
+  it('keeps the dialog open + shows the close-guard toast on closeWouldInvertRange', async () => {
+    createAssignmentInlineFnMock.mockResolvedValue({
+      success: false,
+      error: 'closeWouldInvertRange',
+      conflictingFrom: '2026-09-08'
+    });
+    const { onOpenChange } = renderDialog({ open: true });
+    await waitFor(() => screen.getByText('Assign Shift'));
+
+    const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(trigger);
+    });
+    const option = (await screen.findByRole('option', {
+      name: 'Morning'
+    })) as HTMLElement;
+    await act(async () => {
+      fireEvent.click(option);
+    });
+    const submit = await screen.findByTestId('assign-dialog-submit');
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledTimes(1);
+    });
+    expect(toastErrorMock.mock.calls[0]?.[0]).toContain('2026-09-08');
+    expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
   it('appends the closingNote + policyWarning to the success toast when both fire', async () => {
     createAssignmentInlineFnMock.mockResolvedValue({
       success: true,

@@ -1886,6 +1886,7 @@
       "success": "Shift berhasil di-assign",
       "policyWarning": "Shift disimpan tapi row bisa tampil kosong sampai policy diisi di Shift Master.",
       "errorEffectiveToBeforeFrom": "Tanggal selesai harus setelah tanggal mulai.",
+      "errorCloseWouldInvertRange": "Tanggal mulai harus setelah tanggal mulai assignment saat ini ({{conflictingFrom}}). Pilih tanggal mulai yang lebih akhir atau akhiri assignment saat ini terlebih dahulu.",
       "errorGeneric": "Gagal meng-assign shift. Silakan coba lagi."
     },
     "cell": {

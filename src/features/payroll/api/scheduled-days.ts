@@ -6,8 +6,37 @@ import {
   shiftWeekdayRules
 } from '@/lib/db/schema/attendance';
 import type { PayrollTransaction } from '@/lib/db/payroll';
+import { scheduleAssignmentRangeValid } from '@/lib/db/attendance';
 import type { DateISO } from './date-iso';
 import { dateOnly, effectiveDuring } from './shared';
+
+/**
+ * Schedule assignments overlapping `[periodStart, periodEnd]` for one employee.
+ *
+ * The shared `effectiveDuring` helper keeps its payroll-wide semantics; the
+ * schedule-specific non-inverted predicate is ANDed in here (Opsi B): an
+ * inverted row (`effective_from > effective_to`) is an empty range but still
+ * matches the overlap filter, so it must not reach the day loop. Exported so
+ * integration tests can assert the SQL-level exclusion directly instead of
+ * inferring it from the returned count.
+ */
+export async function listScheduleAssignmentsDuring(
+  tx: PayrollTransaction,
+  employeeId: string,
+  periodStart: DateISO,
+  periodEnd: DateISO
+) {
+  return (await tx
+    .select()
+    .from(scheduleAssignments)
+    .where(
+      and(
+        eq(scheduleAssignments.user_id, employeeId),
+        effectiveDuring(scheduleAssignments, periodStart, periodEnd),
+        scheduleAssignmentRangeValid()
+      )
+    )) as Array<typeof scheduleAssignments.$inferSelect>;
+}
 
 export async function getScheduledDays(
   tx: PayrollTransaction,
@@ -15,15 +44,7 @@ export async function getScheduledDays(
   periodStart: DateISO,
   periodEnd: DateISO
 ) {
-  const assignments = (await tx
-    .select()
-    .from(scheduleAssignments)
-    .where(
-      and(
-        eq(scheduleAssignments.user_id, employeeId),
-        effectiveDuring(scheduleAssignments, periodStart, periodEnd)
-      )
-    )) as Array<typeof scheduleAssignments.$inferSelect>;
+  const assignments = await listScheduleAssignmentsDuring(tx, employeeId, periodStart, periodEnd);
   const rules = await tx.select().from(shiftWeekdayRules);
   const overrides = await tx
     .select()
@@ -55,8 +76,14 @@ export async function getScheduledDays(
   ) {
     const date = cursor.toISOString().slice(0, 10);
     if (daysOffSet.has(date)) continue;
+    // The `effective_from <= effective_to` conjunct mirrors the SQL
+    // predicate above so a pre-existing inverted row can never match here
+    // even if it reaches this loop through another path.
     const assignment = assignments.find(
-      (row) => row.effective_from <= date && (!row.effective_to || row.effective_to >= date)
+      (row) =>
+        row.effective_from <= date &&
+        (!row.effective_to || row.effective_to >= date) &&
+        (!row.effective_to || row.effective_from <= row.effective_to)
     );
     const shiftId = overrideByDate.get(date) ?? assignment?.shift_id;
     const rule = rules.find(
