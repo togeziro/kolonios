@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 // i18n:skip
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
+
+const roleGroupMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/use-nav', () => ({
+  useRoleGroupPermissions: roleGroupMock
+}));
 
 vi.mock('@/lib/auth/auth-client', () => ({
   useSession: () => ({
@@ -57,10 +63,31 @@ function renderPage() {
 }
 
 describe('ProfilePage', () => {
+  beforeEach(() => {
+    roleGroupMock.mockReturnValue({ isAdmin: false, permissions: {}, group: null });
+  });
+
   it('renders profile header with name, email and role', () => {
     renderPage();
     expect(screen.getByText('Budi Santoso')).toBeTruthy();
     expect(screen.getByText('budi@example.com')).toBeTruthy();
+    expect(screen.getByText('technician')).toBeTruthy();
+  });
+
+  it('shows the Access Level name instead of the legacy role (prod: Operation, not technician)', () => {
+    roleGroupMock.mockReturnValue({
+      isAdmin: false,
+      permissions: {},
+      group: { id: 'rg-op', name: 'Operation', description: '', permissions: {}, is_admin: false }
+    });
+    renderPage();
+    expect(screen.getByText('Operation')).toBeTruthy();
+    expect(screen.queryByText('technician')).toBeNull();
+  });
+
+  it('falls back to the legacy role when the user has no role group', () => {
+    roleGroupMock.mockReturnValue({ isAdmin: false, permissions: {}, group: null });
+    renderPage();
     expect(screen.getByText('technician')).toBeTruthy();
   });
 

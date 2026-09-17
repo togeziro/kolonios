@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { attendanceSummaryQueryOptions } from '@/features/attendance/api/queries';
 import { myTicketsQueryOptions } from '@/features/tickets/api/queries';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { useTranslation } from 'react-i18next';
 
 export default function ProfilePage() {
@@ -14,11 +15,16 @@ export default function ProfilePage() {
   const { data: session } = useSession();
   const { data: summaryData } = useQuery(attendanceSummaryQueryOptions());
   const { data: tasksData } = useQuery(myTicketsQueryOptions());
+  const { group } = useRoleGroupPermissions();
 
   const user = session?.user;
   const name = user?.name ?? 'User';
   const email = user?.email ?? '';
   const role = user?.role ?? 'user';
+  // Show the Access Level (role group) name admins actually assigned —
+  // the legacy `user.role` is a compat shim (e.g. Operation → technician)
+  // and only serves as fallback for users without a role group.
+  const roleBadge = group?.name ?? role;
   const image = user?.image ?? undefined;
   const initials = name
     .split(' ')
@@ -45,7 +51,7 @@ export default function ProfilePage() {
           <p className='text-muted-foreground text-xs'>{email}</p>
         </div>
         <Badge variant='secondary' className='rounded-full capitalize'>
-          {role}
+          {roleBadge}
         </Badge>
       </div>
 
