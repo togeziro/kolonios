@@ -212,13 +212,12 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
           effective_to: '2026-09-30'
         });
 
-        // Both rows overlap the month under the OLD overlap-only SQL, and the
-        // inverted row's later `effective_from` (09-14 > 09-08) wins
-        // `ORDER BY effective_from DESC LIMIT 1` without the hardening — so
-        // this assertion fails pre-fix.
+        // Both rows overlap the month under the OLD overlap-only SQL; without
+        // the hardening the inverted row reaches the assignment list. This
+        // assertion fails pre-fix.
         const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-09');
-        expect(res.assignment).not.toBeNull();
-        expect(res.assignment!.shiftId).toBe(validShift.id);
+        expect(res.assignments).toHaveLength(1);
+        expect(res.assignments[0].shiftId).toBe(validShift.id);
       });
     });
 
@@ -235,7 +234,7 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
         });
 
         const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-09');
-        expect(res.assignment).toBeNull();
+        expect(res.assignments).toEqual([]);
       });
     });
 

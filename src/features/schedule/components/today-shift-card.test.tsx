@@ -14,6 +14,7 @@ function cell(date: string, patch: Partial<MonthGridCell> = {}): MonthGridCell {
     startTime: '08:00',
     endTime: '17:00',
     lateToleranceMinutes: 10,
+    shiftName: 'Morning',
     isDayOff: false,
     isHoliday: false,
     holidayName: null,

@@ -74,11 +74,7 @@ export default function MySchedulePage() {
         <p className='text-sm text-muted-foreground'>{t('schedule.loadError')}</p>
       ) : (
         <>
-          <TodayShiftCard
-            today={today}
-            todayDate={todayStr}
-            shiftName={data?.assignment?.shiftName}
-          />
+          <TodayShiftCard today={today} todayDate={todayStr} shiftName={today?.shiftName} />
           <div className='space-y-2'>
             <p className='text-sm font-semibold'>{t('schedule.week')}</p>
             <WeekGrid cells={weekCells} />

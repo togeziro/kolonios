@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { withAudit } from '@/lib/audit';
 import { businessDateInTimeZone } from '@/lib/dates';
+import { pickCoveringAssignment } from '@/lib/attendance/schedule';
 import {
   updateChecklistItemSchema,
   setGlobalNoteSchema,
@@ -60,15 +61,23 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
   const month = today.slice(0, 7);
   const scheduleData = await getMonthlyScheduleData(session.user.id, month);
 
+  // A month can hold several assignment ranges — resolve the checklist against
+  // the range that actually covers today, not one "latest" assignment.
+  const todayAssignment = pickCoveringAssignment(scheduleData.assignments, today);
+  const todayOverride = scheduleData.overrides.find((o) => o.date === today);
+  const effectiveShiftId = todayOverride?.shiftId ?? todayAssignment?.shiftId ?? null;
+
   const resolution = resolveChecklistDay({
     date: today,
-    assignment: scheduleData.assignment,
-    weekdayRules: scheduleData.weekdayRules.map((r) => ({
-      dayOfWeek: r.dayOfWeek,
-      isWorkingDay: r.isWorkingDay,
-      startTime: r.startTime,
-      endTime: r.endTime
-    })),
+    assignment: todayAssignment,
+    weekdayRules: scheduleData.weekdayRules
+      .filter((r) => r.shiftId === effectiveShiftId)
+      .map((r) => ({
+        dayOfWeek: r.dayOfWeek,
+        isWorkingDay: r.isWorkingDay,
+        startTime: r.startTime,
+        endTime: r.endTime
+      })),
     shiftPolicies: scheduleData.shiftPolicies ?? [],
     overrides: scheduleData.overrides,
     dayOffs: scheduleData.dayOffs,
@@ -100,7 +109,7 @@ export const getMyDailyChecklistFn = createServerFn({ method: 'GET' }).handler(a
 
   const created = await createDailyChecklistWithItems(session.user.id, today, {
     shiftId: resolution.schedule.shiftId,
-    shiftName: scheduleData.assignment?.shiftName ?? '',
+    shiftName: todayAssignment?.shiftName ?? '',
     startTime: resolution.schedule.startTime,
     endTime: resolution.schedule.endTime
   });

@@ -89,6 +89,31 @@ function dayOfWeekFromDate(dateStr: string): number {
   return new Date(y, m - 1, d).getDay();
 }
 
+// --- pickCoveringAssignment ---
+
+/**
+ * Pick the assignment that covers `date`, preferring the most recent
+ * `effectiveFrom`. Mirrors the SQL `ORDER BY effective_from DESC` pick and the
+ * per-date lookup in the admin schedule grid. Inverted ranges
+ * (`effectiveFrom > effectiveTo`) are empty and never match.
+ *
+ * A month can hold several non-contiguous ranges (e.g. 1–5 and 14–18), so each
+ * day must resolve against the range that actually covers it; collapsing them
+ * to one "latest" row silently drops the earlier ranges at the read side.
+ * Generic in `T` so callers keep their extra fields (shift name, user id).
+ */
+export function pickCoveringAssignment<
+  T extends Pick<ScheduleAssignment, 'effectiveFrom' | 'effectiveTo'>
+>(assignments: T[], date: string): T | null {
+  let best: T | null = null;
+  for (const a of assignments) {
+    if (a.effectiveFrom > a.effectiveTo) continue;
+    if (date < a.effectiveFrom || date > a.effectiveTo) continue;
+    if (best === null || a.effectiveFrom > best.effectiveFrom) best = a;
+  }
+  return best;
+}
+
 // --- resolveEffectiveSchedule ---
 
 export function resolveEffectiveSchedule(input: {

@@ -592,20 +592,30 @@ export async function getEffectiveEmployeeSchedule(
   }
 }
 
-export type ScheduleWeekdayRuleRow = {
+type ScheduleWeekdayRuleRow = {
+  /** Owning shift — required so multi-assignment months resolve the right weekday rule. */
+  shiftId: number;
   dayOfWeek: number;
   isWorkingDay: boolean;
   startTime: string | null;
   endTime: string | null;
 };
 
+type ScheduleAssignmentRow = {
+  shiftId: number;
+  effectiveFrom: string;
+  effectiveTo: string;
+  shiftName: string | null;
+};
+
 export type ScheduleMonthData = {
-  assignment: {
-    shiftId: number;
-    effectiveFrom: string;
-    effectiveTo: string;
-    shiftName: string | null;
-  } | null;
+  /**
+   * Every assignment range overlapping the month, unordered. A month can hold
+   * several non-contiguous ranges (e.g. 1–5 and 14–18); consumers must resolve
+   * each day against the range that covers it (`pickCoveringAssignment`), not
+   * collapse them into one.
+   */
+  assignments: ScheduleAssignmentRow[];
   weekdayRules: ScheduleWeekdayRuleRow[];
   shiftPolicies: { shiftId: number; lateToleranceMinutes: number; absenceCutoffMinutes: number }[];
   overrides: { date: string; shiftId: number }[];
@@ -683,8 +693,7 @@ export async function getMonthlyScheduleData(
           scheduleAssignmentRangeValid()
         )
       )
-      .orderBy(desc(scheduleAssignments.effective_from))
-      .limit(1),
+      .orderBy(desc(scheduleAssignments.effective_from)),
     db
       .select({ date: dateOverrides.date, shiftId: dateOverrides.shift_id })
       .from(dateOverrides)
@@ -697,34 +706,39 @@ export async function getMonthlyScheduleData(
       )
   ]);
 
-  const assignment = assignmentRows[0];
+  // Distinct shifts across every overlapping assignment and override — rules
+  // and policies are loaded once per shift, and the per-day resolver selects
+  // by shiftId. A month may legitimately reference several shifts (multiple
+  // assignment ranges, or an override to another shift).
+  const shiftIds = Array.from(
+    new Set([...assignmentRows.map((a) => a.shiftId), ...overrides.map((o) => o.shiftId)])
+  );
 
   let weekdayRules: ScheduleWeekdayRuleRow[] = [];
   let shiftPolicies: ScheduleMonthData['shiftPolicies'] = [];
-  if (assignment) {
-    const result = await getShiftWeekdayRules(assignment.shiftId);
-    weekdayRules = (result.success ? result.rules : []).map((r) => ({
+  if (shiftIds.length > 0) {
+    const [ruleRows, policyRows] = await Promise.all([
+      db.select().from(shiftWeekdayRules).where(inArray(shiftWeekdayRules.shift_id, shiftIds)),
+      db
+        .select({
+          shiftId: shifts.id,
+          lateToleranceMinutes: shifts.late_tolerance_minutes,
+          absenceCutoffMinutes: shifts.absence_cutoff_minutes
+        })
+        .from(shifts)
+        .where(inArray(shifts.id, shiftIds))
+    ]);
+
+    weekdayRules = ruleRows.map((r) => ({
+      shiftId: r.shift_id,
       dayOfWeek: r.day_of_week,
       isWorkingDay: r.is_working_day ?? true,
       startTime: r.start_time,
       endTime: r.end_time
     }));
 
-    // Shift-wide policy (ADR-0004): resolve from the assignment's shift row
-    // plus every override shift referenced this month — the engine picks per-date
-    // via shiftPolicies keyed by shiftId. Reuses the `overrides` fetch above.
-    const policyShiftIds = new Set<number>([assignment.shiftId]);
-    for (const o of overrides) policyShiftIds.add(o.shiftId);
-
-    const policyRows = await db
-      .select({
-        shiftId: shifts.id,
-        lateToleranceMinutes: shifts.late_tolerance_minutes,
-        absenceCutoffMinutes: shifts.absence_cutoff_minutes
-      })
-      .from(shifts)
-      .where(or(...[...policyShiftIds].map((id) => eq(shifts.id, id))));
-
+    // Shift-wide policy (ADR-0004): the engine picks per-date via
+    // shiftPolicies keyed by shiftId.
     shiftPolicies = policyRows.map((r) => ({
       shiftId: r.shiftId,
       lateToleranceMinutes: r.lateToleranceMinutes,
@@ -742,14 +756,12 @@ export async function getMonthlyScheduleData(
   const holidayRows = await getHolidaysInRange(monthStart, monthEnd);
 
   return {
-    assignment: assignment
-      ? {
-          shiftId: assignment.shiftId,
-          effectiveFrom: assignment.effectiveFrom,
-          effectiveTo: assignment.effectiveTo,
-          shiftName: assignment.shiftName
-        }
-      : null,
+    assignments: assignmentRows.map((a) => ({
+      shiftId: a.shiftId,
+      effectiveFrom: a.effectiveFrom,
+      effectiveTo: a.effectiveTo,
+      shiftName: a.shiftName
+    })),
     weekdayRules,
     shiftPolicies,
     overrides,

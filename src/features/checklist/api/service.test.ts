@@ -90,13 +90,17 @@ import {
 } from './service';
 
 const WORKING_SCHEDULE = {
-  assignment: {
-    shiftId: 1,
-    effectiveFrom: '2026-01-01',
-    effectiveTo: null,
-    shiftName: 'Morning Shift'
-  },
-  weekdayRules: [{ dayOfWeek: 3, isWorkingDay: true, startTime: '08:00', endTime: '17:00' }],
+  assignments: [
+    {
+      shiftId: 1,
+      effectiveFrom: '2026-01-01',
+      effectiveTo: '2026-12-31',
+      shiftName: 'Morning Shift'
+    }
+  ],
+  weekdayRules: [
+    { shiftId: 1, dayOfWeek: 3, isWorkingDay: true, startTime: '08:00', endTime: '17:00' }
+  ],
   shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
   overrides: [],
   dayOffs: [],
@@ -207,10 +211,40 @@ describe('getMyDailyChecklistFn', () => {
   });
 
   it('creates nothing without a schedule assignment', async () => {
-    mocks.getMonthlyScheduleData.mockResolvedValue({ ...WORKING_SCHEDULE, assignment: null });
+    mocks.getMonthlyScheduleData.mockResolvedValue({ ...WORKING_SCHEDULE, assignments: [] });
     const res = await getMyDailyChecklistFn({} as never);
     expect(res.dayStatus).toBe('no_schedule');
     expect(mocks.createDailyChecklistWithItems).not.toHaveBeenCalled();
+  });
+
+  it('resolves today against the covering range when a later range exists in the month', async () => {
+    mocks.getMonthlyScheduleData.mockResolvedValue({
+      ...WORKING_SCHEDULE,
+      assignments: [
+        {
+          shiftId: 1,
+          effectiveFrom: '2026-08-01',
+          effectiveTo: '2026-08-20',
+          shiftName: 'Morning Shift'
+        },
+        {
+          shiftId: 1,
+          effectiveFrom: '2026-08-21',
+          effectiveTo: '2026-08-31',
+          shiftName: 'Morning Shift'
+        }
+      ]
+    });
+    mocks.findDailyChecklist.mockResolvedValue(null);
+    mocks.createDailyChecklistWithItems.mockResolvedValue({ checklist: dbRow(), items: [] });
+
+    const res = await getMyDailyChecklistFn({} as never);
+    expect(res.dayStatus).toBe('working');
+    expect(mocks.createDailyChecklistWithItems).toHaveBeenCalledWith(
+      'u1',
+      '2026-08-12',
+      expect.objectContaining({ shiftId: 1 })
+    );
   });
 });
 

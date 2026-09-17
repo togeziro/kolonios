@@ -4,20 +4,24 @@ import type { ScheduleMonthData } from '@/lib/db/attendance';
 
 function monthData(overrides: Partial<ScheduleMonthData> = {}): ScheduleMonthData {
   return {
-    assignment: {
-      shiftId: 1,
-      effectiveFrom: '2026-01-01',
-      effectiveTo: '2026-12-31',
-      shiftName: 'Morning'
-    },
+    assignments: [
+      {
+        shiftId: 1,
+        effectiveFrom: '2026-01-01',
+        effectiveTo: '2026-12-31',
+        shiftName: 'Morning'
+      }
+    ],
     weekdayRules: [
       {
+        shiftId: 1,
         dayOfWeek: 1,
         isWorkingDay: true,
         startTime: '08:00',
         endTime: '17:00'
       },
       {
+        shiftId: 1,
         dayOfWeek: 6,
         isWorkingDay: false,
         startTime: null,
@@ -70,7 +74,7 @@ describe('buildMonthGrid', () => {
   });
 
   it('returns all non-working cells when no assignment exists', () => {
-    const cells = buildMonthGrid('2026-08', monthData({ assignment: null, weekdayRules: [] }));
+    const cells = buildMonthGrid('2026-08', monthData({ assignments: [], weekdayRules: [] }));
     expect(cells.every((c) => !c.isWorkingDay)).toBe(true);
   });
 
@@ -105,44 +109,21 @@ describe('buildMonthGrid', () => {
 
   it('dates before assignment.effectiveFrom resolve to no-schedule (green dot gone)', () => {
     const cells = buildMonthGrid('2026-09', {
-      assignment: {
-        shiftId: 1,
-        effectiveFrom: '2026-09-14',
-        effectiveTo: '2026-12-31',
-        shiftName: 'S1'
-      },
-      weekdayRules: [
+      assignments: [
         {
-          dayOfWeek: 1,
-          isWorkingDay: true,
-          startTime: '08:00',
-          endTime: '17:00'
-        },
-        {
-          dayOfWeek: 2,
-          isWorkingDay: true,
-          startTime: '08:00',
-          endTime: '17:00'
-        },
-        {
-          dayOfWeek: 3,
-          isWorkingDay: true,
-          startTime: '08:00',
-          endTime: '17:00'
-        },
-        {
-          dayOfWeek: 4,
-          isWorkingDay: true,
-          startTime: '08:00',
-          endTime: '17:00'
-        },
-        {
-          dayOfWeek: 5,
-          isWorkingDay: true,
-          startTime: '08:00',
-          endTime: '17:00'
+          shiftId: 1,
+          effectiveFrom: '2026-09-14',
+          effectiveTo: '2026-12-31',
+          shiftName: 'S1'
         }
       ],
+      weekdayRules: [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+        shiftId: 1,
+        dayOfWeek,
+        isWorkingDay: true,
+        startTime: '08:00',
+        endTime: '17:00'
+      })),
       shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
       overrides: [],
       dayOffs: [],
@@ -164,26 +145,21 @@ describe('buildMonthGrid', () => {
 
   it('dates after assignment.effectiveTo resolve to no-schedule', () => {
     const cells = buildMonthGrid('2026-09', {
-      assignment: {
-        shiftId: 1,
-        effectiveFrom: '2026-09-01',
-        effectiveTo: '2026-09-21',
-        shiftName: 'S1'
-      },
-      weekdayRules: [
+      assignments: [
         {
-          dayOfWeek: 1,
-          isWorkingDay: true,
-          startTime: '08:00',
-          endTime: '17:00'
-        },
-        {
-          dayOfWeek: 2,
-          isWorkingDay: true,
-          startTime: '08:00',
-          endTime: '17:00'
+          shiftId: 1,
+          effectiveFrom: '2026-09-01',
+          effectiveTo: '2026-09-21',
+          shiftName: 'S1'
         }
       ],
+      weekdayRules: [1, 2].map((dayOfWeek) => ({
+        shiftId: 1,
+        dayOfWeek,
+        isWorkingDay: true,
+        startTime: '08:00',
+        endTime: '17:00'
+      })),
       shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
       overrides: [],
       dayOffs: [],
@@ -196,5 +172,51 @@ describe('buildMonthGrid', () => {
     const outOfRange = cells.find((c) => c.date === '2026-09-22')!;
     expect(outOfRange.isWorkingDay).toBe(false);
     expect(outOfRange.startTime).toBeNull();
+  });
+
+  it('resolves each day against its own range when a month has several assignments (dhani case)', () => {
+    const cells = buildMonthGrid('2026-09', {
+      assignments: [
+        {
+          shiftId: 1,
+          effectiveFrom: '2026-09-01',
+          effectiveTo: '2026-09-05',
+          shiftName: 'Morning'
+        },
+        {
+          shiftId: 1,
+          effectiveFrom: '2026-09-14',
+          effectiveTo: '2026-09-16',
+          shiftName: 'Morning'
+        },
+        { shiftId: 1, effectiveFrom: '2026-09-17', effectiveTo: '2026-09-18', shiftName: 'Morning' }
+      ],
+      weekdayRules: [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+        shiftId: 1,
+        dayOfWeek,
+        isWorkingDay: true,
+        startTime: '08:00',
+        endTime: '17:00'
+      })),
+      shiftPolicies: [{ shiftId: 1, lateToleranceMinutes: 10, absenceCutoffMinutes: 120 }],
+      overrides: [],
+      dayOffs: [],
+      holidays: []
+    });
+    const on = (date: string) => cells.find((c) => c.date === date)!;
+
+    // Every range in the month still resolves — regression: a single
+    // "latest assignment" pick blanked out the earlier ranges.
+    expect(on('2026-09-01').isWorkingDay).toBe(true);
+    expect(on('2026-09-01').shiftName).toBe('Morning');
+    expect(on('2026-09-03').isWorkingDay).toBe(true);
+    expect(on('2026-09-14').isWorkingDay).toBe(true);
+    expect(on('2026-09-16').isWorkingDay).toBe(true);
+    expect(on('2026-09-18').isWorkingDay).toBe(true);
+
+    // Days outside every range stay non-working.
+    expect(on('2026-09-10').isWorkingDay).toBe(false);
+    expect(on('2026-09-21').isWorkingDay).toBe(false);
+    expect(on('2026-09-10').shiftName).toBeNull();
   });
 });

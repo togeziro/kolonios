@@ -568,7 +568,7 @@ describe('attendance data access (integration)', () => {
   describe('monthly schedule data', () => {
     it('returns null assignment plus empty collections when no assignment exists', async () => {
       const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
-      expect(res.assignment).toBeNull();
+      expect(res.assignments).toEqual([]);
       expect(res.weekdayRules).toEqual([]);
       expect(res.overrides).toEqual([]);
       expect(res.dayOffs).toEqual([]);
@@ -596,9 +596,9 @@ describe('attendance data access (integration)', () => {
 
       const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
 
-      expect(res.assignment).not.toBeNull();
-      expect(res.assignment!.shiftId).toBe(shift.id);
-      expect(res.assignment!.shiftName).toBe('Morning');
+      expect(res.assignments).toHaveLength(1);
+      expect(res.assignments[0].shiftId).toBe(shift.id);
+      expect(res.assignments[0].shiftName).toBe('Morning');
       expect(res.weekdayRules).toHaveLength(2);
       expect(res.weekdayRules.find((r) => r.dayOfWeek === 1)?.startTime).toBe('08:00');
       expect(res.weekdayRules.find((r) => r.dayOfWeek === 6)?.isWorkingDay).toBe(false);
@@ -632,12 +632,12 @@ describe('attendance data access (integration)', () => {
       });
 
       const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
-      expect(res.assignment).not.toBeNull();
-      expect(res.assignment!.shiftId).toBe(shift.id);
-      expect(res.assignment!.shiftName).toBe('Morning');
+      expect(res.assignments).toHaveLength(1);
+      expect(res.assignments[0].shiftId).toBe(shift.id);
+      expect(res.assignments[0].shiftName).toBe('Morning');
     });
 
-    it('excludes an assignment that ended before the month and picks the latest overlapping one', async () => {
+    it('excludes an assignment that ended before the month and keeps every overlapping one', async () => {
       const staleShift = await seedShift({ name: 'Stale' });
       const olderShift = await seedShift({ name: 'Older' });
       const latestShift = await seedShift({ name: 'Latest' });
@@ -664,9 +664,12 @@ describe('attendance data access (integration)', () => {
       });
 
       const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
-      expect(res.assignment).not.toBeNull();
-      expect(res.assignment!.shiftId).toBe(latestShift.id);
-      expect(res.assignment!.shiftName).toBe('Latest');
+      const shiftIds = res.assignments.map((a) => a.shiftId);
+      // The stale row (ended July 31) is excluded; both overlapping rows
+      // (July 1 – Sept 30 and Aug 10 – Aug 31) are returned for per-day
+      // resolution instead of collapsing to the latest.
+      expect(shiftIds).not.toContain(staleShift.id);
+      expect(shiftIds).toEqual(expect.arrayContaining([olderShift.id, latestShift.id]));
     });
 
     it('includes national holidays inside the month and recurring holidays by month-day', async () => {

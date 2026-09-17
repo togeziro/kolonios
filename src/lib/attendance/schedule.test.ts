@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   resolveEffectiveSchedule,
+  pickCoveringAssignment,
   calculateLateMinutes,
   isAbsentAfterCutoff,
   resolveAttendancePolicy,
@@ -358,5 +359,44 @@ describe('calculateDistance (Haversine)', () => {
     const d = calculateDistance(-33.8688, 151.2093, -37.8136, 144.9631);
     expect(d).toBeGreaterThan(700_000);
     expect(d).toBeLessThan(750_000);
+  });
+});
+
+// --- pickCoveringAssignment ---
+
+describe('pickCoveringAssignment', () => {
+  const ranges = [
+    { shiftId: 1, effectiveFrom: '2026-09-01', effectiveTo: '2026-09-05' },
+    { shiftId: 1, effectiveFrom: '2026-09-14', effectiveTo: '2026-09-16' },
+    { shiftId: 1, effectiveFrom: '2026-09-17', effectiveTo: '2026-09-18' }
+  ];
+
+  it('returns the range covering an early date (not the latest range)', () => {
+    expect(pickCoveringAssignment(ranges, '2026-09-03')?.effectiveFrom).toBe('2026-09-01');
+  });
+
+  it('returns the range covering a mid-month date', () => {
+    expect(pickCoveringAssignment(ranges, '2026-09-15')?.effectiveFrom).toBe('2026-09-14');
+  });
+
+  it('returns null for a gap between ranges', () => {
+    expect(pickCoveringAssignment(ranges, '2026-09-10')).toBeNull();
+  });
+
+  it('returns null when the list is empty', () => {
+    expect(pickCoveringAssignment([], '2026-09-01')).toBeNull();
+  });
+
+  it('prefers the most recent effectiveFrom when ranges overlap', () => {
+    const overlapping = [
+      { shiftId: 1, effectiveFrom: '2026-09-01', effectiveTo: '2026-09-30' },
+      { shiftId: 2, effectiveFrom: '2026-09-10', effectiveTo: '2026-09-20' }
+    ];
+    expect(pickCoveringAssignment(overlapping, '2026-09-15')?.shiftId).toBe(2);
+  });
+
+  it('skips inverted ranges even if the bounds would enclose the date', () => {
+    const inverted = [{ shiftId: 9, effectiveFrom: '2026-09-14', effectiveTo: '2026-09-07' }];
+    expect(pickCoveringAssignment(inverted, '2026-09-10')).toBeNull();
   });
 });
