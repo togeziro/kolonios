@@ -130,7 +130,7 @@ async function resetTechnicianDay() {
     user_id: id,
     shift_id: shift.id,
     effective_from: '2026-01-01',
-    effective_to: null,
+    effective_to: '2026-12-31',
     created_by: 'e2e'
   });
   return { id, today, shiftId: shift.id };

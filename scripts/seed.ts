@@ -1136,7 +1136,7 @@ async function seedAttendanceSchedules() {
       user_id: empId,
       shift_id: morning.id,
       effective_from: '2026-01-01',
-      effective_to: null,
+      effective_to: '2026-12-31',
       created_by: 'seed'
     });
     console.log(`Assigned Morning Shift to employee@example.com`);

@@ -66,7 +66,7 @@ describe('getScheduledDays — inverted-row hardening (integration)', () => {
         user_id: TEST_USER_ID,
         shift_id: validShift.id,
         effective_from: '2026-09-08',
-        effective_to: null
+        effective_to: '2026-09-30'
       });
 
       const periodStart = asDateISO('2026-09-01');
@@ -84,7 +84,7 @@ describe('getScheduledDays — inverted-row hardening (integration)', () => {
     });
   });
 
-  it('counts the full period for a plain open-ended assignment (predicate no-op)', async () => {
+  it('counts the full period for a plain bounded assignment (predicate no-op)', async () => {
     const shift = await seedShift({ name: 'Plain' });
     for (let dow = 0; dow <= 6; dow += 1) {
       await seedShiftWeekdayRule(shift.id, {
@@ -98,7 +98,7 @@ describe('getScheduledDays — inverted-row hardening (integration)', () => {
       user_id: TEST_USER_ID,
       shift_id: shift.id,
       effective_from: '2026-09-01',
-      effective_to: null
+      effective_to: '2026-09-30'
     });
 
     const days = await countInPeriod(

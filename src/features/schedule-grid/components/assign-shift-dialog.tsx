@@ -62,7 +62,10 @@ export type AssignShiftDialogProps = {
  *
  * Renders inside the schedule grid page (NOT a route navigation). Uses
  * TanStack Form (`useAppForm`) with field-level `required` markers per
- * repo convention — no zod validator at the form level. The cross-field
+ * repo convention — no zod validator at the form level. `effectiveTo` is
+ * REQUIRED (bounded assignments only): an `onSubmit` field validator blocks
+ * empty submits with an inline error, and the server fn rejects with
+ * `effectiveToRequired` as defense-in-depth. The cross-field
  * `effectiveTo > effectiveFrom` rule lives in `createAssignmentInlineFn`.
  *
  * `key` is set to `userId` so a different target user triggers a clean
@@ -148,7 +151,9 @@ function AssignShiftDialogBody({
         return;
       }
       if (!result.success) {
-        if (result.error === 'effectiveToBeforeFrom') {
+        if (result.error === 'effectiveToRequired') {
+          toast.error(t('scheduleGrid.assignDialog.errorEffectiveToRequired'));
+        } else if (result.error === 'effectiveToBeforeFrom') {
           toast.error(t('scheduleGrid.assignDialog.errorEffectiveToBeforeFrom'));
         } else if (result.error === 'closeWouldInvertRange') {
           toast.error(
@@ -187,6 +192,9 @@ function AssignShiftDialogBody({
     }
   });
 
+  // Watch the From date so the To picker can refuse pre-From days in the
+  // calendar (the server tuple stays the source of truth for the rule).
+  const watchedEffectiveFrom = useStore(form.store, (s) => s.values.effectiveFrom);
   // Watch the chosen shift to surface a policy-missing warning inside the
   // dialog (informational, not blocking).
   const watchedShiftId = useStore(form.store, (s) => s.values.shiftId);
@@ -283,10 +291,22 @@ function AssignShiftDialogBody({
           )}
         </form.AppField>
 
-        <form.AppField name='effectiveTo'>
+        <form.AppField
+          name='effectiveTo'
+          validators={{
+            // Required: bounded assignments only. Runs on submit so the
+            // dialog blocks with an inline error instead of firing the
+            // server fn (whose `effectiveToRequired` tuple is the backstop).
+            onSubmit: ({ value }) =>
+              !value ? t('scheduleGrid.assignDialog.toDateRequired') : undefined
+          }}
+        >
           {(field) => (
             <div className='flex flex-col gap-2'>
-              <Label htmlFor={field.name}>{t('scheduleGrid.assignDialog.toDate')}</Label>
+              <Label htmlFor={field.name}>
+                {t('scheduleGrid.assignDialog.toDate')}
+                <span className='text-destructive'> *</span>
+              </Label>
               <DatePicker
                 id={field.name}
                 value={field.state.value ?? undefined}
@@ -294,9 +314,18 @@ function AssignShiftDialogBody({
                   field.handleChange(v ?? null);
                   field.handleBlur();
                 }}
-                placeholder={t('scheduleGrid.assignDialog.toDateHint')}
+                minDate={watchedEffectiveFrom || undefined}
+                placeholder={t('scheduleGrid.assignDialog.toDate')}
+                className={
+                  field.state.meta.errors.length > 0
+                    ? 'border-destructive ring-2 ring-destructive/30'
+                    : undefined
+                }
               />
-              <p className='text-xs text-muted-foreground'>
+              <p
+                className='rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200'
+                data-testid='assign-dialog-todate-hint'
+              >
                 {t('scheduleGrid.assignDialog.toDateHint')}
               </p>
               {field.state.meta.errors.length > 0 ? (

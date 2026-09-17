@@ -4,7 +4,7 @@ import { resolveChecklistDay, type ChecklistDayInput } from './day';
 function base(overrides: Partial<ChecklistDayInput> = {}): ChecklistDayInput {
   return {
     date: '2026-08-12', // Wednesday
-    assignment: { shiftId: 1, effectiveFrom: '2026-01-01', effectiveTo: null },
+    assignment: { shiftId: 1, effectiveFrom: '2026-01-01', effectiveTo: '2026-12-31' },
     weekdayRules: [
       {
         dayOfWeek: 3,
@@ -76,7 +76,7 @@ describe('resolveChecklistDay', () => {
     const res = resolveChecklistDay(
       base({
         date: '2026-08-12',
-        assignment: { shiftId: 1, effectiveFrom: '2026-08-20', effectiveTo: null }
+        assignment: { shiftId: 1, effectiveFrom: '2026-08-20', effectiveTo: '2026-12-31' }
       })
     );
     expect(res.status).toBe('no_schedule');

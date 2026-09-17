@@ -342,7 +342,7 @@ export async function seedScheduleAssignment(
       user_id: 'test-user-att-123',
       shift_id: 1,
       effective_from: '2026-01-01',
-      effective_to: null,
+      effective_to: '2026-12-31',
       ...overrides
     })
     .returning();

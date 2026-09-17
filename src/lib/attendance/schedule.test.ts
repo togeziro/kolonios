@@ -19,7 +19,7 @@ describe('resolveEffectiveSchedule', () => {
     userId: 'user-1',
     shiftId: 1,
     effectiveFrom: '2026-01-01',
-    effectiveTo: null
+    effectiveTo: '2026-12-31'
   };
 
   const shiftPolicies = [

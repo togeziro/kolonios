@@ -127,7 +127,7 @@ describe('attendance assignment server fns — inverted-range guards (integratio
       expect(withAuditMock).not.toHaveBeenCalled();
     });
 
-    it('accepts a valid bounded range and an open-ended row', async () => {
+    it('accepts a valid bounded range', async () => {
       const bounded = (await serverFnProvider.handler!({
         data: {
           userId: TEST_USER_ID,
@@ -136,14 +136,27 @@ describe('attendance assignment server fns — inverted-range guards (integratio
           effectiveTo: '2026-09-30'
         }
       })) as { success: boolean };
-      const open = (await serverFnProvider.handler!({
-        data: { userId: TEST_USER_ID, shiftId: 1, effectiveFrom: '2026-10-01' }
-      })) as { success: boolean };
 
       expect(bounded.success).toBe(true);
-      expect(open.success).toBe(true);
-      expect(await countAssignments(TEST_USER_ID)).toHaveLength(2);
-      expect(withAuditMock).toHaveBeenCalledTimes(2);
+      expect(await countAssignments(TEST_USER_ID)).toHaveLength(1);
+      expect(withAuditMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects a missing effectiveTo with the 'effectiveToRequired' tuple", async () => {
+      for (const data of [
+        { userId: TEST_USER_ID, shiftId: 1, effectiveFrom: '2026-10-01' },
+        { userId: TEST_USER_ID, shiftId: 1, effectiveFrom: '2026-10-01', effectiveTo: null }
+      ]) {
+        const res = (await serverFnProvider.handler!({ data })) as {
+          success: boolean;
+          error?: string;
+        };
+
+        expect(res.success).toBe(false);
+        expect(res.error).toBe('effectiveToRequired');
+      }
+      expect(await countAssignments(TEST_USER_ID)).toHaveLength(0);
+      expect(withAuditMock).not.toHaveBeenCalled();
     });
   });
 
@@ -156,7 +169,12 @@ describe('attendance assignment server fns — inverted-range guards (integratio
       const res = (await serverFnProvider.handler!({
         data: {
           assignments: [
-            { userId: TEST_USER_ID, shiftId: 1, effectiveFrom: '2026-09-01' },
+            {
+              userId: TEST_USER_ID,
+              shiftId: 1,
+              effectiveFrom: '2026-09-01',
+              effectiveTo: '2026-09-30'
+            },
             {
               userId: TEST_USER_ID,
               shiftId: 1,
@@ -173,7 +191,7 @@ describe('attendance assignment server fns — inverted-range guards (integratio
       expect(withAuditMock).not.toHaveBeenCalled();
     });
 
-    it('accepts an all-valid batch', async () => {
+    it('rejects the whole batch when one entry is missing effectiveTo (nothing written)', async () => {
       const res = (await serverFnProvider.handler!({
         data: {
           assignments: [
@@ -184,6 +202,32 @@ describe('attendance assignment server fns — inverted-range guards (integratio
               effectiveTo: '2026-09-30'
             },
             { userId: TEST_USER_ID, shiftId: 1, effectiveFrom: '2026-10-01' }
+          ]
+        }
+      })) as { success: boolean; error?: string };
+
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('effectiveToRequired');
+      expect(await countAssignments(TEST_USER_ID)).toHaveLength(0);
+      expect(withAuditMock).not.toHaveBeenCalled();
+    });
+
+    it('accepts an all-valid batch', async () => {
+      const res = (await serverFnProvider.handler!({
+        data: {
+          assignments: [
+            {
+              userId: TEST_USER_ID,
+              shiftId: 1,
+              effectiveFrom: '2026-09-01',
+              effectiveTo: '2026-09-30'
+            },
+            {
+              userId: TEST_USER_ID,
+              shiftId: 1,
+              effectiveFrom: '2026-10-01',
+              effectiveTo: '2026-10-31'
+            }
           ]
         }
       })) as { success: boolean; count?: number };

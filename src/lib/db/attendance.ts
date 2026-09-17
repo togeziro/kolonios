@@ -53,21 +53,22 @@ async function getLocationById(id: number) {
  * Non-inverted-range predicate for `schedule_assignments` overlap selection.
  *
  * An inverted row (`effective_from > effective_to`) is an empty range, but
- * the overlap-only filters (`from <= end AND (to IS NULL OR to >= start)`)
- * still match it, and it can then win `ORDER BY effective_from DESC LIMIT 1`
- * picks (prod incident: dhani 2026-09-14 → 2026-09-07). Every overlap
- * selection over `schedule_assignments` must AND this in. YYYY-MM-DD lex
- * compare is chronological; column-to-column `lte` keeps it index-friendly.
+ * the overlap-only filters (`from <= end AND to >= start`) still match it,
+ * and it can then win `ORDER BY effective_from DESC LIMIT 1` picks (prod
+ * incident: dhani 2026-09-14 → 2026-09-07). Every overlap selection over
+ * `schedule_assignments` must AND this in. YYYY-MM-DD lex compare is
+ * chronological; column-to-column `lte` keeps it index-friendly.
+ *
+ * (The DB CHECK enforces this for new rows; the predicate additionally
+ * guards readers against legacy/corrupt rows written while the constraint
+ * was disabled.)
  *
  * Exported so feature call sites (schedule-grid cell resolver, payroll
  * scheduled-days) reuse one definition instead of hand-inlining it
  * (features→lib is ADR-0001-legal).
  */
 export function scheduleAssignmentRangeValid() {
-  return or(
-    isNull(scheduleAssignments.effective_to),
-    lte(scheduleAssignments.effective_from, scheduleAssignments.effective_to)
-  );
+  return lte(scheduleAssignments.effective_from, scheduleAssignments.effective_to);
 }
 
 export async function getLocations() {
@@ -520,7 +521,7 @@ export async function getEffectiveEmployeeSchedule(
         and(
           eq(scheduleAssignments.user_id, userId),
           sql`${scheduleAssignments.effective_from} <= ${date}`,
-          sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${date})`,
+          sql`${scheduleAssignments.effective_to} >= ${date}`,
           scheduleAssignmentRangeValid()
         )
       )
@@ -602,7 +603,7 @@ export type ScheduleMonthData = {
   assignment: {
     shiftId: number;
     effectiveFrom: string;
-    effectiveTo: string | null;
+    effectiveTo: string;
     shiftName: string | null;
   } | null;
   weekdayRules: ScheduleWeekdayRuleRow[];
@@ -678,7 +679,7 @@ export async function getMonthlyScheduleData(
         and(
           eq(scheduleAssignments.user_id, userId),
           sql`${scheduleAssignments.effective_from} <= ${monthEnd}`,
-          sql`(${scheduleAssignments.effective_to} IS NULL OR ${scheduleAssignments.effective_to} >= ${monthStart})`,
+          sql`${scheduleAssignments.effective_to} >= ${monthStart}`,
           scheduleAssignmentRangeValid()
         )
       )
@@ -840,17 +841,20 @@ export async function createScheduleAssignment(input: {
   userId: string;
   shiftId: number;
   effectiveFrom: string;
-  effectiveTo?: string | null;
+  effectiveTo: string;
   createdBy?: string;
 }) {
-  // Defense-in-depth: the cross-field rule `effectiveTo > effectiveFrom`
-  // lives in the server fns per repo convention, but the lib fn must never
-  // write an inverted range either (an inverted row is an empty range that
-  // can still win `ORDER BY effective_from DESC` overlap picks).
-  // YYYY-MM-DD lex compare is chronological, no parsing needed. `<=` also
-  // rejects single-day ranges (`effectiveTo === effectiveFrom`) — must be
-  // multi-day or open-ended.
-  if (input.effectiveTo && input.effectiveTo <= input.effectiveFrom) {
+  // Defense-in-depth: `effectiveTo` is required (bounded assignments only)
+  // and the cross-field rule `effectiveTo > effectiveFrom` lives in the
+  // server fns per repo convention, but the lib fn must never write a
+  // missing end date or an inverted range either (an inverted row is an
+  // empty range that can still win `ORDER BY effective_from DESC` overlap
+  // picks). YYYY-MM-DD lex compare is chronological, no parsing needed.
+  // `<=` also rejects single-day ranges (`effectiveTo === effectiveFrom`).
+  if (!input.effectiveTo) {
+    return { success: false, error: 'effectiveToRequired' as const };
+  }
+  if (input.effectiveTo <= input.effectiveFrom) {
     return { success: false, error: 'effectiveToBeforeFrom' as const };
   }
   try {
@@ -860,7 +864,7 @@ export async function createScheduleAssignment(input: {
         user_id: input.userId,
         shift_id: input.shiftId,
         effective_from: input.effectiveFrom,
-        effective_to: input.effectiveTo ?? null,
+        effective_to: input.effectiveTo,
         created_by: input.createdBy ?? null
       })
       .returning();
@@ -1218,17 +1222,21 @@ export async function bulkAssignSchedule(
     userId: string;
     shiftId: number;
     effectiveFrom: string;
-    effectiveTo?: string | null;
+    effectiveTo: string;
   }>,
   actorId: string
 ) {
   // Defense-in-depth (see createScheduleAssignment): reject the whole batch
-  // when any entry carries an inverted range. The insert loop below runs in
-  // a single transaction with no partial-failure concept, so fail-fast here
-  // keeps the batch atomic instead of half-written. `<=` also rejects
-  // single-day ranges (`effectiveTo === effectiveFrom`).
+  // when any entry is missing an end date or carries an inverted range. The
+  // insert loop below runs in a single transaction with no partial-failure
+  // concept, so fail-fast here keeps the batch atomic instead of
+  // half-written. `<=` also rejects single-day ranges
+  // (`effectiveTo === effectiveFrom`).
   for (const entry of entries) {
-    if (entry.effectiveTo && entry.effectiveTo <= entry.effectiveFrom) {
+    if (!entry.effectiveTo) {
+      return { success: false, error: 'effectiveToRequired' as const };
+    }
+    if (entry.effectiveTo <= entry.effectiveFrom) {
       return { success: false, error: 'effectiveToBeforeFrom' as const };
     }
   }
@@ -1242,7 +1250,7 @@ export async function bulkAssignSchedule(
             user_id: entry.userId,
             shift_id: entry.shiftId,
             effective_from: entry.effectiveFrom,
-            effective_to: entry.effectiveTo ?? null,
+            effective_to: entry.effectiveTo,
             created_by: actorId
           })
           .returning();

@@ -2,7 +2,8 @@
 // `schedule_assignments` rows (Opsi B).
 //
 // The DB CHECK constraint `schedule_assignments_effective_range_check` ships
-// with migration `0043`, so a raw insert of an inverted row is rejected. To
+// with migration `0044` (bounded `effective_to`, simplified from `0043`'s
+// nullable form), so a raw insert of an inverted row is rejected. To
 // test read-side hardening against legacy/corrupt data, tests must temporarily
 // drop the constraint, seed the inverted row, exercise the reader, then clean
 // up and re-add the constraint. Postgres validates existing rows on
@@ -23,14 +24,12 @@ async function dropScheduleRangeCheck(): Promise<void> {
 
 /**
  * Delete any leftover inverted rows and (re-)add the Opsi B range check.
- * Mirrors the constraint definition added by migration `0043`.
+ * Mirrors the constraint definition added by migration `0044`.
  */
 async function restoreScheduleRangeCheck(): Promise<void> {
+  await db.execute(sql`DELETE FROM "schedule_assignments" WHERE "effective_from" > "effective_to"`);
   await db.execute(
-    sql`DELETE FROM "schedule_assignments" WHERE "effective_to" IS NOT NULL AND "effective_from" > "effective_to"`
-  );
-  await db.execute(
-    sql`ALTER TABLE "schedule_assignments" ADD CONSTRAINT "schedule_assignments_effective_range_check" CHECK ("schedule_assignments"."effective_to" IS NULL OR "schedule_assignments"."effective_from" <= "schedule_assignments"."effective_to")`
+    sql`ALTER TABLE "schedule_assignments" ADD CONSTRAINT "schedule_assignments_effective_range_check" CHECK ("schedule_assignments"."effective_from" <= "schedule_assignments"."effective_to")`
   );
 }
 

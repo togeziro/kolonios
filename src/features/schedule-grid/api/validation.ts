@@ -24,10 +24,11 @@ export type ScheduleGridFiltersInput = z.infer<typeof scheduleGridFiltersSchema>
  * `scheduleAssignmentSchema` in `src/features/attendance/api/validation.ts`
  * but lives here to keep the schedule-grid feature self-contained.
  *
- * Note: the cross-field rule (`effectiveTo > effectiveFrom`) is NOT enforced
- * by zod — it lives in the server fn and surfaces as a tuple
- * `{ success: false, error: 'effectiveToBeforeFrom' }` so the dialog can
- * keep the field-level `required` markers per repo convention.
+ * Note: the required-`effectiveTo` rule (bounded assignments only) and the
+ * cross-field rule (`effectiveTo > effectiveFrom`) are NOT enforced by zod —
+ * they live in the server fn and surface as tuples
+ * (`{ success: false, error: 'effectiveToRequired' | 'effectiveToBeforeFrom' }`)
+ * so the dialog can keep field-level `required` markers per repo convention.
  */
 export const assignShiftInlineSchema = z.object({
   userId: z.string().min(1),

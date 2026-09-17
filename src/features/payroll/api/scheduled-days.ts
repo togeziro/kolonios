@@ -82,8 +82,8 @@ export async function getScheduledDays(
     const assignment = assignments.find(
       (row) =>
         row.effective_from <= date &&
-        (!row.effective_to || row.effective_to >= date) &&
-        (!row.effective_to || row.effective_from <= row.effective_to)
+        row.effective_to >= date &&
+        row.effective_from <= row.effective_to
     );
     const shiftId = overrideByDate.get(date) ?? assignment?.shift_id;
     const rule = rules.find(

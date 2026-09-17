@@ -338,10 +338,14 @@ export const assignScheduleFn = createServerFn({ method: 'POST' })
     await checkRateLimit(`write:${session.user.id}`);
     // Cross-field rule lives here (NOT in zod) per repo convention, so the
     // form can keep field-level `required` markers. Matches
-    // `createAssignmentInlineFn`'s tuple shape. Note the `<=`: a single-day
-    // range (`effectiveTo === effectiveFrom`) is intentionally rejected too —
-    // assignments must be multi-day or open-ended.
-    if (data.effectiveTo && data.effectiveTo <= data.effectiveFrom) {
+    // `createAssignmentInlineFn`'s tuple shape. `effectiveTo` is required
+    // (bounded assignments only — no more open-ended rows). Note the `<=`:
+    // a single-day range (`effectiveTo === effectiveFrom`) is intentionally
+    // rejected too — assignments must be bounded multi-day ranges.
+    if (!data.effectiveTo) {
+      return { success: false as const, error: 'effectiveToRequired' as const };
+    }
+    if (data.effectiveTo <= data.effectiveFrom) {
       return { success: false as const, error: 'effectiveToBeforeFrom' as const };
     }
     const { createScheduleAssignment } = await import('@/lib/db/attendance');
@@ -349,7 +353,7 @@ export const assignScheduleFn = createServerFn({ method: 'POST' })
       userId: data.userId,
       shiftId: data.shiftId,
       effectiveFrom: data.effectiveFrom,
-      effectiveTo: data.effectiveTo ?? null,
+      effectiveTo: data.effectiveTo,
       createdBy: session.user.id
     });
     if (result.success) {
@@ -373,17 +377,35 @@ export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
-    // Same cross-field rule as `assignScheduleFn`: reject the whole batch
-    // when any entry is inverted (the lib insert loop is a single
-    // transaction with no partial-failure concept). `<=` also rejects
-    // single-day ranges (`effectiveTo === effectiveFrom`).
+    // Same rules as `assignScheduleFn`: every entry needs an end date
+    // (`effectiveToRequired`) and no entry may be inverted (the lib insert
+    // loop is a single transaction with no partial-failure concept, so the
+    // whole batch is rejected). `<=` also rejects single-day ranges
+    // (`effectiveTo === effectiveFrom`). Entries are rebuilt into a
+    // strictly-typed array: property narrowing does not survive the loop,
+    // so the lib signature stays honest without assertions.
+    const entries: Array<{
+      userId: string;
+      shiftId: number;
+      effectiveFrom: string;
+      effectiveTo: string;
+    }> = [];
     for (const entry of data.assignments) {
-      if (entry.effectiveTo && entry.effectiveTo <= entry.effectiveFrom) {
+      if (!entry.effectiveTo) {
+        return { success: false as const, error: 'effectiveToRequired' as const };
+      }
+      if (entry.effectiveTo <= entry.effectiveFrom) {
         return { success: false as const, error: 'effectiveToBeforeFrom' as const };
       }
+      entries.push({
+        userId: entry.userId,
+        shiftId: entry.shiftId,
+        effectiveFrom: entry.effectiveFrom,
+        effectiveTo: entry.effectiveTo
+      });
     }
     const { bulkAssignSchedule } = await import('@/lib/db/attendance');
-    const result = await bulkAssignSchedule(data.assignments, session.user.id);
+    const result = await bulkAssignSchedule(entries, session.user.id);
     if (result.success) {
       await withAudit(
         session.user.id,

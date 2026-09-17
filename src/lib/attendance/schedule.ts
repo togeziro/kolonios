@@ -24,7 +24,7 @@ export type ScheduleAssignment = {
   userId: string;
   shiftId: number;
   effectiveFrom: string; // YYYY-MM-DD
-  effectiveTo: string | null; // YYYY-MM-DD | null = indefinite
+  effectiveTo: string; // YYYY-MM-DD (bounded — open-ended rows are rejected)
 };
 
 export type DateOverride = {
@@ -106,7 +106,7 @@ export function resolveEffectiveSchedule(input: {
   // Assignment date-range guard: the row only covers [effectiveFrom, effectiveTo].
   // YYYY-MM-DD lex compare is chronological, no parsing needed.
   if (date < assignment.effectiveFrom) return null;
-  if (assignment.effectiveTo && date > assignment.effectiveTo) return null;
+  if (date > assignment.effectiveTo) return null;
 
   // Day-off takes precedence
   if (dayOffs.includes(date)) return null;

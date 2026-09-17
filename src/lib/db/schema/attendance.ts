@@ -193,22 +193,20 @@ export const scheduleAssignments = pgTable(
       .notNull()
       .references(() => shifts.id),
     effective_from: text('effective_from').notNull(), // YYYY-MM-DD
-    effective_to: text('effective_to'), // YYYY-MM-DD | null
+    // Bounded assignments only: every row carries a real end date
+    // (open-ended rows are rejected in all create paths).
+    effective_to: text('effective_to').notNull(), // YYYY-MM-DD
     created_by: text('created_by'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull()
   },
   (t) => [
-    // At most one open-ended assignment per employee
-    uniqueIndex('schedule_assignments_one_active_unique')
-      .on(t.user_id)
-      .where(sql`${t.effective_to} IS NULL`),
     // Opsi B: inverted ranges (`effective_from > effective_to`) are empty
     // ranges that still match overlap-only filters and win
     // `ORDER BY effective_from DESC` picks — reject them at the DB level.
     check(
       'schedule_assignments_effective_range_check',
-      sql`${t.effective_to} IS NULL OR ${t.effective_from} <= ${t.effective_to}`
+      sql`${t.effective_from} <= ${t.effective_to}`
     )
   ]
 );

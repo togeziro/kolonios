@@ -7,7 +7,7 @@ function monthData(overrides: Partial<ScheduleMonthData> = {}): ScheduleMonthDat
     assignment: {
       shiftId: 1,
       effectiveFrom: '2026-01-01',
-      effectiveTo: null,
+      effectiveTo: '2026-12-31',
       shiftName: 'Morning'
     },
     weekdayRules: [
@@ -108,7 +108,7 @@ describe('buildMonthGrid', () => {
       assignment: {
         shiftId: 1,
         effectiveFrom: '2026-09-14',
-        effectiveTo: null,
+        effectiveTo: '2026-12-31',
         shiftName: 'S1'
       },
       weekdayRules: [

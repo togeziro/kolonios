@@ -182,6 +182,9 @@ export const scheduleAssignmentSchema = z.object({
   userId: z.string().min(1),
   shiftId: z.number().int().positive(),
   effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // Nullish here but REQUIRED by `assignScheduleFn` / `bulkAssignScheduleFn`
+  // (bounded assignments only — surfaces as `effectiveToRequired`), same
+  // tuple-in-handler convention as the schedule-grid inline schema.
   effectiveTo: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)

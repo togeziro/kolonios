@@ -4,6 +4,7 @@ src/features/attendance/components/admin-attendance-add-dialog.tsx:289
 src/features/attendance/components/attendance-history.tsx:148
 src/features/attendance/components/check-in-scan.test.tsx:107
 src/features/attendance/components/leave-history.tsx:150
+src/features/attendance/components/schedule-assignment-form.tsx:182
 src/features/attendance/components/shift-listing.tsx:142
 src/features/audit/components/audit-log-page.tsx:64
 src/features/branding/components/branding-section.tsx:234
@@ -59,8 +60,9 @@ src/features/overview/components/pie-graph.tsx:80
 src/features/overview/components/pie-graph.tsx:81
 src/features/overview/components/pie-graph.tsx:84
 src/features/role-groups/components/role-group-listing.tsx:143
-src/features/schedule-grid/components/assign-shift-dialog.tsx:218
-src/features/schedule-grid/components/assign-shift-dialog.tsx:268
+src/features/schedule-grid/components/assign-shift-dialog.tsx:226
+src/features/schedule-grid/components/assign-shift-dialog.tsx:276
+src/features/schedule-grid/components/assign-shift-dialog.tsx:308
 src/features/schedule/components/my-schedule-page.tsx:29
 src/features/schedule/components/my-schedule-page.tsx:31
 src/features/schedule/components/today-shift-card.tsx:82

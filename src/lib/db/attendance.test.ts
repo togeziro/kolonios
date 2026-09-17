@@ -628,7 +628,7 @@ describe('attendance data access (integration)', () => {
         user_id: TEST_USER_ID,
         shift_id: shift.id,
         effective_from: '2026-08-10',
-        effective_to: null
+        effective_to: '2026-08-31'
       });
 
       const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
@@ -660,7 +660,7 @@ describe('attendance data access (integration)', () => {
         user_id: TEST_USER_ID,
         shift_id: latestShift.id,
         effective_from: '2026-08-10',
-        effective_to: null
+        effective_to: '2026-08-31'
       });
 
       const res = await getMonthlyScheduleData(TEST_USER_ID, '2026-08');
@@ -734,6 +734,7 @@ describe('attendance data access (integration)', () => {
         userId: TEST_USER_ID,
         shiftId: shift.id,
         effectiveFrom: '2026-08-01',
+        effectiveTo: '2026-08-31',
         createdBy: 'test-admin'
       });
 

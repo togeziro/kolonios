@@ -29,6 +29,8 @@ export function ScheduleAssignmentForm() {
   const [userId, setUserId] = useState('');
   const [shiftId, setShiftId] = useState('');
   const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().slice(0, 10));
+  // Bounded assignments only: the end date is required (no open-ended rows).
+  const [effectiveTo, setEffectiveTo] = useState('');
   const [dayOffUserId, setDayOffUserId] = useState('');
   const [dayOffDate, setDayOffDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -36,15 +38,15 @@ export function ScheduleAssignmentForm() {
     queryClient.invalidateQueries({ queryKey: ['attendance', 'assignments'] });
   };
 
-  // NOTE: both mutations below create open-ended rows only — they never send
-  // `effectiveTo`. The `effectiveTo <= effectiveFrom` guards in
-  // `assignScheduleFn` / `bulkAssignScheduleFn` are therefore unreachable from
-  // this UI and exist for API/other-caller safety (see the tuple convention in
+  // NOTE: assignments are always bounded — both mutations below send the
+  // required `effectiveTo`. The `effectiveToRequired` / `effectiveTo <=
+  // effectiveFrom` guards in `assignScheduleFn` / `bulkAssignScheduleFn`
+  // exist for API/other-caller safety (see the tuple convention in
   // `src/features/attendance/api/service.ts`).
   const assignMutation = useMutation({
     mutationFn: () =>
       assignScheduleFn({
-        data: { userId, shiftId: Number(shiftId), effectiveFrom }
+        data: { userId, shiftId: Number(shiftId), effectiveFrom, effectiveTo }
       }),
     onSuccess: (res) => {
       if (res?.success) {
@@ -64,7 +66,8 @@ export function ScheduleAssignmentForm() {
           assignments: employeeRows.map((e) => ({
             userId: e.id,
             shiftId: Number(shiftId),
-            effectiveFrom
+            effectiveFrom,
+            effectiveTo
           }))
         }
       }),
@@ -97,7 +100,7 @@ export function ScheduleAssignmentForm() {
     onError: () => toast.error(t('attendanceAdmin.assignmentFailed'))
   });
 
-  const canAssign = userId && shiftId && effectiveFrom;
+  const canAssign = userId && shiftId && effectiveFrom && effectiveTo;
 
   return (
     <Card>
@@ -132,7 +135,7 @@ export function ScheduleAssignmentForm() {
             </AlertDescription>
           </Alert>
         )}
-        <div className='grid gap-4 sm:grid-cols-3'>
+        <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
           <div className='space-y-2'>
             <Label htmlFor='as-employee'>{t('attendanceAdmin.employee')}</Label>
             <select
@@ -172,6 +175,22 @@ export function ScheduleAssignmentForm() {
               value={effectiveFrom}
               onChange={(date) => setEffectiveFrom(date ?? '')}
             />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='as-to'>
+              {t('attendanceAdmin.effectiveTo')}
+              <span className='text-destructive'> *</span>
+            </Label>
+            <DatePicker
+              id='as-to'
+              value={effectiveTo}
+              onChange={(date) => setEffectiveTo(date ?? '')}
+              minDate={effectiveFrom || undefined}
+              className={!effectiveTo ? 'border-amber-400 ring-2 ring-amber-300/40' : undefined}
+            />
+            <p className='rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200'>
+              {t('attendanceAdmin.effectiveToHint')}
+            </p>
           </div>
         </div>
 

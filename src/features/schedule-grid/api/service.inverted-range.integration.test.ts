@@ -117,11 +117,16 @@ describe('createAssignmentInlineFn — close-old inverted-range guard (integrati
       user_id: TEST_USER_ID,
       shift_id: 1,
       effective_from: '2026-09-08',
-      effective_to: null
+      effective_to: '2026-09-30'
     });
 
     const res = (await serverFnProvider.handler!({
-      data: { userId: TEST_USER_ID, shiftId: 2, effectiveFrom: '2026-09-08' }
+      data: {
+        userId: TEST_USER_ID,
+        shiftId: 2,
+        effectiveFrom: '2026-09-08',
+        effectiveTo: '2026-09-30'
+      }
     })) as {
       success: boolean;
       error?: string;
@@ -136,7 +141,7 @@ describe('createAssignmentInlineFn — close-old inverted-range guard (integrati
     const rows = await readAssignments(TEST_USER_ID);
     expect(rows).toHaveLength(1);
     expect(rows[0].shift_id).toBe(1);
-    expect(rows[0].effective_to).toBeNull();
+    expect(rows[0].effective_to).toBe('2026-09-30');
   });
 
   it('rejects when the new effectiveFrom predates the old effective_from', async () => {
@@ -144,11 +149,16 @@ describe('createAssignmentInlineFn — close-old inverted-range guard (integrati
       user_id: TEST_USER_ID,
       shift_id: 1,
       effective_from: '2026-09-08',
-      effective_to: null
+      effective_to: '2026-09-30'
     });
 
     const res = (await serverFnProvider.handler!({
-      data: { userId: TEST_USER_ID, shiftId: 2, effectiveFrom: '2026-09-01' }
+      data: {
+        userId: TEST_USER_ID,
+        shiftId: 2,
+        effectiveFrom: '2026-09-01',
+        effectiveTo: '2026-09-30'
+      }
     })) as { success: boolean; error?: string; conflictingFrom?: string };
 
     expect(res.success).toBe(false);
@@ -157,7 +167,7 @@ describe('createAssignmentInlineFn — close-old inverted-range guard (integrati
 
     const rows = await readAssignments(TEST_USER_ID);
     expect(rows).toHaveLength(1);
-    expect(rows[0].effective_to).toBeNull();
+    expect(rows[0].effective_to).toBe('2026-09-30');
   });
 
   it('still closes normally when closingDate >= old effective_from', async () => {
@@ -165,14 +175,19 @@ describe('createAssignmentInlineFn — close-old inverted-range guard (integrati
       user_id: TEST_USER_ID,
       shift_id: 1,
       effective_from: '2026-09-01',
-      effective_to: null
+      effective_to: '2026-09-30'
     });
 
     const res = (await serverFnProvider.handler!({
-      data: { userId: TEST_USER_ID, shiftId: 2, effectiveFrom: '2026-09-10' }
+      data: {
+        userId: TEST_USER_ID,
+        shiftId: 2,
+        effectiveFrom: '2026-09-10',
+        effectiveTo: '2026-09-30'
+      }
     })) as {
       success: boolean;
-      closedAssignment?: { effective_to: string | null };
+      closedAssignment?: { effective_to: string };
     };
 
     expect(res.success).toBe(true);
@@ -181,6 +196,22 @@ describe('createAssignmentInlineFn — close-old inverted-range guard (integrati
     const rows = await readAssignments(TEST_USER_ID);
     expect(rows).toHaveLength(2);
     expect(rows.find((r) => r.shift_id === 1)?.effective_to).toBe('2026-09-09');
+  });
+
+  it("rejects a missing effectiveTo with 'effectiveToRequired' (bounded only)", async () => {
+    for (const data of [
+      { userId: TEST_USER_ID, shiftId: 2, effectiveFrom: '2026-09-10' },
+      { userId: TEST_USER_ID, shiftId: 2, effectiveFrom: '2026-09-10', effectiveTo: null }
+    ]) {
+      const res = (await serverFnProvider.handler!({ data })) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('effectiveToRequired');
+    }
+    expect(await readAssignments(TEST_USER_ID)).toHaveLength(0);
   });
 
   it("keeps rejecting an inverted new row with 'effectiveToBeforeFrom'", async () => {
@@ -236,7 +267,7 @@ describe('resolveScheduleGridCells — skips pre-existing inverted rows (integra
         user_id: TEST_USER_ID,
         shift_id: validShift.id,
         effective_from: '2026-09-08',
-        effective_to: null
+        effective_to: '2026-09-30'
       });
 
       const { byUser } = await resolveScheduleGridCells({

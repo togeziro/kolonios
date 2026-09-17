@@ -76,7 +76,7 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
       expect(await countAssignments(TEST_USER_ID)).toHaveLength(0);
     });
 
-    it('accepts a bounded valid range and an open-ended row', async () => {
+    it('accepts a bounded valid range', async () => {
       const shift = await seedShift({ name: 'Guarded' });
       const bounded = await createScheduleAssignment({
         userId: TEST_USER_ID,
@@ -85,16 +85,31 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
         effectiveTo: '2026-09-30',
         createdBy: 'test-admin'
       });
-      const open = await createScheduleAssignment({
+
+      expect(bounded.success).toBe(true);
+      expect(await countAssignments(TEST_USER_ID)).toHaveLength(1);
+    });
+
+    it("rejects a missing effectiveTo with 'effectiveToRequired' (bounded only)", async () => {
+      const shift = await seedShift({ name: 'Guarded' });
+      // Deliberately incomplete payload (escaped via unknown): the runtime
+      // guard must reject what the type system normally prevents.
+      const res = await createScheduleAssignment({
         userId: TEST_USER_ID,
         shiftId: shift.id,
         effectiveFrom: '2026-10-01',
         createdBy: 'test-admin'
+      } as unknown as {
+        userId: string;
+        shiftId: number;
+        effectiveFrom: string;
+        effectiveTo: string;
+        createdBy?: string;
       });
 
-      expect(bounded.success).toBe(true);
-      expect(open.success).toBe(true);
-      expect(await countAssignments(TEST_USER_ID)).toHaveLength(2);
+      expect(res.success).toBe(false);
+      expect(res).toMatchObject({ error: 'effectiveToRequired' });
+      expect(await countAssignments(TEST_USER_ID)).toHaveLength(0);
     });
   });
 
@@ -103,7 +118,12 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
       const shift = await seedShift({ name: 'Bulk Guarded' });
       const res = await bulkAssignSchedule(
         [
-          { userId: TEST_USER_ID, shiftId: shift.id, effectiveFrom: '2026-09-01' },
+          {
+            userId: TEST_USER_ID,
+            shiftId: shift.id,
+            effectiveFrom: '2026-09-01',
+            effectiveTo: '2026-09-30'
+          },
           {
             userId: TEST_USER_ID,
             shiftId: shift.id,
@@ -119,7 +139,7 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
       expect(await countAssignments(TEST_USER_ID)).toHaveLength(0);
     });
 
-    it('accepts an all-valid batch', async () => {
+    it('rejects the whole batch when one entry is missing effectiveTo (nothing written)', async () => {
       const shift = await seedShift({ name: 'Bulk Guarded' });
       const res = await bulkAssignSchedule(
         [
@@ -130,6 +150,36 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
             effectiveTo: '2026-09-30'
           },
           { userId: TEST_USER_ID, shiftId: shift.id, effectiveFrom: '2026-10-01' }
+        ] as Array<{
+          userId: string;
+          shiftId: number;
+          effectiveFrom: string;
+          effectiveTo: string;
+        }>,
+        'test-admin'
+      );
+
+      expect(res.success).toBe(false);
+      expect(res).toMatchObject({ error: 'effectiveToRequired' });
+      expect(await countAssignments(TEST_USER_ID)).toHaveLength(0);
+    });
+
+    it('accepts an all-valid batch', async () => {
+      const shift = await seedShift({ name: 'Bulk Guarded' });
+      const res = await bulkAssignSchedule(
+        [
+          {
+            userId: TEST_USER_ID,
+            shiftId: shift.id,
+            effectiveFrom: '2026-09-01',
+            effectiveTo: '2026-09-30'
+          },
+          {
+            userId: TEST_USER_ID,
+            shiftId: shift.id,
+            effectiveFrom: '2026-10-01',
+            effectiveTo: '2026-10-31'
+          }
         ],
         'test-admin'
       );
@@ -159,7 +209,7 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
           user_id: TEST_USER_ID,
           shift_id: validShift.id,
           effective_from: '2026-09-08',
-          effective_to: null
+          effective_to: '2026-09-30'
         });
 
         // Both rows overlap the month under the OLD overlap-only SQL, and the
@@ -217,7 +267,7 @@ describe('schedule_assignments inverted-range hardening (integration)', () => {
           user_id: TEST_USER_ID,
           shift_id: validShift.id,
           effective_from: '2026-09-08',
-          effective_to: null
+          effective_to: '2026-09-30'
         });
 
         // A single-date pick matches iff `from <= date AND to >= date`, which

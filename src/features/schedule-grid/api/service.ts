@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { mapDbError } from '@/lib/errors';
@@ -196,19 +196,23 @@ export const getScheduleGridFn = createServerFn({ method: 'GET' })
  * real shift data.
  *
  * Behavior:
- *   - Auto-closes any pre-existing open-ended assignment
- *     (`effective_to IS NULL`) for the same user by setting
+ *   - Auto-closes any pre-existing assignment covering the new
+ *     `effectiveFrom` for the same user by setting
  *     `effective_to = effectiveFrom - 1 day` (admin is GOD MODE — no 422),
  *     EXCEPT when that would write an inverted range (`effectiveFrom` on or
- *     before the old row's start): the whole request is rejected with
+ *     before the old row's start), or when the new range would swallow
+ *     another row's head (a row starting inside the new range): the whole
+ *     request is then rejected with
  *     `{ success: false, error: 'closeWouldInvertRange' }` and nothing is
  *     written. Silently skipping the close is NOT an option — the old row
- *     would stay open-ended and the new open-ended row would violate the
- *     `schedule_assignments_one_active_unique` partial unique index
- *     (proven by probe), while a bounded new row would leave two
- *     overlapping assignments behind.
+ *     would keep covering the new range's head and win the per-date
+ *     most-recent pick for it.
  *   - Wraps the close + insert in a single DB transaction so a partial
  *     state can never be observed.
+ *   - `effectiveTo` is REQUIRED (bounded assignments only): a missing end
+ *     date is rejected with `{ success: false, error: 'effectiveToRequired' }`
+ *     (`effective_to` is NOT NULL at the DB level — open-ended rows cannot
+ *     exist).
  *   - Cross-field rule `effectiveTo > effectiveFrom` is enforced here
  *     (NOT in the zod schema) so the dialog can keep field-level
  *     `required` markers per repo convention.
@@ -222,63 +226,106 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
     const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
 
+    // `effectiveTo` is required — assignments are always bounded. A missing
+    // end date used to mean "open-ended forever"; reject it explicitly so
+    // the admin picks a real end date (tuple, not zod, per repo convention).
+    if (!data.effectiveTo) {
+      return {
+        success: false as const,
+        error: 'effectiveToRequired' as const
+      };
+    }
+
     // `<=` also rejects single-day ranges (`effectiveTo === effectiveFrom`) —
-    // assignments must be multi-day or open-ended.
-    if (data.effectiveTo && data.effectiveTo <= data.effectiveFrom) {
+    // assignments must be bounded multi-day ranges.
+    if (data.effectiveTo <= data.effectiveFrom) {
       return {
         success: false as const,
         error: 'effectiveToBeforeFrom' as const
       };
     }
 
+    // Copy into locals: property narrowing on `data.*` does not survive
+    // into the transaction closure below. `effectiveTo` is narrowed to
+    // `string` by the `effectiveToRequired` guard above.
+    const { userId, shiftId, effectiveFrom } = data;
+    const effectiveTo: string = data.effectiveTo;
+
     // Inverted-range hazard (prod incident: dhani 2026-09-14 →
-    // 2026-09-07): when the new effectiveFrom is on or before the old
-    // open-ended row's effective_from, `closingDate` would predate the old
-    // row's start and the UPDATE would write an empty range that still wins
-    // `ORDER BY effective_from DESC` overlap picks. Reject instead of
-    // writing — the admin picks a From date after the old row's start (the
-    // normal path below then closes it cleanly). YYYY-MM-DD lex compare is
-    // chronological, no parsing needed. The lookup + reject + write stay in
-    // one transaction so the check cannot race a concurrent close.
+    // 2026-09-07): closing a covering row whose start is after the new
+    // effectiveFrom would write an empty range that still wins
+    // `ORDER BY effective_from DESC` overlap picks. Likewise a new range
+    // that swallows another row's head (row starts inside the new range)
+    // would leave a silently shadowed overlap. Reject instead of writing —
+    // the admin picks dates around the conflicting assignment or ends it
+    // first. YYYY-MM-DD lex compare is chronological, no parsing needed.
+    // The lookup + reject + write stay in one transaction so the check
+    // cannot race a concurrent close.
     try {
       const result = await db.transaction(async (tx) => {
-        const [openEnded] = await tx
+        const covering = await tx
           .select()
           .from(scheduleAssignments)
           .where(
             and(
-              eq(scheduleAssignments.user_id, data.userId),
-              isNull(scheduleAssignments.effective_to)
+              eq(scheduleAssignments.user_id, userId),
+              lte(scheduleAssignments.effective_from, effectiveFrom),
+              gte(scheduleAssignments.effective_to, effectiveFrom)
             )
           )
-          .orderBy(desc(scheduleAssignments.effective_from))
-          .limit(1);
+          .orderBy(desc(scheduleAssignments.effective_from));
 
-        if (openEnded && addDays(data.effectiveFrom, -1) < openEnded.effective_from) {
+        for (const row of covering) {
+          if (addDays(effectiveFrom, -1) < row.effective_from) {
+            return {
+              rejected: true as const,
+              conflictingFrom: row.effective_from
+            };
+          }
+        }
+
+        // Rows starting strictly inside the new range would overlap it
+        // without being closed by the loop above (they don't cover
+        // `effectiveFrom`) — reject so no overlap is ever written silently.
+        const [swallowed] = await tx
+          .select({ effective_from: scheduleAssignments.effective_from })
+          .from(scheduleAssignments)
+          .where(
+            and(
+              eq(scheduleAssignments.user_id, userId),
+              sql`${scheduleAssignments.effective_from} > ${effectiveFrom}`,
+              lte(scheduleAssignments.effective_from, effectiveTo)
+            )
+          )
+          .orderBy(asc(scheduleAssignments.effective_from))
+          .limit(1);
+        if (swallowed) {
           return {
             rejected: true as const,
-            conflictingFrom: openEnded.effective_from
+            conflictingFrom: swallowed.effective_from
           };
         }
 
         let closedAssignment: typeof scheduleAssignments.$inferSelect | null = null;
-        if (openEnded) {
-          const closingDate = addDays(data.effectiveFrom, -1);
+        for (const row of covering) {
+          const closingDate = addDays(effectiveFrom, -1);
           const [updated] = await tx
             .update(scheduleAssignments)
             .set({ effective_to: closingDate, updated_at: new Date() })
-            .where(eq(scheduleAssignments.id, openEnded.id))
+            .where(eq(scheduleAssignments.id, row.id))
             .returning();
-          closedAssignment = updated ?? null;
+          // Report the most recent (highest effective_from) closed row —
+          // it is first under the DESC ordering above.
+          closedAssignment ??= updated ?? null;
         }
 
         const [assignment] = await tx
           .insert(scheduleAssignments)
           .values({
-            user_id: data.userId,
-            shift_id: data.shiftId,
-            effective_from: data.effectiveFrom,
-            effective_to: data.effectiveTo ?? null,
+            user_id: userId,
+            shift_id: shiftId,
+            effective_from: effectiveFrom,
+            effective_to: effectiveTo,
             created_by: session.user.id
           })
           .returning();

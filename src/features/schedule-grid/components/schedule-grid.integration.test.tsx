@@ -37,6 +37,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createElement } from 'react';
+import { addDays, format } from 'date-fns';
+import { enUS, id as idLocale } from 'date-fns/locale';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -415,7 +417,7 @@ function stubServerFns(): void {
           user_id: data.userId,
           shift_id: data.shiftId,
           effective_from: '2026-08-31',
-          effective_to: null,
+          effective_to: '2026-09-30',
           created_by: 'admin-user',
           created_at: new Date(),
           updated_at: new Date()
@@ -518,6 +520,46 @@ async function waitForGridSettled() {
     expect(screen.queryAllByTestId(/^schedule-grid-cell-trigger-/).length).toBe(7);
   });
   expect(screen.getAllByRole('gridcell').length).toBe(14);
+}
+
+/**
+ * Pick the assign-dialog To date through its DatePicker calendar (bounded
+ * assignments only — submit is blocked while empty). Navigates months
+ * forward until the target day button appears (robust across month
+ * boundaries). Day-button aria-labels follow the app locale
+ * (`dateFnsLocale()`), which defaults to Indonesian in tests, so both
+ * label shapes are tried.
+ */
+async function pickAssignDialogToDate(daysAhead = 5): Promise<string> {
+  const trigger = document.getElementById('effectiveTo');
+  if (!trigger) throw new Error('To-date picker trigger not found');
+  await act(async () => {
+    fireEvent.click(trigger);
+  });
+  const target = addDays(new Date(), daysAhead);
+  const labels = [
+    format(target, 'PPPP', { locale: enUS }),
+    format(target, 'PPPP', { locale: idLocale })
+  ];
+  let day: HTMLElement | null | undefined = null;
+  for (let i = 0; i < 4 && !day; i += 1) {
+    day = labels
+      .map((label) => screen.queryByRole('button', { name: label }))
+      .find((f) => f != null);
+    if (!day) {
+      const next = screen.queryByRole('button', { name: /next month/i });
+      if (!next) break;
+      await act(async () => {
+        fireEvent.click(next);
+      });
+    }
+  }
+  if (!day) throw new Error(`To-date day button not found: ${labels.join(' / ')}`);
+  const picked = day;
+  await act(async () => {
+    fireEvent.click(picked);
+  });
+  return format(target, 'yyyy-MM-dd');
 }
 
 // ----- The 6-step flow, split per concern so each test mounts a fresh
@@ -679,6 +721,12 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     await waitFor(() => {
       expect(screen.getByText('Assign Shift')).toBeTruthy();
     });
+
+    // To date is required (bounded assignments only) — pick it through the
+    // DatePicker calendar BEFORE touching the shift Select (Radix layering
+    // swallows the picker trigger click while a Select popover interaction
+    // is still settling).
+    await pickAssignDialogToDate();
 
     const dialogShiftTrigger = await screen.findByTestId('assign-dialog-shift-trigger');
     await act(async () => {

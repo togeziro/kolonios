@@ -4,6 +4,8 @@ import { createElement } from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
+import { addDays, format } from 'date-fns';
+import { enUS, id as idLocale } from 'date-fns/locale';
 import i18n from '@/i18n/config';
 import { AssignShiftDialog } from './assign-shift-dialog';
 
@@ -123,6 +125,67 @@ beforeEach(() => {
   i18n.changeLanguage('en');
 });
 
+// ----- Interaction helpers -----
+
+async function selectShift(name: string) {
+  const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
+  await act(async () => {
+    fireEvent.click(trigger);
+  });
+  const option = (await screen.findByRole('option', { name })) as HTMLElement;
+  await act(async () => {
+    fireEvent.click(option);
+  });
+}
+
+/**
+ * Pick a To date through the DatePicker calendar (bounded assignments only —
+ * the dialog blocks submit while this is empty). Navigates months forward
+ * until the target day button appears (robust across month boundaries).
+ * Returns the picked date as YYYY-MM-DD.
+ */
+async function pickToDate(daysAhead = 5): Promise<string> {
+  const trigger = document.getElementById('effectiveTo');
+  if (!trigger) throw new Error('To-date picker trigger not found');
+  await act(async () => {
+    fireEvent.click(trigger);
+  });
+  const target = addDays(new Date(), daysAhead);
+  // The calendar's aria-labels follow the app locale (`dateFnsLocale()`),
+  // which defaults to Indonesian in tests regardless of the i18n language —
+  // try both label shapes.
+  const labels = [
+    format(target, 'PPPP', { locale: enUS }),
+    format(target, 'PPPP', { locale: idLocale })
+  ];
+  let day: HTMLElement | null | undefined = null;
+  for (let i = 0; i < 4 && !day; i += 1) {
+    day = labels
+      .map((label) => screen.queryByRole('button', { name: label }))
+      .find((found) => found != null);
+    if (!day) {
+      const next = screen.queryByRole('button', { name: /next month/i });
+      if (!next) break;
+      await act(async () => {
+        fireEvent.click(next);
+      });
+    }
+  }
+  if (!day) throw new Error(`To-date day button not found: ${labels.join(' / ')}`);
+  const picked = day;
+  await act(async () => {
+    fireEvent.click(picked);
+  });
+  return format(target, 'yyyy-MM-dd');
+}
+
+async function submitDialog() {
+  const submit = await screen.findByTestId('assign-dialog-submit');
+  await act(async () => {
+    fireEvent.click(submit);
+  });
+}
+
 // ----- Tests -----
 
 describe('AssignShiftDialog', () => {
@@ -134,14 +197,41 @@ describe('AssignShiftDialog', () => {
     expect(screen.getByText(/Aldi Pranata/)).toBeTruthy();
   });
 
-  it('renders the required-marker asterisk on the Shift + From date labels', async () => {
+  it('renders the required-marker asterisk on the Shift + From + To date labels', async () => {
     renderDialog({ open: true });
     await waitFor(() => screen.getByText('Assign Shift'));
     expect(screen.getByText('Shift')).toBeTruthy();
     expect(screen.getByText('From date')).toBeTruthy();
-    // Both labels must end with the required-marker '*' (UI convention for
-    // field-level `required` per repo audit).
-    expect(screen.getAllByText('*').length).toBeGreaterThanOrEqual(2);
+    // The To-date placeholder duplicates the label text, so assert on the
+    // <label> element directly.
+    const toLabel = document.querySelector('label[for="effectiveTo"]');
+    expect(toLabel?.textContent).toContain('To date');
+    expect(toLabel?.textContent).toContain('*');
+    // All three labels must carry the required-marker '*' (UI convention
+    // for field-level `required` per repo audit; To date is required since
+    // assignments are bounded-only).
+    expect(screen.getAllByText('*').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('shows the bounded-assignment awareness hint under the To date', async () => {
+    renderDialog({ open: true });
+    await waitFor(() => screen.getByText('Assign Shift'));
+    const hint = await screen.findByTestId('assign-dialog-todate-hint');
+    expect(hint.textContent).toMatch(/bounded/i);
+  });
+
+  it('blocks submit with an inline error when the To date is empty', async () => {
+    renderDialog({ open: true });
+    await waitFor(() => screen.getByText('Assign Shift'));
+    await selectShift('Morning');
+    await submitDialog();
+
+    // Inline field error (not a toast): the server fn must never fire.
+    await waitFor(() => {
+      expect(screen.getByText('To date is required.')).toBeTruthy();
+    });
+    expect(createAssignmentInlineFnMock).not.toHaveBeenCalled();
+    expect(toastErrorMock).not.toHaveBeenCalled();
   });
 
   it('calls createAssignmentInlineFn on submit with the chosen shift + dates', async () => {
@@ -153,31 +243,23 @@ describe('AssignShiftDialog', () => {
     await waitFor(() => screen.getByText('Assign Shift'));
 
     // Pick shift id=1 via the mocked Select trigger.
-    const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(trigger);
-    });
-    const option = (await screen.findByRole('option', {
-      name: 'Morning'
-    })) as HTMLElement;
-    await act(async () => {
-      fireEvent.click(option);
-    });
-
-    const submit = await screen.findByTestId('assign-dialog-submit');
-    await act(async () => {
-      fireEvent.click(submit);
-    });
+    // NOTE: pick the To date BEFORE touching the shift Select — Radix
+    // layering swallows the DatePicker trigger click while the Select
+    // popover interaction is still settling.
+    const expectedTo = await pickToDate();
+    await selectShift('Morning');
+    await submitDialog();
 
     await waitFor(() => {
       expect(createAssignmentInlineFnMock).toHaveBeenCalledTimes(1);
     });
     const call = createAssignmentInlineFnMock.mock.calls[0]?.[0] as
-      | { data: { userId: string; shiftId: number; effectiveFrom: string } }
+      | { data: { userId: string; shiftId: number; effectiveFrom: string; effectiveTo: string } }
       | undefined;
     expect(call?.data.userId).toBe('u-1');
     expect(call?.data.shiftId).toBe(1);
     expect(typeof call?.data.effectiveFrom).toBe('string');
+    expect(call?.data.effectiveTo).toBe(expectedTo);
     expect(toastSuccessMock).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -190,25 +272,34 @@ describe('AssignShiftDialog', () => {
     const { onOpenChange } = renderDialog({ open: true });
     await waitFor(() => screen.getByText('Assign Shift'));
 
-    const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(trigger);
-    });
-    const option = (await screen.findByRole('option', {
-      name: 'Morning'
-    })) as HTMLElement;
-    await act(async () => {
-      fireEvent.click(option);
-    });
-    const submit = await screen.findByTestId('assign-dialog-submit');
-    await act(async () => {
-      fireEvent.click(submit);
-    });
+    await pickToDate();
+    await selectShift('Morning');
+    await submitDialog();
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledTimes(1);
     });
     // Dialog should remain open (parent's onOpenChange NOT called with false).
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
+  it('keeps the dialog open + shows the required toast on effectiveToRequired', async () => {
+    createAssignmentInlineFnMock.mockResolvedValue({
+      success: false,
+      error: 'effectiveToRequired'
+    });
+    const { onOpenChange } = renderDialog({ open: true });
+    await waitFor(() => screen.getByText('Assign Shift'));
+
+    await pickToDate();
+    await selectShift('Morning');
+    await submitDialog();
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledTimes(1);
+    });
+    expect(String(toastErrorMock.mock.calls[0]?.[0] ?? '')).toMatch(/To date is required/);
+    expect(toastSuccessMock).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
@@ -221,20 +312,9 @@ describe('AssignShiftDialog', () => {
     const { onOpenChange } = renderDialog({ open: true });
     await waitFor(() => screen.getByText('Assign Shift'));
 
-    const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(trigger);
-    });
-    const option = (await screen.findByRole('option', {
-      name: 'Morning'
-    })) as HTMLElement;
-    await act(async () => {
-      fireEvent.click(option);
-    });
-    const submit = await screen.findByTestId('assign-dialog-submit');
-    await act(async () => {
-      fireEvent.click(submit);
-    });
+    await pickToDate();
+    await selectShift('Morning');
+    await submitDialog();
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledTimes(1);
@@ -279,10 +359,8 @@ describe('AssignShiftDialog', () => {
       expect(screen.getByTestId('assign-dialog-policy-warning')).toBeTruthy();
     });
 
-    const submit = await screen.findByTestId('assign-dialog-submit');
-    await act(async () => {
-      fireEvent.click(submit);
-    });
+    await pickToDate();
+    await submitDialog();
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledTimes(1);

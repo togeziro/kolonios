@@ -106,7 +106,7 @@ async function seedShiftSchedule(shiftName = 'KPI') {
     user_id: EMPLOYEE_USER_ID,
     shift_id: shift.id,
     effective_from: '2026-08-01',
-    effective_to: null,
+    effective_to: '2026-09-30',
     created_by: sessionUser.id
   });
   return { employee, department, shift };
