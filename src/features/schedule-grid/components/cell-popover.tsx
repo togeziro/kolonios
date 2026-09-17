@@ -5,8 +5,11 @@
  *  - Shift dropdown filtered to shifts with `shift_weekday_rules` for this
  *    day-of-week.
  *  - "Day Off" toggle + reason input.
- *  - "Clear" button (visible only when the cell has an existing override
- *    or day-off).
+ *  - "Clear" button (visible only when the cell has its own `date_overrides`
+ *    row or a `day_offs` row — never for a shift that merely comes from an
+ *    assignment range, which Clear cannot remove).
+ *  - "Delete schedule" button + confirm dialog (visible when the cell sits on
+ *    an assignment range; deletes that whole `schedule_assignments` row).
  *  - "Terapkan ke 7 hari minggu ini" toggle (single-day mode only).
  *  - Day-off-pre-existing conflict UX with a "Clear Day Off" button.
  *  - Weekend override note (when the chosen shift has no weekday rule for
@@ -27,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -47,6 +51,7 @@ import { addDays, dayOfWeek, weekDays } from '../utils/date-utils';
 import {
   useApplyToWholeWeek,
   useClearCell,
+  useDeleteAssignment,
   useSetCellDayOff,
   useSetCellShift
 } from '../api/write-mutations';
@@ -92,6 +97,7 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
   const [isDayOffToggle, setIsDayOffToggle] = useState<boolean>(cell.isDayOff);
   const [dayOffReason, setDayOffReason] = useState<string>(cell.dayOffReason ?? '');
   const [applyToWeek, setApplyToWeek] = useState<boolean>(false);
+  const [confirmDeleteAssignment, setConfirmDeleteAssignment] = useState<boolean>(false);
 
   const today = businessDateInTimeZone(new Date());
   const isPastDate = cell.date < today;
@@ -99,6 +105,7 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
   const setShiftMut = useSetCellShift();
   const setDayOffMut = useSetCellDayOff();
   const clearMut = useClearCell();
+  const deleteAssignmentMut = useDeleteAssignment();
   const applyWeekMut = useApplyToWholeWeek();
 
   // Fetch shifts eligible for this cell's day-of-week.
@@ -116,7 +123,15 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
   const applyToWeekEligible = isDayOffToggle || !!shiftId;
 
   const isConflict = cell.isDayOff;
-  const hasOverrideOrDayOff = cell.isDayOff || cell.shiftId != null;
+  // Clear only ever removes a `date_overrides` / `day_offs` row, so it is
+  // offered only when the cell has one of its own. `cell.shiftId` is NOT a
+  // valid signal for this: the resolver stamps it from the covering
+  // assignment range as well, which used to surface a Clear button that
+  // reported success while the schedule stayed in place.
+  const canClearCell = cell.isDayOff || cell.hasOverride;
+  // Deleting the range is the only way to remove an assignment, and the
+  // resolved cell carries the exact row id to do it with.
+  const canDeleteAssignment = cell.assignmentId != null;
 
   // Past-date toast helper — fires on any successful save.
   const firePastDateToast = () => {
@@ -221,212 +236,287 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
     }
   };
 
+  /**
+   * Destructive: removes the whole `schedule_assignments` row the cell
+   * resolved against, not just this day (see `deleteAssignmentFn`). Guarded
+   * by the confirm dialog, which names the range.
+   */
+  const handleDeleteAssignment = async () => {
+    if (cell.assignmentId == null) return;
+    const res = await deleteAssignmentMut.mutateAsync({
+      userId: employeeId,
+      date: cell.date,
+      assignmentId: cell.assignmentId
+    });
+    if (res.success) {
+      toast.success(t('scheduleGrid.popover.assignmentDeleted'));
+      firePastDateToast();
+      setConfirmDeleteAssignment(false);
+      setOpen(false);
+      return;
+    }
+    if (res.error === 'notFound') {
+      // Already removed by another admin / a stale cell. Nothing was lost —
+      // re-sync the grid instead of reporting a failure.
+      toast.info(t('scheduleGrid.popover.assignmentNotFound'));
+      setConfirmDeleteAssignment(false);
+      setOpen(false);
+      return;
+    }
+    toast.error(t('scheduleGrid.popover.saveFailed'));
+  };
+
   const isPending =
-    setShiftMut.isPending || setDayOffMut.isPending || clearMut.isPending || applyWeekMut.isPending;
+    setShiftMut.isPending ||
+    setDayOffMut.isPending ||
+    clearMut.isPending ||
+    deleteAssignmentMut.isPending ||
+    applyWeekMut.isPending;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type='button'
-          // Per ticket 04 / spec rule "date + cell state": the trigger's
-          // aria-label is bound to the cell fields directly, NOT to a
-          // translated phrase. Radix Enter/Space handling opens the popover
-          // natively because the trigger is a real <button>.
-          aria-label={buildCellAriaLabel(cell)}
-          data-testid={`schedule-grid-cell-trigger-${employeeId}-${cell.date}`}
-          className='block h-full w-full cursor-pointer text-left'
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type='button'
+            // Per ticket 04 / spec rule "date + cell state": the trigger's
+            // aria-label is bound to the cell fields directly, NOT to a
+            // translated phrase. Radix Enter/Space handling opens the popover
+            // natively because the trigger is a real <button>.
+            aria-label={buildCellAriaLabel(cell)}
+            data-testid={`schedule-grid-cell-trigger-${employeeId}-${cell.date}`}
+            className='block h-full w-full cursor-pointer text-left'
+          >
+            {children}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align='start'
+          side='bottom'
+          sideOffset={6}
+          className='w-80 space-y-3 p-3'
+          data-testid={`schedule-grid-cell-popover-${employeeId}-${cell.date}`}
+          // The confirm dialog portals to <body>, so its overlay reads as an
+          // outside pointer-down. Without this guard, opening the dialog would
+          // dismiss the popover underneath it.
+          onInteractOutside={(event) => {
+            if (confirmDeleteAssignment) event.preventDefault();
+          }}
         >
-          {children}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align='start'
-        side='bottom'
-        sideOffset={6}
-        className='w-80 space-y-3 p-3'
-        data-testid={`schedule-grid-cell-popover-${employeeId}-${cell.date}`}
-      >
-        <header className='space-y-1'>
-          <p className='text-sm font-semibold'>{t('scheduleGrid.popover.title')}</p>
-          <p className='text-xs text-muted-foreground'>{formatDateHeading(cell.date, t)}</p>
-        </header>
+          <header className='space-y-1'>
+            <p className='text-sm font-semibold'>{t('scheduleGrid.popover.title')}</p>
+            <p className='text-xs text-muted-foreground'>{formatDateHeading(cell.date, t)}</p>
+          </header>
 
-        {/* Policy-missing warning — admin is GOD MODE; non-blocking */}
-        {cell.policyMissing ? (
-          <div
-            role='alert'
-            data-testid='policy-missing-warning'
-            className='rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300'
-          >
-            {t('scheduleGrid.popover.policyMissingWarning')}
+          {/* Policy-missing warning — admin is GOD MODE; non-blocking */}
+          {cell.policyMissing ? (
+            <div
+              role='alert'
+              data-testid='policy-missing-warning'
+              className='rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300'
+            >
+              {t('scheduleGrid.popover.policyMissingWarning')}
+            </div>
+          ) : null}
+
+          {/* Day-off pre-existing conflict — Shift picker disabled until clear */}
+          {isConflict ? (
+            <div
+              role='alert'
+              data-testid='day-off-conflict-warning'
+              className='rounded-md border border-rose-500/40 bg-rose-500/10 p-2 text-xs text-rose-700 dark:text-rose-300'
+            >
+              <p>{t('scheduleGrid.popover.dayOffConflictWarning')}</p>
+              <Button
+                size='sm'
+                variant='outline'
+                className='mt-2'
+                onClick={handleClear}
+                disabled={isPending}
+                data-testid='clear-cell-button'
+              >
+                {t('scheduleGrid.popover.clear')}
+              </Button>
+            </div>
+          ) : null}
+
+          {/* Orphan Day-Off note — visible whenever a day_offs row exists */}
+          {isConflict ? (
+            <p
+              className='text-[11px] italic text-muted-foreground'
+              data-testid='conflict-day-off-note'
+            >
+              {t('scheduleGrid.popover.orphanDayOffNote')}
+            </p>
+          ) : null}
+
+          {/* Shift selector */}
+          <div className='space-y-1'>
+            <Label htmlFor={`shift-${employeeId}-${cell.date}`}>
+              {t('scheduleGrid.popover.shift')}
+            </Label>
+            <Select value={shiftId} onValueChange={setShiftId} disabled={isConflict}>
+              <SelectTrigger
+                id={`shift-${employeeId}-${cell.date}`}
+                data-testid='shift-select-trigger'
+                className='w-full'
+              >
+                <SelectValue placeholder={t('scheduleGrid.popover.shiftPickerEmpty')} />
+              </SelectTrigger>
+              <SelectContent>
+                {dayShifts.length === 0 ? (
+                  <div className='px-2 py-1.5 text-xs text-muted-foreground'>
+                    {t('scheduleGrid.popover.shiftPickerEmpty')}
+                  </div>
+                ) : (
+                  dayShifts.map((s) => (
+                    <SelectItem
+                      key={s.shiftId}
+                      value={String(s.shiftId)}
+                      data-testid={`shift-option-${s.shiftId}`}
+                    >
+                      {t('scheduleGrid.popover.shiftOptionLabel', {
+                        name: s.shiftName,
+                        start: s.startTime,
+                        end: s.endTime,
+                        tolerance: s.lateToleranceMinutes,
+                        cutoff: s.absenceCutoffMinutes
+                      })}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
-        ) : null}
 
-        {/* Day-off pre-existing conflict — Shift picker disabled until clear */}
-        {isConflict ? (
-          <div
-            role='alert'
-            data-testid='day-off-conflict-warning'
-            className='rounded-md border border-rose-500/40 bg-rose-500/10 p-2 text-xs text-rose-700 dark:text-rose-300'
-          >
-            <p>{t('scheduleGrid.popover.dayOffConflictWarning')}</p>
+          {/* Weekend override note — when the cell's day has no weekday rule */}
+          {shiftId && !dayShifts.some((s) => String(s.shiftId) === shiftId) ? (
+            <p
+              className='text-[11px] italic text-muted-foreground'
+              data-testid='weekend-override-note'
+            >
+              {t('scheduleGrid.popover.weekendOverrideNote')}
+            </p>
+          ) : null}
+
+          {/* Day Off toggle */}
+          <div className='flex items-center justify-between gap-2'>
+            <Label htmlFor={`dayoff-${employeeId}-${cell.date}`} className='text-sm'>
+              {t('scheduleGrid.popover.dayOff')}
+            </Label>
+            <Switch
+              id={`dayoff-${employeeId}-${cell.date}`}
+              checked={isDayOffToggle}
+              onCheckedChange={setIsDayOffToggle}
+              data-testid='day-off-switch'
+            />
+          </div>
+          {isDayOffToggle ? (
+            <div className='space-y-1'>
+              <Label htmlFor={`reason-${employeeId}-${cell.date}`} className='text-xs'>
+                {t('scheduleGrid.popover.dayOffReason')}
+              </Label>
+              <Input
+                id={`reason-${employeeId}-${cell.date}`}
+                value={dayOffReason}
+                onChange={(e) => setDayOffReason(e.target.value)}
+                placeholder={t('scheduleGrid.popover.dayOffReasonPlaceholder')}
+                data-testid='day-off-reason-input'
+              />
+            </div>
+          ) : null}
+
+          {/* Apply to week toggle — only single-day mode; disabled if shift lacks rules for any day */}
+          <div className='flex items-center justify-between gap-2 border-t pt-2'>
+            <Label htmlFor={`apply-week-${employeeId}-${cell.date}`} className='text-xs'>
+              {t('scheduleGrid.popover.applyToWeek')}
+            </Label>
+            <Switch
+              id={`apply-week-${employeeId}-${cell.date}`}
+              checked={applyToWeek}
+              onCheckedChange={setApplyToWeek}
+              disabled={!applyToWeekEligible || (isDayOffToggle ? false : !shiftId)}
+              data-testid='apply-to-week-switch'
+            />
+          </div>
+          {!applyToWeekEligible && shiftId ? (
+            <p className='text-[11px] italic text-rose-600 dark:text-rose-400'>
+              {t('scheduleGrid.popover.applyToWeekDisabled')}
+            </p>
+          ) : null}
+
+          {/* Clear button — only when the cell owns a date_override / day_off
+            AND the cell is not in the day-off conflict UX (that has its own
+            button). An assignment-backed shift is not clearable here; that is
+            what Delete schedule below is for. */}
+          {canClearCell && !applyToWeek && !isConflict ? (
             <Button
-              size='sm'
+              type='button'
               variant='outline'
-              className='mt-2'
+              size='sm'
               onClick={handleClear}
               disabled={isPending}
-              data-testid='clear-cell-button'
+              className={cn('w-full')}
+              data-testid='clear-cell-footer-button'
             >
               {t('scheduleGrid.popover.clear')}
             </Button>
-          </div>
-        ) : null}
+          ) : null}
 
-        {/* Orphan Day-Off note — visible whenever a day_offs row exists */}
-        {isConflict ? (
-          <p
-            className='text-[11px] italic text-muted-foreground'
-            data-testid='conflict-day-off-note'
-          >
-            {t('scheduleGrid.popover.orphanDayOffNote')}
-          </p>
-        ) : null}
-
-        {/* Shift selector */}
-        <div className='space-y-1'>
-          <Label htmlFor={`shift-${employeeId}-${cell.date}`}>
-            {t('scheduleGrid.popover.shift')}
-          </Label>
-          <Select value={shiftId} onValueChange={setShiftId} disabled={isConflict}>
-            <SelectTrigger
-              id={`shift-${employeeId}-${cell.date}`}
-              data-testid='shift-select-trigger'
-              className='w-full'
-            >
-              <SelectValue placeholder={t('scheduleGrid.popover.shiftPickerEmpty')} />
-            </SelectTrigger>
-            <SelectContent>
-              {dayShifts.length === 0 ? (
-                <div className='px-2 py-1.5 text-xs text-muted-foreground'>
-                  {t('scheduleGrid.popover.shiftPickerEmpty')}
-                </div>
-              ) : (
-                dayShifts.map((s) => (
-                  <SelectItem
-                    key={s.shiftId}
-                    value={String(s.shiftId)}
-                    data-testid={`shift-option-${s.shiftId}`}
-                  >
-                    {t('scheduleGrid.popover.shiftOptionLabel', {
-                      name: s.shiftName,
-                      start: s.startTime,
-                      end: s.endTime,
-                      tolerance: s.lateToleranceMinutes,
-                      cutoff: s.absenceCutoffMinutes
-                    })}
-                  </SelectItem>
-                ))
+          {/* Delete schedule — removes the whole covering assignment range. */}
+          {canDeleteAssignment ? (
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={() => setConfirmDeleteAssignment(true)}
+              disabled={isPending}
+              className={cn(
+                'w-full border-destructive/40 text-destructive hover:bg-destructive/10'
               )}
-            </SelectContent>
-          </Select>
-        </div>
+              data-testid='delete-assignment-button'
+            >
+              {t('scheduleGrid.popover.deleteAssignment')}
+            </Button>
+          ) : null}
 
-        {/* Weekend override note — when the cell's day has no weekday rule */}
-        {shiftId && !dayShifts.some((s) => String(s.shiftId) === shiftId) ? (
-          <p
-            className='text-[11px] italic text-muted-foreground'
-            data-testid='weekend-override-note'
-          >
-            {t('scheduleGrid.popover.weekendOverrideNote')}
-          </p>
-        ) : null}
-
-        {/* Day Off toggle */}
-        <div className='flex items-center justify-between gap-2'>
-          <Label htmlFor={`dayoff-${employeeId}-${cell.date}`} className='text-sm'>
-            {t('scheduleGrid.popover.dayOff')}
-          </Label>
-          <Switch
-            id={`dayoff-${employeeId}-${cell.date}`}
-            checked={isDayOffToggle}
-            onCheckedChange={setIsDayOffToggle}
-            data-testid='day-off-switch'
-          />
-        </div>
-        {isDayOffToggle ? (
-          <div className='space-y-1'>
-            <Label htmlFor={`reason-${employeeId}-${cell.date}`} className='text-xs'>
-              {t('scheduleGrid.popover.dayOffReason')}
-            </Label>
-            <Input
-              id={`reason-${employeeId}-${cell.date}`}
-              value={dayOffReason}
-              onChange={(e) => setDayOffReason(e.target.value)}
-              placeholder={t('scheduleGrid.popover.dayOffReasonPlaceholder')}
-              data-testid='day-off-reason-input'
-            />
+          {/* Action footer */}
+          <div className='flex items-center justify-end gap-2 border-t pt-2'>
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              onClick={isDayOffToggle ? handleSaveDayOff : handleSaveShift}
+              disabled={isPending || (!isDayOffToggle && !shiftId)}
+              data-testid='popover-save-button'
+            >
+              {t('scheduleGrid.popover.save')}
+            </Button>
           </div>
-        ) : null}
-
-        {/* Apply to week toggle — only single-day mode; disabled if shift lacks rules for any day */}
-        <div className='flex items-center justify-between gap-2 border-t pt-2'>
-          <Label htmlFor={`apply-week-${employeeId}-${cell.date}`} className='text-xs'>
-            {t('scheduleGrid.popover.applyToWeek')}
-          </Label>
-          <Switch
-            id={`apply-week-${employeeId}-${cell.date}`}
-            checked={applyToWeek}
-            onCheckedChange={setApplyToWeek}
-            disabled={!applyToWeekEligible || (isDayOffToggle ? false : !shiftId)}
-            data-testid='apply-to-week-switch'
-          />
-        </div>
-        {!applyToWeekEligible && shiftId ? (
-          <p className='text-[11px] italic text-rose-600 dark:text-rose-400'>
-            {t('scheduleGrid.popover.applyToWeekDisabled')}
-          </p>
-        ) : null}
-
-        {/* Clear button — only when there's something to clear AND the
-            cell is not in the day-off conflict UX (that has its own button). */}
-        {hasOverrideOrDayOff && !applyToWeek && !isConflict ? (
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            onClick={handleClear}
-            disabled={isPending}
-            className={cn('w-full')}
-            data-testid='clear-cell-footer-button'
-          >
-            {t('scheduleGrid.popover.clear')}
-          </Button>
-        ) : null}
-
-        {/* Action footer */}
-        <div className='flex items-center justify-end gap-2 border-t pt-2'>
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            onClick={() => setOpen(false)}
-            disabled={isPending}
-          >
-            {t('common.cancel')}
-          </Button>
-          <Button
-            type='button'
-            size='sm'
-            onClick={isDayOffToggle ? handleSaveDayOff : handleSaveShift}
-            disabled={isPending || (!isDayOffToggle && !shiftId)}
-            data-testid='popover-save-button'
-          >
-            {t('scheduleGrid.popover.save')}
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+      <ConfirmDialog
+        open={confirmDeleteAssignment}
+        onOpenChange={setConfirmDeleteAssignment}
+        destructive
+        loading={deleteAssignmentMut.isPending}
+        title={t('scheduleGrid.popover.deleteAssignmentTitle')}
+        description={t('scheduleGrid.popover.deleteAssignmentBody', {
+          shift: cell.shiftName ?? '',
+          from: cell.assignmentFrom ?? '',
+          to: cell.assignmentTo ?? ''
+        })}
+        confirmLabel={t('scheduleGrid.popover.deleteAssignmentConfirm')}
+        onConfirm={handleDeleteAssignment}
+      />
+    </>
   );
 }

@@ -38,3 +38,19 @@ export const assignShiftInlineSchema = z.object({
 });
 
 export type AssignShiftInlineInput = z.infer<typeof assignShiftInlineSchema>;
+
+/**
+ * "Delete schedule" payload. The covering assignment is addressed by
+ * `assignmentId` (taken straight off the resolved `ScheduleGridCell`), so the
+ * write is exact even when two ranges overlap the same date — no re-deriving
+ * "which row does the grid mean?" on the server. `userId` is both the
+ * ownership guard and the scope for the post-delete cell re-resolve; `date`
+ * is the day whose cell is re-resolved.
+ */
+export const deleteAssignmentSchema = z.object({
+  userId: z.string().min(1),
+  date: ymd,
+  assignmentId: z.number().int().positive()
+});
+
+export type DeleteAssignmentInput = z.infer<typeof deleteAssignmentSchema>;

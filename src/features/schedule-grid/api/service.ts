@@ -7,14 +7,19 @@ import { db } from '@/lib/db';
 import { departments } from '@/lib/db/schema/masterdata';
 import { scheduleAssignments } from '@/lib/db/schema/attendance';
 import { employees } from '@/lib/db/schema/employees';
-import { resolveScheduleGridCells } from './cell-resolver';
+import { resolveScheduleGridCells, resolveScheduleGridCell } from './cell-resolver';
 import {
   SCHEDULE_GRID_MAX_PAGE_SIZE,
   scheduleGridFiltersSchema,
-  assignShiftInlineSchema
+  assignShiftInlineSchema,
+  deleteAssignmentSchema
 } from './validation';
 import type { ScheduleGridCell, ScheduleGridResponse, ScheduleGridRow } from './types';
-import type { ScheduleGridFiltersInput, AssignShiftInlineInput } from './validation';
+import type {
+  ScheduleGridFiltersInput,
+  AssignShiftInlineInput,
+  DeleteAssignmentInput
+} from './validation';
 import { addDays, weekDays } from '../utils/date-utils';
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -351,5 +356,91 @@ export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
       // in try/catch and surfaces errorGeneric. We don't return a tuple
       // here because `mapDbError`'s return type is `never`.
       mapDbError(error, 'scheduleGrid.createAssignmentInline');
+    }
+  });
+
+/**
+ * "Delete schedule" (the grid popover's destructive counterpart to
+ * `createAssignmentInlineFn`).
+ *
+ * Removes ONE `schedule_assignments` row — the range the cell resolved
+ * against — addressed by `assignmentId`. Deleting the whole range is the
+ * point: an assignment is a bounded range, so "delete the schedule for this
+ * day" is meaningless without saying what happens to its other days, and
+ * silently splitting the range would leave the admin with a schedule they
+ * never asked for. The confirm dialog names the full range before the write.
+ *
+ * Contract:
+ *   - `assignmentId` is scoped by `user_id`, so a stale or tampered payload
+ *     can never delete another employee's assignment.
+ *   - Per-date `date_overrides` / `day_offs` rows are deliberately NOT
+ *     touched: they are independent of the assignment and the resolver
+ *     already ignores an override that has no assignment behind it (a
+ *     `date_overrides` row with no covering assignment resolves to no
+ *     weekday rules → the cell falls back to "—"), while an orphan day-off
+ *     still renders as Day Off. Deleting them here would destroy attendance
+ *     context the admin did not ask to remove.
+ *   - Returns the post-delete cell via `resolveScheduleGridCell` (the read
+ *     path's own builder), so the popover's cache refresh matches a fresh
+ *     fetch exactly — same contract as the per-cell writes in
+ *     `write-service.ts`.
+ *   - Tuple convention: `{ success: true, ... }` / `{ success: false, error }`,
+ *     with `notFound` reported separately from `internal` so the client can
+ *     re-sync instead of claiming the delete failed.
+ */
+export type DeleteAssignmentResult =
+  | {
+      success: true;
+      deletedId: number;
+      effectiveFrom: string;
+      effectiveTo: string;
+      cell: ScheduleGridCell;
+      affectedUserId: string;
+      affectedDates: string[];
+    }
+  | {
+      success: false;
+      error: 'notFound' | 'internal';
+    };
+
+export const deleteAssignmentFn = createServerFn({ method: 'POST' })
+  .validator(deleteAssignmentSchema)
+  .handler(async ({ data }: { data: DeleteAssignmentInput }): Promise<DeleteAssignmentResult> => {
+    const session = await requirePermission('attendance_admin', 'edit');
+    await checkRateLimit(`write:${session.user.id}`);
+
+    try {
+      const deleted = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .delete(scheduleAssignments)
+          .where(
+            and(
+              eq(scheduleAssignments.id, data.assignmentId),
+              eq(scheduleAssignments.user_id, data.userId)
+            )
+          )
+          .returning();
+        return row ?? null;
+      });
+
+      if (!deleted) {
+        // Already gone (double-click, concurrent admin, stale cell). Not an
+        // error worth alarming over — the client just re-syncs the grid.
+        return { success: false as const, error: 'notFound' as const };
+      }
+
+      const cell = await resolveScheduleGridCell(data.userId, data.date);
+      return {
+        success: true as const,
+        deletedId: deleted.id,
+        effectiveFrom: deleted.effective_from,
+        effectiveTo: deleted.effective_to,
+        cell,
+        affectedUserId: data.userId,
+        affectedDates: [data.date]
+      };
+    } catch (error) {
+      mapDbError(error, 'scheduleGrid.deleteAssignment');
+      return { success: false as const, error: 'internal' as const };
     }
   });

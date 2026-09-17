@@ -243,6 +243,10 @@ export async function resolveScheduleGridCells(args: {
       date: o.date,
       shiftId: o.shift_id
     }));
+    // O(1) "does this date have its own date_override row?" lookup. Drives
+    // `cell.hasOverride` (the popover's Clear gate) and the effective-shift
+    // resolution for `policyMissing`.
+    const overrideShiftByDate = new Map(userOverrides.map((o) => [o.date, o.shift_id]));
     const dayOffDates = userDayOffs.map((d) => d.date);
     const dayOffReasonsByDate = new Map(userDayOffs.map((d) => [d.date, d.reason ?? null]));
 
@@ -321,6 +325,10 @@ export async function resolveScheduleGridCells(args: {
         absenceCutoffMinutes: resolved?.absenceCutoffMinutes ?? null,
         isDayOff,
         hasAssignment,
+        hasOverride: overrideShiftByDate.has(date),
+        assignmentId: matching?.id ?? null,
+        assignmentFrom: matching?.effective_from ?? null,
+        assignmentTo: matching?.effective_to ?? null,
         isHoliday,
         holidayName,
         holidayOverUnassigned: !hasAssignment && isHoliday,
@@ -333,8 +341,7 @@ export async function resolveScheduleGridCells(args: {
           if (!hasAssignment || isDayOff || resolved != null) return false;
           // `effectiveShiftId` mirrors the engine's precedence: date
           // override > assignment.
-          const override = overrideDates.find((o) => o.date === date);
-          const effectiveShiftId = override?.shiftId ?? assignment!.shiftId;
+          const effectiveShiftId = overrideShiftByDate.get(date) ?? assignment!.shiftId;
           const rule = (rulesByShift.get(effectiveShiftId) ?? []).find(
             (r) => r.dayOfWeek === dayOfWeek(date)
           );

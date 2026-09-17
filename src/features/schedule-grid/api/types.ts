@@ -13,6 +13,25 @@ export type ScheduleGridCell = {
   absenceCutoffMinutes: number | null;
   isDayOff: boolean;
   hasAssignment: boolean;
+  /**
+   * True when a `date_overrides` row exists for (user, date).
+   *
+   * `shiftId` alone cannot distinguish "the admin pinned this one date to a
+   * shift" from "this date's shift comes from an assignment range" — both
+   * populate it. The popover gates its Clear action on this flag so it is
+   * never offered for a cell that has nothing of its own to clear.
+   */
+  hasOverride: boolean;
+  /**
+   * Identity and full range of the `schedule_assignments` row covering this
+   * date (all null when none). `assignmentId` makes the delete-schedule write
+   * exact even when two ranges overlap the same date; `assignmentFrom` /
+   * `assignmentTo` let the confirm dialog name the whole range being removed
+   * instead of only the clicked day.
+   */
+  assignmentId: number | null;
+  assignmentFrom: string | null;
+  assignmentTo: string | null;
   isHoliday: boolean;
   holidayName: string | null;
   /** True when the date is a holiday but the cell has no assignment either

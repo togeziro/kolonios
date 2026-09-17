@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import '@/i18n/config';
@@ -12,6 +12,7 @@ vi.mock('../api/shifts-queries', () => ({
 vi.mock('../api/write-mutations', () => ({
   useApplyToWholeWeek: vi.fn(),
   useClearCell: vi.fn(),
+  useDeleteAssignment: vi.fn(),
   useSetCellDayOff: vi.fn(),
   useSetCellShift: vi.fn()
 }));
@@ -30,6 +31,7 @@ import { useEligibleShiftsForDay } from '../api/shifts-queries';
 import {
   useApplyToWholeWeek,
   useClearCell,
+  useDeleteAssignment,
   useSetCellDayOff,
   useSetCellShift
 } from '../api/write-mutations';
@@ -46,6 +48,10 @@ function makeCell(overrides: Partial<ScheduleGridCell> = {}): ScheduleGridCell {
     absenceCutoffMinutes: 120,
     isDayOff: false,
     hasAssignment: true,
+    hasOverride: false,
+    assignmentId: 1,
+    assignmentFrom: '2026-08-01',
+    assignmentTo: '2026-08-31',
     isHoliday: false,
     holidayName: null,
     holidayOverUnassigned: false,
@@ -59,6 +65,7 @@ const shiftsMock = useEligibleShiftsForDay as unknown as ReturnType<typeof vi.fn
 const setShiftMock = useSetCellShift as unknown as ReturnType<typeof vi.fn>;
 const setDayOffMock = useSetCellDayOff as unknown as ReturnType<typeof vi.fn>;
 const clearMock = useClearCell as unknown as ReturnType<typeof vi.fn>;
+const deleteAssignmentMock = useDeleteAssignment as unknown as ReturnType<typeof vi.fn>;
 const applyWeekMock = useApplyToWholeWeek as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
@@ -78,6 +85,7 @@ beforeEach(() => {
   setShiftMock.mockReturnValue(mutStub());
   setDayOffMock.mockReturnValue(mutStub());
   clearMock.mockReturnValue(mutStub());
+  deleteAssignmentMock.mockReturnValue(mutStub());
   applyWeekMock.mockReturnValue(mutStub());
 });
 
@@ -365,5 +373,148 @@ describe('CellPopover', () => {
       shiftId: 1,
       includeWeekend: true
     });
+  });
+
+  it('hides Clear for an assignment-backed shift and offers Delete schedule instead', async () => {
+    // Regression test: the Clear button used to be gated on `cell.shiftId != null`,
+    // which the resolver also stamps from the covering assignment. Clear only
+    // deletes `date_overrides` / `day_offs`, so it reported success while the
+    // schedule stayed put.
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          cell: makeCell({ shiftId: 1, hasOverride: false, isDayOff: false, assignmentId: 7 }),
+          children: createElement('span', null, 'Morning')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('clear-cell-footer-button')).toBeNull();
+  });
+
+  it('shows Clear when the cell owns a date override', async () => {
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          cell: makeCell({ shiftId: 1, hasOverride: true, isDayOff: false, assignmentId: 7 }),
+          children: createElement('span', null, 'Morning')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('clear-cell-footer-button')).toBeTruthy();
+    });
+    // The assignment is still behind the override, so it can also be deleted.
+    expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+  });
+
+  it('offers no Delete schedule when the cell has no assignment', async () => {
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          cell: makeCell({
+            shiftId: null,
+            shiftName: null,
+            startTime: null,
+            endTime: null,
+            hasAssignment: false,
+            assignmentId: null,
+            assignmentFrom: null,
+            assignmentTo: null,
+            isDayOff: true
+          }),
+          children: createElement('span', null, 'Day Off')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('day-off-conflict-warning')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('delete-assignment-button')).toBeNull();
+  });
+
+  it('deletes the resolved assignment after confirming', async () => {
+    const mut = mutStub();
+    deleteAssignmentMock.mockReturnValue(mut);
+
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          cell: makeCell({ assignmentId: 42 }),
+          children: createElement('span', null, 'Morning')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('delete-assignment-button'));
+    });
+
+    const dialog = await screen.findByRole('alertdialog');
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete schedule' }));
+    });
+
+    expect(mut.mutateAsync).toHaveBeenCalledWith({
+      userId: 'u1',
+      date: '2026-08-05',
+      assignmentId: 42
+    });
+  });
+
+  it('treats an already-deleted assignment as a no-op, not a failure', async () => {
+    const { toast } = await import('sonner');
+    const mut = mutStub();
+    mut.mutateAsync.mockResolvedValue({ success: false, error: 'notFound' });
+    deleteAssignmentMock.mockReturnValue(mut);
+
+    render(
+      withQueryClient(
+        createElement(CellPopover, {
+          employeeId: 'u1',
+          cell: makeCell({ assignmentId: 42 }),
+          children: createElement('span', null, 'Morning')
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('delete-assignment-button'));
+    });
+
+    const dialog = await screen.findByRole('alertdialog');
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete schedule' }));
+    });
+
+    expect(toast.info).toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

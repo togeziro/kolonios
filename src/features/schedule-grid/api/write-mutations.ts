@@ -2,7 +2,9 @@
  * React Query factories for the write-side schedule grid (ticket 02).
  *
  * The popover composes `setCellShiftMutation`, `setCellDayOffMutation`,
- * `clearCellMutation`, and `applyToWholeWeekMutation`, and the grid page's
+ * `clearCellMutation`, `applyToWholeWeekMutation`, and the destructive
+ * `deleteAssignmentMutation` (which clears a whole `schedule_assignments`
+ * range, not just a cell), and the grid page's
  * bulk-repeat dialog composes `repeatWeekBulkMutation` (ticket 03). Each wraps the
  * corresponding server fn in a `useMutation` hook. Cache invalidation
  * crosses the `scheduleGridKeys` namespace AND the cross-feature
@@ -28,6 +30,7 @@ import {
   setCellShiftFn,
   type CellWriteResult
 } from './write-service';
+import { deleteAssignmentFn, type DeleteAssignmentResult } from './service';
 import {
   repeatWeekBulkFn,
   type RepeatWeekBulkInput,
@@ -50,6 +53,17 @@ export type SetCellDayOffInput = {
 export type ClearCellInput = {
   userId: string;
   date: string;
+};
+
+/**
+ * "Delete schedule" input — the assignment to remove plus the day whose cell
+ * is re-resolved afterwards. `assignmentId` comes straight off the resolved
+ * cell (see `ScheduleGridCell.assignmentId`).
+ */
+export type DeleteAssignmentMutationInput = {
+  userId: string;
+  date: string;
+  assignmentId: number;
 };
 
 export type ApplyToWholeWeekInput = {
@@ -113,6 +127,15 @@ function clearCellMutation(
   };
 }
 
+function deleteAssignmentMutation(
+  queryClient: ReturnType<typeof useQueryClient>
+): UseMutationOptions<DeleteAssignmentResult, Error, DeleteAssignmentMutationInput> {
+  return {
+    mutationFn: async (input) => deleteAssignmentFn({ data: input }),
+    onSettled: () => invalidateScheduleGridCaches(queryClient)
+  };
+}
+
 function applyToWholeWeekMutation(
   queryClient: ReturnType<typeof useQueryClient>
 ): UseMutationOptions<ApplyToWholeWeekResult, Error, ApplyToWholeWeekInput> {
@@ -171,6 +194,11 @@ export function useSetCellDayOff() {
 export function useClearCell() {
   const queryClient = useQueryClient();
   return useMutation(clearCellMutation(queryClient));
+}
+
+export function useDeleteAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation(deleteAssignmentMutation(queryClient));
 }
 
 export function useApplyToWholeWeek() {

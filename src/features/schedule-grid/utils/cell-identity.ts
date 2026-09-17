@@ -10,11 +10,17 @@
  * fields populated from the latest server truth.
  *
  * The key intentionally excludes volatile read-only fields (holiday
- * flags, `holidayOverUnassigned`) so a holiday-overlay refresh does
- * NOT remount the popover mid-edit. TanStack Query's structural
- * sharing preserves object identity when the cell's relevant fields
- * haven't actually changed, so unrelated background refetches don't
+ * flags, `holidayOverUnassigned`, `policyMissing`) so a background
+ * refresh does NOT remount the popover mid-edit. TanStack Query's
+ * structural sharing preserves object identity when the cell's relevant
+ * fields haven't actually changed, so unrelated background refetches don't
  * cause spurious remounts either.
+ *
+ * `hasOverride` and `assignmentId` ARE part of the key: clearing a date
+ * override over an assignment restores the assignment's shift, so `shiftId`
+ * alone comes back unchanged and the popover would keep showing the cleared
+ * override's state. Same for deleting an assignment — the popover must
+ * remount without its Delete schedule action.
  *
  * See `.scratch/shift-scheduler/EPIC_SUMMARY.md` § Follow-ups #4 —
  * this is the implementation of that suggestion.
@@ -33,6 +39,8 @@ export function getCellIdentityKey(cell: ScheduleGridCell): string {
     field(cell.shiftId),
     cell.isDayOff ? '1' : '0',
     field(cell.dayOffReason),
-    cell.hasAssignment ? '1' : '0'
+    cell.hasAssignment ? '1' : '0',
+    cell.hasOverride ? '1' : '0',
+    field(cell.assignmentId)
   ].join('|');
 }

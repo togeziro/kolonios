@@ -13,6 +13,10 @@ function makeCell(overrides: Partial<ScheduleGridCell> = {}): ScheduleGridCell {
     absenceCutoffMinutes: null,
     isDayOff: false,
     hasAssignment: false,
+    hasOverride: false,
+    assignmentId: null,
+    assignmentFrom: null,
+    assignmentTo: null,
     isHoliday: false,
     holidayName: null,
     holidayOverUnassigned: false,
@@ -58,6 +62,25 @@ describe('getCellIdentityKey', () => {
   it('changes when hasAssignment flips (unassignment surface from ticket 03)', () => {
     const before = makeCell({ hasAssignment: true, shiftId: 5 });
     const after = makeCell({ hasAssignment: false });
+    expect(getCellIdentityKey(before)).not.toBe(getCellIdentityKey(after));
+  });
+
+  it('changes when hasOverride flips (clearing an override over an assignment)', () => {
+    // Clearing a date override restores the assignment's shift, so `shiftId`
+    // comes back unchanged — hasOverride is the only signal that the cell's
+    // own state changed and the popover must remount.
+    const before = makeCell({ shiftId: 1, hasAssignment: true, hasOverride: true });
+    const after = makeCell({ shiftId: 1, hasAssignment: true, hasOverride: false });
+    expect(getCellIdentityKey(before)).not.toBe(getCellIdentityKey(after));
+  });
+
+  it('changes when assignmentId changes (deleting a schedule)', () => {
+    const before = makeCell({ shiftId: 1, hasAssignment: true, assignmentId: 7 });
+    const after = makeCell({
+      shiftId: 1,
+      hasAssignment: true,
+      assignmentId: null
+    });
     expect(getCellIdentityKey(before)).not.toBe(getCellIdentityKey(after));
   });
 
