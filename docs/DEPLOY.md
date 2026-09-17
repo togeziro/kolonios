@@ -1,11 +1,13 @@
 # Deploy — Kolonios
 
 Production target: a single Linux VM running **Bun** (Nitro `bun` preset),
-**systemd**, and **Caddy**, with **self-hosted PostgreSQL** on the same host
-and **managed S3** for object storage.
+**systemd**, and **self-hosted PostgreSQL** on the same host, with **managed
+S3** for object storage. TLS is terminated outside the app — by an external
+edge proxy/tunnel in front of the host, or by whatever fronts the internal
+network. The app itself listens on `0.0.0.0:3000` and does not do TLS.
 
 ```
-internet / LAN ──TLS──▶ Caddy :443 ──▶ 127.0.0.1:3000 (Bun/Nitro) ──▶ PostgreSQL 127.0.0.1:5432
+internet / LAN ──TLS──▶ edge proxy ──▶ 0.0.0.0:3000 (Bun/Nitro) ──▶ PostgreSQL 127.0.0.1:5432
                                                                     └──▶ S3 (managed)
 ```
 
@@ -20,8 +22,6 @@ internet / LAN ──TLS──▶ Caddy :443 ──▶ 127.0.0.1:3000 (Bun/Nitro
 | ------------------------------ | -------------------------------------------------- |
 | `scripts/prod-setup.sh`        | guided first-time provisioning wizard              |
 | `deploy/kolonios.service`      | systemd unit for the app                           |
-| `deploy/Caddyfile`             | reverse proxy + automatic TLS (public domain)      |
-| `deploy/Caddyfile.internal`    | reverse proxy + self-signed TLS (internal VM)      |
 | `deploy/kolonios.env.example`  | production env template                            |
 | `deploy/deploy.sh`             | on-host install/build/migrate/restart/health-check |
 | `deploy/backup-postgres.sh`    | `pg_dump` + retention                              |
@@ -56,7 +56,9 @@ key-only (disable password auth).
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y ufw git curl ca-certificates rsync ssh
 sudo ufw allow OpenSSH
-sudo ufw allow 80,443/tcp        # skip if an edge proxy already terminates TLS
+sudo ufw allow 3000/tcp          # only if clients reach the app directly; skip
+                                 # when an edge proxy/tunnel terminates TLS and
+                                 # forwards to the host
 sudo ufw --force enable
 
 # Bun 1.4.2 (must match CI — see .github/actions/setup/action.yml)
@@ -75,12 +77,6 @@ bun --version                    # expect 1.4.2
 sudo apt install -y postgresql postgresql-contrib
 sudo -u postgres psql -c "CREATE ROLE kolonios LOGIN PASSWORD 'CHANGE_ME';"
 sudo -u postgres psql -c "CREATE DATABASE kolonios OWNER kolonios;"
-
-# Caddy
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install -y caddy
 
 # Deploy/service account: login-capable for CD, key-only in practice.
 # NOTE: $HOME is /home/kolonios, NOT the app dir. SSH keys live in
@@ -119,23 +115,9 @@ sudo systemctl daemon-reload
 sudo systemctl enable kolonios
 ```
 
-Install the Caddy config. The Caddyfiles read `{$DOMAIN}`, but the packaged
-`caddy.service` does **not** load `/etc/default/caddy`, so add a drop-in that
-does:
-
-```bash
-sudo cp deploy/Caddyfile /etc/caddy/Caddyfile          # or Caddyfile.internal for a self-signed internal VM
-sudo mkdir -p /etc/systemd/system/caddy.service.d
-printf '[Service]\nEnvironmentFile=/etc/default/caddy\n' \
-  | sudo tee /etc/systemd/system/caddy.service.d/kolonios-env.conf
-echo 'DOMAIN=app.example.com' | sudo tee /etc/default/caddy
-sudo systemctl daemon-reload
-sudo systemctl restart caddy
-```
-
-For the public-domain path, point DNS at the host and Caddy issues the
-certificate automatically. For an internal VM, use `Caddyfile.internal`
-(`tls internal`); browsers warn until the internal CA is trusted.
+Point the edge proxy/tunnel at `0.0.0.0:3000` (`HOST=0.0.0.0` in the env
+file). The app does not terminate TLS; how that happens in front of the VM
+is outside this runbook.
 
 Allow the service account to restart the app without a password (used by
 `deploy.sh`):
@@ -151,7 +133,8 @@ sudo chmod 440 /etc/sudoers.d/kolonios-restart
 ```bash
 cd /opt/kolonios
 sudo -u kolonios APP_DIR=/opt/kolonios bash deploy/deploy.sh
-curl -k https://app.example.com/api/v1/health   # -k for the self-signed internal cert
+curl -fsS http://127.0.0.1:3000/api/v1/health   # on the VM
+curl -fsS http://<host>:3000/api/v1/health      # from the LAN, HOST=0.0.0.0
 ```
 
 Host prerequisite (incident 2026-09-13): `nodejs` must be installed on the
@@ -266,14 +249,12 @@ APP_DIR=/opt/kolonios bash deploy/deploy.sh
 > command will then land on a stale `main` tip instead of
 > `origin/main` (incident 2026-09-16).
 
-### Pre-handover / internal VM (no Caddy, no backups)
+### Pre-handover / internal VM (no backups)
 
-Before handover to end users, the VM runs without Caddy (the app listens
-on `0.0.0.0:3000` via `HOST=0.0.0.0` in the env file, reached directly as
-`http://<host>:3000`) and without the backup cron (§5 starts at handover).
-`deploy.sh` itself needs neither — it only installs, builds, migrates
-`--no-seed`, restarts, and health-checks — so the manual command above is
-already the whole procedure; just skip the Caddy and backup sections.
+Before handover to end users, the VM runs without the backup cron (§5
+starts at handover). `deploy.sh` does not need it — it only installs,
+builds, migrates `--no-seed`, restarts, and health-checks — so the manual
+command above is already the whole procedure; just skip the backup section.
 
 ### Ownership rule: never deploy as root
 
@@ -374,7 +355,6 @@ Per-secret notes (generate replacements with `openssl rand -hex 32`):
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `cannot read /etc/kolonios/kolonios.env` on deploy       | Env is `600`; make it `640 root:kolonios` (§2)                                                    |
 | Boot fails with "Missing required environment variables" | `/etc/kolonios/kolonios.env` incomplete; check `journalctl -u kolonios`                           |
-| `caddy` reload fails / empty site address                | No `EnvironmentFile` drop-in for `{$DOMAIN}` (§2)                                                 |
 | CD says `Permission denied (publickey)`                  | Deploy public key not in `/home/kolonios/.ssh/authorized_keys`, or `DEPLOY_USER` isn't `kolonios` |
 | Sign-in fails with origin/CSRF error                     | `BETTER_AUTH_URL`/`BETTER_AUTH_TRUSTED_ORIGINS` not the URL users visit                           |
 | Health returns 503                                       | Postgres down or `DATABASE_URL` wrong                                                             |

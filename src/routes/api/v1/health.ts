@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 
 /**
  * Liveness/readiness probe for the platform in front of the app (systemd,
- * Caddy, and uptime monitors). Public by design and intentionally terse: it
+ * edge proxies, and uptime monitors). Public by design and intentionally terse: it
  * returns no version, host, or error detail, only whether the database is
  * reachable. A 503 makes load balancers and `systemctl` health checks fail.
  */

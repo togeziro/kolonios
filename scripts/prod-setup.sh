@@ -198,7 +198,7 @@ banner "Kolonios production setup (internal VM)"
 
 # ── 1. Target & prerequisites ─────────────────────────────────────────────
 stage "Target & prerequisites"
-say "Provisions a Bun + systemd + Caddy + PostgreSQL host and writes $ENV_FILE."
+say "Provisions a Bun + systemd + PostgreSQL host and writes $ENV_FILE."
 say "Run this from the repo root on your dev machine."
 for bin in ssh scp openssl; do
   command -v "$bin" >/dev/null 2>&1 || warn "missing '$bin' — install it before continuing"
@@ -226,8 +226,6 @@ if [[ -z "${REPO_URL:-}" ]]; then
 fi
 [[ -n "${REPO_URL:-}" ]] || warn "REPO_URL empty — clone the repo on the VM manually"
 
-APP_HOST="${APP_URL#*://}"; APP_HOST="${APP_HOST%%/*}"
-
 # Derive the deploy public key so stage 4 can authorize it.
 DEPLOY_PUBKEY=""
 if [[ -n "${DEPLOY_SSH_KEY_PATH:-}" && -f "${DEPLOY_SSH_KEY_PATH}.pub" ]]; then
@@ -244,22 +242,18 @@ step "Paste these on the VM:"
 say "  sudo apt update && sudo apt upgrade -y"
 say "  sudo apt install -y ufw git curl ca-certificates rsync ssh"
 say "  sudo ufw allow OpenSSH"
-say "  sudo ufw allow 80,443/tcp"
+say "  sudo ufw allow 3000/tcp   # only if clients reach the app directly"
 say "  sudo ufw --force enable"
-note "Internal-only VM behind an existing edge proxy? You can skip opening 80/443."
+note "Behind an edge proxy/tunnel that terminates TLS? Skip opening 3000 publicly."
 pause "Base OS done? Press Enter."
 
 # ── 3. Runtime + services ─────────────────────────────────────────────────
-stage "VM: install Bun, PostgreSQL, Caddy"
+stage "VM: install Bun, PostgreSQL"
 step "Run these on the VM:"
 say "  curl -fsSL https://bun.sh/install | bash -s \"bun-v1.4.2\""
 say "  sudo install -m 755 \"\$HOME/.bun/bin/bun\" /usr/local/bin/bun"
 say "  bun --version    # expect 1.4.2 (needs host CPU or any SIMD-capable CPU — see docs/DEPLOY.md)"
 say "  sudo apt install -y postgresql postgresql-contrib"
-say "  sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https"
-say "  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg"
-say "  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list"
-say "  sudo apt update && sudo apt install -y caddy"
 pause "Installed? Press Enter."
 
 # ── 4. Database, service user, repo ───────────────────────────────────────
@@ -294,7 +288,7 @@ BETTER_AUTH_SECRET="$(_existing BETTER_AUTH_SECRET 2>/dev/null || true)"
 STORAGE_ENCRYPTION_KEY="$(_existing STORAGE_ENCRYPTION_KEY 2>/dev/null || true)"
 [[ -n "$STORAGE_ENCRYPTION_KEY" ]] || STORAGE_ENCRYPTION_KEY="$(openssl rand -hex 32)"
 write_env NODE_ENV production
-write_env HOST 127.0.0.1
+write_env HOST 0.0.0.0
 write_env PORT 3000
 write_env LOG_LEVEL info
 write_env DATABASE_URL "postgres://kolonios:$DB_PASSWORD@127.0.0.1:5432/kolonios"
@@ -323,7 +317,7 @@ else
 fi
 
 # ── 7. Install env + units on the VM ──────────────────────────────────────
-stage "Install env, systemd unit, Caddy"
+stage "Install env + systemd unit"
 step "Copy the env file to the VM:"
 say "  scp -P $DEPLOY_PORT $ENV_FILE $SSH_USER@$DEPLOY_HOST:/tmp/kolonios.env"
 say "  ssh -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST \"sudo install -m 640 -o root -g kolonios /tmp/kolonios.env /etc/kolonios/kolonios.env && rm /tmp/kolonios.env\""
@@ -333,19 +327,7 @@ say "  echo 'kolonios ALL=(root) NOPASSWD: /usr/bin/systemctl restart kolonios' 
 step "Install the systemd unit:"
 say "  sudo cp $DEPLOY_PATH/deploy/kolonios.service /etc/systemd/system/kolonios.service"
 say "  sudo systemctl daemon-reload && sudo systemctl enable kolonios"
-step "Install Caddy:"
-if confirm "Does this VM terminate TLS for a public domain (Caddy auto-HTTPS)?"; then
-  say "  sudo cp $DEPLOY_PATH/deploy/Caddyfile /etc/caddy/Caddyfile"
-else
-  say "  sudo cp $DEPLOY_PATH/deploy/Caddyfile.internal /etc/caddy/Caddyfile"
-  note "Self-signed: browsers warn until the internal CA is trusted."
-fi
-say "  sudo mkdir -p /etc/systemd/system/caddy.service.d"
-say "  printf '[Service]\\nEnvironmentFile=/etc/default/caddy\\n' | sudo tee /etc/systemd/system/caddy.service.d/kolonios-env.conf"
-say "  echo 'DOMAIN=$APP_HOST' | sudo tee /etc/default/caddy"
-say "  sudo systemctl daemon-reload && sudo systemctl restart caddy"
-note "The package's caddy.service doesn't read /etc/default/caddy; the drop-in is what supplies DOMAIN."
-note "For auto-HTTPS, DNS for $APP_HOST must point at $DEPLOY_HOST."
+note "TLS is terminated outside the app: point your edge proxy/tunnel at port 3000."
 pause "Installed? Press Enter."
 
 # ── 8. First deploy + health ──────────────────────────────────────────────
@@ -354,7 +336,7 @@ step "On the VM:"
 say "  cd $DEPLOY_PATH && sudo -u kolonios APP_DIR=$DEPLOY_PATH bash deploy/deploy.sh"
 note "deploy.sh installs, builds, migrates --no-seed, restarts, then polls /api/v1/health."
 step "From your machine:"
-say "  curl -k $APP_URL/api/v1/health    # -k tolerates the self-signed cert"
+say "  curl -fsS http://$DEPLOY_HOST:3000/api/v1/health"
 pause "Health returned {\"status\":\"ok\"}? Press Enter."
 
 # ── 9. First admin account ────────────────────────────────────────────────
