@@ -10,7 +10,16 @@ import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
-import { schedulesQueryOptions, missingEmployeeProfilesQueryOptions } from '../api/queries';
+import {
+  schedulesQueryOptions,
+  missingEmployeeProfilesQueryOptions,
+  attendanceKeys
+} from '../api/queries';
+// Cross-feature invalidation (same allowance as schedule-grid's
+// `write-mutations.ts`): writes here must refresh the admin grid and My
+// Schedule, which live under different key namespaces.
+import { scheduleGridKeys } from '@/features/schedule-grid/api/queries';
+import { scheduleKeys } from '@/features/schedule/api/queries';
 import { assignScheduleFn, bulkAssignScheduleFn, createDayOffFn } from '../api/service';
 
 export function ScheduleAssignmentForm() {
@@ -34,8 +43,17 @@ export function ScheduleAssignmentForm() {
   const [dayOffUserId, setDayOffUserId] = useState('');
   const [dayOffDate, setDayOffDate] = useState(new Date().toISOString().slice(0, 10));
 
+  // Every write here (assignment or day-off) changes what the admin
+  // schedule grid and My Schedule resolve, but those pages query under
+  // `scheduleGridKeys` / `scheduleKeys` — without this cross-namespace
+  // invalidation the grid keeps showing stale cells until the week filter
+  // changes (new query key → refetch).
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['attendance', 'assignments'] });
+    queryClient.invalidateQueries({ queryKey: scheduleGridKeys.all });
+    queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+    queryClient.invalidateQueries({ queryKey: attendanceKeys.dayOffs() });
+    queryClient.invalidateQueries({ queryKey: attendanceKeys.effectiveSchedule() });
+    queryClient.invalidateQueries({ queryKey: attendanceKeys.assignments({}) });
   };
 
   // NOTE: assignments are always bounded — both mutations below send the
@@ -93,6 +111,7 @@ export function ScheduleAssignmentForm() {
     onSuccess: (res) => {
       if (res?.success) {
         toast.success(t('attendanceAdmin.dayOffCreated'));
+        invalidate();
       } else {
         toast.error(t('attendanceAdmin.assignmentFailed'));
       }

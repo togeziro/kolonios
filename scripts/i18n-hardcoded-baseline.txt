@@ -2,9 +2,8 @@ src/features/attendance/components/admin-attendance-add-dialog.tsx:211
 src/features/attendance/components/admin-attendance-add-dialog.tsx:256
 src/features/attendance/components/admin-attendance-add-dialog.tsx:289
 src/features/attendance/components/attendance-history.tsx:148
-src/features/attendance/components/check-in-scan.test.tsx:107
 src/features/attendance/components/leave-history.tsx:150
-src/features/attendance/components/schedule-assignment-form.tsx:182
+src/features/attendance/components/schedule-assignment-form.tsx:201
 src/features/attendance/components/shift-listing.tsx:142
 src/features/audit/components/audit-log-page.tsx:64
 src/features/branding/components/branding-section.tsx:234
@@ -72,8 +71,6 @@ src/features/users/components/users-table/columns.tsx:26
 src/features/users/components/users-table/columns.tsx:52
 src/features/users/components/users-table/columns.tsx:76
 src/features/users/components/users-table/columns.tsx:99
-src/features/users/components/users-table/index.tsx:131
-src/features/users/components/users-table/index.tsx:152
 src/routes/__root.tsx:136
 src/routes/__root.tsx:137
 src/routes/about.tsx:15

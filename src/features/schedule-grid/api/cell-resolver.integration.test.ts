@@ -322,4 +322,55 @@ describe('schedule-grid cell resolver (integration)', () => {
       expect(cellOnOtherAugustDay.holidayName).toBeNull();
     });
   });
+
+  describe('orphan day-off (prod incident: dhani 2026-09-09)', () => {
+    it('marks a day_offs row Day Off even when no assignment covers the date', async () => {
+      // Prod state that motivated the fix: the technician's only assignment
+      // starts 2026-09-14, but a `day_offs` row exists on 2026-09-09. The
+      // admin grid rendered "—" while My Schedule (`build-month-grid.ts`,
+      // which keys `isDayOff` off the day-off set alone) rendered "Day
+      // Off". The resolver must agree with My Schedule: the pill + reason
+      // show, with null shift fields and no popover (GridCell only wraps
+      // `hasAssignment` cells).
+      await seedShift({ id: 1, name: 'Morning' });
+      await seedShiftWeekdayRule(1, {
+        day_of_week: 1,
+        is_working_day: true,
+        start_time: '09:00',
+        end_time: '17:00'
+      });
+      await seedEmployee(TEST_USER_ID);
+      await seedScheduleAssignment({
+        user_id: TEST_USER_ID,
+        shift_id: 1,
+        effective_from: '2026-09-14',
+        effective_to: '2026-09-19'
+      });
+      await seedDayOff({
+        user_id: TEST_USER_ID,
+        date: '2026-09-09',
+        reason: 'Izin'
+      });
+
+      const cells = await resolveScheduleGridCells({
+        userIds: [TEST_USER_ID],
+        startDate: '2026-09-07',
+        endDate: '2026-09-15'
+      });
+
+      const orphan = cells.byUser.get(TEST_USER_ID)!.cells.get('2026-09-09')!;
+      expect(orphan.hasAssignment).toBe(false);
+      expect(orphan.isDayOff).toBe(true);
+      expect(orphan.dayOffReason).toBe('Izin');
+      expect(orphan.shiftId).toBeNull();
+      expect(orphan.shiftName).toBeNull();
+      expect(orphan.policyMissing).toBe(false);
+
+      // A covered working date with no day-off stays a normal shift cell.
+      const covered = cells.byUser.get(TEST_USER_ID)!.cells.get('2026-09-14')!;
+      expect(covered.hasAssignment).toBe(true);
+      expect(covered.isDayOff).toBe(false);
+      expect(covered.shiftId).toBe(1);
+    });
+  });
 });

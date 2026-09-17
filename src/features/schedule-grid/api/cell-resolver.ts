@@ -295,7 +295,14 @@ export async function resolveScheduleGridCells(args: {
       const holidayName = holidaysByDate[date] ?? null;
       const isHoliday = holidayName != null;
       const hasAssignment = assignment != null;
-      const isDayOff = hasAssignment && dayOffDates.includes(date);
+      // A `day_offs` row marks the date Day Off even when no assignment
+      // covers it (orphan day-off) — parity with My Schedule
+      // (`build-month-grid.ts` keys `isDayOff` off the day-off set alone),
+      // so the admin grid never renders "—" where the technician sees
+      // "Day Off". Shift resolution above still needs an assignment, so an
+      // orphan cell carries the pill + reason with null shift fields and no
+      // popover (GridCell only wraps `hasAssignment` cells).
+      const isDayOff = dayOffDates.includes(date);
       const dayOffReason = isDayOff ? (dayOffReasonsByDate.get(date) ?? null) : null;
 
       // Track the active shift name from the earliest (in calendar order)
