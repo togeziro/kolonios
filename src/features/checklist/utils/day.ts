@@ -6,9 +6,9 @@ import {
   type WeekdayScheduleRule
 } from '@/lib/attendance/schedule';
 
-export type ChecklistDayStatus = 'working' | 'no_schedule' | 'day_off' | 'holiday';
+type ChecklistDayStatus = 'working' | 'no_schedule' | 'day_off' | 'holiday';
 
-export type ChecklistScheduleSnapshot = {
+type ChecklistScheduleSnapshot = {
   shiftId: number;
   startTime: string; // HH:MM
   endTime: string; // HH:MM

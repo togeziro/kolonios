@@ -48,7 +48,7 @@ export type TaxDraft = {
   effectiveTo: string;
 };
 
-export type TaxSelectKey =
+type TaxSelectKey =
   | 'employmentStatus'
   | 'ptkpStatus'
   | 'residency'

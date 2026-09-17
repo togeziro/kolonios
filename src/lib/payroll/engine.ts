@@ -16,7 +16,7 @@ export type RawEffectiveRow = {
   effective_to: string | null;
 };
 
-export function toEffectiveRows<T extends RawEffectiveRow>(rows: T[]): Array<T & EffectiveRow> {
+function toEffectiveRows<T extends RawEffectiveRow>(rows: T[]): Array<T & EffectiveRow> {
   return rows.map((row) => ({
     ...row,
     effective_from: asDateISO(row.effective_from),
@@ -44,8 +44,6 @@ export function assertDateRange(periodStart: string, periodEnd: string) {
     );
   }
 }
-
-export const validatePayrollDateRange = assertDateRange;
 
 // --- Effective-dated record resolution ---
 

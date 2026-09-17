@@ -66,7 +66,7 @@ export const leaveFiltersSchema = z.object({
 
 const timeString = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:MM format');
 
-export const weekdayScheduleRuleSchema = z.object({
+const weekdayScheduleRuleSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6),
   isWorkingDay: z.boolean().optional(),
   startTime: timeString.nullable().optional(),
@@ -188,32 +188,12 @@ export const scheduleAssignmentSchema = z.object({
     .nullish()
 });
 
-export const dateOverrideSchema = z.object({
-  userId: z.string().min(1),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  shiftId: z.number().int().positive()
-});
-
 export const dayOffSchema = z.object({
   userId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 });
 
-export const locationPolicySchema = z.object({
-  gpsValidationEnabled: z.boolean(),
-  selfieRequired: z.boolean(),
-  maxAccuracyMeters: z.number().positive(),
-  maxStaleMs: z.number().positive()
-});
-
-export const schedulePolicyOverrideSchema = z.object({
-  gpsValidationEnabled: z.boolean().nullable(),
-  selfieRequired: z.boolean().nullable(),
-  maxAccuracyMeters: z.number().positive().nullable(),
-  maxStaleMs: z.number().positive().nullable()
-});
-
-export const correctionReasonSchema = z.string().min(1).max(MAX_TEXT_LENGTH);
+const correctionReasonSchema = z.string().min(1).max(MAX_TEXT_LENGTH);
 
 // --- Location management ---
 
@@ -266,10 +246,6 @@ export const bulkAssignmentSchema = z.object({
 });
 
 // --- Day off ---
-
-export const dayOffDeleteSchema = z.object({
-  id: z.number().int().positive()
-});
 
 // --- Corrections ---
 
@@ -335,5 +311,3 @@ export const attendanceManualRecordSchema = z.object({
   reason: z.string().trim().max(MAX_TEXT_LENGTH).optional(),
   confirmOverwrite: z.boolean().default(false)
 });
-
-export type AttendanceManualRecordInput = z.infer<typeof attendanceManualRecordSchema>;

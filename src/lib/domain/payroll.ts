@@ -1,7 +1,3 @@
-import type { payrollPeriodStatusEnum } from '@/lib/db/schema/payroll';
-
-export type PayrollPeriodStatus = (typeof payrollPeriodStatusEnum.enumValues)[number];
-
 /**
  * Minimum shape `isRecordPaid` needs to decide whether a payroll record is paid
  * (ADR-0003). Wider shapes (e.g. `PayrollReportRow`, `PaymentHistoryRow`) are

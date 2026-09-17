@@ -113,7 +113,7 @@ export type WorkSessionMaterialInput = {
   source: 'warehouse' | 'van';
 };
 
-export type WorkSessionPhotoInput = {
+type WorkSessionPhotoInput = {
   fileUrl: string;
 };
 
@@ -140,7 +140,7 @@ export type NewTicketInput = {
   legs?: NewLegInput[];
 };
 
-export type NextLegInfo = {
+type NextLegInfo = {
   legNumber: number;
   name: string;
 };
@@ -159,7 +159,7 @@ export type TicketDetail = Ticket & {
   claimEligibilityReasons?: string[];
 };
 
-export type UnavailableTicket = Ticket & { eligibilityReasons: string[] };
+type UnavailableTicket = Ticket & { eligibilityReasons: string[] };
 
 export type TicketListFilters = {
   domain?: TicketDomain;
@@ -188,7 +188,6 @@ export type TicketActionResponse = {
 };
 
 export type CreateTicketResponse = TicketDetailResponse;
-export type TicketPhotoInput = { fileUrl: string };
 
 export type RelayPoolLeg = {
   legId: number;

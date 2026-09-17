@@ -7,26 +7,20 @@ import type {
 } from '@/lib/db/schema/attendance';
 
 export type {
-  WeekdayScheduleRule,
-  ScheduleAssignment,
-  DateOverride,
   AttendancePolicy,
   LocationPolicy,
-  SchedulePolicyOverride,
   EffectiveSchedule
 } from '@/lib/attendance/schedule';
 
 export type EmployeeShift = typeof employeeShifts.$inferSelect;
-export type Location = typeof locations.$inferSelect;
-export type Shift = typeof shifts.$inferSelect;
-export type Leave = typeof leaves.$inferSelect;
-export type PerformanceReport = typeof performanceReports.$inferSelect;
-
-export type ShiftType = 'fixed' | 'flexible';
-
-export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused' | 'pending';
+type Location = typeof locations.$inferSelect;
+type Shift = typeof shifts.$inferSelect;
+type Leave = typeof leaves.$inferSelect;
+type PerformanceReport = typeof performanceReports.$inferSelect;
 
 export type LeaveType = 'annual' | 'sick' | 'personal' | 'emergency' | 'maternity' | 'paternity';
+
+type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused' | 'pending';
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -114,14 +108,6 @@ export type AdminAttendanceFilters = {
 
 export type ExportFormat = 'csv' | 'xlsx' | 'pdf';
 
-export type ExportResponse = {
-  success: boolean;
-  format?: ExportFormat;
-  content?: string;
-  mime?: string;
-  ext?: string;
-};
-
 export type LeaveListResponse = {
   success: boolean;
   time?: string;
@@ -137,12 +123,4 @@ export type PerformanceStatsResponse = {
   time?: string;
   message?: string;
   reports?: PerformanceReport[];
-};
-
-export type AttendanceSummary = {
-  total: number;
-  present: number;
-  late: number;
-  absent: number;
-  month: string;
 };

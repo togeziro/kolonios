@@ -1,8 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { listCustomersFn, getCustomerByIdFn } from './service';
-import type { Customer, CustomerFilters } from './types';
-
-export type { Customer };
+import type { CustomerFilters } from './types';
 
 export const customerKeys = {
   all: ['customers'] as const,

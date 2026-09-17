@@ -2,7 +2,7 @@ import { queryOptions, useQuery, useMutation, useQueryClient } from '@tanstack/r
 import { DEFAULT_LOCALE, type AppLocale } from '@/lib/locale/types';
 import { getAppLocaleFn, updateAppLocaleFn } from './service';
 
-export const appLocaleQueryOptions = () =>
+const appLocaleQueryOptions = () =>
   queryOptions({
     queryKey: ['settings', 'locale'],
     queryFn: () => getAppLocaleFn(),

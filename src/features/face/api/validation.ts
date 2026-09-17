@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { FACE_DESCRIPTOR_LENGTH } from '@/lib/face/types';
 
-export const faceDescriptorSchema = z
+const faceDescriptorSchema = z
   .array(z.number().finite())
   .length(FACE_DESCRIPTOR_LENGTH, `Face descriptor must be ${FACE_DESCRIPTOR_LENGTH} dimensions`);
 
@@ -24,6 +24,4 @@ export const faceSettingsSchema = z.object({
   showSeconds: z.boolean()
 });
 
-export type FaceEnrollmentInput = z.infer<typeof faceEnrollmentSchema>;
-export type FaceVerifyInput = z.infer<typeof faceVerifySchema>;
 export type FaceSettingsInput = z.infer<typeof faceSettingsSchema>;

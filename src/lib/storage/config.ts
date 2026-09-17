@@ -65,7 +65,7 @@ export function maskSecret(secret: string): string {
   return `••••${secret.slice(-4)}`;
 }
 
-export function applyEnvOverride(config: StorageConfig): StorageConfig {
+function applyEnvOverride(config: StorageConfig): StorageConfig {
   // Deployment escape hatch for idrive_e2: when both env vars are set they
   // win over the stored credentials (useful for managed deployments that keep
   // credentials in the environment, not the DB).

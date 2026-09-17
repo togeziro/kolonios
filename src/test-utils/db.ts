@@ -150,19 +150,6 @@ export async function seedUser(id: string, overrides: Partial<typeof user.$infer
   });
 }
 
-export async function seedAuditRow(overrides: Partial<typeof auditLog.$inferInsert> = {}) {
-  const [row] = await db
-    .insert(auditLog)
-    .values({
-      actorUserId: 'test-admin',
-      action: 'test.action',
-      entityType: 'test',
-      ...overrides
-    })
-    .returning();
-  return row;
-}
-
 export async function seedDepartment(overrides: Partial<typeof departments.$inferInsert> = {}) {
   const [dept] = await db
     .insert(departments)
@@ -324,17 +311,6 @@ export async function seedTicketMaterial(
   return material;
 }
 
-export async function seedTicketWorklog(
-  legId: number,
-  overrides: Partial<typeof ticketWorklog.$inferInsert> = {}
-) {
-  const [entry] = await db
-    .insert(ticketWorklog)
-    .values({ leg_id: legId, kind: 'note', body: 'Test entry', ...overrides })
-    .returning();
-  return entry;
-}
-
 export async function seedEmployeeSkill(userId: string, skill: string) {
   await db.insert(employeeSkills).values({ user_id: userId, skill });
 }
@@ -396,19 +372,4 @@ export async function seedDayOff(overrides: Partial<typeof dayOffs.$inferInsert>
     })
     .returning();
   return dayOff;
-}
-
-export async function seedAttendanceCorrection(
-  overrides: Partial<typeof attendanceCorrections.$inferInsert> = {}
-) {
-  const [correction] = await db
-    .insert(attendanceCorrections)
-    .values({
-      attendance_id: 1,
-      actor_id: 'test-admin',
-      reason: 'Manual correction',
-      ...overrides
-    })
-    .returning();
-  return correction;
 }

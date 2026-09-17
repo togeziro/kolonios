@@ -17,7 +17,7 @@ export const resources = {
   }
 } as const;
 
-export function createI18nInstance(initialLanguage?: string) {
+function createI18nInstance(initialLanguage?: string) {
   const instance = createInstance();
 
   instance.use(initReactI18next).init({

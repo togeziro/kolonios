@@ -28,7 +28,7 @@ type MoneyField =
   | 'leaveHourDeduction'
   | 'shortfallHourDeduction';
 
-export type SalaryDetailDraft = {
+type SalaryDetailDraft = {
   key: number;
   description: string;
   amount: string;
@@ -71,7 +71,7 @@ export const EMPTY_BASE_SALARY_DRAFT: BaseSalaryDraft = {
   details: []
 };
 
-export function todayISO() {
+function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 

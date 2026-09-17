@@ -7,10 +7,6 @@ export { SwitchField } from './switch-field';
 export { RadioGroupField } from './radio-group-field';
 export { SliderField } from './slider-field';
 
-export { ComboboxField } from './combobox-field';
-export { TagsField } from './tags-field';
-export { SectionTitle } from './section-title';
-
 // Composed (standalone, for direct use in forms)
 export { FormTextField } from './text-field';
 export { FormTextareaField } from './textarea-field';

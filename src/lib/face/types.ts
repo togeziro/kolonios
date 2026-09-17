@@ -1,8 +1,3 @@
-export interface FaceDescriptor {
-  label: string;
-  descriptors: number[][];
-}
-
 export interface FaceMatchResult {
   matched: boolean;
   label: string;
@@ -17,12 +12,6 @@ export interface FaceDetectionResult {
   livenessScore: number | null;
   detectionScore?: number | null;
   error?: string;
-}
-
-export interface FaceConfig {
-  validationMode: 'realtime' | 'background';
-  accuracyLevel: 'loose' | 'medium' | 'tight';
-  showSeconds: boolean;
 }
 
 export type FaceAccuracyLevel = 'loose' | 'medium' | 'tight';

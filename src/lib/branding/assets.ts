@@ -1,6 +1,6 @@
 export type BrandingSlot = 'logo_light' | 'logo_dark' | 'favicon';
 
-export const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
+const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
 
 export function toPngDataUrl(base64: string): string {
   return `${PNG_DATA_URL_PREFIX}${base64}`;

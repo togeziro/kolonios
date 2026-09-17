@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
-import { getNationalHolidaysFn, getNationalHolidayFn, getHolidayApiSettingsFn } from './service';
+import { getNationalHolidaysFn, getHolidayApiSettingsFn } from './service';
 
 export const holidayKeys = {
   all: ['holidays'] as const,
@@ -17,13 +17,7 @@ export const nationalHolidaysQueryOptions = (year?: number) =>
     queryFn: () => getNationalHolidaysFn({ data: { year } })
   });
 
-export const nationalHolidayQueryOptions = (id: number) =>
-  queryOptions({
-    queryKey: holidayKeys.detail(id),
-    queryFn: () => getNationalHolidayFn({ data: { id } })
-  });
-
-export const holidayApiSettingsQueryOptions = () =>
+const holidayApiSettingsQueryOptions = () =>
   queryOptions({
     queryKey: holidayKeys.settings(),
     queryFn: () => getHolidayApiSettingsFn()

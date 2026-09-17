@@ -86,7 +86,7 @@ function invalidateScheduleGridCaches(queryClient: ReturnType<typeof useQueryCli
   queryClient.invalidateQueries({ queryKey: attendanceKeys.dayOffs() });
 }
 
-export function setCellShiftMutation(
+function setCellShiftMutation(
   queryClient: ReturnType<typeof useQueryClient>
 ): UseMutationOptions<CellWriteResult, Error, SetCellShiftInput> {
   return {
@@ -95,7 +95,7 @@ export function setCellShiftMutation(
   };
 }
 
-export function setCellDayOffMutation(
+function setCellDayOffMutation(
   queryClient: ReturnType<typeof useQueryClient>
 ): UseMutationOptions<CellWriteResult, Error, SetCellDayOffInput> {
   return {
@@ -104,7 +104,7 @@ export function setCellDayOffMutation(
   };
 }
 
-export function clearCellMutation(
+function clearCellMutation(
   queryClient: ReturnType<typeof useQueryClient>
 ): UseMutationOptions<CellWriteResult, Error, ClearCellInput> {
   return {
@@ -113,7 +113,7 @@ export function clearCellMutation(
   };
 }
 
-export function applyToWholeWeekMutation(
+function applyToWholeWeekMutation(
   queryClient: ReturnType<typeof useQueryClient>
 ): UseMutationOptions<ApplyToWholeWeekResult, Error, ApplyToWholeWeekInput> {
   return {
@@ -139,7 +139,7 @@ export type RepeatWeekBulkMutationInput = {
  * invalidation matches the other write mutations (grid + cross-feature
  * attendance keys).
  */
-export function repeatWeekBulkMutation(
+function repeatWeekBulkMutation(
   queryClient: ReturnType<typeof useQueryClient>
 ): UseMutationOptions<RepeatWeekBulkResult, Error, RepeatWeekBulkMutationInput> {
   return {

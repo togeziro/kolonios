@@ -10,7 +10,7 @@ import {
   updateChecklistStatusSchema
 } from './validation';
 import { resolveChecklistDay, type HolidayRow } from '../utils/day';
-import type { ChecklistItem, DailyChecklist, DailyChecklistResponse } from './types';
+import type { ChecklistItem, DailyChecklist } from './types';
 import type { DailyChecklistItem } from '@/lib/db/schema/checklists';
 
 function serializeChecklist(row: {
@@ -241,5 +241,3 @@ export const updateChecklistStatusFn = createServerFn({ method: 'POST' })
     );
     return { success: true as const };
   });
-
-export type { DailyChecklistResponse };

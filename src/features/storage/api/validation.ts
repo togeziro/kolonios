@@ -1,12 +1,6 @@
 import { z } from 'zod';
 
-export const storageProviderSchema = z.enum([
-  'idrive_e2',
-  'aws_s3',
-  'minio',
-  'cloudflare_r2',
-  'custom'
-]);
+const storageProviderSchema = z.enum(['idrive_e2', 'aws_s3', 'minio', 'cloudflare_r2', 'custom']);
 
 export const storageSettingsSchema = z.object({
   provider: storageProviderSchema,
@@ -23,13 +17,6 @@ export const storageSettingsSchema = z.object({
 
 export const testStorageConnectionSchema = storageSettingsSchema;
 
-import {
-  uploadFolderSchema,
-  getUploadUrlSchema,
-  getObjectUrlSchema
-} from '@/lib/storage/upload-fns';
+import { getUploadUrlSchema } from '@/lib/storage/upload-fns';
 
-export { uploadFolderSchema, getUploadUrlSchema, getObjectUrlSchema };
-
-export type StorageSettingsInput = z.infer<typeof storageSettingsSchema>;
-export type GetUploadUrlInput = z.infer<typeof getUploadUrlSchema>;
+export { getUploadUrlSchema };

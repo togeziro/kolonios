@@ -14,11 +14,3 @@ export type AddNotificationPayload = {
   body: string;
   actions?: NotificationAction[];
 };
-
-export type MarkAsReadPayload = {
-  id: string;
-};
-
-export type RemoveNotificationPayload = {
-  id: string;
-};

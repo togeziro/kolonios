@@ -4,13 +4,7 @@ import { requirePermission, requireSession } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { deriveStorageConfig, readyConfig } from './config';
 
-export const uploadFolderSchema = z.enum([
-  'attendance',
-  'customers',
-  'tickets',
-  'checklists',
-  'avatars'
-]);
+const uploadFolderSchema = z.enum(['attendance', 'customers', 'tickets', 'checklists', 'avatars']);
 
 export const getUploadUrlSchema = z.object({
   folder: uploadFolderSchema,
@@ -18,7 +12,7 @@ export const getUploadUrlSchema = z.object({
   ownerId: z.string().trim().min(1).max(100).optional()
 });
 
-export const getObjectUrlSchema = z.object({
+const getObjectUrlSchema = z.object({
   key: z.string().trim().min(1).max(500)
 });
 
@@ -120,4 +114,4 @@ export const getObjectUrlFn = createServerFn({ method: 'POST' })
     return { url };
   });
 
-export type UploadFolder = z.infer<typeof uploadFolderSchema>;
+type UploadFolder = z.infer<typeof uploadFolderSchema>;

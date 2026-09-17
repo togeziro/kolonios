@@ -10,8 +10,7 @@ import {
   mapPtkpStatusToAmount,
   requireEffectiveRecord,
   resolveEffectiveRecord,
-  resolveEffectiveRecords,
-  validatePayrollDateRange
+  resolveEffectiveRecords
 } from './engine';
 
 describe('assertEffectiveDate', () => {
@@ -30,16 +29,16 @@ describe('assertEffectiveDate', () => {
   });
 });
 
-describe('assertDateRange / validatePayrollDateRange', () => {
+describe('assertDateRange', () => {
   it('accepts start <= end', () => {
     expect(() => assertDateRange('2026-08-01', '2026-08-31')).not.toThrow();
     expect(() => assertDateRange('2026-08-01', '2026-08-01')).not.toThrow();
-    expect(() => validatePayrollDateRange('2026-07-01', '2026-07-31')).not.toThrow();
+    expect(() => assertDateRange('2026-07-01', '2026-07-31')).not.toThrow();
   });
 
   it('rejects start > end', () => {
     expect(() => assertDateRange('2026-08-01', '2026-07-31')).toThrow(/start/i);
-    expect(() => validatePayrollDateRange('2026-08-01', '2026-07-31')).toThrow(/start/i);
+    expect(() => assertDateRange('2026-08-01', '2026-07-31')).toThrow(/start/i);
   });
 
   it('rejects malformed dates in the range', () => {

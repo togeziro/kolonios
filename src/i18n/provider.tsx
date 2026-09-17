@@ -4,26 +4,6 @@ import { createInstance, type i18n as I18nInstance } from 'i18next';
 
 import { resources, supportedLanguages, defaultLanguage } from './config';
 
-export { supportedLanguages, defaultLanguage };
-export type { SupportedLanguage } from './config';
-
-export async function getServerSideI18n(initialLanguage?: string): Promise<I18nInstance> {
-  const instance = createInstance();
-  instance.use(initReactI18next).init({
-    resources,
-    lng: initialLanguage,
-    fallbackLng: defaultLanguage,
-    supportedLngs: supportedLanguages,
-    interpolation: {
-      escapeValue: false
-    },
-    react: {
-      useSuspense: false
-    }
-  });
-  return instance;
-}
-
 // Browser-only instance creation; touches cookies/localStorage via the
 // language-detector plugin, so it must never run during the server render.
 function createClientI18n(initialLanguage?: string): I18nInstance {

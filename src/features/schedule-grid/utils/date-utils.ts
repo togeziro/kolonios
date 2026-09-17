@@ -17,7 +17,7 @@ export function parseDate(dateStr: string): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-export function formatDate(date: Date): string {
+function formatDate(date: Date): string {
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, '0');
   const d = String(date.getUTCDate()).padStart(2, '0');

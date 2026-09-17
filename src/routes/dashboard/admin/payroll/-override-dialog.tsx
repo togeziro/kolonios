@@ -15,7 +15,7 @@ export type OverrideDraft = {
   shortfallHours: string;
 };
 
-export const EMPTY_OVERRIDE_DRAFT: OverrideDraft = {
+const EMPTY_OVERRIDE_DRAFT: OverrideDraft = {
   scheduledDays: '',
   payableDays: '',
   workedHours: '',

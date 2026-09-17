@@ -6,7 +6,7 @@ const optionalText = (max: number) =>
     z.string().trim().max(max).optional()
   );
 
-export const brandingProfileSchema = z.object({
+const brandingProfileSchema = z.object({
   name: z.string().trim().min(1).max(100),
   address: optionalText(255),
   email: z.preprocess(
@@ -38,7 +38,7 @@ export const brandingProfileSchema = z.object({
 // Per-slot data-URL cap: 512 KB logo → ~700 KB base64; favicon is smaller.
 // Content (magic bytes, dimensions) is validated in the server fn via
 // validateBrandingImage — the schema only bounds the transport shape.
-export const brandingSlotSchema = z
+const brandingSlotSchema = z
   .string()
   .regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/)
   .max(1024 * 1024)
@@ -52,4 +52,3 @@ export const updateBrandingSchema = z.object({
 });
 
 export type UpdateBrandingInput = z.infer<typeof updateBrandingSchema>;
-export type BrandingProfileInput = z.infer<typeof brandingProfileSchema>;

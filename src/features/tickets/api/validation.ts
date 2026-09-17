@@ -28,7 +28,7 @@ export const listTicketsSchema = z.object({
   priority: z.enum(['low', 'medium', 'high']).optional()
 });
 
-export const ticketLegInputSchema = z.object({
+const ticketLegInputSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional()
 });
@@ -59,18 +59,18 @@ export const arriveTicketSchema = ticketIdSchema.extend({
   accuracy: z.number().min(0).optional()
 });
 
-export const workSessionMaterialSchema = z.object({
+const workSessionMaterialSchema = z.object({
   name: z.string().min(1).max(200),
   qty: z.number().int().min(1).max(999),
   unit: z.string().max(20),
   source: z.enum(['warehouse', 'van'])
 });
 
-export const workSessionPhotoSchema = z.object({
+const workSessionPhotoSchema = z.object({
   fileUrl: z.string().min(1).max(500)
 });
 
-export const workSessionLogEntrySchema = z.object({
+const workSessionLogEntrySchema = z.object({
   kind: z.enum(['note', 'photo', 'location', 'meter']),
   body: z.string().min(1).max(500)
 });

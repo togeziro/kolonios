@@ -1,8 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
 import { listRoleGroupsFn, getRoleGroupByIdFn } from './service';
-import type { RoleGroup } from './types';
-
-export type { RoleGroup };
 
 export const roleGroupKeys = {
   all: ['role-groups'] as const,

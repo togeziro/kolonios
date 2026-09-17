@@ -49,11 +49,8 @@ const MODULES = [
   }
 ] as const;
 
-type ModuleKey = (typeof MODULES)[number]['key'];
-
 export const PERMISSION_ACTIONS: readonly PermissionAction[] = [
   ...new Set(MODULES.flatMap((module) => module.actions))
 ];
 
 export { MODULES };
-export type { ModuleKey };

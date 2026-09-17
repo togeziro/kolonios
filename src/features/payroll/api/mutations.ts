@@ -27,7 +27,7 @@ export const payrollMutationKeys = {
   generation: () => [payrollKeys.periods(), payrollKeys.records(), payrollKeys.report()] as const
 };
 
-export function usePayrollMutation<T>(
+function usePayrollMutation<T>(
   mutationFn: (data: T) => Promise<unknown>,
   getKeys: (data: T) => QueryKey[]
 ) {

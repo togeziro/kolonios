@@ -56,7 +56,7 @@ import { SCHEDULE_GRID_MAX_PAGE_SIZE } from './validation';
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
 
-export const repeatWeekBulkSchema = z.object({
+const repeatWeekBulkSchema = z.object({
   sourceWeekStart: ymd,
   targetWeekStarts: z.array(ymd).min(1).max(12),
   userIds: z.array(z.string().min(1)).min(1).max(SCHEDULE_GRID_MAX_PAGE_SIZE).optional(),

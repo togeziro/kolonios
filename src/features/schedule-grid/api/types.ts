@@ -51,7 +51,7 @@ export type ScheduleGridRow = {
   hasAssignment: boolean;
 };
 
-export type ScheduleGridWeekHolidays = {
+type ScheduleGridWeekHolidays = {
   /** Map of YYYY-MM-DD -> holiday name for the 7-day window. */
   byDate: Record<string, string>;
 };

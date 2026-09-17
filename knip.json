@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/routes/**/*.{ts,tsx}",
+    "!src/routes/**/-*.{ts,tsx}",
+    "scripts/*.ts",
+    "scripts/*.js",
+    "e2e/*.setup.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,js}", "e2e/**/*.{ts,tsx}"],
+  "ignore": ["src/integrations/**", "src/i18n/types.ts"],
+  "ignoreDependencies": ["tailwindcss", "tw-animate-css", "pino-pretty"],
+  "ignoreUnresolved": ["^/src/", "^\\./routeTree\\.gen$"],
+  "ignoreIssues": {
+    "src/components/ui/**": ["exports", "types"],
+    "src/features/employees/api/career-events.ts": ["exports"],
+    "src/features/storage/api/validation.ts": ["duplicates"]
+  }
+}

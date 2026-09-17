@@ -18,7 +18,7 @@ import { useRepeatWeekBulk } from '../api/write-mutations';
 import { SCHEDULE_GRID_MAX_PAGE_SIZE } from '../api/validation';
 import { addDays, formatWeekRangeLabel } from '../utils/date-utils';
 
-export const BULK_REPEAT_MAX_WEEKS = 12;
+const BULK_REPEAT_MAX_WEEKS = 12;
 const BULK_REPEAT_DEFAULT_WEEKS = 4;
 
 export type BulkRepeatDialogProps = {
