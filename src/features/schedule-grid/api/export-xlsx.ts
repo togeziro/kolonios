@@ -14,8 +14,8 @@ import { EXPORT_VALUE_UNASSIGNED } from './export-constants';
 
 export const SHIFT_SCHEDULE_SHEET_NAME = 'Shift Schedule';
 
-/** Fixed columns before the per-day columns: `Name | Employee Code | Division`. */
-export const SHIFT_SCHEDULE_PRELUDE_COLUMNS = ['Name', 'Employee Code', 'Division'] as const;
+/** Fixed columns before the per-day columns: `Name | Employee Code | Department`. */
+export const SHIFT_SCHEDULE_PRELUDE_COLUMNS = ['Name', 'Employee Code', 'Department'] as const;
 
 export type ShiftScheduleExportRow = {
   fullName: string;
@@ -27,7 +27,7 @@ export type ShiftScheduleExportRow = {
 
 /**
  * Build the workbook buffer. Header row 1 is
- * `Name | Employee Code | Division | YYYY-MM-DD ...` (one column per day of
+ * `Name | Employee Code | Department | YYYY-MM-DD ...` (one column per day of
  * the month, in calendar order); each following row is one employee.
  * Values use the grid's vocabulary: the resolved shift name (e.g. `KPI`),
  * `OFF`, `HOLIDAY`, or `—` for unassigned days.
@@ -51,7 +51,7 @@ export function buildShiftScheduleWorkbook(
   sheet['!cols'] = [
     { wch: 24 }, // Name
     { wch: 14 }, // Employee Code
-    { wch: 20 }, // Division
+    { wch: 20 }, // Department
     ...dates.map(() => ({ wch: 12 }))
   ];
 

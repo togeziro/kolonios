@@ -121,10 +121,10 @@ describe('CareerTimelineSubTab — header', () => {
     expect(screen.getByText(/Time with the company/i)).toBeTruthy();
   });
 
-  it('renders three enabled Change buttons (Division / Position / Work Status)', () => {
+  it('renders three enabled Change buttons (Department / Position / Work Status)', () => {
     setQuery({ lengthOfService: { years: 0, months: 0 }, events: [] });
     renderTab();
-    expect(screen.getByRole('button', { name: 'Change Division' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Change Department' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change Position' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change Work Status' })).toBeTruthy();
   });

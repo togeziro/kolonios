@@ -213,14 +213,14 @@
       "headerTitle": "Length of Service",
       "headerEmpty": "No join date on file",
       "headerSubtitle": "Time with the company based on join date",
-      "changeDivision": "Change Division",
+      "changeDivision": "Change Department",
       "changePosition": "Change Position",
       "changeWorkStatus": "Change Work Status",
       "loading": "Loading career history...",
       "empty": "No career events recorded yet.",
       "append": {
         "position": "Change Position",
-        "division": "Change Division",
+        "division": "Change Department",
         "employment_status": "Change Work Status",
         "description": "Record a new career event. The change will appear at the top of the timeline and update the employee's record.",
         "effectiveDate": "Effective Date",
@@ -241,7 +241,7 @@
       },
       "category": {
         "position": "Position",
-        "division": "Division",
+        "division": "Department",
         "employment_status": "Work Status",
         "start_work": "Start Work"
       },
@@ -879,8 +879,8 @@
       "totalPayroll": "Total Payroll:",
       "from": "from",
       "employees": "employees",
-      "division": "Division",
-      "allDivisions": "All divisions",
+      "division": "Department",
+      "allDivisions": "All departments",
       "bank": "Bank Account",
       "selectAll": "Select all rows",
       "selectRow": "Select row",
@@ -1947,8 +1947,8 @@
     "filter": {
       "searchLabel": "Search by employee name",
       "searchPlaceholder": "Search employee…",
-      "divisionLabel": "Filter by division",
-      "divisionAll": "All divisions"
+      "divisionLabel": "Filter by department",
+      "divisionAll": "All departments"
     },
     "weekStart": {
       "label": "Week starts on",

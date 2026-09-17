@@ -81,7 +81,7 @@ function buildWorkbookBase64(
   headerDates: string[],
   rows: Array<[string, string, string, ...string[]]>
 ): string {
-  const header = ['Name', 'Employee Code', 'Division', ...headerDates];
+  const header = ['Name', 'Employee Code', 'Department', ...headerDates];
   const aoa: string[][] = [header];
   for (const row of rows) aoa.push(row as unknown as string[]);
   const sheet = XLSX.utils.aoa_to_sheet(aoa);

@@ -213,14 +213,14 @@
       "headerTitle": "Masa Kerja",
       "headerEmpty": "Tanggal bergabung belum tersedia",
       "headerSubtitle": "Waktu bersama perusahaan berdasarkan tanggal bergabung",
-      "changeDivision": "Ubah Divisi",
+      "changeDivision": "Ubah Departemen",
       "changePosition": "Ubah Posisi",
       "changeWorkStatus": "Ubah Status Kerja",
       "loading": "Memuat riwayat karier...",
       "empty": "Belum ada peristiwa karier yang tercatat.",
       "append": {
         "position": "Ubah Posisi",
-        "division": "Ubah Divisi",
+        "division": "Ubah Departemen",
         "employment_status": "Ubah Status Kerja",
         "description": "Catat peristiwa karier baru. Perubahan akan muncul di atas linimasa dan memperbarui data karyawan.",
         "effectiveDate": "Tanggal Berlaku",
@@ -241,7 +241,7 @@
       },
       "category": {
         "position": "Posisi",
-        "division": "Divisi",
+        "division": "Departemen",
         "employment_status": "Status Kerja",
         "start_work": "Mulai Kerja"
       },
@@ -879,8 +879,8 @@
       "totalPayroll": "Total Payroll:",
       "from": "dari",
       "employees": "karyawan",
-      "division": "Divisi",
-      "allDivisions": "Semua divisi",
+      "division": "Departemen",
+      "allDivisions": "Semua departemen",
       "bank": "Rekening Bank",
       "selectAll": "Pilih semua baris",
       "selectRow": "Pilih baris",
@@ -1947,8 +1947,8 @@
     "filter": {
       "searchLabel": "Cari berdasarkan nama karyawan",
       "searchPlaceholder": "Cari karyawan…",
-      "divisionLabel": "Filter divisi",
-      "divisionAll": "Semua divisi"
+      "divisionLabel": "Filter departemen",
+      "divisionAll": "Semua departemen"
     },
     "weekStart": {
       "label": "Awal minggu",

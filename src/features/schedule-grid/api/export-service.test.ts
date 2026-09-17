@@ -137,7 +137,7 @@ describe('exportMonthFn (integration)', () => {
     expect(res.mime).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
     const { rows } = readWorkbook(res.base64);
-    // Name | Employee Code | Division + 30 September days.
+    // Name | Employee Code | Department + 30 September days.
     expect(rows[0].length).toBe(33);
     expect(rows[0][3]).toBe('2026-09-01');
     expect(rows[0][32]).toBe('2026-09-30');

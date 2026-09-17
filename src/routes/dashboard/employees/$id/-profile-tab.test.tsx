@@ -106,7 +106,7 @@ describe('EmployeeProfileTab — sub-tab shell', () => {
     renderProfileTab();
     const careerTab = screen.getByRole('tab', { name: 'Career Timeline' });
     fireEvent.mouseDown(careerTab, { button: 0 });
-    expect(screen.getByRole('button', { name: 'Change Division' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Change Department' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change Position' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change Work Status' })).toBeTruthy();
     expect(screen.getByText(/No career events recorded yet/i)).toBeTruthy();

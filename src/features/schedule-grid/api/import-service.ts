@@ -126,7 +126,7 @@ export const importMonthFn = createServerFn({ method: 'POST' })
     }
 
     const header = rows[0].map((cell) => String(cell ?? '').trim());
-    // Columns 0..2 are prelude (Name | Employee Code | Division); date cols start at 3.
+    // Columns 0..2 are prelude (Name | Employee Code | Department); date cols start at 3.
     const dateColIndexes: number[] = [];
     const dateByCol = new Map<number, string>();
     for (let col = 3; col < header.length; col += 1) {

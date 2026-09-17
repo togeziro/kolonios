@@ -41,7 +41,7 @@ export function buildCellAriaLabel(cell: ScheduleGridCell): string {
 
 /**
  * Build the aria-label for an employee row header. Includes the full
- * name, employee code, and division name so screen-reader users can
+ * name, employee code, and department name so screen-reader users can
  * orient themselves without re-reading the visible cell text.
  */
 export function buildRowHeaderAriaLabel(row: {
@@ -49,6 +49,6 @@ export function buildRowHeaderAriaLabel(row: {
   employeeCode: string;
   divisionName: string;
 }): string {
-  const division = row.divisionName ? `, division ${row.divisionName}` : '';
-  return `Employee ${row.fullName}, code ${row.employeeCode}${division}`;
+  const department = row.divisionName ? `, department ${row.divisionName}` : '';
+  return `Employee ${row.fullName}, code ${row.employeeCode}${department}`;
 }

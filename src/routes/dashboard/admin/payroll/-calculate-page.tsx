@@ -5,9 +5,9 @@
  * i18n, theming, RBAC, and the shadcn/Tailwind primitives:
  *
  *  1. "Hitung Gaji" (Calculate) tab — payroll records with date-range,
- *     division, and search filters; a "Bulk Action" affordance that calls
+ *     department, and search filters; a "Bulk Action" affordance that calls
  *     `useGeneratePayroll` for the matching draft period.
- *  2. "Siap Bayar" (Ready to Pay) tab — the pay queue with division filter,
+ *  2. "Siap Bayar" (Ready to Pay) tab — the pay queue with department filter,
  *     `PayQueueSummaryBar`, paginated preview, and a CTA that opens the
  *     full bulk-pay experience on `/dashboard/admin/payroll/ready-to-pay`.
  *
@@ -319,7 +319,7 @@ export function CalculatePage() {
                 </Button>
               </CardHeader>
               <CardContent className='space-y-3 p-3 sm:p-4'>
-                {/* Filter row — date range + division + search + action icons (Kerjoo div.p-3 layout) */}
+                {/* Filter row — date range + department + search + action icons (Kerjoo div.p-3 layout) */}
                 <div className='flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end'>
                   <div className='flex items-end gap-2 lg:basis-[280px]'>
                     <div className='flex-1 space-y-1'>
@@ -1195,7 +1195,7 @@ export function CalculatePage() {
                 </Button>
               </CardHeader>
               <CardContent className='space-y-4'>
-                {/* Division filter (matches Kerjoo's Ready To Pay filter row) */}
+                {/* Department filter (matches Kerjoo's Ready To Pay filter row) */}
                 <div className='flex flex-wrap items-end gap-3'>
                   <div className='space-y-1 lg:basis-[230px]'>
                     <label className='text-xs font-medium text-muted-foreground'>

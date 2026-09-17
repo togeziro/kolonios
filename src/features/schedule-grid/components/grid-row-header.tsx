@@ -23,7 +23,7 @@ export type GridRowHeaderProps = {
  * stays visible.
  *
  * Ticket 04: `role="rowheader"` + `aria-label` follow the spec rule that
- * the employee column announces name + code + division to screen readers.
+ * the employee column announces name + code + department to screen readers.
  */
 export function GridRowHeader({ row, sticky = true, onAssignShift }: GridRowHeaderProps) {
   const { t } = useTranslation();

@@ -10,7 +10,7 @@ import { FilterBar } from './filter-bar';
 // drives the React onChange handler with a target.value that matches the
 // option we set.
 describe('FilterBar', () => {
-  it('renders the division dropdown with an "All" option plus provided divisions', () => {
+  it('renders the department dropdown with an "All" option plus provided departments', () => {
     render(
       createElement(FilterBar, {
         divisions: [
@@ -24,14 +24,14 @@ describe('FilterBar', () => {
         onPendingSearchChange: vi.fn()
       })
     );
-    const select = screen.getByLabelText(/filter by division/i) as HTMLSelectElement;
+    const select = screen.getByLabelText(/filter by department/i) as HTMLSelectElement;
     expect(select).toBeTruthy();
-    expect(screen.getByRole('option', { name: /all divisions/i })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /all departments/i })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Engineering' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Operations' })).toBeTruthy();
   });
 
-  it('emits the division id when a non-empty option is chosen', () => {
+  it('emits the department id when a non-empty option is chosen', () => {
     const onDivisionChange = vi.fn();
     render(
       createElement(FilterBar, {
@@ -43,12 +43,12 @@ describe('FilterBar', () => {
         onPendingSearchChange: vi.fn()
       })
     );
-    const select = screen.getByLabelText(/filter by division/i) as HTMLSelectElement;
+    const select = screen.getByLabelText(/filter by department/i) as HTMLSelectElement;
     fireEvent.change(select, { target: { value: '7' } });
     expect(onDivisionChange).toHaveBeenCalledWith('7');
   });
 
-  it('emits null when the "All divisions" option is chosen', () => {
+  it('emits null when the "All departments" option is chosen', () => {
     const onDivisionChange = vi.fn();
     render(
       createElement(FilterBar, {
@@ -60,7 +60,7 @@ describe('FilterBar', () => {
         onPendingSearchChange: vi.fn()
       })
     );
-    const select = screen.getByLabelText(/filter by division/i) as HTMLSelectElement;
+    const select = screen.getByLabelText(/filter by department/i) as HTMLSelectElement;
     fireEvent.change(select, { target: { value: '' } });
     expect(onDivisionChange).toHaveBeenCalledWith(null);
   });

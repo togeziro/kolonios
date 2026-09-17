@@ -17,7 +17,7 @@ export type ScheduleGridFilterBarProps = {
 };
 
 /**
- * Non-form filter bar — bare `<NativeSelect>` for the division dropdown
+ * Non-form filter bar — bare `<NativeSelect>` for the department dropdown
  * (per repo convention: non-form selects never use `FormSelectField`) and
  * a debounced search input. The parent owns the debounce timer so the
  * component itself stays a pure view layer.

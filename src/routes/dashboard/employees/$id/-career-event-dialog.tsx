@@ -69,7 +69,7 @@ function validatePayload(payload: AppendCareerEventPayload): string | null {
 
 /**
  * Shared dialog for the three Change buttons on the Career Timeline header
- * (Change Division / Change Position / Change Work Status). The visible
+ * (Change Department / Change Position / Change Work Status). The visible
  * fields vary by `category`:
  *
  *   position         → designation picker

@@ -25,7 +25,7 @@ describe('buildShiftScheduleWorkbook', () => {
     expect(wb.SheetNames).toEqual([SHIFT_SCHEDULE_SHEET_NAME]);
   });
 
-  it('header = Name | Employee Code | Division + one column per day of the month', () => {
+  it('header = Name | Employee Code | Department + one column per day of the month', () => {
     const dates = ['2026-09-01', '2026-09-02', '2026-09-03'];
     const { rows } = readWorkbook(buildShiftScheduleWorkbook([], dates));
 
