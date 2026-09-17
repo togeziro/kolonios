@@ -6,7 +6,6 @@ export const navItems: NavItem[] = [
     url: '/dashboard/overview',
     icon: 'dashboard',
     isActive: false,
-    shortcut: ['d', 'd'],
     module: 'overview',
     items: []
   },
@@ -15,7 +14,6 @@ export const navItems: NavItem[] = [
     url: '/dashboard/employees',
     icon: 'employee',
     isActive: false,
-    shortcut: ['e', 'e'],
     module: 'employees',
     items: []
   },
@@ -24,7 +22,6 @@ export const navItems: NavItem[] = [
     url: '/dashboard/customers',
     icon: 'customer',
     isActive: false,
-    shortcut: ['c', 'c'],
     module: 'customers',
     items: []
   },
@@ -75,7 +72,6 @@ export const navItems: NavItem[] = [
     url: '/dashboard/attendance/check-in',
     icon: 'clock',
     isActive: false,
-    shortcut: ['a', 'a'],
     module: 'attendance',
     hiddenForAdmin: true,
     items: []
@@ -94,7 +90,6 @@ export const navItems: NavItem[] = [
     url: '/dashboard/leave',
     icon: 'calendar',
     isActive: false,
-    shortcut: ['l', 'l'],
     module: 'leave',
     items: []
   },
@@ -249,7 +244,6 @@ export const navItems: NavItem[] = [
         title: 'Users',
         url: '/dashboard/users',
         icon: 'teams',
-        shortcut: ['u', 'u'],
         isActive: false,
         module: 'users',
         items: []
@@ -258,7 +252,6 @@ export const navItems: NavItem[] = [
         title: 'Departments',
         url: '/dashboard/admin/departments',
         icon: 'workspace',
-        shortcut: ['d', 'e'],
         isActive: false,
         module: 'departments',
         items: []
@@ -267,7 +260,6 @@ export const navItems: NavItem[] = [
         title: 'Job Titles',
         url: '/dashboard/admin/designations',
         icon: 'employee',
-        shortcut: ['j', 't'],
         isActive: false,
         module: 'designations',
         items: []

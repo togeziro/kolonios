@@ -4,7 +4,6 @@ import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Kbd } from '@/components/ui/kbd';
 
 export function ThemeModeToggle() {
   const { setTheme, resolvedTheme } = useTheme();
@@ -45,9 +44,7 @@ export function ThemeModeToggle() {
           <span className='sr-only'>Toggle theme</span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent>
-        Toggle theme <Kbd>D D</Kbd>
-      </TooltipContent>
+      <TooltipContent>Toggle theme</TooltipContent>
     </Tooltip>
   );
 }
