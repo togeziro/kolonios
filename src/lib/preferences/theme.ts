@@ -1,9 +1,3 @@
-const THEME_MODE_OPTIONS = [
-  { label: 'Light', value: 'light' },
-  { label: 'Dark', value: 'dark' },
-  { label: 'System', value: 'system' }
-] as const;
-
 // --- generated:themePresets:start ---
 
 export const THEME_PRESET_OPTIONS = [

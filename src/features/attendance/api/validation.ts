@@ -234,13 +234,6 @@ export const locationDeleteSchema = z.object({
 
 // --- Assignments ---
 
-export const assignmentFiltersSchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
-  userId: z.string().optional(),
-  shiftId: z.coerce.number().int().positive().optional()
-});
-
 export const bulkAssignmentSchema = z.object({
   assignments: z.array(scheduleAssignmentSchema).min(1, 'At least one assignment is required')
 });

@@ -17,7 +17,6 @@ import {
   shiftCreateSchema,
   shiftUpdateSchema,
   shiftDeleteSchema,
-  assignmentFiltersSchema,
   scheduleAssignmentSchema,
   bulkAssignmentSchema,
   dayOffSchema,
