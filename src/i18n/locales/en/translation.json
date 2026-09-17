@@ -387,7 +387,7 @@
   },
   "auth": {
     "alreadyHaveAccount": "Already have an account?",
-    "brand": "TanStack Dashboard",
+    "brand": "Kolonios",
     "confirmPassword": "Confirm Password",
     "copyright": "© {{year}}, {{name}}.",
     "createAccount": "Create an account",

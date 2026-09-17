@@ -387,7 +387,7 @@
   },
   "auth": {
     "alreadyHaveAccount": "Sudah punya akun?",
-    "brand": "TanStack Dashboard",
+    "brand": "Kolonios",
     "confirmPassword": "Konfirmasi Kata Sandi",
     "copyright": "© {{year}}, {{name}}.",
     "createAccount": "Buat akun",

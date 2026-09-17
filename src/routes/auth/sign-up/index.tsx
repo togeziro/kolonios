@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import AuthCard from '@/features/auth/components/auth-card';
 import RegisterForm from '@/features/auth/components/register-form';
 import { getPublicAuthConfigFn } from '@/features/auth/api/public';
+import { publicBrandingQueryOptions } from '@/features/branding/api/public-queries';
 import { BrandPanelPattern, BrandHeader } from './-brand-panel';
 
 export const Route = createFileRoute('/auth/sign-up/')({
@@ -16,6 +17,12 @@ export const Route = createFileRoute('/auth/sign-up/')({
     if (!signupEnabled) {
       throw redirect({ to: '/auth/sign-in' });
     }
+  },
+  // Same SSR branding seed as sign-in: first paint must carry the real
+  // company name, not the `auth.brand` fallback.
+  loader: async ({ context: { queryClient } }) => {
+    await queryClient.ensureQueryData(publicBrandingQueryOptions());
+    return null;
   },
   component: SignUpPage
 });

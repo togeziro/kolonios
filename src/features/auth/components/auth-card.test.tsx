@@ -73,7 +73,7 @@ describe('AuthCard footer copyright', () => {
   it('falls back to the product brand when branding is missing', () => {
     brandingMock.mockReturnValue({ data: undefined });
     renderCard();
-    expect(screen.getByText(`© ${new Date().getFullYear()}, TanStack Dashboard.`)).toBeTruthy();
+    expect(screen.getByText(`© ${new Date().getFullYear()}, Kolonios.`)).toBeTruthy();
   });
 });
 

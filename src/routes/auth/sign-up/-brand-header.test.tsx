@@ -54,7 +54,7 @@ describe('BrandHeader', () => {
   it('falls back to the product brand when branding is missing', () => {
     brandingMock.mockReturnValue({ data: undefined });
     renderHeader();
-    expect(screen.getByText('TanStack Dashboard')).toBeTruthy();
+    expect(screen.getByText('Kolonios')).toBeTruthy();
   });
 
   it('does not render an h1 so the card title stays the only one', () => {

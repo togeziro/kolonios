@@ -1,7 +1,10 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo, BrandName } from '@/features/branding/components/brand-logo';
-import { usePublicBranding } from '@/features/branding/api/public-queries';
+import {
+  publicBrandingQueryOptions,
+  usePublicBranding
+} from '@/features/branding/api/public-queries';
 import UserAuthForm from '@/features/auth/components/user-auth-form';
 import { getPublicAuthConfigFn } from '@/features/auth/api/public';
 import { LanguageSwitcher } from '@/components/language-switcher';
@@ -12,8 +15,15 @@ export const Route = createFileRoute('/auth/sign-in/')({
   head: () => ({
     meta: [{ title: 'Sign In' }]
   }),
+  // Branding is SSR-seeded so the first paint already carries the real
+  // company name — otherwise SSR + pre-hydration render the `auth.brand`
+  // fallback and visibly flash over once the client query lands (worst on
+  // cold/incognito loads).
   // Drives the register-link visibility below (no new copy when closed).
-  loader: async () => getPublicAuthConfigFn(),
+  loader: async ({ context: { queryClient } }) => {
+    await queryClient.ensureQueryData(publicBrandingQueryOptions());
+    return getPublicAuthConfigFn();
+  },
   component: SignInPage
 });
 
