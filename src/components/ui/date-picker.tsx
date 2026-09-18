@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { formatLongDate, dateFnsLocale } from '@/lib/format';
 import { Calendar } from '@/components/ui/calendar';
@@ -31,6 +32,7 @@ export function DatePicker({
   maxDate,
   className
 }: DatePickerProps) {
+  const { i18n } = useTranslation();
   const [open, setOpen] = React.useState(false);
 
   const selectedDate = value ? new Date(value) : undefined;
@@ -69,7 +71,7 @@ export function DatePicker({
       </PopoverTrigger>
       <PopoverContent className='w-auto p-0' align='start'>
         <Calendar
-          locale={dateFnsLocale()}
+          locale={dateFnsLocale(i18n.language)}
           mode='single'
           selected={selectedDate}
           onSelect={handleSelect}
@@ -99,6 +101,7 @@ export function DatePickerRange({
   disabled = false,
   className
 }: DatePickerRangeProps) {
+  const { i18n } = useTranslation();
   const [open, setOpen] = React.useState(false);
 
   const dateRange: DateRange | undefined =
@@ -156,7 +159,7 @@ export function DatePickerRange({
       </PopoverTrigger>
       <PopoverContent className='w-auto p-0' align='start'>
         <Calendar
-          locale={dateFnsLocale()}
+          locale={dateFnsLocale(i18n.language)}
           mode='range'
           selected={dateRange}
           onSelect={handleSelect}
