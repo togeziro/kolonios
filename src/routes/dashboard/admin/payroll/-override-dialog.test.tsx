@@ -2,7 +2,8 @@
 // i18n:skip
 import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { PayrollAttendanceOverride } from '@/lib/db/schema/payroll';
 import { AttendanceOverrideDialog, draftToOverrideValues } from './-override-dialog';
 
@@ -76,7 +77,7 @@ describe('attendance override dialog', () => {
 
   it('shows the fetch error and disables save when the override lookup fails', () => {
     render(<AttendanceOverrideDialog {...baseProps()} isError />);
-    expect(screen.getByText('payroll.loadFailed')).toBeTruthy();
+    expect(screen.getByText('payroll.loadFailed')).toBeInTheDocument();
     expect(saveButton().disabled).toBe(true);
   });
 
@@ -92,11 +93,13 @@ describe('attendance override dialog', () => {
     expect(saveButton().disabled).toBe(true);
   });
 
-  it('submits the drafted values through onSave', () => {
+  it('submits the drafted values through onSave', async () => {
+    const user = userEvent.setup();
     const onSave = vi.fn();
     render(<AttendanceOverrideDialog {...baseProps()} onSave={onSave} />);
-    fireEvent.change(screen.getByLabelText('payroll.workedHours'), { target: { value: '8' } });
-    fireEvent.click(saveButton());
+    await user.clear(screen.getByLabelText('payroll.workedHours'));
+    await user.type(screen.getByLabelText('payroll.workedHours'), '8');
+    await user.click(saveButton());
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ workedHours: '8' }));
   });
 

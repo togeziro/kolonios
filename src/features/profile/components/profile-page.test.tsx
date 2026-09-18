@@ -69,9 +69,9 @@ describe('ProfilePage', () => {
 
   it('renders profile header with name, email and role', () => {
     renderPage();
-    expect(screen.getByText('Budi Santoso')).toBeTruthy();
-    expect(screen.getByText('budi@example.com')).toBeTruthy();
-    expect(screen.getByText('technician')).toBeTruthy();
+    expect(screen.getByText('Budi Santoso')).toBeInTheDocument();
+    expect(screen.getByText('budi@example.com')).toBeInTheDocument();
+    expect(screen.getByText('technician')).toBeInTheDocument();
   });
 
   it('shows the Access Level name instead of the legacy role (prod: Operation, not technician)', () => {
@@ -81,19 +81,19 @@ describe('ProfilePage', () => {
       group: { id: 'rg-op', name: 'Operation', description: '', permissions: {}, is_admin: false }
     });
     renderPage();
-    expect(screen.getByText('Operation')).toBeTruthy();
-    expect(screen.queryByText('technician')).toBeNull();
+    expect(screen.getByText('Operation')).toBeInTheDocument();
+    expect(screen.queryByText('technician')).not.toBeInTheDocument();
   });
 
   it('falls back to the legacy role when the user has no role group', () => {
     roleGroupMock.mockReturnValue({ isAdmin: false, permissions: {}, group: null });
     renderPage();
-    expect(screen.getByText('technician')).toBeTruthy();
+    expect(screen.getByText('technician')).toBeInTheDocument();
   });
 
   it('renders work stats from real data sources', () => {
     renderPage();
-    expect(screen.getByText(/this month/i)).toBeTruthy();
+    expect(screen.getByText(/this month/i)).toBeInTheDocument();
   });
 
   it('renders menu links to settings, edit profile, change password and daily checklist', () => {
@@ -114,6 +114,6 @@ describe('ProfilePage', () => {
 
   it('no longer offers log out on profile — it lives on settings', () => {
     renderPage();
-    expect(screen.queryByText(/sign out|log out/i)).toBeNull();
+    expect(screen.queryByText(/sign out|log out/i)).not.toBeInTheDocument();
   });
 });

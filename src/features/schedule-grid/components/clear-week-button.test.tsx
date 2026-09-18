@@ -15,7 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import '@/i18n/config';
 
@@ -153,7 +154,7 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    expect(screen.getByTestId('clear-week-button-u1')).toBeTruthy();
+    expect(screen.getByTestId('clear-week-button-u1')).toBeInTheDocument();
   });
 
   it('renders the button for an orphan day off (no assignment behind it)', () => {
@@ -165,7 +166,7 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    expect(screen.getByTestId('clear-week-button-u1')).toBeTruthy();
+    expect(screen.getByTestId('clear-week-button-u1')).toBeInTheDocument();
   });
 
   it('renders the button for a lone date override', () => {
@@ -179,13 +180,13 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    expect(screen.getByTestId('clear-week-button-u1')).toBeTruthy();
+    expect(screen.getByTestId('clear-week-button-u1')).toBeInTheDocument();
   });
 
   it('hides the button when the week has nothing clearable', () => {
     renderHeader(makeRow());
 
-    expect(screen.queryByTestId('clear-week-button-u1')).toBeNull();
+    expect(screen.queryByTestId('clear-week-button-u1')).not.toBeInTheDocument();
   });
 
   it('hides the button for a role without attendance_admin.delete', () => {
@@ -197,10 +198,11 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    expect(screen.queryByTestId('clear-week-button-u1')).toBeNull();
+    expect(screen.queryByTestId('clear-week-button-u1')).not.toBeInTheDocument();
   });
 
   it('opens the confirm dialog naming the employee and the exact week range', async () => {
+    const user = userEvent.setup();
     renderHeader(
       makeRow({
         hasAssignment: true,
@@ -208,16 +210,15 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('clear-week-button-u1'));
-    });
+    await user.click(screen.getByTestId('clear-week-button-u1'));
 
     const dialog = await screen.findByRole('alertdialog');
     expect(within(dialog).getAllByText(/Aldi Pranata/).length).toBeGreaterThan(0);
-    expect(within(dialog).getByText(new RegExp(`${WEEK_START}.*${WEEK_END}`))).toBeTruthy();
+    expect(within(dialog).getByText(new RegExp(`${WEEK_START}.*${WEEK_END}`))).toBeInTheDocument();
   });
 
   it('calls the clear-week mutation with the userId and weekStart on confirm', async () => {
+    const user = userEvent.setup();
     const mut = mutStub({
       success: true,
       affectedUserId: 'u1',
@@ -239,18 +240,15 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('clear-week-button-u1'));
-    });
+    await user.click(screen.getByTestId('clear-week-button-u1'));
     const dialog = await screen.findByRole('alertdialog');
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Clear week' }));
-    });
+    await user.click(within(dialog).getByRole('button', { name: 'Clear week' }));
 
     expect(mut.mutateAsync).toHaveBeenCalledWith({ userId: 'u1', weekStart: WEEK_START });
   });
 
   it('does not call the mutation when the dialog is cancelled', async () => {
+    const user = userEvent.setup();
     const mut = mutStub({ success: true });
     clearWeekMock.mockReturnValue(mut);
 
@@ -261,18 +259,15 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('clear-week-button-u1'));
-    });
+    await user.click(screen.getByTestId('clear-week-button-u1'));
     const dialog = await screen.findByRole('alertdialog');
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
     expect(mut.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('shows an info toast, not an error, when there was nothing to clear', async () => {
+    const user = userEvent.setup();
     const { toast } = await import('sonner');
     const mut = mutStub({
       success: true,
@@ -295,13 +290,9 @@ describe('GridRowHeader — Clear week', () => {
       })
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('clear-week-button-u1'));
-    });
+    await user.click(screen.getByTestId('clear-week-button-u1'));
     const dialog = await screen.findByRole('alertdialog');
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Clear week' }));
-    });
+    await user.click(within(dialog).getByRole('button', { name: 'Clear week' }));
 
     expect(toast.info).toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();

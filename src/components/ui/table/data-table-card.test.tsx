@@ -10,9 +10,9 @@ describe('DataTableCard', () => {
         <div>table goes here</div>
       </DataTableCard>
     );
-    expect(screen.getByText('Users')).toBeTruthy();
-    expect(screen.getByText('Manage members')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add User' })).toBeTruthy();
+    expect(screen.getByText('Users')).toBeInTheDocument();
+    expect(screen.getByText('Manage members')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add User' })).toBeInTheDocument();
   });
 
   it('renders children inside card content', () => {
@@ -21,6 +21,6 @@ describe('DataTableCard', () => {
         <div>body</div>
       </DataTableCard>
     );
-    expect(screen.getByText('body')).toBeTruthy();
+    expect(screen.getByText('body')).toBeInTheDocument();
   });
 });

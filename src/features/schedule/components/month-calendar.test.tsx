@@ -45,8 +45,8 @@ describe('MonthCalendar', () => {
         <MonthCalendar month='2026-08' cells={cells} />
       </I18nextProvider>
     );
-    expect(screen.getByText('17')).toBeTruthy();
-    expect(screen.getByText('30')).toBeTruthy();
+    expect(screen.getByText('17')).toBeInTheDocument();
+    expect(screen.getByText('30')).toBeInTheDocument();
   });
 
   it('shows holiday name legend for the holiday cell', () => {
@@ -55,6 +55,6 @@ describe('MonthCalendar', () => {
         <MonthCalendar month='2026-08' cells={cells} />
       </I18nextProvider>
     );
-    expect(screen.getByLabelText(/Independence Day/)).toBeTruthy();
+    expect(screen.getByLabelText(/Independence Day/)).toBeInTheDocument();
   });
 });

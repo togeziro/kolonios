@@ -67,13 +67,13 @@ describe('AuthCard footer copyright', () => {
       }
     });
     renderCard();
-    expect(screen.getByText(`© ${new Date().getFullYear()}, Acme Corp.`)).toBeTruthy();
+    expect(screen.getByText(`© ${new Date().getFullYear()}, Acme Corp.`)).toBeInTheDocument();
   });
 
   it('falls back to the product brand when branding is missing', () => {
     brandingMock.mockReturnValue({ data: undefined });
     renderCard();
-    expect(screen.getByText(`© ${new Date().getFullYear()}, Kolonios.`)).toBeTruthy();
+    expect(screen.getByText(`© ${new Date().getFullYear()}, Kolonios.`)).toBeInTheDocument();
   });
 });
 
@@ -89,7 +89,7 @@ describe('AuthCard logo gate', () => {
       }
     });
     renderCard();
-    expect(screen.getByTestId('brand-logo')).toBeTruthy();
+    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
   });
 
   it('renders the logo when only the light slot is set', () => {
@@ -103,7 +103,7 @@ describe('AuthCard logo gate', () => {
       }
     });
     renderCard();
-    expect(screen.getByTestId('brand-logo')).toBeTruthy();
+    expect(screen.getByTestId('brand-logo')).toBeInTheDocument();
   });
 
   it('renders no logo when both slots are empty', () => {
@@ -117,7 +117,7 @@ describe('AuthCard logo gate', () => {
       }
     });
     renderCard();
-    expect(screen.queryByTestId('brand-logo')).toBeNull();
+    expect(screen.queryByTestId('brand-logo')).not.toBeInTheDocument();
   });
 });
 
@@ -152,7 +152,7 @@ describe('AuthCard header layout', () => {
     // The logo and name share the same flex column parent, with logo as the
     // first child (above) and name below — column layout, not row.
     const parent = logo.parentElement;
-    expect(parent).not.toBeNull();
+    expect(parent).toBeInTheDocument();
     expect(parent).toBe(name.parentElement);
     expect(parent?.className).toContain('flex-col');
     expect(parent?.className).toContain('items-center');
@@ -160,7 +160,7 @@ describe('AuthCard header layout', () => {
     expect(Array.from(parent!.children).indexOf(logo)).toBeLessThan(
       Array.from(parent!.children).indexOf(name)
     );
-    expect(container).toBeTruthy();
+    expect(container).toBeInTheDocument();
   });
 });
 
@@ -168,8 +168,8 @@ describe('AuthCard footer controls', () => {
   it('always renders the language switcher and theme toggle in the footer', () => {
     brandingMock.mockReturnValue({ data: undefined });
     renderCard();
-    expect(screen.getByTestId('lang-switcher')).toBeTruthy();
-    expect(screen.getByTestId('theme-toggle')).toBeTruthy();
+    expect(screen.getByTestId('lang-switcher')).toBeInTheDocument();
+    expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
   });
 
   it('uses branding.copyrightYear when set, otherwise current year', () => {
@@ -183,6 +183,6 @@ describe('AuthCard footer controls', () => {
       }
     });
     renderCard();
-    expect(screen.getByText(`© 2024, Acme Corp.`)).toBeTruthy();
+    expect(screen.getByText(`© 2024, Acme Corp.`)).toBeInTheDocument();
   });
 });

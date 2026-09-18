@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -63,21 +64,23 @@ beforeEach(() => {
 describe('WorkLog add-location flow', () => {
   it('shows "Add location" button when no location entry exists', () => {
     renderLog([]);
-    expect(screen.getByRole('button', { name: /add location/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /add location/i })).toBeInTheDocument();
   });
 
-  it('opens the location picker dialog on click', () => {
+  it('opens the location picker dialog on click', async () => {
+    const user = userEvent.setup();
     renderLog([]);
-    fireEvent.click(screen.getByRole('button', { name: /add location/i }));
-    expect(screen.getByRole('dialog')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /confirm location/i })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /add location/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirm location/i })).toBeInTheDocument();
   });
 
-  it('adds a location entry when the dialog is confirmed', () => {
+  it('adds a location entry when the dialog is confirmed', async () => {
+    const user = userEvent.setup();
     const { onChange } = renderLog([]);
-    fireEvent.click(screen.getByRole('button', { name: /add location/i }));
-    fireEvent.click(screen.getByRole('button', { name: /simulate-locate/i }));
-    fireEvent.click(screen.getByRole('button', { name: /confirm location/i }));
+    await user.click(screen.getByRole('button', { name: /add location/i }));
+    await user.click(screen.getByRole('button', { name: /simulate-locate/i }));
+    await user.click(screen.getByRole('button', { name: /confirm location/i }));
 
     expect(onChange).toHaveBeenCalledWith([
       expect.objectContaining({
@@ -93,42 +96,46 @@ describe('WorkLog add-location flow', () => {
       body: '-6.2088,106.8456 ±50m'
     };
     renderLog([locationEntry]);
-    expect(screen.getByRole('button', { name: /location recorded/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /add location/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /location recorded/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add location/i })).not.toBeInTheDocument();
   });
 
-  it('can close the dialog without confirming', () => {
+  it('can close the dialog without confirming', async () => {
+    const user = userEvent.setup();
     renderLog([]);
-    fireEvent.click(screen.getByRole('button', { name: /add location/i }));
-    const dialog = screen.getByRole('dialog');
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-    waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await user.click(screen.getByRole('button', { name: /add location/i }));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
 
 describe('WorkLog photo upload retry', () => {
   it('keeps the captured photo and offers a retry button when upload fails', async () => {
+    const user = userEvent.setup();
     uploadTicketPhotoMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
     const { onChange } = renderLog([]);
 
-    fireEvent.click(screen.getByRole('button', { name: /capture-photo/i }));
+    await user.click(screen.getByRole('button', { name: /capture-photo/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /retry upload/i })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /retry upload/i })).toBeInTheDocument();
     });
     expect(onChange).not.toHaveBeenCalled();
     expect(toastMock.error).toHaveBeenCalled();
   });
 
   it('uploads the pending photo again on retry and appends the entry', async () => {
+    const user = userEvent.setup();
     uploadTicketPhotoMock.mockRejectedValueOnce(new Error('PHOTO_UPLOAD_FAILED'));
     uploadTicketPhotoMock.mockResolvedValueOnce('tickets/0/9.jpg');
     const { onChange } = renderLog([]);
 
-    fireEvent.click(screen.getByRole('button', { name: /capture-photo/i }));
-    await waitFor(() => expect(screen.getByRole('button', { name: /retry upload/i })).toBeTruthy());
+    await user.click(screen.getByRole('button', { name: /capture-photo/i }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /retry upload/i })).toBeInTheDocument()
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: /retry upload/i }));
+    await user.click(screen.getByRole('button', { name: /retry upload/i }));
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith([
@@ -139,6 +146,7 @@ describe('WorkLog photo upload retry', () => {
   });
 
   it('disables the retry button while a retry upload is in flight', async () => {
+    const user = userEvent.setup();
     let resolveUpload: (key: string) => void = () => undefined;
     uploadTicketPhotoMock
       .mockRejectedValueOnce(new Error('PHOTO_UPLOAD_FAILED'))
@@ -150,15 +158,19 @@ describe('WorkLog photo upload retry', () => {
       );
     renderLog([]);
 
-    fireEvent.click(screen.getByRole('button', { name: /capture-photo/i }));
-    await waitFor(() => expect(screen.getByRole('button', { name: /retry upload/i })).toBeTruthy());
+    await user.click(screen.getByRole('button', { name: /capture-photo/i }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /retry upload/i })).toBeInTheDocument()
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: /retry upload/i }));
+    await user.click(screen.getByRole('button', { name: /retry upload/i }));
     expect(
       (screen.getByRole('button', { name: /retry upload/i }) as HTMLButtonElement).disabled
     ).toBe(true);
 
     resolveUpload('tickets/0/10.jpg');
-    await waitFor(() => expect(screen.queryByRole('button', { name: /retry upload/i })).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /retry upload/i })).not.toBeInTheDocument()
+    );
   });
 });

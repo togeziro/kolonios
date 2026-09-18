@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { ShiftDeleteConfirmDialog } from './shift-delete-confirm-dialog';
@@ -51,13 +52,13 @@ describe('ShiftDeleteConfirmDialog', () => {
 
     expect(
       screen.getByText(i18n.t('attendanceAdmin.shiftDeleteConfirmPermanentTitle'))
-    ).toBeTruthy();
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
         name: i18n.t('attendanceAdmin.shiftDeleteConfirmPermanentAction')
       })
-    ).toBeTruthy();
-    expect(screen.getByRole('button', { name: i18n.t('common.cancel') })).toBeTruthy();
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: i18n.t('common.cancel') })).toBeInTheDocument();
   });
 
   it('renders deactivate copy when the shift is used', () => {
@@ -65,12 +66,12 @@ describe('ShiftDeleteConfirmDialog', () => {
 
     expect(
       screen.getByText(i18n.t('attendanceAdmin.shiftDeleteConfirmDeactivateTitle'))
-    ).toBeTruthy();
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
         name: i18n.t('attendanceAdmin.shiftDeleteConfirmDeactivateAction')
       })
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   it('interpolates the shift name into the description', () => {
@@ -85,14 +86,15 @@ describe('ShiftDeleteConfirmDialog', () => {
               .slice(0, 12) ?? false
           ) ?? false
       )
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
-  it('invokes onConfirm when the confirm button is clicked', () => {
+  it('invokes onConfirm when the confirm button is clicked', async () => {
+    const user = userEvent.setup();
     const onConfirm = vi.fn();
     renderDialog({ shift: makeShift({ used: false }), onConfirm });
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole('button', {
         name: i18n.t('attendanceAdmin.shiftDeleteConfirmPermanentAction')
       })
@@ -100,11 +102,12 @@ describe('ShiftDeleteConfirmDialog', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('invokes onOpenChange(false) when Cancel is clicked', () => {
+  it('invokes onOpenChange(false) when Cancel is clicked', async () => {
+    const user = userEvent.setup();
     const onOpenChange = vi.fn();
     renderDialog({ onOpenChange });
 
-    fireEvent.click(screen.getByRole('button', { name: i18n.t('common.cancel') }));
+    await user.click(screen.getByRole('button', { name: i18n.t('common.cancel') }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -113,10 +116,10 @@ describe('ShiftDeleteConfirmDialog', () => {
 
     expect(
       screen.queryByText(i18n.t('attendanceAdmin.shiftDeleteConfirmPermanentTitle'))
-    ).toBeNull();
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText(i18n.t('attendanceAdmin.shiftDeleteConfirmDeactivateTitle'))
-    ).toBeNull();
+    ).not.toBeInTheDocument();
   });
 
   it('disables the confirm button while loading to prevent double-firing the mutation', () => {

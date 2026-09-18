@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PayslipData } from './payslip-template';
 import { PrintablePayslip } from './printable-payslip';
@@ -41,22 +42,22 @@ describe('PrintablePayslip', () => {
   it('renders the Kerjoo-style slip: letterhead, title, range, identity with NPWP and raw bank data', () => {
     render(<PrintablePayslip payslip={payslip} periodRange={'08 Jul 2026 - 07 Aug 2026'} />);
 
-    expect(screen.getByText('PT Koloni Lintas Nusantara')).toBeTruthy();
-    expect(screen.getByText('Jl. Merdeka 10, Jakarta')).toBeTruthy();
-    expect(screen.getByText('hr@koloni.id | +62 21 555 0100')).toBeTruthy();
-    expect(screen.getByText(/payslipDocumentTitle/i)).toBeTruthy();
-    expect(screen.getByText('08 Jul 2026 - 07 Aug 2026')).toBeTruthy();
+    expect(screen.getByText('PT Koloni Lintas Nusantara')).toBeInTheDocument();
+    expect(screen.getByText('Jl. Merdeka 10, Jakarta')).toBeInTheDocument();
+    expect(screen.getByText('hr@koloni.id | +62 21 555 0100')).toBeInTheDocument();
+    expect(screen.getByText(/payslipDocumentTitle/i)).toBeInTheDocument();
+    expect(screen.getByText('08 Jul 2026 - 07 Aug 2026')).toBeInTheDocument();
     expect(screen.getAllByText('Ari Pratama').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('EMP-0007')).toBeTruthy();
-    expect(screen.getByText('12.345.678.9-012.345')).toBeTruthy();
+    expect(screen.getByText('EMP-0007')).toBeInTheDocument();
+    expect(screen.getByText('12.345.678.9-012.345')).toBeInTheDocument();
     expect(screen.getByTestId('payslip-account-number').textContent).toBe('1234567890');
-    expect(screen.queryByText(/\*{4}/)).toBeNull();
+    expect(screen.queryByText(/\*{4}/)).not.toBeInTheDocument();
   });
 
   it('falls back to the record period range and splits earnings from deductions', () => {
     render(<PrintablePayslip payslip={payslip} />);
 
-    expect(screen.getByText('2026-07-01 - 2026-07-31')).toBeTruthy();
+    expect(screen.getByText('2026-07-01 - 2026-07-31')).toBeInTheDocument();
     const earnings = screen.getByTestId('payslip-earnings');
     const deductions = screen.getByTestId('payslip-deductions');
     expect(earnings.textContent).toContain('Base salary');
@@ -69,10 +70,11 @@ describe('PrintablePayslip', () => {
     );
   });
 
-  it('prints through the browser dialog', () => {
+  it('prints through the browser dialog', async () => {
+    const user = userEvent.setup();
     render(<PrintablePayslip payslip={payslip} />);
 
-    fireEvent.click(screen.getByRole('button'));
+    await user.click(screen.getByRole('button'));
     expect(window.print).toHaveBeenCalledTimes(1);
   });
 });

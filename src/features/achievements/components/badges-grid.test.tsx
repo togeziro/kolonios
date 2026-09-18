@@ -37,9 +37,9 @@ describe('BadgesGrid', () => {
         <BadgesGrid badges={badges} recentUnlocks={[]} />
       </I18nextProvider>
     );
-    expect(screen.getByText('OLT Master')).toBeTruthy();
-    expect(screen.getByText('Early Bird')).toBeTruthy();
-    expect(screen.getByText('Fast Finisher')).toBeTruthy();
+    expect(screen.getByText('OLT Master')).toBeInTheDocument();
+    expect(screen.getByText('Early Bird')).toBeInTheDocument();
+    expect(screen.getByText('Fast Finisher')).toBeInTheDocument();
   });
 
   it('marks locked badges with data-locked', () => {
@@ -49,7 +49,7 @@ describe('BadgesGrid', () => {
       </I18nextProvider>
     );
     const locked = screen.getByText('Fast Finisher').closest('[data-locked]');
-    expect(locked).toBeTruthy();
+    expect(locked).toBeInTheDocument();
     const unlocked = screen.getByText('OLT Master').closest('[data-locked]');
     expect(unlocked).toBeFalsy();
   });
@@ -74,9 +74,9 @@ describe('BadgesGrid', () => {
           <BadgesGrid badges={badges} recentUnlocks={[]} />
         </I18nextProvider>
       );
-      expect(screen.getByText('Selesaikan 10 cek OLT')).toBeTruthy();
-      expect(screen.getByText('Check-in sebelum 07:00')).toBeTruthy();
-      expect(screen.getByText('Selesaikan 5 tugas dalam <30 menit')).toBeTruthy();
+      expect(screen.getByText('Selesaikan 10 cek OLT')).toBeInTheDocument();
+      expect(screen.getByText('Check-in sebelum 07:00')).toBeInTheDocument();
+      expect(screen.getByText('Selesaikan 5 tugas dalam <30 menit')).toBeInTheDocument();
     } finally {
       await i18n.changeLanguage('en');
     }
@@ -97,7 +97,7 @@ describe('BadgesGrid', () => {
         <BadgesGrid badges={unknownBadges} recentUnlocks={[]} />
       </I18nextProvider>
     );
-    expect(screen.getByText('Mystery Badge')).toBeTruthy();
-    expect(screen.getByText('Mystery description')).toBeTruthy();
+    expect(screen.getByText('Mystery Badge')).toBeInTheDocument();
+    expect(screen.getByText('Mystery description')).toBeInTheDocument();
   });
 });

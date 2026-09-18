@@ -3,7 +3,8 @@
 import type { TFunction } from 'i18next';
 import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { Assignment, ProfileData, SalaryDetail } from './-profile-types';
 import {
   BaseSalaryDialog,
@@ -190,7 +191,7 @@ describe('base salary dialog', () => {
     );
     const nominals = screen.getAllByLabelText('payroll.nominal') as HTMLInputElement[];
     expect(nominals[0]?.value).toBe('4500000.00');
-    expect(screen.getByText(/payroll.totalPayrollPreview/)).toBeTruthy();
+    expect(screen.getByText(/payroll.totalPayrollPreview/)).toBeInTheDocument();
   });
 
   it('starts empty with defaults when no config exists yet', () => {
@@ -201,24 +202,24 @@ describe('base salary dialog', () => {
     expect(screen.queryAllByLabelText('payroll.nominal')).toHaveLength(0);
   });
 
-  it('adds detail rows and recomputes the live Total Payroll preview', () => {
+  it('adds detail rows and recomputes the live Total Payroll preview', async () => {
+    const user = userEvent.setup();
     render(<BaseSalaryDialog {...baseProps()} />);
     const preview = screen.getByTestId('total-payroll');
     const before = preview.textContent;
-    fireEvent.click(screen.getByRole('button', { name: 'common.add' }));
-    fireEvent.change(screen.getByLabelText('payroll.detailDescription'), {
-      target: { value: 'Transport' }
-    });
-    fireEvent.change(screen.getByLabelText('payroll.nominal'), {
-      target: { value: '100000' }
-    });
+    await user.click(screen.getByRole('button', { name: 'common.add' }));
+    await user.clear(screen.getByLabelText('payroll.detailDescription'));
+    await user.type(screen.getByLabelText('payroll.detailDescription'), 'Transport');
+    await user.clear(screen.getByLabelText('payroll.nominal'));
+    await user.type(screen.getByLabelText('payroll.nominal'), '100000');
     expect(screen.getAllByLabelText('payroll.nominal')).toHaveLength(1);
     expect(saveButton().disabled).toBe(false);
     expect(screen.getByTestId('total-payroll').textContent).not.toBe(before);
-    fireEvent.click(saveButton());
+    await user.click(saveButton());
   });
 
-  it('deletes a detail row via its remove button', () => {
+  it('deletes a detail row via its remove button', async () => {
+    const user = userEvent.setup();
     render(
       <BaseSalaryDialog
         {...baseProps({
@@ -232,7 +233,7 @@ describe('base salary dialog', () => {
       />
     );
     expect(screen.getAllByLabelText('payroll.detailDescription')).toHaveLength(2);
-    fireEvent.click(screen.getAllByRole('button', { name: 'common.delete' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'common.delete' })[0]);
     expect(screen.getAllByLabelText('payroll.detailDescription')).toHaveLength(1);
   });
 
@@ -247,42 +248,44 @@ describe('base salary dialog', () => {
     expect(saveButton().disabled).toBe(true);
   });
 
-  it('guards an in-progress edit with a discard confirmation before closing', () => {
+  it('guards an in-progress edit with a discard confirmation before closing', async () => {
+    const user = userEvent.setup();
     const onOpenChange = vi.fn();
     render(<BaseSalaryDialog {...baseProps({ onOpenChange })} />);
-    fireEvent.click(screen.getByRole('button', { name: 'common.add' }));
-    fireEvent.change(screen.getByLabelText('payroll.detailDescription'), {
-      target: { value: 'X' }
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await user.click(screen.getByRole('button', { name: 'common.add' }));
+    await user.clear(screen.getByLabelText('payroll.detailDescription'));
+    await user.type(screen.getByLabelText('payroll.detailDescription'), 'X');
+    await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(onOpenChange).not.toHaveBeenCalled();
-    expect(screen.getByText('payroll.discardTitle')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }));
+    expect(screen.getByText('payroll.discardTitle')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'common.cancel' }));
     expect(onOpenChange).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-    expect(screen.getByText('payroll.discardTitle')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'payroll.discardConfirm' }));
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.getByText('payroll.discardTitle')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'payroll.discardConfirm' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('copies the config to selected employees through onAlign', () => {
+  it('copies the config to selected employees through onAlign', async () => {
+    const user = userEvent.setup();
     const onAlign = vi.fn();
     render(<BaseSalaryDialog {...baseProps({ onAlign })} />);
-    fireEvent.click(screen.getByRole('button', { name: 'payroll.alignWithOthers' }));
-    fireEvent.click(screen.getByLabelText('Ani'));
-    fireEvent.click(screen.getByRole('button', { name: 'payroll.applyAlign' }));
+    await user.click(screen.getByRole('button', { name: 'payroll.alignWithOthers' }));
+    await user.click(screen.getByLabelText('Ani'));
+    await user.click(screen.getByRole('button', { name: 'payroll.applyAlign' }));
     expect(onAlign).toHaveBeenCalledWith(['emp-2']);
   });
 
-  it('submits the drafted values through onSave', () => {
+  it('submits the drafted values through onSave', async () => {
+    const user = userEvent.setup();
     const onSave = vi.fn();
     render(<BaseSalaryDialog {...baseProps({ onSave })} />);
-    fireEvent.click(screen.getByRole('button', { name: 'common.add' }));
-    fireEvent.change(screen.getByLabelText('payroll.detailDescription'), {
-      target: { value: 'Transport' }
-    });
-    fireEvent.change(screen.getByLabelText('payroll.nominal'), { target: { value: '100000' } });
-    fireEvent.click(saveButton());
+    await user.click(screen.getByRole('button', { name: 'common.add' }));
+    await user.clear(screen.getByLabelText('payroll.detailDescription'));
+    await user.type(screen.getByLabelText('payroll.detailDescription'), 'Transport');
+    await user.clear(screen.getByLabelText('payroll.nominal'));
+    await user.type(screen.getByLabelText('payroll.nominal'), '100000');
+    await user.click(saveButton());
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       salaryType: 'monthly',

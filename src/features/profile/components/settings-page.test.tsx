@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '@/i18n/config';
@@ -67,32 +68,34 @@ function renderPage() {
 describe('SettingsPage', () => {
   it('renders profile card with name and edit link', () => {
     renderPage();
-    expect(screen.getByText('Budi Santoso')).toBeTruthy();
+    expect(screen.getByText('Budi Santoso')).toBeInTheDocument();
     const editLink = screen.getByRole('link', { name: /edit/i });
     expect(editLink.getAttribute('href')).toBe('/dashboard/edit-profile');
   });
 
   it('renders preferences rows for language and theme', () => {
     renderPage();
-    expect(screen.getByText(/language/i)).toBeTruthy();
-    expect(screen.getByText(/^theme$/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^english$/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^indonesia$/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^light$/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^dark$/i })).toBeTruthy();
+    expect(screen.getByText(/language/i)).toBeInTheDocument();
+    expect(screen.getByText(/^theme$/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^english$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^indonesia$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^light$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^dark$/i })).toBeInTheDocument();
   });
 
-  it('switches language live when a language option is tapped', () => {
+  it('switches language live when a language option is tapped', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /^indonesia$/i }));
+    await user.click(screen.getByRole('button', { name: /^indonesia$/i }));
     expect(applyLanguageMock).toHaveBeenCalledWith(expect.anything(), 'id');
   });
 
-  it('applies theme instantly when light/dark is tapped', () => {
+  it('applies theme instantly when light/dark is tapped', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /^light$/i }));
+    await user.click(screen.getByRole('button', { name: /^light$/i }));
     expect(setThemeMock).toHaveBeenCalledWith('light');
-    fireEvent.click(screen.getByRole('button', { name: /^dark$/i }));
+    await user.click(screen.getByRole('button', { name: /^dark$/i }));
     expect(setThemeMock).toHaveBeenCalledWith('dark');
   });
 
@@ -104,13 +107,14 @@ describe('SettingsPage', () => {
 
   it('shows the app version in the about row', () => {
     renderPage();
-    expect(screen.getByText(APP_VERSION)).toBeTruthy();
+    expect(screen.getByText(APP_VERSION)).toBeInTheDocument();
   });
 
   it('signs out and lands on auth root when log out is tapped', async () => {
+    const user = userEvent.setup();
     signOutMock.mockResolvedValue(undefined);
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /log out|sign out/i }));
+    await user.click(screen.getByRole('button', { name: /log out|sign out/i }));
     await waitFor(() => {
       expect(signOutMock).toHaveBeenCalled();
     });
@@ -121,7 +125,7 @@ describe('SettingsPage', () => {
 
   it('does not render notifications or help rows', () => {
     renderPage();
-    expect(screen.queryByText(/help & support/i)).toBeNull();
-    expect(screen.queryByText(/notification preferences/i)).toBeNull();
+    expect(screen.queryByText(/help & support/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/notification preferences/i)).not.toBeInTheDocument();
   });
 });

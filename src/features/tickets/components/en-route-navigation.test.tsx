@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -88,18 +89,19 @@ describe('EnRouteNavigationPage', () => {
   it('renders the ticket card, contact actions, map, and arrival bar for an assigned ticket', () => {
     renderPage();
 
-    expect(screen.getByText('Field install')).toBeTruthy();
-    expect(screen.getByText('T-9')).toBeTruthy();
-    expect(screen.getByRole('link', { name: /\+6281234567890|call/i })).toBeTruthy();
-    expect(screen.getByTestId('en-route-map-stub')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /arrived/i })).toBeTruthy();
+    expect(screen.getByText('Field install')).toBeInTheDocument();
+    expect(screen.getByText('T-9')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /\+6281234567890|call/i })).toBeInTheDocument();
+    expect(screen.getByTestId('en-route-map-stub')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /arrived/i })).toBeInTheDocument();
   });
 
   it('sends the captured GPS fix when arrival succeeds', async () => {
+    const user = userEvent.setup();
     arriveMock.mockImplementation((_input, opts) => opts?.onSuccess?.({ success: true }));
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /arrived/i }));
+    await user.click(screen.getByRole('button', { name: /arrived/i }));
 
     await waitFor(() =>
       expect(arriveMock).toHaveBeenCalledWith(
@@ -121,15 +123,18 @@ describe('EnRouteNavigationPage', () => {
   });
 
   it('opens the no-location dialog when GPS fails and still records the arrival without coordinates', async () => {
+    const user = userEvent.setup();
     currentLocationMock.mockResolvedValue({ status: 'permission-denied' });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /arrived/i }));
+    await user.click(screen.getByRole('button', { name: /arrived/i }));
 
     // The confirm dialog explains the arrival will be recorded without coords.
-    expect(await screen.findByRole('heading', { name: /arrive without location/i })).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', { name: /arrive without location/i })
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^arrive without location$/i }));
+    await user.click(screen.getByRole('button', { name: /^arrive without location$/i }));
     await waitFor(() =>
       expect(arriveMock).toHaveBeenCalledWith(
         expect.objectContaining({ ticketId: 9 }),
@@ -140,18 +145,22 @@ describe('EnRouteNavigationPage', () => {
   });
 
   it('does not record an arrival when the no-location dialog is cancelled', async () => {
+    const user = userEvent.setup();
     currentLocationMock.mockResolvedValue({ status: 'permission-denied' });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /arrived/i }));
-    expect(await screen.findByRole('heading', { name: /arrive without location/i })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /arrived/i }));
+    expect(
+      await screen.findByRole('heading', { name: /arrive without location/i })
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(arriveMock).not.toHaveBeenCalled();
   });
 
   it('ignores a second I-have-arrived click while the first arrival flow is running', async () => {
+    const user = userEvent.setup();
     let resolveLocation: (value: unknown) => void = () => {};
     currentLocationMock.mockReturnValue(
       new Promise((resolve) => {
@@ -160,7 +169,7 @@ describe('EnRouteNavigationPage', () => {
     );
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /arrived/i }));
+    await user.click(screen.getByRole('button', { name: /arrived/i }));
     // The button disables during the GPS capture, so the double click is a
     // no-op and only one mutation can ever be queued.
     expect(screen.getByRole('button', { name: /arrived/i })).toHaveProperty('disabled', true);
@@ -170,11 +179,12 @@ describe('EnRouteNavigationPage', () => {
   });
 
   it('accepts stale and inaccurate fixes for arrival (coords still recorded)', async () => {
+    const user = userEvent.setup();
     arriveMock.mockImplementation((_input, opts) => opts?.onSuccess?.({ success: true }));
     currentLocationMock.mockResolvedValue({ status: 'stale', location: FIX });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /arrived/i }));
+    await user.click(screen.getByRole('button', { name: /arrived/i }));
 
     await waitFor(() =>
       expect(arriveMock).toHaveBeenCalledWith(
@@ -191,23 +201,23 @@ describe('EnRouteNavigationPage', () => {
     });
     renderPage();
 
-    expect(screen.getByText(/already in progress/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /continue to work session/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /arrived/i })).toBeNull();
+    expect(screen.getByText(/already in progress/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue to work session/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /arrived/i })).not.toBeInTheDocument();
   });
 
   it('redirects a non-assigned ticket back to the detail page', () => {
     detailMock.mockReturnValue({ success: true, ticket: { ...BASE_TICKET, status: 'open' } });
     renderPage();
 
-    expect(screen.getByText(/not assigned to you/i)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /arrived/i })).toBeNull();
+    expect(screen.getByText(/not assigned to you/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /arrived/i })).not.toBeInTheDocument();
   });
 
   it('shows an invalid-ticket message when the ticket does not exist', () => {
     detailMock.mockReturnValue({ success: false, ticket: null });
     renderPage();
 
-    expect(screen.getByText(/ticket not found/i)).toBeTruthy();
+    expect(screen.getByText(/ticket not found/i)).toBeInTheDocument();
   });
 });

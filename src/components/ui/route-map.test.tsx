@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -114,6 +115,7 @@ describe('EnRouteMap', () => {
   });
 
   it('shows the locate-me button and pipes a plausible fix through onDeviceFix', async () => {
+    const user = userEvent.setup();
     const onDeviceFix = vi.fn();
     renderMap({ destination: DEST, onDeviceFix });
     await waitFor(() => expect(mapMock.on).toHaveBeenCalled());
@@ -131,7 +133,7 @@ describe('EnRouteMap', () => {
       })
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /find my location/i }));
+    await user.click(screen.getByRole('button', { name: /find my location/i }));
 
     await waitFor(() =>
       expect(onDeviceFix).toHaveBeenCalledWith(

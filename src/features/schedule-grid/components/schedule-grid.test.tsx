@@ -41,7 +41,7 @@ function withQueryClient(node: React.ReactNode) {
 describe('ScheduleGrid', () => {
   it('renders the employee column header and seven day columns', () => {
     render(withQueryClient(createElement(ScheduleGrid, { response: makeResponse() })));
-    expect(screen.getByText(/employee/i)).toBeTruthy();
+    expect(screen.getByText(/employee/i)).toBeInTheDocument();
     // Seven day numbers — for 2026-08-03..2026-08-09 we expect 03..09.
     for (const day of ['03', '04', '05', '06', '07', '08', '09']) {
       expect(screen.getAllByText(day).length).toBeGreaterThan(0);
@@ -127,12 +127,12 @@ describe('ScheduleGrid', () => {
 
     render(withQueryClient(createElement(ScheduleGrid, { response })));
 
-    expect(screen.getByText('Aldi Pranata')).toBeTruthy();
-    expect(screen.getByText(/EMP-0001 · Engineering/)).toBeTruthy();
+    expect(screen.getByText('Aldi Pranata')).toBeInTheDocument();
+    expect(screen.getByText(/EMP-0001 · Engineering/)).toBeInTheDocument();
     expect(screen.getAllByText('Morning').length).toBeGreaterThan(0);
     // Day Off pill on 2026-08-04
     expect(screen.getAllByText(/day off/i).length).toBeGreaterThan(0);
-    expect(screen.getByText('Family event')).toBeTruthy();
+    expect(screen.getByText('Family event')).toBeInTheDocument();
   });
 
   it('renders a flag emoji and the holiday name on a holiday column header', () => {
@@ -142,8 +142,8 @@ describe('ScheduleGrid', () => {
 
     render(withQueryClient(createElement(ScheduleGrid, { response })));
     // The 🇮🇩 character is the convention copied from MySchedulePage.
-    expect(screen.getByText('🇮🇩')).toBeTruthy();
-    expect(screen.getByText('Independence Day')).toBeTruthy();
+    expect(screen.getByText('🇮🇩')).toBeInTheDocument();
+    expect(screen.getByText('Independence Day')).toBeInTheDocument();
   });
 
   it('highlights the today column header (5th column = Thursday 03 Sep 2026) with table-success and aria-current=date', () => {

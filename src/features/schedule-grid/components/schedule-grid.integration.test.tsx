@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest';
 /**
  * End-to-end integration tests for the admin schedule grid page
  * (ticket 04 wrap-up).
@@ -36,6 +37,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import { addDays, format } from 'date-fns';
 import { enUS, id as idLocale } from 'date-fns/locale';
@@ -546,11 +548,10 @@ async function waitForGridSettled() {
  * label shapes are tried.
  */
 async function pickAssignDialogToDate(daysAhead = 5): Promise<string> {
+  const user = userEvent.setup();
   const trigger = document.getElementById('effectiveTo');
   if (!trigger) throw new Error('To-date picker trigger not found');
-  await act(async () => {
-    fireEvent.click(trigger);
-  });
+  await user.click(trigger);
   const target = addDays(new Date(), daysAhead);
   const labels = [
     format(target, 'PPPP', { locale: enUS }),
@@ -564,16 +565,12 @@ async function pickAssignDialogToDate(daysAhead = 5): Promise<string> {
     if (!day) {
       const next = screen.queryByRole('button', { name: /next month/i });
       if (!next) break;
-      await act(async () => {
-        fireEvent.click(next);
-      });
+      await user.click(next);
     }
   }
   if (!day) throw new Error(`To-date day button not found: ${labels.join(' / ')}`);
   const picked = day;
-  await act(async () => {
-    fireEvent.click(picked);
-  });
+  await user.click(picked);
   return format(target, 'yyyy-MM-dd');
 }
 
@@ -596,8 +593,8 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     );
 
     // Unassigned row's "+ Assign Shift" CTA is visible (and only there).
-    expect(screen.getByTestId('assign-shift-cta-u2')).toBeTruthy();
-    expect(screen.queryByTestId('assign-shift-cta-u1')).toBeNull();
+    expect(screen.getByTestId('assign-shift-cta-u2')).toBeInTheDocument();
+    expect(screen.queryByTestId('assign-shift-cta-u1')).not.toBeInTheDocument();
   });
 
   it('steps 2-3 — debounces the search input via vi.useFakeTimers + advanceTimersByTime(300)', async () => {
@@ -611,6 +608,11 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
 
     // Switch to fake timers AFTER findBy* so waitFor's polling isn't
     // disrupted by the synthetic clock.
+    // NOTE: this interaction intentionally stays on `fireEvent.change`, not
+    // `user.type` — user-event's keystroke machinery deadlocks under fake
+    // timers (its internal waits never resolve), while a synchronous change
+    // event lets the test drive the debounce window manually below. The
+    // subject under test here is the debounce timing, not the input event.
     vi.useFakeTimers();
     fireEvent.change(searchInput, { target: { value: 'Aldi' } });
 
@@ -645,17 +647,14 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
 
   it('step 4 — click Day Off → Clear → cell becomes unassigned', async () => {
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-09-02'));
-    });
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-09-02'));
     const dayOffPopover = await screen.findByTestId('schedule-grid-cell-popover-u1-2026-09-02');
     const clearButton = await within(dayOffPopover).findByTestId('clear-cell-button');
 
-    await act(async () => {
-      fireEvent.click(clearButton);
-    });
+    await user.click(clearButton);
 
     await waitFor(() => {
       expect(clearCellFnMock).toHaveBeenCalledWith({
@@ -682,34 +681,27 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     expect(clearedCell.shiftId).toBeNull();
 
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
     const placeholderTrigger = screen.getByTestId('schedule-grid-cell-trigger-u1-2026-09-02');
     expect(placeholderTrigger.getAttribute('aria-label')).toMatch(/2026-09-02/);
 
-    await act(async () => {
-      fireEvent.click(placeholderTrigger);
-    });
+    await user.click(placeholderTrigger);
     const popover = await screen.findByTestId('schedule-grid-cell-popover-u1-2026-09-02');
     const popoverShiftTrigger = within(popover).getByTestId('shift-select-trigger');
-    await act(async () => {
-      fireEvent.click(popoverShiftTrigger);
-    });
+    await user.click(popoverShiftTrigger);
     await waitFor(() => {
-      expect(within(document.body).getByRole('option', { name: /Morning/ })).toBeTruthy();
+      expect(within(document.body).getByRole('option', { name: /Morning/ })).toBeInTheDocument();
     });
 
     const morningOption = within(document.body).getByRole('option', {
       name: /Morning/
     });
-    await act(async () => {
-      fireEvent.click(morningOption);
-    });
+    await user.click(morningOption);
 
     const popoverSaveButton = within(popover).getByTestId('popover-save-button');
-    await act(async () => {
-      fireEvent.click(popoverSaveButton);
-    });
+    await user.click(popoverSaveButton);
 
     await waitFor(() => {
       expect(setCellShiftFnMock).toHaveBeenCalledWith({
@@ -727,14 +719,13 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
 
   it('step 6 — click "+ Assign Shift" CTA → fill dialog → submit → row cells resolve', async () => {
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
     const cta = screen.getByTestId('assign-shift-cta-u2');
-    await act(async () => {
-      fireEvent.click(cta);
-    });
+    await user.click(cta);
     await waitFor(() => {
-      expect(screen.getByText('Assign Shift')).toBeTruthy();
+      expect(screen.getByText('Assign Shift')).toBeInTheDocument();
     });
 
     // To date is required (bounded assignments only) — pick it through the
@@ -744,21 +735,15 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     await pickAssignDialogToDate();
 
     const dialogShiftTrigger = await screen.findByTestId('assign-dialog-shift-trigger');
-    await act(async () => {
-      fireEvent.click(dialogShiftTrigger);
-    });
+    await user.click(dialogShiftTrigger);
 
     const dialogMorningOption = await within(document.body).findByRole('option', {
       name: 'Morning'
     });
-    await act(async () => {
-      fireEvent.click(dialogMorningOption);
-    });
+    await user.click(dialogMorningOption);
 
     const submitButton = screen.getByTestId('assign-dialog-submit');
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
+    await user.click(submitButton);
 
     await waitFor(() => {
       expect(createAssignmentInlineFnMock).toHaveBeenCalledTimes(1);
@@ -766,13 +751,13 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
 
     // Dialog should close (parent's onOpenChange receives false).
     await waitFor(() => {
-      expect(screen.queryByText('Assign Shift')).toBeNull();
+      expect(screen.queryByText('Assign Shift')).not.toBeInTheDocument();
     });
 
     // After the assignment lands the row no longer carries the CTA, and
     // every cell resolves to the chosen shift.
     await waitFor(() => {
-      expect(screen.queryByTestId('assign-shift-cta-u2')).toBeNull();
+      expect(screen.queryByTestId('assign-shift-cta-u2')).not.toBeInTheDocument();
     });
     for (const date of WEEK_DAYS) {
       const trigger = screen.getByTestId(`schedule-grid-cell-trigger-u2-${date}`);
@@ -782,14 +767,13 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
 
   it('export — Export Excel button calls exportMonthFn with the current month + filters', async () => {
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
     const exportButton = screen.getByTestId('schedule-grid-export');
     expect(exportButton.hasAttribute('disabled')).toBe(false);
 
-    await act(async () => {
-      fireEvent.click(exportButton);
-    });
+    await user.click(exportButton);
 
     await waitFor(() => {
       expect(exportMonthFnMock).toHaveBeenCalledWith({
@@ -811,11 +795,10 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     };
     try {
       renderPage();
+      const user = userEvent.setup();
       await waitForGridSettled();
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('schedule-grid-export'));
-      });
+      await user.click(screen.getByTestId('schedule-grid-export'));
 
       await waitFor(() => {
         expect(exportMonthFnMock).toHaveBeenCalled();
@@ -855,16 +838,13 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     };
     try {
       renderPage();
+      const user = userEvent.setup();
       await waitForGridSettled();
 
       const file = new File(['fake-xlsx-bytes'], 'Shift_Schedule_2026-08.xlsx', {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
-      await act(async () => {
-        fireEvent.change(screen.getByTestId('schedule-grid-import-input'), {
-          target: { files: [file] }
-        });
-      });
+      await user.upload(screen.getByTestId('schedule-grid-import-input'), file);
 
       await waitFor(() => {
         expect(importMonthFnMock).toHaveBeenCalled();
@@ -874,7 +854,9 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
           "Couldn't import the schedule. Please try again."
         );
       });
-      expect(screen.queryByTestId('schedule-grid-import-failures-download')).toBeNull();
+      expect(
+        screen.queryByTestId('schedule-grid-import-failures-download')
+      ).not.toBeInTheDocument();
     } finally {
       URL.createObjectURL = originalCreateObjectURL;
     }
@@ -882,14 +864,13 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
 
   it('keyboard nav — arrow keys + T in the WeekNav toolbar', async () => {
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
     const toolbar = screen.getByRole('toolbar', { name: /week navigation/i });
     toolbar.focus();
 
-    await act(async () => {
-      fireEvent.keyDown(toolbar, { key: 'ArrowRight' });
-    });
+    await user.keyboard('{ArrowRight}');
     // The mock grid is keyed by weekStart; advancing the week should bump
     // the request to the next Monday.
     await waitFor(() => {
@@ -898,9 +879,7 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
       expect(weekStarts).toContain('2026-09-07');
     });
 
-    await act(async () => {
-      fireEvent.keyDown(toolbar, { key: 'ArrowLeft' });
-    });
+    await user.keyboard('{ArrowLeft}');
     await waitFor(() => {
       const calls = getScheduleGridFnMock.mock.calls;
       const weekStarts = calls.map((c) => (c[0] as { data: { weekStart: string } }).data.weekStart);
@@ -908,9 +887,7 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     });
 
     // Jump to today (still pinned to 2026-09-02 → 2026-08-31).
-    await act(async () => {
-      fireEvent.keyDown(toolbar, { key: 't' });
-    });
+    await user.keyboard('t');
     await waitFor(() => {
       const calls = getScheduleGridFnMock.mock.calls;
       const weekStarts = calls.map((c) => (c[0] as { data: { weekStart: string } }).data.weekStart);
@@ -920,33 +897,28 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
 
   it('bulk — Repeat Schedule in Bulk opens the dialog, summarizes users × weeks, and applies', async () => {
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
     const bulkButton = screen.getByTestId('schedule-grid-bulk');
     expect(bulkButton.hasAttribute('disabled')).toBe(false);
 
-    await act(async () => {
-      fireEvent.click(bulkButton);
-    });
+    await user.click(bulkButton);
     await screen.findByTestId('bulk-repeat-dialog');
 
     // Default: 2 fixture employees × 4 weeks.
     expect(screen.getByTestId('bulk-summary').textContent).toBe('2 employees × 4 weeks');
 
     // Narrow to 2 upcoming weeks; the dialog previews both target weeks.
-    await act(async () => {
-      fireEvent.change(screen.getByTestId('bulk-weeks-select'), { target: { value: '2' } });
-    });
+    await user.selectOptions(screen.getByTestId('bulk-weeks-select'), '2');
     expect(screen.getByTestId('bulk-summary').textContent).toBe('2 employees × 2 weeks');
-    expect(screen.getByTestId('bulk-target-week-2026-09-07')).toBeTruthy();
-    expect(screen.getByTestId('bulk-target-week-2026-09-14')).toBeTruthy();
+    expect(screen.getByTestId('bulk-target-week-2026-09-07')).toBeInTheDocument();
+    expect(screen.getByTestId('bulk-target-week-2026-09-14')).toBeInTheDocument();
 
     // Include Weekend defaults to off.
     expect(screen.getByTestId('bulk-include-weekend').getAttribute('aria-checked')).toBe('false');
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('bulk-repeat-apply'));
-    });
+    await user.click(screen.getByTestId('bulk-repeat-apply'));
 
     await waitFor(() => {
       expect(repeatWeekBulkFnMock).toHaveBeenCalledWith({
@@ -964,7 +936,7 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     });
     // The dialog closes after a successful apply.
     await waitFor(() => {
-      expect(screen.queryByTestId('bulk-repeat-dialog')).toBeNull();
+      expect(screen.queryByTestId('bulk-repeat-dialog')).not.toBeInTheDocument();
     });
   });
 
@@ -978,21 +950,16 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     });
 
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('schedule-grid-bulk'));
-    });
+    await user.click(screen.getByTestId('schedule-grid-bulk'));
     await screen.findByTestId('bulk-repeat-dialog');
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('bulk-include-weekend'));
-    });
+    await user.click(screen.getByTestId('bulk-include-weekend'));
     expect(screen.getByTestId('bulk-include-weekend').getAttribute('aria-checked')).toBe('true');
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('bulk-repeat-apply'));
-    });
+    await user.click(screen.getByTestId('bulk-repeat-apply'));
 
     await waitFor(() => {
       expect(repeatWeekBulkFnMock).toHaveBeenCalledWith({
@@ -1027,19 +994,16 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     });
 
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
     // No link before any import.
-    expect(screen.queryByTestId('schedule-grid-import-failures-download')).toBeNull();
+    expect(screen.queryByTestId('schedule-grid-import-failures-download')).not.toBeInTheDocument();
 
     const file = new File(['fake-xlsx-bytes'], 'Shift_Schedule_2026-08.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
-    await act(async () => {
-      fireEvent.change(screen.getByTestId('schedule-grid-import-input'), {
-        target: { files: [file] }
-      });
-    });
+    await user.upload(screen.getByTestId('schedule-grid-import-input'), file);
 
     await waitFor(() => {
       expect(importMonthFnMock).toHaveBeenCalledWith({
@@ -1068,20 +1032,17 @@ describe('ScheduleGridPage integration (ticket 04)', () => {
     });
 
     renderPage();
+    const user = userEvent.setup();
     await waitForGridSettled();
 
     const file = new File(['fake-xlsx-bytes'], 'Shift_Schedule_2026-08.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
-    await act(async () => {
-      fireEvent.change(screen.getByTestId('schedule-grid-import-input'), {
-        target: { files: [file] }
-      });
-    });
+    await user.upload(screen.getByTestId('schedule-grid-import-input'), file);
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Imported 5 cells for 2 employees');
     });
-    expect(screen.queryByTestId('schedule-grid-import-failures-download')).toBeNull();
+    expect(screen.queryByTestId('schedule-grid-import-failures-download')).not.toBeInTheDocument();
   });
 });

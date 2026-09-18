@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import MaterialsUsed, { adjustQty, clampQty } from './materials-used';
@@ -41,18 +42,19 @@ describe('MaterialsUsed', () => {
         <MaterialsUsed materials={[material()]} onChange={() => {}} />
       </I18nextProvider>
     );
-    expect(screen.getByText('Drop cable')).toBeTruthy();
-    expect(screen.getByText('5')).toBeTruthy();
+    expect(screen.getByText('Drop cable')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  it('fires onChange with incremented qty when + is clicked', () => {
+  it('fires onChange with incremented qty when + is clicked', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <I18nextProvider i18n={i18n}>
         <MaterialsUsed materials={[material({ qty: 2 })]} onChange={onChange} />
       </I18nextProvider>
     );
-    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    await user.click(screen.getByRole('button', { name: '+' }));
     expect(onChange).toHaveBeenCalledWith([material({ qty: 3 })]);
   });
 });

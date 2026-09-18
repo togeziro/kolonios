@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -101,7 +102,7 @@ describe('ShiftListing — rendering', () => {
   it('shows the loading state when the query is pending', () => {
     useQueryMock.mockReturnValue({ data: undefined, isLoading: true, isPending: true });
     renderListing();
-    expect(screen.getByText(/loading/i)).toBeTruthy();
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 
   it('renders one row per shift with name, hours, break, and status', () => {
@@ -111,14 +112,14 @@ describe('ShiftListing — rendering', () => {
     // 1 header row + 2 data rows.
     expect(rows).toHaveLength(3);
     const morningRow = rows.find((r) => r.textContent?.includes('Morning'));
-    expect(morningRow).toBeTruthy();
+    expect(morningRow).toBeInTheDocument();
     expect(morningRow?.textContent).toContain('08:00');
     expect(morningRow?.textContent).toContain('17:00');
     expect(morningRow?.textContent).toContain('12:00');
     expect(morningRow?.textContent).toContain('Active');
 
     const nightRow = rows.find((r) => r.textContent?.includes('Night Owl'));
-    expect(nightRow).toBeTruthy();
+    expect(nightRow).toBeInTheDocument();
     expect(nightRow?.textContent).toContain('Inactive');
     // Empty break cell renders the dash.
     expect(nightRow?.textContent).toContain('—');
@@ -126,10 +127,11 @@ describe('ShiftListing — rendering', () => {
 });
 
 describe('ShiftListing — actions', () => {
-  it('opens the Add dialog when the header button is clicked', () => {
+  it('opens the Add dialog when the header button is clicked', async () => {
+    const user = userEvent.setup();
     setListingLoaded();
     renderListing();
-    fireEvent.click(screen.getByRole('button', { name: /Add Shift/i }));
+    await user.click(screen.getByRole('button', { name: /Add Shift/i }));
     // SheetContent renders the title.
     expect(screen.getAllByText('New Shift').length).toBeGreaterThan(0);
   });
@@ -146,7 +148,7 @@ describe('ShiftListing — delete confirm flow', () => {
   it('does not render the delete dialog body when no row is targeted (Radix skips the portal when open is false)', () => {
     setListingLoaded();
     renderListing();
-    expect(screen.queryByText('Delete shift?')).toBeNull();
-    expect(screen.queryByText('Deactivate shift?')).toBeNull();
+    expect(screen.queryByText('Delete shift?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Deactivate shift?')).not.toBeInTheDocument();
   });
 });

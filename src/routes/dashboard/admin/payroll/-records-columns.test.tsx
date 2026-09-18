@@ -3,7 +3,8 @@
 import type { TFunction } from 'i18next';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createPayrollRecordColumns, toHoursMinutes } from './-records-columns';
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
@@ -48,7 +49,8 @@ describe('payroll record columns', () => {
     expect(actions?.meta?.label).toBe('payroll.actions');
   });
 
-  it('renders the inline salary editor trigger only when permitted', () => {
+  it('renders the inline salary editor trigger only when permitted', async () => {
+    const user = userEvent.setup();
     const record = {
       payroll_period_id: 1,
       employee_id: 'emp-1',
@@ -70,7 +72,7 @@ describe('payroll record columns', () => {
         </tbody>
       </table>
     );
-    fireEvent.click(screen.getByRole('button', { name: 'payroll.editBaseSalary' }));
+    await user.click(screen.getByRole('button', { name: 'payroll.editBaseSalary' }));
     expect(onEditSalary).toHaveBeenCalledWith(record);
     unmount();
     render(
@@ -80,7 +82,9 @@ describe('payroll record columns', () => {
         </tbody>
       </table>
     );
-    expect(screen.queryByRole('button', { name: 'payroll.editBaseSalary' })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'payroll.editBaseSalary' })
+    ).not.toBeInTheDocument();
   });
 
   it('rounds fractional hours to the nearest minute and never carries 60 minutes', () => {
@@ -159,8 +163,8 @@ describe('payroll record per-record paid stamp (ADR-0003)', () => {
       paid_at: stamped,
       paid_by: 'admin-1'
     } as RecordRow);
-    expect(status.getByText('payroll.paidLabel')).toBeTruthy();
-    expect(status.queryByText('payroll.unpaidLabel')).toBeNull();
+    expect(status.getByText('payroll.paidLabel')).toBeInTheDocument();
+    expect(status.queryByText('payroll.unpaidLabel')).not.toBeInTheDocument();
   });
 
   it('renders Paid when the period is paid, even if the record row has no stamp (defensive: period status is sufficient when in paid/locked)', () => {
@@ -175,8 +179,8 @@ describe('payroll record per-record paid stamp (ADR-0003)', () => {
       period_status: 'paid',
       paid_at: null
     } as RecordRow);
-    expect(status.getByText('payroll.paidLabel')).toBeTruthy();
-    expect(status.queryByText('payroll.unpaidLabel')).toBeNull();
+    expect(status.getByText('payroll.paidLabel')).toBeInTheDocument();
+    expect(status.queryByText('payroll.unpaidLabel')).not.toBeInTheDocument();
   });
 
   it('hides the Pay menu when the record is stamped, even when the period is ready_to_pay', () => {
@@ -187,7 +191,7 @@ describe('payroll record per-record paid stamp (ADR-0003)', () => {
       paid_at: '2026-08-07T10:00:00.000Z',
       paid_by: 'admin-1'
     } as RecordRow);
-    expect(actions.queryByRole('button', { name: 'payroll.pay' })).toBeNull();
+    expect(actions.queryByRole('button', { name: 'payroll.pay' })).not.toBeInTheDocument();
   });
 
   it('shows the Pay menu when the record is unstamped and the period is ready_to_pay', () => {
@@ -197,6 +201,6 @@ describe('payroll record per-record paid stamp (ADR-0003)', () => {
       period_status: 'ready_to_pay',
       paid_at: null
     } as RecordRow);
-    expect(actions.getByRole('button', { name: 'payroll.pay' })).toBeTruthy();
+    expect(actions.getByRole('button', { name: 'payroll.pay' })).toBeInTheDocument();
   });
 });

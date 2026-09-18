@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import TicketCard from './ticket-card';
@@ -70,7 +71,26 @@ describe('ticket status labels', () => {
         <TicketCard task={makeTicket('in_progress')} />
       </I18nextProvider>
     );
-    expect(screen.getByText('In Progress')).toBeTruthy();
-    expect(screen.queryByText('in progress')).toBeNull();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(screen.queryByText('in progress')).not.toBeInTheDocument();
+  });
+
+  it('invokes the action slot via realistic user interaction', async () => {
+    const user = userEvent.setup();
+    const onTake = vi.fn();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <TicketCard
+          task={makeTicket('open')}
+          action={
+            <button type='button' onClick={onTake}>
+              Take ticket
+            </button>
+          }
+        />
+      </I18nextProvider>
+    );
+    await user.click(screen.getByRole('button', { name: /take ticket/i }));
+    expect(onTake).toHaveBeenCalledOnce();
   });
 });

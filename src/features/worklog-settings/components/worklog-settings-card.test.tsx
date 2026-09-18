@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -51,17 +52,18 @@ describe('WorklogSettingsCard', () => {
   });
 
   it('flips the switch and calls the mutation', async () => {
+    const user = userEvent.setup();
     useWorklogSettingsMock.mockReturnValue({ data: { lenient: false }, isLoading: false });
     setWorklogSettingsMock.mockResolvedValue({ lenient: true });
     renderCard();
     const sw = screen.getByRole('switch');
-    fireEvent.click(sw);
+    await user.click(sw);
     await waitFor(() => expect(setWorklogSettingsMock).toHaveBeenCalledWith({ lenient: true }));
   });
 
   it('shows an error message when the query fails', () => {
     useWorklogSettingsMock.mockReturnValue({ isError: true, isLoading: false });
     renderCard();
-    expect(screen.getByText(/Could not load work log settings/i)).toBeTruthy();
+    expect(screen.getByText(/Could not load work log settings/i)).toBeInTheDocument();
   });
 });

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '@/i18n/config';
@@ -163,20 +164,22 @@ describe('ReviewQueuePage', () => {
     renderPage();
     await screen.findByText('Alex Kim');
     expect(screen.getAllByText('Pending').length).toBeGreaterThanOrEqual(3);
-    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getAllByText('1')).toHaveLength(2);
   });
 
   it('renders pending cards with day context from live data', async () => {
     renderPage();
     await screen.findByText('Alex Kim');
-    expect(screen.getByText('Rina Wijaya')).toBeTruthy();
-    expect(screen.getByText('Wed, Aug 12 · 08:00 - 17:00')).toBeTruthy();
-    expect(screen.getByText(/Installed fiber drop/)).toBeTruthy();
-    expect(screen.getByText('Checklist 6/6 OK')).toBeTruthy();
-    expect(screen.getByText('2 tasks logged')).toBeTruthy();
+    expect(screen.getByText('Rina Wijaya')).toBeInTheDocument();
+    expect(screen.getByText('Wed, Aug 12 · 08:00 - 17:00')).toBeInTheDocument();
+    expect(screen.getByText(/Installed fiber drop/)).toBeInTheDocument();
+    expect(screen.getByText('Checklist 6/6 OK')).toBeInTheDocument();
+    expect(screen.getByText('2 tasks logged')).toBeInTheDocument();
     await waitFor(() =>
-      expect(document.querySelector('img[src="/fixtures/checklist-drop-cable.jpg"]')).toBeTruthy()
+      expect(
+        document.querySelector('img[src="/fixtures/checklist-drop-cable.jpg"]')
+      ).toBeInTheDocument()
     );
   });
 
@@ -184,28 +187,29 @@ describe('ReviewQueuePage', () => {
     renderPage();
     await screen.findByText('Joko Prasetyo');
     const approvedCard = screen.getByText('Joko Prasetyo').closest('.opacity-60');
-    expect(approvedCard).toBeTruthy();
+    expect(approvedCard).toBeInTheDocument();
     expect(screen.getAllByText('Approved').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Missing photo evidence for task #4092/)).toBeTruthy();
+    expect(screen.getByText(/Missing photo evidence for task #4092/)).toBeInTheDocument();
   });
 
   it('pending cards link to the review ticket detail', async () => {
     renderPage();
     await screen.findByText('Alex Kim');
     const link = document.querySelector<HTMLAnchorElement>('a[href="/dashboard/spv/review/1042"]');
-    expect(link).toBeTruthy();
+    expect(link).toBeInTheDocument();
   });
 
   it('approve and reject buttons call update mutation', async () => {
+    const user = userEvent.setup();
     renderPage();
     await screen.findByText('Alex Kim');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
     expect(updateMutateMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'approved' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Reject' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Reject' })[0]);
     // reject opens dialog; confirm within dialog triggers mutate with rejected
     const dialogReject = await screen.findByRole('dialog');
-    expect(dialogReject).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Reject', hidden: false }));
+    expect(dialogReject).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reject', hidden: false }));
     // The dialog's reject button is also named Reject; ensure at least one rejected call
     await waitFor(() =>
       expect(updateMutateMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'rejected' }))
@@ -215,8 +219,8 @@ describe('ReviewQueuePage', () => {
   it('hides the queue behind a no-access state without checklist.approve', async () => {
     permsMock.mockReturnValue({ isAdmin: false, permissions: {} });
     renderPage();
-    expect(await screen.findByText(/You do not have access to this page/i)).toBeTruthy();
-    expect(screen.queryByText('Alex Kim')).toBeNull();
+    expect(await screen.findByText(/You do not have access to this page/i)).toBeInTheDocument();
+    expect(screen.queryByText('Alex Kim')).not.toBeInTheDocument();
   });
 
   it('shows the Ticket Reviews section with submitted tickets and links to detail', async () => {
@@ -240,7 +244,7 @@ describe('ReviewQueuePage', () => {
     renderPage();
     await screen.findByText('Ticket awaiting review');
     const link = document.querySelector<HTMLAnchorElement>('a[href="/dashboard/spv/review/77"]');
-    expect(link).toBeTruthy();
+    expect(link).toBeInTheDocument();
   });
 
   it('shows the empty state when no tickets are awaiting review', async () => {
@@ -255,6 +259,6 @@ describe('ReviewQueuePage', () => {
     });
     renderPage();
     await screen.findByText('Alex Kim');
-    expect(screen.queryByText('Ticket Reviews')).toBeNull();
+    expect(screen.queryByText('Ticket Reviews')).not.toBeInTheDocument();
   });
 });

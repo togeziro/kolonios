@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -43,12 +44,14 @@ function renderPage() {
   );
 }
 
-function fillField(label: string, value: string) {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+async function fillField(user: UserEvent, label: string, value: string) {
+  const input = screen.getByLabelText(label);
+  await user.clear(input);
+  await user.type(input, value);
 }
 
-async function submitForm() {
-  fireEvent.click(screen.getByRole('button', { name: 'Update Password' }));
+async function submitForm(user: UserEvent) {
+  await user.click(screen.getByRole('button', { name: 'Update Password' }));
 }
 
 beforeEach(() => {
@@ -65,30 +68,32 @@ describe('ChangePasswordPage', () => {
   it('renders the three password fields and the strength meter', () => {
     renderPage();
 
-    expect(screen.getByLabelText('Current Password')).toBeTruthy();
-    expect(screen.getByLabelText('New Password')).toBeTruthy();
-    expect(screen.getByLabelText('Confirm New Password')).toBeTruthy();
-    expect(screen.getByTestId('strength-meter')).toBeTruthy();
+    expect(screen.getByLabelText('Current Password')).toBeInTheDocument();
+    expect(screen.getByLabelText('New Password')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirm New Password')).toBeInTheDocument();
+    expect(screen.getByTestId('strength-meter')).toBeInTheDocument();
   });
 
   it('shows no strength label while the new password is empty', () => {
     renderPage();
-    expect(screen.queryByTestId('strength-label')).toBeNull();
+    expect(screen.queryByTestId('strength-label')).not.toBeInTheDocument();
   });
 
-  it('reacts to the new-password value with a labeled tier', () => {
+  it('reacts to the new-password value with a labeled tier', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fillField('New Password', 'Str0ng!Passw0rd');
+    await fillField(user, 'New Password', 'Str0ng!Passw0rd');
     expect(screen.getByTestId('strength-label').textContent).toBe('Strong');
   });
 
   it('rotates with the expected args on valid submit and navigates back', async () => {
+    const user = userEvent.setup();
     renderPage();
 
-    fillField('Current Password', 'OldPass1!');
-    fillField('New Password', 'NewPass1!');
-    fillField('Confirm New Password', 'NewPass1!');
-    await submitForm();
+    await fillField(user, 'Current Password', 'OldPass1!');
+    await fillField(user, 'New Password', 'NewPass1!');
+    await fillField(user, 'Confirm New Password', 'NewPass1!');
+    await submitForm(user);
 
     await waitFor(() => {
       expect(rotateMock).toHaveBeenCalledWith({
@@ -115,12 +120,13 @@ describe('ChangePasswordPage', () => {
   });
 
   it('shows an inline mismatch error and does not rotate', async () => {
+    const user = userEvent.setup();
     renderPage();
 
-    fillField('Current Password', 'OldPass1!');
-    fillField('New Password', 'NewPass1!');
-    fillField('Confirm New Password', 'Different1!');
-    await submitForm();
+    await fillField(user, 'Current Password', 'OldPass1!');
+    await fillField(user, 'New Password', 'NewPass1!');
+    await fillField(user, 'Confirm New Password', 'Different1!');
+    await submitForm(user);
 
     expect(await screen.findByRole('alert').then((el) => el.textContent)).toBe(
       'New password and confirmation do not match.'
@@ -129,12 +135,13 @@ describe('ChangePasswordPage', () => {
   });
 
   it('rejects weak passwords before rotating', async () => {
+    const user = userEvent.setup();
     renderPage();
 
-    fillField('Current Password', 'OldPass1!');
-    fillField('New Password', 'short');
-    fillField('Confirm New Password', 'short');
-    await submitForm();
+    await fillField(user, 'Current Password', 'OldPass1!');
+    await fillField(user, 'New Password', 'short');
+    await fillField(user, 'Confirm New Password', 'short');
+    await submitForm(user);
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('too weak');
@@ -142,13 +149,14 @@ describe('ChangePasswordPage', () => {
   });
 
   it('maps a wrong-current-password failure to an inline localized message', async () => {
+    const user = userEvent.setup();
     rotateMock.mockResolvedValue({ ok: false as const, code: 'WRONG_CURRENT' as const });
     renderPage();
 
-    fillField('Current Password', 'WrongPass1!');
-    fillField('New Password', 'NewPass1!');
-    fillField('Confirm New Password', 'NewPass1!');
-    await submitForm();
+    await fillField(user, 'Current Password', 'WrongPass1!');
+    await fillField(user, 'New Password', 'NewPass1!');
+    await fillField(user, 'Confirm New Password', 'NewPass1!');
+    await submitForm(user);
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe('Current password is incorrect.');
@@ -157,13 +165,14 @@ describe('ChangePasswordPage', () => {
   });
 
   it('maps a generic rotation failure without toast or navigation', async () => {
+    const user = userEvent.setup();
     rotateMock.mockResolvedValue({ ok: false as const, code: 'GENERIC' as const });
     renderPage();
 
-    fillField('Current Password', 'OldPass1!');
-    fillField('New Password', 'NewPass1!');
-    fillField('Confirm New Password', 'NewPass1!');
-    await submitForm();
+    await fillField(user, 'Current Password', 'OldPass1!');
+    await fillField(user, 'New Password', 'NewPass1!');
+    await fillField(user, 'Confirm New Password', 'NewPass1!');
+    await submitForm(user);
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe('Could not change password. Please try again.');
@@ -173,7 +182,7 @@ describe('ChangePasswordPage', () => {
 
   it('has no forgot-password affordance anywhere', () => {
     renderPage();
-    expect(screen.queryByText(/forgot/i)).toBeNull();
-    expect(screen.queryByText(/reset/i)).toBeNull();
+    expect(screen.queryByText(/forgot/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/reset/i)).not.toBeInTheDocument();
   });
 });

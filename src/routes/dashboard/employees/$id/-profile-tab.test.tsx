@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -83,21 +84,22 @@ function renderProfileTab() {
 describe('EmployeeProfileTab — sub-tab shell', () => {
   it('renders the Personal Information and Career Timeline sub-tab triggers', () => {
     renderProfileTab();
-    expect(screen.getByRole('tab', { name: 'Personal Information' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Career Timeline' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Personal Information' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Career Timeline' })).toBeInTheDocument();
   });
 
   it('shows the Personal Information fields by default', () => {
     renderProfileTab();
-    expect(screen.getByText('Jane Doe')).toBeTruthy();
-    expect(screen.getByText('Jan')).toBeTruthy();
-    expect(screen.getByText('jane@example.com')).toBeTruthy();
-    expect(screen.getByText('EMP-0001')).toBeTruthy();
-    expect(screen.getByText('Operation')).toBeTruthy();
-    expect(screen.getByText('Field Engineer')).toBeTruthy();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.getByText('Jan')).toBeInTheDocument();
+    expect(screen.getByText('jane@example.com')).toBeInTheDocument();
+    expect(screen.getByText('EMP-0001')).toBeInTheDocument();
+    expect(screen.getByText('Operation')).toBeInTheDocument();
+    expect(screen.getByText('Field Engineer')).toBeInTheDocument();
   });
 
-  it('switches to the Career Timeline sub-tab when clicked', () => {
+  it('switches to the Career Timeline sub-tab when clicked', async () => {
+    const user = userEvent.setup();
     useQueryMock.mockReturnValue({
       data: { lengthOfService: { years: 0, months: 0 }, events: [] },
       isLoading: false,
@@ -105,11 +107,11 @@ describe('EmployeeProfileTab — sub-tab shell', () => {
     });
     renderProfileTab();
     const careerTab = screen.getByRole('tab', { name: 'Career Timeline' });
-    fireEvent.mouseDown(careerTab, { button: 0 });
-    expect(screen.getByRole('button', { name: 'Change Department' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Change Position' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Change Work Status' })).toBeTruthy();
-    expect(screen.getByText(/No career events recorded yet/i)).toBeTruthy();
+    await user.click(careerTab);
+    expect(screen.getByRole('button', { name: 'Change Department' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change Position' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change Work Status' })).toBeInTheDocument();
+    expect(screen.getByText(/No career events recorded yet/i)).toBeInTheDocument();
   });
 });
 
@@ -123,16 +125,16 @@ describe('EmployeePersonalInfoSubTab', () => {
         createElement(EmployeePersonalInfoSubTab, { employee: fakeEmployee })
       )
     );
-    expect(screen.getByText('Identity')).toBeTruthy();
-    expect(screen.getByText('Employment')).toBeTruthy();
-    expect(screen.getByText('Jane Doe')).toBeTruthy();
-    expect(screen.getByText('Operation')).toBeTruthy();
+    expect(screen.getByText('Identity')).toBeInTheDocument();
+    expect(screen.getByText('Employment')).toBeInTheDocument();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.getByText('Operation')).toBeInTheDocument();
   });
 });
 
 describe('EmployeeAttendanceTab — labelled placeholder', () => {
   it('renders the placeholder title and helper text', () => {
     render(<EmployeeAttendanceTab />);
-    expect(screen.getByText(/Attendance history ships in the next phase/i)).toBeTruthy();
+    expect(screen.getByText(/Attendance history ships in the next phase/i)).toBeInTheDocument();
   });
 });

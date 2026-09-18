@@ -29,7 +29,7 @@ describe('HolidayCalendarPage', () => {
     const { container } = renderPage();
 
     const content = container.querySelector('[data-slot="tabs-content"]');
-    expect(content).toBeTruthy();
+    expect(content).toBeInTheDocument();
     const classes = content!.getAttribute('class') ?? '';
     expect(classes).toContain('flex-col');
     expect(classes).toContain('min-h-0');

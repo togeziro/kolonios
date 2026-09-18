@@ -28,7 +28,7 @@ describe('ElapsedTimer', () => {
         <ElapsedTimer takenAt='2026-08-16T07:35:43Z' />
       </I18nextProvider>
     );
-    expect(screen.getByText('00:24:17')).toBeTruthy();
+    expect(screen.getByText('00:24:17')).toBeInTheDocument();
     vi.useRealTimers();
   });
 });

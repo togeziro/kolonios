@@ -94,6 +94,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
+          setupFiles: ['./vitest.setup.ui.ts'],
           // 185 of 207 test files; includes all *.test.ts(x) EXCEPT
           //   - src/lib/db/*.test.ts   (always reset/truncate against PG)
           //   - **/*.integration.test.* (5 explicit integration files)

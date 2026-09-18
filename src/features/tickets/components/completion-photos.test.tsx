@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -36,6 +37,7 @@ import CompletionPhotos from './completion-photos';
 
 describe('CompletionPhotos', () => {
   it('uploads the captured photo and reports its key via onChange', async () => {
+    const user = userEvent.setup();
     uploadTicketPhotoMock.mockResolvedValue('tickets/0/99.jpg');
     const onChange = vi.fn();
 
@@ -45,11 +47,12 @@ describe('CompletionPhotos', () => {
       </I18nextProvider>
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: /capture/i })[0]);
+    await user.click(screen.getAllByRole('button', { name: /capture/i })[0]);
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(['tickets/0/99.jpg']));
   });
 
   it('does not report a key when the upload fails', async () => {
+    const user = userEvent.setup();
     uploadTicketPhotoMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
     const onChange = vi.fn();
 
@@ -59,7 +62,7 @@ describe('CompletionPhotos', () => {
       </I18nextProvider>
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: /capture/i })[0]);
+    await user.click(screen.getAllByRole('button', { name: /capture/i })[0]);
     await waitFor(() => expect(onChange).toHaveBeenLastCalledWith([]));
   });
 });

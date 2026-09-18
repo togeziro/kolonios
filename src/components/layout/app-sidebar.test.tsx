@@ -76,8 +76,8 @@ describe('AppSidebar footer', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText('Budi Santoso')).toBeTruthy();
-    expect(screen.getByText('budi@example.com')).toBeTruthy();
-    expect(screen.queryByText('user@example.com')).toBeNull();
+    expect(screen.getByText('Budi Santoso')).toBeInTheDocument();
+    expect(screen.getByText('budi@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('user@example.com')).not.toBeInTheDocument();
   });
 });

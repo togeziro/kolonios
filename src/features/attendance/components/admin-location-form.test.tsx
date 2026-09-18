@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -40,14 +41,19 @@ beforeEach(() => {
 describe('LocationForm coordinates', () => {
   it('renders manual latitude and longitude inputs', () => {
     renderForm();
-    expect(screen.getByLabelText('Latitude')).toBeTruthy();
-    expect(screen.getByLabelText('Longitude')).toBeTruthy();
+    expect(screen.getByLabelText('Latitude')).toBeInTheDocument();
+    expect(screen.getByLabelText('Longitude')).toBeInTheDocument();
   });
 
-  it('updates the map coordinates when latitude/longitude are typed', () => {
+  it('updates the map coordinates when latitude/longitude are typed', async () => {
+    const user = userEvent.setup();
     renderForm();
-    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-6.2' } });
-    fireEvent.change(screen.getByLabelText('Longitude'), { target: { value: '106.85' } });
+    const latitude = screen.getByLabelText('Latitude');
+    const longitude = screen.getByLabelText('Longitude');
+    await user.clear(latitude);
+    await user.type(latitude, '-6.2');
+    await user.clear(longitude);
+    await user.type(longitude, '106.85');
     expect(locationMapProps.at(-1)?.coordinates).toEqual({ lat: -6.2, lng: 106.85 });
   });
 

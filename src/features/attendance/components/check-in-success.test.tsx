@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { CheckInSuccess } from './check-in-success';
@@ -28,13 +29,12 @@ describe('CheckInSuccess', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('calls onDone exactly once when the Done button is clicked', () => {
-    vi.useFakeTimers();
+  it('calls onDone exactly once when the Done button is clicked', async () => {
+    const user = userEvent.setup();
     const onDone = vi.fn();
     renderScreen(onDone);
 
-    vi.advanceTimersByTime(5000);
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 });

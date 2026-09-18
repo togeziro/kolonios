@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -223,8 +224,8 @@ function renderPage() {
   );
 }
 
-function triggerCheckIn() {
-  fireEvent.click(screen.getByTestId('check-in-trigger'));
+async function triggerCheckIn(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByTestId('check-in-trigger'));
 }
 
 beforeEach(() => {
@@ -242,9 +243,10 @@ beforeEach(() => {
 
 describe('CheckInPage two-step check-in flow', () => {
   it('sends GPS coordinates incl. capturedAt from the device fix to checkInFn (regression)', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await waitFor(() =>
       expect(checkInFnMock).toHaveBeenCalledWith({
@@ -260,9 +262,10 @@ describe('CheckInPage two-step check-in flow', () => {
   });
 
   it('fetches GPS before uploading the selfie', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await waitFor(() => expect(checkInFnMock).toHaveBeenCalled());
     expect(getCurrentLocationMock.mock.invocationCallOrder[0]).toBeLessThan(
@@ -275,9 +278,10 @@ describe('CheckInPage two-step check-in flow', () => {
       status: 'stale',
       location: DEVICE_LOCATION
     });
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await waitFor(() =>
       expect(checkInFnMock).toHaveBeenCalledWith({
@@ -291,9 +295,10 @@ describe('CheckInPage two-step check-in flow', () => {
 
   it('aborts before any upload when GPS permission is denied, with a specific toast', async () => {
     getCurrentLocationMock.mockResolvedValue({ status: 'permission-denied' });
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await waitFor(() =>
       expect(toastMock.error).toHaveBeenCalledWith(
@@ -307,9 +312,10 @@ describe('CheckInPage two-step check-in flow', () => {
 
   it('aborts before checkInFn when the selfie upload fails (PHOTO_UPLOAD_FAILED)', async () => {
     uploadSelfieMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Photo upload failed'));
     expect(checkInFnMock).not.toHaveBeenCalled();
@@ -322,9 +328,10 @@ describe('CheckInPage two-step check-in flow', () => {
       code: 'OUTSIDE_RADIUS',
       message: 'You are outside the fence'
     });
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await waitFor(() =>
       expect(toastMock.error).toHaveBeenCalledWith(
@@ -335,22 +342,24 @@ describe('CheckInPage two-step check-in flow', () => {
   });
 
   it('moves to the success step when the server accepts the check-in', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
-    await waitFor(() => expect(screen.getByTestId('check-in-success')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('check-in-success')).toBeInTheDocument());
   });
 });
 
 describe('CheckInPage location + shift picker and enrollment gate (ticket 01)', () => {
   it('blocks the submit with an inline hint when no location is selected', async () => {
+    const user = userEvent.setup();
     renderPage();
     // Two locations configured → nothing preselected.
     await screen.findByTestId('location-7');
-    expect(screen.queryByTestId('no-location-hint')).toBeNull();
+    expect(screen.queryByTestId('no-location-hint')).not.toBeInTheDocument();
 
-    triggerCheckIn();
+    await triggerCheckIn(user);
 
     await screen.findByTestId('no-location-hint');
     expect(verifyFaceFnMock).not.toHaveBeenCalled();
@@ -362,22 +371,24 @@ describe('CheckInPage location + shift picker and enrollment gate (ticket 01)', 
   });
 
   it('clears the guard and submits the chosen location once the technician picks one', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-9'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-9'));
+    await triggerCheckIn(user);
 
     await waitFor(() =>
       expect(checkInFnMock).toHaveBeenCalledWith({
         data: expect.objectContaining({ locationId: 9 })
       })
     );
-    expect(screen.queryByTestId('no-location-hint')).toBeNull();
+    expect(screen.queryByTestId('no-location-hint')).not.toBeInTheDocument();
   });
 
   it('submits the default first shift when the technician picks only a location', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await waitFor(() =>
       expect(checkInFnMock).toHaveBeenCalledWith({
@@ -387,11 +398,12 @@ describe('CheckInPage location + shift picker and enrollment gate (ticket 01)', 
   });
 
   it('switches the submitted shift when the technician taps another shift', async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    fireEvent.click(await screen.findByTestId('shift-3'));
+    await user.click(await screen.findByTestId('location-7'));
+    await user.click(await screen.findByTestId('shift-3'));
     expect(screen.getByTestId('shift-3').getAttribute('data-selected')).toBe('true');
-    triggerCheckIn();
+    await triggerCheckIn(user);
 
     await waitFor(() =>
       expect(checkInFnMock).toHaveBeenCalledWith({
@@ -410,9 +422,10 @@ describe('CheckInPage location + shift picker and enrollment gate (ticket 01)', 
 
   it('renders the NOT_ENROLLED error instead of swallowing it', async () => {
     verifyFaceFnMock.mockResolvedValue({ verified: false, reason: 'NOT_ENROLLED' });
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await screen.findByTestId('face-error');
     expect(screen.getByTestId('face-error').textContent).toMatch(/enroll/i);
@@ -422,9 +435,10 @@ describe('CheckInPage location + shift picker and enrollment gate (ticket 01)', 
 
   it('still requires face-match on normal locations: NO_MATCH never reaches GPS/upload/save', async () => {
     verifyFaceFnMock.mockResolvedValue({ verified: false, reason: 'NO_MATCH' });
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.click(await screen.findByTestId('location-7'));
-    triggerCheckIn();
+    await user.click(await screen.findByTestId('location-7'));
+    await triggerCheckIn(user);
 
     await screen.findByTestId('face-error');
     expect(verifyFaceFnMock).toHaveBeenCalledTimes(1);
@@ -443,9 +457,10 @@ describe('CheckInPage checkout + history/correction sections (ticket 03)', () =>
 
   it('sends attendanceId + GPS fix + uploaded selfie photo to checkOutFn', async () => {
     setCheckedIn();
+    const user = userEvent.setup();
     renderPage();
 
-    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+    await user.click(await screen.findByTestId('check-out-trigger'));
 
     await waitFor(() => expect(checkOutFnMock).toHaveBeenCalledTimes(1));
     expect(checkOutFnMock).toHaveBeenCalledWith({
@@ -472,9 +487,10 @@ describe('CheckInPage checkout + history/correction sections (ticket 03)', () =>
       message: 'You are far away'
     });
     setCheckedIn();
+    const user = userEvent.setup();
     renderPage();
 
-    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+    await user.click(await screen.findByTestId('check-out-trigger'));
 
     await waitFor(() =>
       expect(toastMock.error).toHaveBeenCalledWith(
@@ -487,9 +503,10 @@ describe('CheckInPage checkout + history/correction sections (ticket 03)', () =>
   it('aborts checkout before any upload when GPS is unavailable', async () => {
     getCurrentLocationMock.mockResolvedValue({ status: 'permission-denied' });
     setCheckedIn();
+    const user = userEvent.setup();
     renderPage();
 
-    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+    await user.click(await screen.findByTestId('check-out-trigger'));
 
     await waitFor(() =>
       expect(toastMock.error).toHaveBeenCalledWith(
@@ -503,9 +520,10 @@ describe('CheckInPage checkout + history/correction sections (ticket 03)', () =>
   it('aborts checkout when the selfie upload fails (PHOTO_UPLOAD_FAILED)', async () => {
     uploadSelfieMock.mockRejectedValue(new Error('PHOTO_UPLOAD_FAILED'));
     setCheckedIn();
+    const user = userEvent.setup();
     renderPage();
 
-    fireEvent.click(await screen.findByTestId('check-out-trigger'));
+    await user.click(await screen.findByTestId('check-out-trigger'));
 
     await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Photo upload failed'));
     expect(checkOutFnMock).not.toHaveBeenCalled();
@@ -515,7 +533,7 @@ describe('CheckInPage checkout + history/correction sections (ticket 03)', () =>
   it('renders the history section on the single page', async () => {
     renderPage();
 
-    expect(await screen.findByTestId('attendance-history-section')).toBeTruthy();
+    expect(await screen.findByTestId('attendance-history-section')).toBeInTheDocument();
   });
 
   it('renders the correction form wired to today\u2019s record once checked in', async () => {
@@ -530,6 +548,6 @@ describe('CheckInPage checkout + history/correction sections (ticket 03)', () =>
     renderPage();
     await screen.findByTestId('attendance-history-section');
 
-    expect(screen.queryByTestId('attendance-correction-section')).toBeNull();
+    expect(screen.queryByTestId('attendance-correction-section')).not.toBeInTheDocument();
   });
 });

@@ -23,8 +23,8 @@ describe('employee payment history card (ADR-0003 per-record paid_at)', () => {
         paid_by: 'admin-1'
       }
     ]);
-    expect(screen.getByText('payroll.paidLabel')).toBeTruthy();
-    expect(screen.queryByText('payroll.unpaidLabel')).toBeNull();
+    expect(screen.getByText('payroll.paidLabel')).toBeInTheDocument();
+    expect(screen.queryByText('payroll.unpaidLabel')).not.toBeInTheDocument();
   });
 
   it('renders Paid when the period is paid, even if the record row has no stamp (defensive: period status is sufficient when in paid/locked)', () => {
@@ -46,8 +46,8 @@ describe('employee payment history card (ADR-0003 per-record paid_at)', () => {
         paid_by: null
       }
     ]);
-    expect(screen.getByText('payroll.paidLabel')).toBeTruthy();
-    expect(screen.queryByText('payroll.unpaidLabel')).toBeNull();
+    expect(screen.getByText('payroll.paidLabel')).toBeInTheDocument();
+    expect(screen.queryByText('payroll.unpaidLabel')).not.toBeInTheDocument();
   });
 
   it('renders Unpaid for an unstamped record with a ready_to_pay period', () => {
@@ -64,7 +64,7 @@ describe('employee payment history card (ADR-0003 per-record paid_at)', () => {
         paid_by: null
       }
     ]);
-    expect(screen.queryByText('payroll.paidLabel')).toBeNull();
-    expect(screen.getByText('payroll.unpaidLabel')).toBeTruthy();
+    expect(screen.queryByText('payroll.paidLabel')).not.toBeInTheDocument();
+    expect(screen.getByText('payroll.unpaidLabel')).toBeInTheDocument();
   });
 });

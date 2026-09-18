@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createElement } from 'react';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -99,20 +100,16 @@ function renderDialog(props: {
   };
 }
 
-async function fillCreateForm() {
+async function fillCreateForm(user: ReturnType<typeof userEvent.setup>) {
   const employee = (await screen.findByTestId('manual-attendance-employee')) as HTMLSelectElement;
   await screen.findByRole('option', { name: 'Aldi Pranata' });
-  await act(async () => {
-    fireEvent.change(employee, { target: { value: 'emp-1' } });
-  });
+  await user.selectOptions(employee, 'emp-1');
   const checkIn = (await screen.findByTestId('manual-attendance-check-in')) as HTMLInputElement;
-  await act(async () => {
-    fireEvent.change(checkIn, { target: { value: '08:00' } });
-  });
+  await user.clear(checkIn);
+  await user.type(checkIn, '08:00');
   const checkOut = (await screen.findByTestId('manual-attendance-check-out')) as HTMLInputElement;
-  await act(async () => {
-    fireEvent.change(checkOut, { target: { value: '13:00' } });
-  });
+  await user.clear(checkOut);
+  await user.type(checkOut, '13:00');
 }
 
 beforeEach(() => {
@@ -129,12 +126,15 @@ describe('AdminAttendanceAddDialog', () => {
   it('renders the Add Attendance title + description when open in create mode', async () => {
     renderDialog({ open: true });
     await waitFor(() => {
-      expect(screen.getByText('Add Attendance')).toBeTruthy();
+      expect(screen.getByText('Add Attendance')).toBeInTheDocument();
     });
-    expect(screen.getByText('Record an attendance entry manually for an employee')).toBeTruthy();
+    expect(
+      screen.getByText('Record an attendance entry manually for an employee')
+    ).toBeInTheDocument();
   });
 
   it('submits confirmOverwrite: false first, then true on the confirm step', async () => {
+    const user = userEvent.setup();
     recordManualAttendanceFnMock
       .mockResolvedValueOnce({
         kind: 'overwrite_required',
@@ -146,11 +146,9 @@ describe('AdminAttendanceAddDialog', () => {
       });
     renderDialog({ open: true });
 
-    await fillCreateForm();
+    await fillCreateForm(user);
     const save = (await screen.findByTestId('manual-attendance-save')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(save);
-    });
+    await user.click(save);
 
     await waitFor(() => {
       expect(recordManualAttendanceFnMock).toHaveBeenCalledTimes(1);
@@ -163,16 +161,14 @@ describe('AdminAttendanceAddDialog', () => {
 
     // The overwrite prompt should render with the existing-row summary.
     await waitFor(() => {
-      expect(screen.getByText('Overwrite existing entry?')).toBeTruthy();
+      expect(screen.getByText('Overwrite existing entry?')).toBeInTheDocument();
     });
-    expect(screen.getByText(/07:30/)).toBeTruthy();
+    expect(screen.getByText(/07:30/)).toBeInTheDocument();
     expect(screen.getAllByText(/Aldi Pranata/).length).toBeGreaterThan(0);
 
     // Confirm the overwrite.
     const confirmButton = screen.getByRole('button', { name: 'Overwrite' }) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(confirmButton);
-    });
+    await user.click(confirmButton);
 
     await waitFor(() => {
       expect(recordManualAttendanceFnMock).toHaveBeenCalledTimes(2);
@@ -189,6 +185,7 @@ describe('AdminAttendanceAddDialog', () => {
   });
 
   it('keeps the overwrite prompt open when the confirm call fails', async () => {
+    const user = userEvent.setup();
     recordManualAttendanceFnMock
       .mockResolvedValueOnce({
         kind: 'overwrite_required',
@@ -197,58 +194,52 @@ describe('AdminAttendanceAddDialog', () => {
       .mockRejectedValueOnce(new Error('boom'));
     renderDialog({ open: true });
 
-    await fillCreateForm();
+    await fillCreateForm(user);
     const save = (await screen.findByTestId('manual-attendance-save')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(save);
-    });
+    await user.click(save);
 
     await waitFor(() => {
-      expect(screen.getByText('Overwrite existing entry?')).toBeTruthy();
+      expect(screen.getByText('Overwrite existing entry?')).toBeInTheDocument();
     });
 
     const confirmButton = screen.getByRole('button', { name: 'Overwrite' }) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(confirmButton);
-    });
+    await user.click(confirmButton);
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledTimes(1);
     });
     // Prompt stays open for a retry.
-    expect(screen.getByText('Overwrite existing entry?')).toBeTruthy();
+    expect(screen.getByText('Overwrite existing entry?')).toBeInTheDocument();
     expect(recordManualAttendanceFnMock).toHaveBeenCalledTimes(2);
   });
 
   it('shows field errors and does not submit when required fields are empty', async () => {
+    const user = userEvent.setup();
     renderDialog({ open: true });
 
     const save = (await screen.findByTestId('manual-attendance-save')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(save);
-    });
+    await user.click(save);
 
     // Field validators run on submit: employee + clock-in are empty.
     await waitFor(() => {
-      expect(screen.getByText('Select an employee')).toBeTruthy();
+      expect(screen.getByText('Select an employee')).toBeInTheDocument();
     });
-    expect(screen.getByText('Enter a clock-in time')).toBeTruthy();
+    expect(screen.getByText('Enter a clock-in time')).toBeInTheDocument();
     expect(recordManualAttendanceFnMock).not.toHaveBeenCalled();
     expect(toastErrorMock).not.toHaveBeenCalled();
   });
 
   it('closes + toasts on a plain created result (no conflict)', async () => {
+    const user = userEvent.setup();
     recordManualAttendanceFnMock.mockResolvedValueOnce({
       kind: 'created',
       row: { check_in_time: '08:00', check_out_time: '13:00' }
     });
     const { onOpenChange } = renderDialog({ open: true });
 
-    await fillCreateForm();
+    await fillCreateForm(user);
     const save = (await screen.findByTestId('manual-attendance-save')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(save);
-    });
+    await user.click(save);
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledTimes(1);
@@ -268,7 +259,7 @@ describe('AdminAttendanceAddDialog', () => {
       }
     });
     await waitFor(() => {
-      expect(screen.getByText('Edit Attendance')).toBeTruthy();
+      expect(screen.getByText('Edit Attendance')).toBeInTheDocument();
     });
 
     const employee = (await screen.findByTestId('manual-attendance-employee')) as HTMLSelectElement;
@@ -280,7 +271,7 @@ describe('AdminAttendanceAddDialog', () => {
     expect(buttons.some((b) => (b as HTMLButtonElement).disabled)).toBe(true);
 
     // Lock hint is visible.
-    expect(screen.getByText(/locked while editing/i)).toBeTruthy();
+    expect(screen.getByText(/locked while editing/i)).toBeInTheDocument();
 
     // Times are prefilled from the row.
     const checkIn = (await screen.findByTestId('manual-attendance-check-in')) as HTMLInputElement;
@@ -297,7 +288,7 @@ describe('AdminAttendanceAddDialog', () => {
     await i18n.changeLanguage('id');
     renderDialog({ open: true });
     await waitFor(() => {
-      expect(screen.getByText('Tambah Kehadiran')).toBeTruthy();
+      expect(screen.getByText('Tambah Kehadiran')).toBeInTheDocument();
     });
     const save = (await screen.findByTestId('manual-attendance-save')) as HTMLButtonElement;
     expect(save.textContent).toMatch(/Simpan/);

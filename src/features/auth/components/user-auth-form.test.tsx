@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -72,15 +73,18 @@ afterEach(() => {
 
 describe('UserAuthForm autofill handling', () => {
   it('submits browser-autofilled credentials on the first click', async () => {
+    const user = userEvent.setup();
     renderForm();
     autofill('email', 'admin@example.com');
     autofill('password', 'Password123!');
     await act(async () => {
       vi.advanceTimersByTime(1000);
     });
-    await act(async () => {
-      fireEvent.click(loginButton());
-    });
+    // RTL's asyncWrapper drains via a real setTimeout that never fires under
+    // fake timers — the autofill debounce above already ran, so go back to
+    // real timers before simulating the click.
+    vi.useRealTimers();
+    await user.click(loginButton());
     expect(emailSignInMock).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'admin@example.com',
@@ -91,24 +95,26 @@ describe('UserAuthForm autofill handling', () => {
   });
 
   it('keeps autofilled values in the fields after a re-render', async () => {
+    const user = userEvent.setup();
     renderForm();
     autofill('email', 'admin@example.com');
     autofill('password', 'Password123!');
     await act(async () => {
       vi.advanceTimersByTime(1000);
     });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('checkbox'));
-    });
+    // See above: userEvent needs real timers (RTL asyncWrapper setTimeout).
+    vi.useRealTimers();
+    await user.click(screen.getByRole('checkbox'));
     expect((document.getElementById('email') as HTMLInputElement).value).toBe('admin@example.com');
     expect((document.getElementById('password') as HTMLInputElement).value).toBe('Password123!');
   });
 
   it('shows an error toast and does not call sign-in when fields are empty', async () => {
+    const user = userEvent.setup();
+    // No timers under test here — userEvent needs real timers (see above).
+    vi.useRealTimers();
     renderForm();
-    await act(async () => {
-      fireEvent.click(loginButton());
-    });
+    await user.click(loginButton());
     expect(toastErrorMock).toHaveBeenCalled();
     expect(emailSignInMock).not.toHaveBeenCalled();
   });
@@ -123,19 +129,19 @@ describe('UserAuthForm remember-me checkbox', () => {
   });
 
   it('sends rememberMe when the checkbox is checked', async () => {
+    const user = userEvent.setup();
+    // Typed values flow through onChange — no debounce timers needed, and
+    // userEvent needs real timers (RTL asyncWrapper setTimeout).
+    vi.useRealTimers();
     renderForm();
-    fireEvent.change(document.getElementById('email') as HTMLInputElement, {
-      target: { value: 'admin@example.com' }
-    });
-    fireEvent.change(document.getElementById('password') as HTMLInputElement, {
-      target: { value: 'Password123!' }
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('checkbox'));
-    });
-    await act(async () => {
-      fireEvent.click(loginButton());
-    });
+    const email = document.getElementById('email') as HTMLInputElement;
+    const password = document.getElementById('password') as HTMLInputElement;
+    await user.clear(email);
+    await user.type(email, 'admin@example.com');
+    await user.clear(password);
+    await user.type(password, 'Password123!');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(loginButton());
     expect(emailSignInMock).toHaveBeenCalledWith(expect.objectContaining({ rememberMe: true }));
   });
 });

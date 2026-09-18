@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -39,6 +40,7 @@ const sample: NotificationItem[] = [
 
 describe('NotificationCenter', () => {
   it('renders notifications returned as a raw array by the server fn', async () => {
+    const user = userEvent.setup();
     notificationListQueryOptions.mockReturnValue({
       queryKey: ['notifications', 'list'],
       queryFn: async () => sample
@@ -53,7 +55,7 @@ describe('NotificationCenter', () => {
       </I18nextProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
-    await waitFor(() => expect(screen.getByText('Welcome')).toBeTruthy());
+    await user.click(screen.getByRole('button', { name: /notifications/i }));
+    await waitFor(() => expect(screen.getByText('Welcome')).toBeInTheDocument());
   });
 });

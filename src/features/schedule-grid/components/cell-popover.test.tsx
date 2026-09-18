@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import '@/i18n/config';
@@ -126,6 +127,7 @@ afterEach(() => {
 
 describe('CellPopover', () => {
   it('renders the trigger button and opens the popover on click', async () => {
+    const user = userEvent.setup();
     render(
       withQueryClient(
         createElement(CellPopover, {
@@ -137,18 +139,17 @@ describe('CellPopover', () => {
     );
 
     const trigger = screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05');
-    expect(trigger).toBeTruthy();
+    expect(trigger).toBeInTheDocument();
 
-    await act(async () => {
-      fireEvent.click(trigger);
-    });
+    await user.click(trigger);
 
     await waitFor(() => {
-      expect(screen.getByTestId('schedule-grid-cell-popover-u1-2026-08-05')).toBeTruthy();
+      expect(screen.getByTestId('schedule-grid-cell-popover-u1-2026-08-05')).toBeInTheDocument();
     });
   });
 
   it('shows the policy-missing warning when cell.policyMissing is true', async () => {
+    const user = userEvent.setup();
     render(
       withQueryClient(
         createElement(CellPopover, {
@@ -159,16 +160,15 @@ describe('CellPopover', () => {
       )
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
-    });
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('policy-missing-warning')).toBeTruthy();
+      expect(screen.getByTestId('policy-missing-warning')).toBeInTheDocument();
     });
   });
 
   it('shows the day-off conflict UX when cell.isDayOff is true', async () => {
+    const user = userEvent.setup();
     render(
       withQueryClient(
         createElement(CellPopover, {
@@ -179,16 +179,15 @@ describe('CellPopover', () => {
       )
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
-    });
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('day-off-conflict-warning')).toBeTruthy();
+      expect(screen.getByTestId('day-off-conflict-warning')).toBeInTheDocument();
     });
   });
 
   it('shows the orphan day-off note when cell.isDayOff is true', async () => {
+    const user = userEvent.setup();
     render(
       withQueryClient(
         createElement(CellPopover, {
@@ -199,14 +198,15 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('conflict-day-off-note')).toBeTruthy();
+      expect(screen.getByTestId('conflict-day-off-note')).toBeInTheDocument();
     });
   });
 
   it('invokes setCellShiftFn on save when a shift is selected', async () => {
+    const user = userEvent.setup();
     const mut = mutStub();
     setShiftMock.mockReturnValue(mut);
 
@@ -220,15 +220,13 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('popover-save-button')).toBeTruthy();
+      expect(screen.getByTestId('popover-save-button')).toBeInTheDocument();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('popover-save-button'));
-    });
+    await user.click(screen.getByTestId('popover-save-button'));
 
     expect(mut.mutateAsync).toHaveBeenCalledWith({
       userId: 'u1',
@@ -238,6 +236,7 @@ describe('CellPopover', () => {
   });
 
   it('threads the day-off reason to setCellDayOffFn when saving', async () => {
+    const user = userEvent.setup();
     const mut = mutStub();
     setDayOffMock.mockReturnValue(mut);
 
@@ -251,25 +250,20 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('day-off-switch')).toBeTruthy();
+      expect(screen.getByTestId('day-off-switch')).toBeInTheDocument();
     });
 
     // Toggle the day-off switch and type a reason.
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('day-off-switch'));
-    });
+    await user.click(screen.getByTestId('day-off-switch'));
 
     const reasonInput = screen.getByTestId('day-off-reason-input') as HTMLInputElement;
-    await act(async () => {
-      fireEvent.change(reasonInput, { target: { value: 'Family event' } });
-    });
+    await user.clear(reasonInput);
+    await user.type(reasonInput, 'Family event');
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('popover-save-button'));
-    });
+    await user.click(screen.getByTestId('popover-save-button'));
 
     expect(mut.mutateAsync).toHaveBeenCalledWith({
       userId: 'u1',
@@ -279,6 +273,7 @@ describe('CellPopover', () => {
   });
 
   it('shows the bulk-partial toast when apply-to-week has partial failures', async () => {
+    const user = userEvent.setup();
     const mut = mutStub();
     mut.mutateAsync.mockResolvedValue({
       success: true,
@@ -304,19 +299,15 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('apply-to-week-switch')).toBeTruthy();
+      expect(screen.getByTestId('apply-to-week-switch')).toBeInTheDocument();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('apply-to-week-switch'));
-    });
+    await user.click(screen.getByTestId('apply-to-week-switch'));
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('popover-save-button'));
-    });
+    await user.click(screen.getByTestId('popover-save-button'));
 
     expect(toast.warning).toHaveBeenCalledWith(
       expect.stringMatching(/Applied to 4 days.*2 failed/i)
@@ -324,6 +315,7 @@ describe('CellPopover', () => {
   });
 
   it('anchors "Apply to all 7 days" to the displayed Monday-start week, not the Sunday-start window', async () => {
+    const user = userEvent.setup();
     // Regression test (issue 03 observed): the popover used to anchor
     // `cell.date − dow` (Sunday-start), so on a Monday-start grid it wrote
     // Sun-1wk…Sat and missed the visible Sunday. With `weekStart` (the
@@ -359,19 +351,15 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-09-02'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-09-02'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('apply-to-week-switch')).toBeTruthy();
+      expect(screen.getByTestId('apply-to-week-switch')).toBeInTheDocument();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('apply-to-week-switch'));
-    });
+    await user.click(screen.getByTestId('apply-to-week-switch'));
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('popover-save-button'));
-    });
+    await user.click(screen.getByTestId('popover-save-button'));
 
     // Sunday-start anchor would have been 2026-08-30 (missing visible Sun 09-06).
     expect(mut.mutateAsync).toHaveBeenCalledWith({
@@ -384,6 +372,7 @@ describe('CellPopover', () => {
   });
 
   it('hides Clear for an assignment-backed shift and offers Delete schedule instead', async () => {
+    const user = userEvent.setup();
     // Regression test: the Clear button used to be gated on `cell.shiftId != null`,
     // which the resolver also stamps from the covering assignment. Clear only
     // deletes `date_overrides` / `day_offs`, so it reported success while the
@@ -398,15 +387,16 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+      expect(screen.getByTestId('delete-assignment-button')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('clear-cell-footer-button')).toBeNull();
+    expect(screen.queryByTestId('clear-cell-footer-button')).not.toBeInTheDocument();
   });
 
   it('shows Clear when the cell owns a date override', async () => {
+    const user = userEvent.setup();
     render(
       withQueryClient(
         createElement(CellPopover, {
@@ -417,16 +407,17 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('clear-cell-footer-button')).toBeTruthy();
+      expect(screen.getByTestId('clear-cell-footer-button')).toBeInTheDocument();
     });
     // The assignment is still behind the override, so it can also be deleted.
-    expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+    expect(screen.getByTestId('delete-assignment-button')).toBeInTheDocument();
   });
 
   it('offers no Delete schedule when the cell has no assignment', async () => {
+    const user = userEvent.setup();
     render(
       withQueryClient(
         createElement(CellPopover, {
@@ -447,15 +438,16 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('day-off-conflict-warning')).toBeTruthy();
+      expect(screen.getByTestId('day-off-conflict-warning')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('delete-assignment-button')).toBeNull();
+    expect(screen.queryByTestId('delete-assignment-button')).not.toBeInTheDocument();
   });
 
   it('deletes the resolved assignment after confirming', async () => {
+    const user = userEvent.setup();
     const mut = mutStub();
     deleteAssignmentMock.mockReturnValue(mut);
 
@@ -469,20 +461,16 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+      expect(screen.getByTestId('delete-assignment-button')).toBeInTheDocument();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('delete-assignment-button'));
-    });
+    await user.click(screen.getByTestId('delete-assignment-button'));
 
     const dialog = await screen.findByRole('alertdialog');
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete schedule' }));
-    });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete schedule' }));
 
     expect(mut.mutateAsync).toHaveBeenCalledWith({
       userId: 'u1',
@@ -492,6 +480,7 @@ describe('CellPopover', () => {
   });
 
   it('treats an already-deleted assignment as a no-op, not a failure', async () => {
+    const user = userEvent.setup();
     const { toast } = await import('sonner');
     const mut = mutStub();
     mut.mutateAsync.mockResolvedValue({ success: false, error: 'notFound' });
@@ -507,20 +496,16 @@ describe('CellPopover', () => {
       )
     );
 
-    fireEvent.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
+    await user.click(screen.getByTestId('schedule-grid-cell-trigger-u1-2026-08-05'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('delete-assignment-button')).toBeTruthy();
+      expect(screen.getByTestId('delete-assignment-button')).toBeInTheDocument();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('delete-assignment-button'));
-    });
+    await user.click(screen.getByTestId('delete-assignment-button'));
 
     const dialog = await screen.findByRole('alertdialog');
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete schedule' }));
-    });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete schedule' }));
 
     expect(toast.info).toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();

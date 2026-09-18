@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -68,49 +69,40 @@ beforeEach(() => {
 
 describe('UserPasswordDialog', () => {
   it('rejects a short password without calling the server', async () => {
+    const user = userEvent.setup();
     renderDialog();
     await openForm();
-    fireEvent.change(screen.getByLabelText('New Password'), {
-      target: { value: 'short' }
-    });
-    fireEvent.change(screen.getByLabelText('Confirm Password'), {
-      target: { value: 'short' }
-    });
-    fireEvent.click(submitButton());
+    await user.type(screen.getByLabelText('New Password'), 'short');
+    await user.type(screen.getByLabelText('Confirm Password'), 'short');
+    await user.click(submitButton());
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeTruthy();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
     });
     expect(mutationFnMock).not.toHaveBeenCalled();
   });
 
   it('rejects mismatched confirmation', async () => {
+    const user = userEvent.setup();
     renderDialog();
     await openForm();
-    fireEvent.change(screen.getByLabelText('New Password'), {
-      target: { value: 'n3w!!passw0rd' }
-    });
-    fireEvent.change(screen.getByLabelText('Confirm Password'), {
-      target: { value: 'different!!' }
-    });
-    fireEvent.click(submitButton());
+    await user.type(screen.getByLabelText('New Password'), 'n3w!!passw0rd');
+    await user.type(screen.getByLabelText('Confirm Password'), 'different!!');
+    await user.click(submitButton());
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeTruthy();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
     });
     expect(mutationFnMock).not.toHaveBeenCalled();
   });
 
   it('submits matching passwords and shows a success toast', async () => {
+    const user = userEvent.setup();
     renderDialog();
     await openForm();
-    fireEvent.change(screen.getByLabelText('New Password'), {
-      target: { value: 'n3w!!passw0rd' }
-    });
-    fireEvent.change(screen.getByLabelText('Confirm Password'), {
-      target: { value: 'n3w!!passw0rd' }
-    });
-    fireEvent.click(submitButton());
+    await user.type(screen.getByLabelText('New Password'), 'n3w!!passw0rd');
+    await user.type(screen.getByLabelText('Confirm Password'), 'n3w!!passw0rd');
+    await user.click(submitButton());
 
     await waitFor(() => {
       expect(mutationFnMock).toHaveBeenCalledWith(

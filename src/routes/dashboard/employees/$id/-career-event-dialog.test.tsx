@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -97,31 +98,31 @@ describe('CareerEventDialog — per-category visible fields', () => {
   it('renders the designation picker for the position category', async () => {
     renderDialog('position');
     await waitFor(() => screen.getByTestId('career-event-to-designation'));
-    expect(screen.getByTestId('career-event-to-designation')).toBeTruthy();
-    expect(screen.getByTestId('career-event-effective-date')).toBeTruthy();
-    expect(screen.getByTestId('career-event-notes')).toBeTruthy();
-    expect(screen.queryByTestId('career-event-to-department')).toBeNull();
-    expect(screen.queryByTestId('career-event-to-employment-status')).toBeNull();
+    expect(screen.getByTestId('career-event-to-designation')).toBeInTheDocument();
+    expect(screen.getByTestId('career-event-effective-date')).toBeInTheDocument();
+    expect(screen.getByTestId('career-event-notes')).toBeInTheDocument();
+    expect(screen.queryByTestId('career-event-to-department')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('career-event-to-employment-status')).not.toBeInTheDocument();
   });
 
   it('renders the department picker for the division category', async () => {
     renderDialog('division');
     await waitFor(() => screen.getByTestId('career-event-to-department'));
-    expect(screen.getByTestId('career-event-to-department')).toBeTruthy();
-    expect(screen.getByTestId('career-event-effective-date')).toBeTruthy();
-    expect(screen.getByTestId('career-event-notes')).toBeTruthy();
-    expect(screen.queryByTestId('career-event-to-designation')).toBeNull();
-    expect(screen.queryByTestId('career-event-to-employment-status')).toBeNull();
+    expect(screen.getByTestId('career-event-to-department')).toBeInTheDocument();
+    expect(screen.getByTestId('career-event-effective-date')).toBeInTheDocument();
+    expect(screen.getByTestId('career-event-notes')).toBeInTheDocument();
+    expect(screen.queryByTestId('career-event-to-designation')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('career-event-to-employment-status')).not.toBeInTheDocument();
   });
 
   it('renders the employment-status select for the employment_status category', async () => {
     renderDialog('employment_status');
     await waitFor(() => screen.getByTestId('career-event-to-employment-status'));
-    expect(screen.getByTestId('career-event-to-employment-status')).toBeTruthy();
-    expect(screen.getByTestId('career-event-effective-date')).toBeTruthy();
-    expect(screen.getByTestId('career-event-notes')).toBeTruthy();
-    expect(screen.queryByTestId('career-event-to-designation')).toBeNull();
-    expect(screen.queryByTestId('career-event-to-department')).toBeNull();
+    expect(screen.getByTestId('career-event-to-employment-status')).toBeInTheDocument();
+    expect(screen.getByTestId('career-event-effective-date')).toBeInTheDocument();
+    expect(screen.getByTestId('career-event-notes')).toBeInTheDocument();
+    expect(screen.queryByTestId('career-event-to-designation')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('career-event-to-department')).not.toBeInTheDocument();
   });
 
   it('defaults the effective date input to today', async () => {
@@ -149,15 +150,15 @@ describe('CareerEventDialog — per-category visible fields', () => {
 
 describe('CareerEventDialog — submission', () => {
   it('calls appendCareerEventFn with a position payload and invalidates the timeline query', async () => {
+    const user = userEvent.setup();
     renderDialog('position');
     const designationPicker = (await waitFor(() =>
       screen.getByTestId('career-event-to-designation')
     )) as HTMLSelectElement;
-    fireEvent.change(designationPicker, { target: { value: '6' } });
-    fireEvent.change(screen.getByTestId('career-event-notes'), {
-      target: { value: 'Promoted after Q2 review' }
-    });
-    fireEvent.click(screen.getByTestId('career-event-submit'));
+    await user.selectOptions(designationPicker, '6');
+    await user.clear(screen.getByTestId('career-event-notes'));
+    await user.type(screen.getByTestId('career-event-notes'), 'Promoted after Q2 review');
+    await user.click(screen.getByTestId('career-event-submit'));
 
     await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled());
     const call = mutateAsyncMock.mock.calls[0]?.[0] as {
@@ -171,12 +172,13 @@ describe('CareerEventDialog — submission', () => {
   });
 
   it('calls appendCareerEventFn with a division payload (department picker)', async () => {
+    const user = userEvent.setup();
     renderDialog('division');
     const departmentPicker = (await waitFor(() =>
       screen.getByTestId('career-event-to-department')
     )) as HTMLSelectElement;
-    fireEvent.change(departmentPicker, { target: { value: '10' } });
-    fireEvent.click(screen.getByTestId('career-event-submit'));
+    await user.selectOptions(departmentPicker, '10');
+    await user.click(screen.getByTestId('career-event-submit'));
 
     await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled());
     const call = mutateAsyncMock.mock.calls[0]?.[0] as {
@@ -188,9 +190,10 @@ describe('CareerEventDialog — submission', () => {
   });
 
   it('calls appendCareerEventFn with an employment_status payload', async () => {
+    const user = userEvent.setup();
     renderDialog('employment_status');
     await waitFor(() => screen.getByTestId('career-event-to-employment-status'));
-    fireEvent.click(screen.getByTestId('career-event-submit'));
+    await user.click(screen.getByTestId('career-event-submit'));
 
     await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled());
     const call = mutateAsyncMock.mock.calls[0]?.[0] as {
@@ -202,15 +205,15 @@ describe('CareerEventDialog — submission', () => {
   });
 
   it('trims empty notes to null before sending the payload', async () => {
+    const user = userEvent.setup();
     renderDialog('position');
     const designationPicker = (await waitFor(() =>
       screen.getByTestId('career-event-to-designation')
     )) as HTMLSelectElement;
-    fireEvent.change(designationPicker, { target: { value: '5' } });
-    fireEvent.change(screen.getByTestId('career-event-notes'), {
-      target: { value: '   ' }
-    });
-    fireEvent.click(screen.getByTestId('career-event-submit'));
+    await user.selectOptions(designationPicker, '5');
+    await user.clear(screen.getByTestId('career-event-notes'));
+    await user.type(screen.getByTestId('career-event-notes'), '   ');
+    await user.click(screen.getByTestId('career-event-submit'));
 
     await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled());
     const call = mutateAsyncMock.mock.calls[0]?.[0] as { notes: string | null };
@@ -218,17 +221,18 @@ describe('CareerEventDialog — submission', () => {
   });
 
   it('blocks submission and toasts the translated message when the effective date is invalid', async () => {
+    const user = userEvent.setup();
     // employment_status needs no picker selection, so the only invalid field
     // is the empty effective date — the app-level regex guard must fire.
     renderDialog('employment_status');
     await waitFor(() => screen.getByTestId('career-event-effective-date'));
-    fireEvent.change(screen.getByTestId('career-event-effective-date'), {
-      target: { value: '' }
-    });
-    // Submit directly (not via button click) so the empty `required` date
-    // input cannot short-circuit the flow via HTML constraint validation —
+    await user.clear(screen.getByTestId('career-event-effective-date'));
+    // Submit the form directly (not via button click) so the empty `required`
+    // date input cannot short-circuit the flow via HTML constraint validation —
     // the app-level regex guard is what we are exercising.
-    fireEvent.submit(screen.getByTestId('career-event-form'));
+    screen
+      .getByTestId('career-event-form')
+      .dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
 
     await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
     const message = vi.mocked(toast.error).mock.calls[0]?.[0];

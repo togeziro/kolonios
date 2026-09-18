@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -116,25 +117,26 @@ describe('CareerTimelineSubTab — header', () => {
       events: []
     });
     renderTab();
-    expect(screen.getByText('Length of Service')).toBeTruthy();
-    expect(screen.getByText('2 Year 3 Month')).toBeTruthy();
-    expect(screen.getByText(/Time with the company/i)).toBeTruthy();
+    expect(screen.getByText('Length of Service')).toBeInTheDocument();
+    expect(screen.getByText('2 Year 3 Month')).toBeInTheDocument();
+    expect(screen.getByText(/Time with the company/i)).toBeInTheDocument();
   });
 
   it('renders three enabled Change buttons (Department / Position / Work Status)', () => {
     setQuery({ lengthOfService: { years: 0, months: 0 }, events: [] });
     renderTab();
-    expect(screen.getByRole('button', { name: 'Change Department' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Change Position' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Change Work Status' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Change Department' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change Position' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change Work Status' })).toBeInTheDocument();
   });
 
-  it('opens the CareerEventDialog when Change Position is clicked', () => {
+  it('opens the CareerEventDialog when Change Position is clicked', async () => {
+    const user = userEvent.setup();
     setQuery({ lengthOfService: { years: 0, months: 0 }, events: [] });
     renderTab();
-    expect(screen.queryByTestId('career-event-dialog-position')).toBeNull();
-    fireEvent.click(screen.getByTestId('career-action-position'));
-    expect(screen.getByTestId('career-event-dialog-position')).toBeTruthy();
+    expect(screen.queryByTestId('career-event-dialog-position')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('career-action-position'));
+    expect(screen.getByTestId('career-event-dialog-position')).toBeInTheDocument();
   });
 });
 
@@ -142,13 +144,13 @@ describe('CareerTimelineSubTab — empty + loading + error states', () => {
   it('renders the empty-state message when there are no events', () => {
     setQuery({ lengthOfService: '1 Month', events: [] });
     renderTab();
-    expect(screen.getByText(/No career events recorded yet/i)).toBeTruthy();
+    expect(screen.getByText(/No career events recorded yet/i)).toBeInTheDocument();
   });
 
   it('renders the loading state while the query is pending', () => {
     setQuery(undefined, { isLoading: true });
     renderTab();
-    expect(screen.getByText(/Loading career history/i)).toBeTruthy();
+    expect(screen.getByText(/Loading career history/i)).toBeInTheDocument();
   });
 });
 
@@ -235,8 +237,8 @@ describe('CareerTimelineSubTab — event card rendering', () => {
     ];
     setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     renderTab();
-    expect(screen.getByText(/Not Set/)).toBeTruthy();
-    expect(screen.getByText('Field Services Engineer')).toBeTruthy();
+    expect(screen.getByText(/Not Set/)).toBeInTheDocument();
+    expect(screen.getByText('Field Services Engineer')).toBeInTheDocument();
   });
 
   it('renders both from and to labels when both are set, with to_label bolded', () => {
@@ -253,11 +255,11 @@ describe('CareerTimelineSubTab — event card rendering', () => {
     setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const item = container.querySelector('[data-testid="career-event-item"]');
-    expect(item).toBeTruthy();
+    expect(item).toBeInTheDocument();
     expect(item!.textContent).toContain('Helper Field Services Engineer');
     expect(item!.textContent).toContain('Field Services Engineer');
     const bolded = item!.querySelector('[data-testid="career-event-to"]');
-    expect(bolded).toBeTruthy();
+    expect(bolded).toBeInTheDocument();
     expect(bolded!.className).toMatch(/font-bold/);
   });
 });
@@ -277,7 +279,9 @@ describe('CareerTimelineSubTab — recorded-at meta line', () => {
     ];
     setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
-    expect(container.querySelector('[data-testid="career-event-recorded-meta"]')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="career-event-recorded-meta"]')
+    ).not.toBeInTheDocument();
   });
 
   it('shows the recorded-at meta line when effective_date differs from created_at', () => {
@@ -296,13 +300,14 @@ describe('CareerTimelineSubTab — recorded-at meta line', () => {
     setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const meta = container.querySelector('[data-testid="career-event-recorded-meta"]');
-    expect(meta).toBeTruthy();
+    expect(meta).toBeInTheDocument();
     expect(meta!.textContent).toMatch(/system/i);
   });
 });
 
 describe('CareerTimelineSubTab — expandable notes', () => {
-  it('expands a note when the show-notes toggle is clicked', () => {
+  it('expands a note when the show-notes toggle is clicked', async () => {
+    const user = userEvent.setup();
     const events = [
       makeEvent({
         id: 1,
@@ -317,10 +322,10 @@ describe('CareerTimelineSubTab — expandable notes', () => {
     setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     renderTab();
     const toggle = screen.getByRole('button', { name: /Show notes/i });
-    expect(toggle).toBeTruthy();
-    fireEvent.click(toggle);
-    expect(screen.getByText('Promoted after Q2 review')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Hide notes/i })).toBeTruthy();
+    expect(toggle).toBeInTheDocument();
+    await user.click(toggle);
+    expect(screen.getByText('Promoted after Q2 review')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Hide notes/i })).toBeInTheDocument();
   });
 
   it('omits the notes toggle when notes is null', () => {
@@ -337,6 +342,8 @@ describe('CareerTimelineSubTab — expandable notes', () => {
     setQuery({ lengthOfService: { years: 0, months: 0 }, events });
     const { container } = renderTab();
     const item = container.querySelector('[data-testid="career-event-item"]');
-    expect(within(item as HTMLElement).queryByRole('button', { name: /Show notes/i })).toBeNull();
+    expect(
+      within(item as HTMLElement).queryByRole('button', { name: /Show notes/i })
+    ).not.toBeInTheDocument();
   });
 });

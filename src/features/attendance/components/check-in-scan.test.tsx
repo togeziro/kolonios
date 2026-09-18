@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { CheckInScan } from './check-in-scan';
@@ -85,21 +86,23 @@ function renderScan(overrides: Partial<Parameters<typeof CheckInScan>[0]> = {}) 
 describe('CheckInScan location + shift picker', () => {
   it('renders one button per location and per shift', () => {
     renderScan();
-    expect(screen.getByRole('button', { name: /HQ/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Branch/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Morning/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Night/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /HQ/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Branch/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Morning/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Night/ })).toBeInTheDocument();
   });
 
-  it('calls onSelectLocation with the tapped location id', () => {
+  it('calls onSelectLocation with the tapped location id', async () => {
+    const user = userEvent.setup();
     const props = renderScan();
-    fireEvent.click(screen.getByRole('button', { name: /Branch/ }));
+    await user.click(screen.getByRole('button', { name: /Branch/ }));
     expect(props.onSelectLocation).toHaveBeenCalledWith(9);
   });
 
-  it('calls onSelectShift with the tapped shift id', () => {
+  it('calls onSelectShift with the tapped shift id', async () => {
+    const user = userEvent.setup();
     const props = renderScan();
-    fireEvent.click(screen.getByRole('button', { name: /Night/ }));
+    await user.click(screen.getByRole('button', { name: /Night/ }));
     expect(props.onSelectShift).toHaveBeenCalledWith(4);
   });
 
@@ -125,62 +128,64 @@ describe('CheckInScan location + shift picker', () => {
         />
       </I18nextProvider>
     );
-    expect(screen.queryByText(/Select your work location first/i)).toBeNull();
+    expect(screen.queryByText(/Select your work location first/i)).not.toBeInTheDocument();
     unmount();
     renderScan({ noLocationSelected: true });
-    expect(screen.getByText(/Select your work location first/i)).toBeTruthy();
+    expect(screen.getByText(/Select your work location first/i)).toBeInTheDocument();
   });
 });
 
 describe('CheckInScan enrollment gate', () => {
   it('replaces the camera with an enrollment link when not enrolled', () => {
     renderScan({ faceEnrolled: false, faceEnrollmentPending: false });
-    expect(screen.queryByTestId('face-capture')).toBeNull();
+    expect(screen.queryByTestId('face-capture')).not.toBeInTheDocument();
     const link = screen.getByTestId('enrollment-link');
     expect(link.getAttribute('href')).toBe('/dashboard/attendance/face-settings');
   });
 
   it('keeps the camera while the enrollment status is still loading', () => {
     renderScan({ faceEnrolled: false, faceEnrollmentPending: true });
-    expect(screen.getByTestId('face-capture')).toBeTruthy();
-    expect(screen.queryByTestId('enrollment-link')).toBeNull();
+    expect(screen.getByTestId('face-capture')).toBeInTheDocument();
+    expect(screen.queryByTestId('enrollment-link')).not.toBeInTheDocument();
   });
 
   it('shows the camera for enrolled users with no gate link', () => {
     renderScan({ faceEnrolled: true });
-    expect(screen.getByTestId('face-capture')).toBeTruthy();
-    expect(screen.queryByTestId('enrollment-link')).toBeNull();
+    expect(screen.getByTestId('face-capture')).toBeInTheDocument();
+    expect(screen.queryByTestId('enrollment-link')).not.toBeInTheDocument();
   });
 
   it('renders the face error text (NOT_ENROLLED / NO_MATCH) instead of swallowing it', () => {
     renderScan({ faceError: 'You have not enrolled your face yet.' });
-    expect(screen.getByText('You have not enrolled your face yet.')).toBeTruthy();
+    expect(screen.getByText('You have not enrolled your face yet.')).toBeInTheDocument();
   });
 });
 
 describe('CheckInScan checkout card (ticket 03)', () => {
   it('hides the checkout card when not checked in', () => {
     renderScan({ isCheckedIn: false });
-    expect(screen.queryByTestId('checkout-selfie-capture')).toBeNull();
-    expect(screen.queryByRole('button', { name: /check out/i })).toBeNull();
+    expect(screen.queryByTestId('checkout-selfie-capture')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /check out/i })).not.toBeInTheDocument();
   });
 
   it('shows selfie capture + checkout button when checked in', () => {
     renderScan({ isCheckedIn: true });
-    expect(screen.getByTestId('checkout-selfie-capture')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /check out/i })).toBeTruthy();
+    expect(screen.getByTestId('checkout-selfie-capture')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /check out/i })).toBeInTheDocument();
   });
 
-  it('passes the captured selfie to onCheckOut on submit', () => {
+  it('passes the captured selfie to onCheckOut on submit', async () => {
+    const user = userEvent.setup();
     const props = renderScan({ isCheckedIn: true });
-    fireEvent.click(screen.getByTestId('checkout-selfie-capture'));
-    fireEvent.click(screen.getByRole('button', { name: /check out/i }));
+    await user.click(screen.getByTestId('checkout-selfie-capture'));
+    await user.click(screen.getByRole('button', { name: /check out/i }));
     expect(props.onCheckOut).toHaveBeenCalledWith('data:image/jpeg;base64,checkout');
   });
 
-  it('submits a null selfie when checkout runs without a photo', () => {
+  it('submits a null selfie when checkout runs without a photo', async () => {
+    const user = userEvent.setup();
     const props = renderScan({ isCheckedIn: true });
-    fireEvent.click(screen.getByRole('button', { name: /check out/i }));
+    await user.click(screen.getByRole('button', { name: /check out/i }));
     expect(props.onCheckOut).toHaveBeenCalledWith(null);
   });
 });

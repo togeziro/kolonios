@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createElement } from 'react';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import { addDays, format } from 'date-fns';
@@ -19,6 +20,18 @@ globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserv
 // Radix Select relies on scrollIntoView; jsdom doesn't implement it.
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function () {};
+}
+
+// userEvent dispatches real pointer events; Radix's dismissable layer
+// probes pointer-capture APIs that jsdom doesn't implement.
+if (!HTMLElement.prototype.hasPointerCapture) {
+  HTMLElement.prototype.hasPointerCapture = () => false;
+}
+if (!HTMLElement.prototype.setPointerCapture) {
+  HTMLElement.prototype.setPointerCapture = () => {};
+}
+if (!HTMLElement.prototype.releasePointerCapture) {
+  HTMLElement.prototype.releasePointerCapture = () => {};
 }
 
 // ----- Mocks -----
@@ -128,14 +141,11 @@ beforeEach(() => {
 // ----- Interaction helpers -----
 
 async function selectShift(name: string) {
+  const user = userEvent.setup();
   const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
-  await act(async () => {
-    fireEvent.click(trigger);
-  });
+  await user.click(trigger);
   const option = (await screen.findByRole('option', { name })) as HTMLElement;
-  await act(async () => {
-    fireEvent.click(option);
-  });
+  await user.click(option);
 }
 
 /**
@@ -145,11 +155,10 @@ async function selectShift(name: string) {
  * Returns the picked date as YYYY-MM-DD.
  */
 async function pickToDate(daysAhead = 5): Promise<string> {
+  const user = userEvent.setup();
   const trigger = document.getElementById('effectiveTo');
   if (!trigger) throw new Error('To-date picker trigger not found');
-  await act(async () => {
-    fireEvent.click(trigger);
-  });
+  await user.click(trigger);
   const target = addDays(new Date(), daysAhead);
   // The calendar's aria-labels follow the app locale (`dateFnsLocale()`),
   // which defaults to Indonesian in tests regardless of the i18n language —
@@ -166,24 +175,19 @@ async function pickToDate(daysAhead = 5): Promise<string> {
     if (!day) {
       const next = screen.queryByRole('button', { name: /next month/i });
       if (!next) break;
-      await act(async () => {
-        fireEvent.click(next);
-      });
+      await user.click(next);
     }
   }
   if (!day) throw new Error(`To-date day button not found: ${labels.join(' / ')}`);
   const picked = day;
-  await act(async () => {
-    fireEvent.click(picked);
-  });
+  await user.click(picked);
   return format(target, 'yyyy-MM-dd');
 }
 
 async function submitDialog() {
+  const user = userEvent.setup();
   const submit = await screen.findByTestId('assign-dialog-submit');
-  await act(async () => {
-    fireEvent.click(submit);
-  });
+  await user.click(submit);
 }
 
 // ----- Tests -----
@@ -192,16 +196,16 @@ describe('AssignShiftDialog', () => {
   it('renders the title + description in English when open', async () => {
     renderDialog({ open: true });
     await waitFor(() => {
-      expect(screen.getByText('Assign Shift')).toBeTruthy();
+      expect(screen.getByText('Assign Shift')).toBeInTheDocument();
     });
-    expect(screen.getByText(/Aldi Pranata/)).toBeTruthy();
+    expect(screen.getByText(/Aldi Pranata/)).toBeInTheDocument();
   });
 
   it('renders the required-marker asterisk on the Shift + From + To date labels', async () => {
     renderDialog({ open: true });
     await waitFor(() => screen.getByText('Assign Shift'));
-    expect(screen.getByText('Shift')).toBeTruthy();
-    expect(screen.getByText('From date')).toBeTruthy();
+    expect(screen.getByText('Shift')).toBeInTheDocument();
+    expect(screen.getByText('From date')).toBeInTheDocument();
     // The To-date placeholder duplicates the label text, so assert on the
     // <label> element directly.
     const toLabel = document.querySelector('label[for="effectiveTo"]');
@@ -228,7 +232,7 @@ describe('AssignShiftDialog', () => {
 
     // Inline field error (not a toast): the server fn must never fire.
     await waitFor(() => {
-      expect(screen.getByText('To date is required.')).toBeTruthy();
+      expect(screen.getByText('To date is required.')).toBeInTheDocument();
     });
     expect(createAssignmentInlineFnMock).not.toHaveBeenCalled();
     expect(toastErrorMock).not.toHaveBeenCalled();
@@ -343,20 +347,17 @@ describe('AssignShiftDialog', () => {
     await waitFor(() => screen.getByText('Assign Shift'));
 
     // Choose shift id=2 (no policy) so both warnings fire.
+    const user = userEvent.setup();
     const trigger = (await screen.findByTestId('assign-dialog-shift-trigger')) as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(trigger);
-    });
+    await user.click(trigger);
     const option = (await screen.findByRole('option', {
       name: 'Night (no policy)'
     })) as HTMLElement;
-    await act(async () => {
-      fireEvent.click(option);
-    });
+    await user.click(option);
 
     // Policy banner should be visible inside the dialog.
     await waitFor(() => {
-      expect(screen.getByTestId('assign-dialog-policy-warning')).toBeTruthy();
+      expect(screen.getByTestId('assign-dialog-policy-warning')).toBeInTheDocument();
     });
 
     await pickToDate();
@@ -380,11 +381,11 @@ describe('AssignShiftDialog', () => {
       // picker — distinct from the English "From date". Both `en` and
       // `id` happen to use "Assign Shift" as the dialog title, so we
       // assert on a translation that is unique to the id locale.
-      expect(screen.getByText('Tanggal mulai')).toBeTruthy();
+      expect(screen.getByText('Tanggal mulai')).toBeInTheDocument();
     });
     // Submit button should also be in Indonesian.
     expect(screen.getByTestId('assign-dialog-submit').textContent).toMatch(/Simpan/);
     // The description interpolation should keep the user name.
-    expect(screen.getByText(/Aldi Pranata/)).toBeTruthy();
+    expect(screen.getByText(/Aldi Pranata/)).toBeInTheDocument();
   });
 });

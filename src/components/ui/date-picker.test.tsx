@@ -2,7 +2,8 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { createElement } from 'react';
 import type { ReactElement } from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { DatePicker, DatePickerRange } from './date-picker';
@@ -24,10 +25,9 @@ function renderWithI18n(ui: ReactElement) {
 }
 
 async function openPopover(triggerName: RegExp) {
+  const user = userEvent.setup();
   const trigger = screen.getByRole('button', { name: triggerName });
-  await act(async () => {
-    fireEvent.click(trigger);
-  });
+  await user.click(trigger);
 }
 
 beforeEach(async () => {
@@ -42,8 +42,8 @@ describe('DatePicker calendar locale', () => {
     // react-day-picker's default weekday formatter (`cccccc`): en-US → "Mo",
     // id-ID → "Sen". The calendar must follow the i18n language, not the
     // app-locale default (id-ID).
-    await waitFor(() => expect(screen.getByText('Mo')).toBeTruthy());
-    expect(screen.queryByText('Sen')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Mo')).toBeInTheDocument());
+    expect(screen.queryByText('Sen')).not.toBeInTheDocument();
   });
 
   it('shows Indonesian weekday labels when the UI language is id', async () => {
@@ -51,15 +51,15 @@ describe('DatePicker calendar locale', () => {
     renderWithI18n(createElement(DatePicker, {}));
     await openPopover(/select date/i);
 
-    await waitFor(() => expect(screen.getByText('Sen')).toBeTruthy());
-    expect(screen.queryByText('Mo')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Sen')).toBeInTheDocument());
+    expect(screen.queryByText('Mo')).not.toBeInTheDocument();
   });
 
   it('shows English weekday labels in DatePickerRange when the UI language is en', async () => {
     renderWithI18n(createElement(DatePickerRange, {}));
     await openPopover(/select date range/i);
 
-    await waitFor(() => expect(screen.getByText('Mo')).toBeTruthy());
-    expect(screen.queryByText('Sen')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Mo')).toBeInTheDocument());
+    expect(screen.queryByText('Sen')).not.toBeInTheDocument();
   });
 });

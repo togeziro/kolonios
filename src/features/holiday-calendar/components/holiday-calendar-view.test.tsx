@@ -72,7 +72,7 @@ describe('HolidayCalendarView', () => {
     const { container } = renderView();
 
     await waitFor(() => {
-      expect(container.querySelector('.holiday-date')).toBeTruthy();
+      expect(container.querySelector('.holiday-date')).toBeInTheDocument();
     });
     const marker = container.querySelector('.holiday-date');
     expect(marker!.getAttribute('class')).toContain('relative');
@@ -82,7 +82,7 @@ describe('HolidayCalendarView', () => {
     const { container } = renderView();
 
     await waitFor(() => {
-      expect(container.querySelector('.holiday-date button span + span')).toBeTruthy();
+      expect(container.querySelector('.holiday-date button span + span')).toBeInTheDocument();
     });
     const pill = container.querySelector('.holiday-date button span + span');
     expect(pill!.textContent).toBe('Test Holiday');
@@ -92,7 +92,7 @@ describe('HolidayCalendarView', () => {
     const { container } = renderView();
 
     await waitFor(() => {
-      expect(container.querySelector('.holiday-date button')).toBeTruthy();
+      expect(container.querySelector('.holiday-date button')).toBeInTheDocument();
     });
     const dayButton = container.querySelector('.holiday-date button');
     expect(dayButton!.getAttribute('aria-label')).toContain('Test Holiday');
@@ -102,7 +102,7 @@ describe('HolidayCalendarView', () => {
     const { container } = renderView();
 
     await waitFor(() => {
-      expect(container.querySelector('[aria-current="date"]')).toBeTruthy();
+      expect(container.querySelector('[aria-current="date"]')).toBeInTheDocument();
     });
     const todayButton = container.querySelector('[aria-current="date"]');
     expect(todayButton!.textContent).toContain('Today');
@@ -114,22 +114,22 @@ describe('HolidayCalendarView', () => {
     const { container } = renderView();
 
     await waitFor(() => {
-      expect(container.querySelector('[aria-current="date"]')).toBeTruthy();
+      expect(container.querySelector('[aria-current="date"]')).toBeInTheDocument();
     });
     const selectedCell = container.querySelector('[aria-selected="true"]');
-    expect(selectedCell).toBeTruthy();
+    expect(selectedCell).toBeInTheDocument();
   });
 
   it('renders a close button on the selected-date details panel', async () => {
     const { container } = renderView();
 
     await waitFor(() => {
-      expect(container.querySelector('.holiday-date button')).toBeTruthy();
+      expect(container.querySelector('.holiday-date button')).toBeInTheDocument();
     });
     const dayButton = container.querySelector('.holiday-date button');
     dayButton!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await waitFor(() => {
-      expect(container.querySelector('button[aria-label="Close"]')).toBeTruthy();
+      expect(container.querySelector('button[aria-label="Close"]')).toBeInTheDocument();
     });
   });
 });

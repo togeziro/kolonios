@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -73,6 +74,7 @@ const BASE_TICKET = {
 
 describe('WorkSessionPage', () => {
   it('renders pills, timer card, and submits materials, photos and work log', async () => {
+    const user = userEvent.setup();
     detailMock.mockReturnValue({ success: true, ticket: { ...BASE_TICKET } });
     submitMock.mockImplementation((_input, opts) =>
       opts?.onSuccess?.({ success: true, isLastLeg: true, nextLeg: null })
@@ -84,13 +86,13 @@ describe('WorkSessionPage', () => {
       </I18nextProvider>
     );
 
-    expect(screen.getByText(/elapsed-timer/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /add-photo/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /add-log/i })).toBeTruthy();
+    expect(screen.getByText(/elapsed-timer/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add-photo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add-log/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /add-photo/i }));
-    fireEvent.click(screen.getByRole('button', { name: /add-log/i }));
-    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: /add-photo/i }));
+    await user.click(screen.getByRole('button', { name: /add-log/i }));
+    await user.click(screen.getByRole('button', { name: /submit/i }));
     await waitFor(() =>
       expect(submitMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -111,6 +113,7 @@ describe('WorkSessionPage', () => {
   });
 
   it('navigates to handoff when a next leg remains', async () => {
+    const user = userEvent.setup();
     detailMock.mockReturnValue({ success: true, ticket: { ...BASE_TICKET } });
     submitMock.mockImplementation((_input, opts) =>
       opts?.onSuccess?.({
@@ -126,8 +129,8 @@ describe('WorkSessionPage', () => {
       </I18nextProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /add-photo/i }));
-    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: /add-photo/i }));
+    await user.click(screen.getByRole('button', { name: /submit/i }));
     await waitFor(() =>
       expect(navigateMock).toHaveBeenCalledWith(
         expect.objectContaining({ to: '/dashboard/work-session/$ticketId/handoff' })
@@ -145,6 +148,6 @@ describe('WorkSessionPage', () => {
         <WorkSessionPage ticketId={7} />
       </I18nextProvider>
     );
-    expect(screen.getByText(/notInProgress|not in progress/i)).toBeTruthy();
+    expect(screen.getByText(/notInProgress|not in progress/i)).toBeInTheDocument();
   });
 });

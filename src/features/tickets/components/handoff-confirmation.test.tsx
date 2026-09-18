@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 import HandoffConfirmation from './handoff-confirmation';
@@ -76,9 +77,9 @@ describe('HandoffConfirmation', () => {
         <HandoffConfirmation ticketId={7} />
       </I18nextProvider>
     );
-    expect(screen.getByText(/Leg 1/i)).toBeTruthy();
-    expect(screen.getByText(/awaiting/i)).toBeTruthy();
-    expect(screen.getByText(/Install/)).toBeTruthy();
+    expect(screen.getByText(/Leg 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/awaiting/i)).toBeInTheDocument();
+    expect(screen.getByText(/Install/)).toBeInTheDocument();
   });
 
   it('shows pool fallback when the next leg is unassigned', () => {
@@ -109,10 +110,11 @@ describe('HandoffConfirmation', () => {
         <HandoffConfirmation ticketId={7} />
       </I18nextProvider>
     );
-    expect(screen.getByText(/pool/i)).toBeTruthy();
+    expect(screen.getByText(/pool/i)).toBeInTheDocument();
   });
 
-  it('submits the handoff note with the submitted leg id', () => {
+  it('submits the handoff note with the submitted leg id', async () => {
+    const user = userEvent.setup();
     detailMock.mockReturnValue({
       success: true,
       ticket: {
@@ -131,10 +133,10 @@ describe('HandoffConfirmation', () => {
         <HandoffConfirmation ticketId={7} />
       </I18nextProvider>
     );
-    fireEvent.change(screen.getByPlaceholderText(/next technician/), {
-      target: { value: 'Send courier' }
-    });
-    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    const noteInput = screen.getByPlaceholderText(/next technician/);
+    await user.clear(noteInput);
+    await user.type(noteInput, 'Send courier');
+    await user.click(screen.getByRole('button', { name: /save/i }));
     expect(handoffMutate).toHaveBeenCalledWith({
       legId: 5,
       note: 'Send courier'

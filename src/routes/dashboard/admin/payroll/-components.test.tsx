@@ -43,9 +43,9 @@ describe('pay queue summary bar', () => {
     // Intl may render the currency separator as U+202F under jsdom's ICU;
     // compare against the same formatter output instead of a literal.
     const money = formatPayrollMoney('6500000');
-    expect(screen.getByText((_, element) => element?.textContent === money)).toBeTruthy();
-    expect(screen.getByText('3')).toBeTruthy();
-    expect(screen.queryByTestId('pay-queue-selection-chip')).toBeNull();
+    expect(screen.getByText((_, element) => element?.textContent === money)).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByTestId('pay-queue-selection-chip')).not.toBeInTheDocument();
   });
 
   it('shows the live selection chip once rows are ticked', () => {

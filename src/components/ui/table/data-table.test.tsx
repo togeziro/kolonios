@@ -26,7 +26,7 @@ function TestTable() {
 describe('DataTable', () => {
   it('renders rows and passes tableClassName to the <table>', () => {
     render(<TestTable />);
-    expect(screen.getByText('Ada')).toBeTruthy();
+    expect(screen.getByText('Ada')).toBeInTheDocument();
     expect(screen.getByRole('table').className).toContain('min-w-[600px]');
   });
 });

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -65,7 +66,7 @@ describe('FaceSettings honest background-mode label', () => {
     renderFaceSettings();
     expect(
       await screen.findByText('Not yet in effect — check-ins always verify in realtime.')
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   it('round-trips locale: Indonesian note in id mode', async () => {
@@ -73,14 +74,15 @@ describe('FaceSettings honest background-mode label', () => {
     renderFaceSettings();
     expect(
       await screen.findByText('Belum berlaku — check-in selalu diverifikasi secara realtime.')
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   it('keeps the stored value meaning: saving background persists "background"', async () => {
+    const user = userEvent.setup();
     updateFaceSettingsFnMock.mockResolvedValue({ success: true });
     renderFaceSettings();
     await screen.findByText('Not yet in effect — check-ins always verify in realtime.');
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(updateFaceSettingsFnMock).toHaveBeenCalledTimes(1));
     const payload = updateFaceSettingsFnMock.mock.calls[0]?.[0] as
       | { data: { validationMode: string } }

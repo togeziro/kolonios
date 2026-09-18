@@ -24,7 +24,7 @@ describe('ErrorBoundary', () => {
         <Bomb />
       </ErrorBoundary>
     );
-    expect(screen.getByText('fallback-ui')).toBeTruthy();
+    expect(screen.getByText('fallback-ui')).toBeInTheDocument();
     expect(mockedCapture).toHaveBeenCalledTimes(1);
     expect(mockedCapture).toHaveBeenCalledWith(
       expect.any(Error),
@@ -38,7 +38,7 @@ describe('ErrorBoundary', () => {
         <p>child-ui</p>
       </ErrorBoundary>
     );
-    expect(screen.getByText('child-ui')).toBeTruthy();
+    expect(screen.getByText('child-ui')).toBeInTheDocument();
     expect(mockedCapture).not.toHaveBeenCalled();
   });
 });

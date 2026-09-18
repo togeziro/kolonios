@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -73,8 +74,8 @@ function renderPage() {
   );
 }
 
-function pickPeriod() {
-  fireEvent.change(screen.getByLabelText('Payroll Periods'), { target: { value: '1' } });
+async function pickPeriod(user: ReturnType<typeof userEvent.setup>) {
+  await user.selectOptions(screen.getByLabelText('Payroll Periods'), '1');
 }
 
 describe('Generate payroll page — double-click guard', () => {
@@ -83,59 +84,64 @@ describe('Generate payroll page — double-click guard', () => {
     mutateAsyncMock.mockImplementation(() => Promise.resolve(undefined));
   });
 
-  it('disables the Generate button while the mutation is pending', () => {
+  it('disables the Generate button while the mutation is pending', async () => {
+    const user = userEvent.setup();
     setPeriodsLoaded();
     setMutatePending(true);
     renderPage();
-    pickPeriod();
+    await pickPeriod(user);
     const btn = screen.getByRole('button', { name: /Generating/i }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
 
-  it('marks the button aria-busy while pending', () => {
+  it('marks the button aria-busy while pending', async () => {
+    const user = userEvent.setup();
     setPeriodsLoaded();
     setMutatePending(true);
     renderPage();
-    pickPeriod();
+    await pickPeriod(user);
     const btn = screen.getByRole('button', { name: /Generating/i }) as HTMLButtonElement;
     expect(btn.getAttribute('aria-busy')).toBe('true');
   });
 
-  it('does not fire mutateAsync when onClick fires repeatedly while pending', () => {
+  it('does not fire mutateAsync when onClick fires repeatedly while pending', async () => {
+    const user = userEvent.setup();
     setPeriodsLoaded();
     setMutatePending(true);
     renderPage();
-    pickPeriod();
+    await pickPeriod(user);
     const btn = screen.getByRole('button', { name: /Generating/i }) as HTMLButtonElement;
-    fireEvent.click(btn);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    await user.click(btn);
+    await user.click(btn);
+    await user.click(btn);
     expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
 
-  it('fires mutateAsync exactly once on a single click when not pending', () => {
+  it('fires mutateAsync exactly once on a single click when not pending', async () => {
+    const user = userEvent.setup();
     setPeriodsLoaded();
     setMutatePending(false);
     renderPage();
-    pickPeriod();
+    await pickPeriod(user);
     const btn = screen.getByRole('button', { name: /Generate Payroll/i }) as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
-    fireEvent.click(btn);
+    await user.click(btn);
     expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
     expect(mutateAsyncMock).toHaveBeenCalledWith({ payrollPeriodId: 1 });
   });
 
-  it('does not fire mutateAsync a second time when clicked twice in rapid succession (guard)', () => {
+  it('does not fire mutateAsync a second time when clicked twice in rapid succession (guard)', async () => {
+    const user = userEvent.setup();
     setPeriodsLoaded();
     // mutateAsync never resolves so the second click test runs before any
     // pending-state re-render could possibly reach the button.
     mutateAsyncMock.mockImplementation(() => new Promise(() => {}));
     setMutatePending(false);
     renderPage();
-    pickPeriod();
+    await pickPeriod(user);
     const btn = screen.getByRole('button', { name: /Generate Payroll/i }) as HTMLButtonElement;
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    await user.click(btn);
+    await user.click(btn);
     expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
   });
 });

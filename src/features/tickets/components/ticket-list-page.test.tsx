@@ -52,8 +52,8 @@ describe('TicketListPage status tabs', () => {
         <TicketListPage />
       </I18nextProvider>
     );
-    expect(screen.getByText('In Progress')).toBeTruthy();
-    expect(screen.getByText('Submitted')).toBeTruthy();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(screen.getByText('Submitted')).toBeInTheDocument();
     const text = container.textContent ?? '';
     expect(text).not.toContain('ticket.submitted');
     expect(text).not.toContain('inProgressCount');

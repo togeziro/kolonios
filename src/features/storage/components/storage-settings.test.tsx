@@ -41,8 +41,8 @@ function renderSettings() {
 describe('StorageSettings', () => {
   it('renders the bucket, masked secret hint, and a blank secret field', async () => {
     renderSettings();
-    await waitFor(() => expect(screen.getByDisplayValue('koloni-dev')).toBeTruthy());
-    expect(screen.getByText(/••••sk/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByDisplayValue('koloni-dev')).toBeInTheDocument());
+    expect(screen.getByText(/••••sk/)).toBeInTheDocument();
     const secretInput = screen.getByLabelText(/secret/i) as HTMLInputElement;
     expect(secretInput.value).toBe('');
   });

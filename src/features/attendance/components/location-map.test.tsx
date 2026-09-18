@@ -86,7 +86,7 @@ describe('LocationMap', () => {
   it('renders a map container', async () => {
     render(<LocationMap coordinates={null} radius={100} />);
     await act(async () => {});
-    expect(screen.getByTestId('attendance-map')).toBeTruthy();
+    expect(screen.getByTestId('attendance-map')).toBeInTheDocument();
   });
 
   it('emits coordinates when the map is clicked', async () => {
@@ -178,7 +178,7 @@ describe('LocationMap', () => {
     setGeoSupported(false);
     render(<LocationMap coordinates={{ lat: -6.2, lng: 106.85 }} radius={100} />);
     await act(async () => {});
-    expect(screen.getByTestId('geo-unavailable-banner')).toBeTruthy();
+    expect(screen.getByTestId('geo-unavailable-banner')).toBeInTheDocument();
     expect(FakeGeolocateControl.instances).toBe(0);
   });
 

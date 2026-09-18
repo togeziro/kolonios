@@ -47,14 +47,14 @@ describe('BrandHeader', () => {
       }
     });
     renderHeader();
-    expect(screen.getByText('Acme Corp')).toBeTruthy();
-    expect(screen.getByTestId('panel-logo')).toBeTruthy();
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    expect(screen.getByTestId('panel-logo')).toBeInTheDocument();
   });
 
   it('falls back to the product brand when branding is missing', () => {
     brandingMock.mockReturnValue({ data: undefined });
     renderHeader();
-    expect(screen.getByText('Kolonios')).toBeTruthy();
+    expect(screen.getByText('Kolonios')).toBeInTheDocument();
   });
 
   it('does not render an h1 so the card title stays the only one', () => {
@@ -74,7 +74,7 @@ describe('BrandHeader', () => {
         </QueryClientProvider>
       </I18nextProvider>
     );
-    expect(container.querySelector('h1')).toBeNull();
+    expect(container.querySelector('h1')).not.toBeInTheDocument();
   });
 
   it('renders the tagline when branding.tagline is set', () => {
@@ -88,7 +88,7 @@ describe('BrandHeader', () => {
       }
     });
     renderHeader();
-    expect(screen.getByText('Design. Build. Ship.')).toBeTruthy();
+    expect(screen.getByText('Design. Build. Ship.')).toBeInTheDocument();
   });
 
   it('hides the tagline when branding.tagline is null', () => {

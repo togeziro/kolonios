@@ -53,15 +53,15 @@ describe('PayslipTemplate', () => {
   it('renders the stored payroll snapshot and masks bank account data', () => {
     render(<PayslipTemplate payslip={payslip} />);
 
-    expect(screen.getByText('Kolonios Labs')).toBeTruthy();
-    expect(screen.getByText('Ari Pratama')).toBeTruthy();
-    expect(screen.getByText('EMP-0007')).toBeTruthy();
-    expect(screen.getByText('July 2026')).toBeTruthy();
-    expect(screen.getByText('Base salary')).toBeTruthy();
-    expect(screen.getByText('750.00')).toBeTruthy();
-    expect(screen.getByText('12,500.00')).toBeTruthy();
-    expect(screen.getByText('******7890')).toBeTruthy();
-    expect(screen.queryByText('1234567890')).toBeNull();
+    expect(screen.getByText('Kolonios Labs')).toBeInTheDocument();
+    expect(screen.getByText('Ari Pratama')).toBeInTheDocument();
+    expect(screen.getByText('EMP-0007')).toBeInTheDocument();
+    expect(screen.getByText('July 2026')).toBeInTheDocument();
+    expect(screen.getByText('Base salary')).toBeInTheDocument();
+    expect(screen.getByText('750.00')).toBeInTheDocument();
+    expect(screen.getByText('12,500.00')).toBeInTheDocument();
+    expect(screen.getByText('******7890')).toBeInTheDocument();
+    expect(screen.queryByText('1234567890')).not.toBeInTheDocument();
   });
 
   it('creates a PDF from the same payslip snapshot with a deterministic filename', async () => {
@@ -94,7 +94,7 @@ describe('PayslipTemplate', () => {
 
   it('renders no logo image when none is configured (fallback)', () => {
     render(<PayslipTemplate payslip={payslip} />);
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('wraps long Unicode line items across pages without throwing', async () => {

@@ -36,7 +36,7 @@ describe('TodayShiftCard', () => {
         />
       </I18nextProvider>
     );
-    expect(screen.getByText('Independence Day')).toBeTruthy();
+    expect(screen.getByText('Independence Day')).toBeInTheDocument();
   });
 
   it('renders the day-off label for a day-off cell', () => {
@@ -61,7 +61,7 @@ describe('TodayShiftCard', () => {
         />
       </I18nextProvider>
     );
-    expect(screen.getByText(i18n.t('schedule.noSchedule'))).toBeTruthy();
+    expect(screen.getByText(i18n.t('schedule.noSchedule'))).toBeInTheDocument();
   });
 
   it('renders the shift hours and late tolerance for a working cell', () => {
@@ -70,10 +70,10 @@ describe('TodayShiftCard', () => {
         <TodayShiftCard today={cell('2026-08-10')} todayDate='2026-08-10' />
       </I18nextProvider>
     );
-    expect(screen.getByText(/08:00/)).toBeTruthy();
-    expect(screen.getByText(/17:00/)).toBeTruthy();
-    expect(screen.getByText(i18n.t('schedule.morningShift'))).toBeTruthy();
-    expect(screen.getByText(i18n.t('schedule.mainOffice'))).toBeTruthy();
-    expect(screen.getByText(i18n.t('schedule.geofenceActive'))).toBeTruthy();
+    expect(screen.getByText(/08:00/)).toBeInTheDocument();
+    expect(screen.getByText(/17:00/)).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('schedule.morningShift'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('schedule.mainOffice'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('schedule.geofenceActive'))).toBeInTheDocument();
   });
 });

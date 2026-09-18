@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '@/i18n/config';
@@ -149,16 +150,16 @@ describe('ReviewTicketPage', () => {
 
   it('renders all sections from the real ticket detail', async () => {
     renderPage(55);
-    await waitFor(() => expect(screen.getByText('#T-55')).toBeTruthy());
-    expect(screen.getByText('Maintenance Server Room B')).toBeTruthy();
-    expect(screen.getByText('Jl. Merdeka No. 45')).toBeTruthy();
-    expect(screen.getByText(/Requester/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('#T-55')).toBeInTheDocument());
+    expect(screen.getByText('Maintenance Server Room B')).toBeInTheDocument();
+    expect(screen.getByText('Jl. Merdeka No. 45')).toBeInTheDocument();
+    expect(screen.getByText(/Requester/)).toBeInTheDocument();
     expect(screen.getByTestId('leg-progress-label').textContent).toContain('of');
-    expect(document.querySelector('[role="progressbar"]')).toBeTruthy();
-    expect(screen.getByText('Dedi Setiawan')).toBeTruthy();
-    expect(screen.getByText('Evidence Photos')).toBeTruthy();
-    expect(screen.getByText('Materials Used')).toBeTruthy();
-    expect(screen.getByText('AC Filter')).toBeTruthy();
+    expect(document.querySelector('[role="progressbar"]')).toBeInTheDocument();
+    expect(screen.getByText('Dedi Setiawan')).toBeInTheDocument();
+    expect(screen.getByText('Evidence Photos')).toBeInTheDocument();
+    expect(screen.getByText('Materials Used')).toBeInTheDocument();
+    expect(screen.getByText('AC Filter')).toBeInTheDocument();
   });
 
   it('shows a localized not-found state when the ticket is missing', async () => {
@@ -167,35 +168,43 @@ describe('ReviewTicketPage', () => {
       queryFn: async () => ({ success: false })
     }));
     renderPage(9999);
-    await waitFor(() => expect(screen.getByText('Ticket not found.')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Ticket not found.')).toBeInTheDocument());
   });
 
   it('renders the leg progress bar from real legs', async () => {
     renderPage(55);
-    await waitFor(() => expect(document.querySelector('[role="progressbar"]')).toBeTruthy());
+    await waitFor(() => expect(document.querySelector('[role="progressbar"]')).toBeInTheDocument());
     const bar = document.querySelector<HTMLDivElement>('[role="progressbar"] > div');
     expect(bar?.getAttribute('style')).toContain('width: 100%');
   });
 
   it('renders the priority badge with tone classes', async () => {
     renderPage(55);
-    await waitFor(() => expect(document.querySelector('[data-priority="medium"]')).toBeTruthy());
+    await waitFor(() =>
+      expect(document.querySelector('[data-priority="medium"]')).toBeInTheDocument()
+    );
     const badge = document.querySelector('[data-priority="medium"]');
     expect(badge?.className).toContain('bg-amber-500/15');
   });
 
   it('back button navigates to the review queue', async () => {
+    const user = userEvent.setup();
     renderPage(55);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Back to queue' })).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: 'Back to queue' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Back to queue' })).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole('button', { name: 'Back to queue' }));
     expect(navigateMock).toHaveBeenCalledWith({ to: '/dashboard/spv/review' });
   });
 
   it('approve fires reviewTicketFn with decision approved, then navigates back to the queue', async () => {
+    const user = userEvent.setup();
     reviewTicketFnMock.mockResolvedValue({ success: true, message: 'Ticket approved' });
     renderPage(55);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
     await waitFor(() =>
       expect(reviewTicketFnMock).toHaveBeenCalledWith({
         data: { ticketId: 55, decision: 'approved' }
@@ -205,10 +214,11 @@ describe('ReviewTicketPage', () => {
   });
 
   it('reject fires reviewTicketFn with decision rejected', async () => {
+    const user = userEvent.setup();
     reviewTicketFnMock.mockResolvedValue({ success: true, message: 'Ticket rejected' });
     renderPage(55);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Reject' }));
     await waitFor(() =>
       expect(reviewTicketFnMock).toHaveBeenCalledWith({
         data: { ticketId: 55, decision: 'rejected' }
@@ -217,13 +227,16 @@ describe('ReviewTicketPage', () => {
   });
 
   it('shows an error path instead of navigating when the server declines the review', async () => {
+    const user = userEvent.setup();
     reviewTicketFnMock.mockResolvedValue({
       success: false,
       message: 'Ticket is no longer awaiting review'
     });
     renderPage(55);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
     await waitFor(() => expect(reviewTicketFnMock).toHaveBeenCalled());
     await waitFor(() => expect(navigateMock).not.toHaveBeenCalled());
   });

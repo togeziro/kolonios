@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // i18n:skip
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n/config';
 
@@ -103,14 +104,14 @@ describe('EditProfilePage', () => {
     });
     renderPage();
 
-    expect(screen.getByText('Personal Information')).toBeTruthy();
-    expect(screen.getByText('Work Information')).toBeTruthy();
+    expect(screen.getByText('Personal Information')).toBeInTheDocument();
+    expect(screen.getByText('Work Information')).toBeInTheDocument();
     const nameInput = screen.getByLabelText('Full Name') as HTMLInputElement;
     expect(nameInput.value).toBe('Budi Santoso');
-    expect(screen.getByText('TECH-0042')).toBeTruthy();
-    expect(screen.getByText('Field Operations')).toBeTruthy();
-    expect(screen.getByText('Senior Technician')).toBeTruthy();
-    expect(screen.getByText('BS')).toBeTruthy();
+    expect(screen.getByText('TECH-0042')).toBeInTheDocument();
+    expect(screen.getByText('Field Operations')).toBeInTheDocument();
+    expect(screen.getByText('Senior Technician')).toBeInTheDocument();
+    expect(screen.getByText('BS')).toBeInTheDocument();
   });
 
   it('renders the email input disabled with the contact-HR hint', () => {
@@ -119,17 +120,18 @@ describe('EditProfilePage', () => {
     const emailInput = screen.getByLabelText('Email Address') as HTMLInputElement;
     expect(emailInput.value).toBe('budi@example.com');
     expect(emailInput.disabled).toBe(true);
-    expect(screen.getByText('Contact HR to change your email')).toBeTruthy();
+    expect(screen.getByText('Contact HR to change your email')).toBeInTheDocument();
   });
 
   it('saves the name through authClient.updateUser and toasts success', async () => {
+    const user = userEvent.setup();
     updateUserMock.mockResolvedValue({ data: {}, error: null });
     renderPage();
 
-    fireEvent.change(screen.getByLabelText('Full Name'), {
-      target: { value: 'Budi Santoso Jr' }
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    const nameInput = screen.getByLabelText('Full Name');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Budi Santoso Jr');
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     await waitFor(() => {
       expect(updateUserMock).toHaveBeenCalledWith({ name: 'Budi Santoso Jr' });
@@ -140,14 +142,13 @@ describe('EditProfilePage', () => {
   });
 
   it('uploads an avatar through the storage client then updates the session image', async () => {
+    const user = userEvent.setup();
     updateUserMock.mockResolvedValue({ data: {}, error: null });
     uploadAvatarMock.mockResolvedValue('avatars/u/9.jpg');
     renderPage();
 
     const file = new File(['fake-image'], 'avatar.png', { type: 'image/png' });
-    fireEvent.change(screen.getByTestId('avatar-file-input'), {
-      target: { files: [file] }
-    });
+    await user.upload(screen.getByTestId('avatar-file-input'), file);
 
     await waitFor(() => {
       expect(uploadAvatarMock).toHaveBeenCalledWith(expect.any(String));
@@ -159,13 +160,12 @@ describe('EditProfilePage', () => {
   });
 
   it('falls back to initials without crashing when storage is unconfigured', async () => {
+    const user = userEvent.setup();
     uploadAvatarMock.mockRejectedValue(new Error('Storage is not configured'));
     renderPage();
 
     const file = new File(['fake-image'], 'avatar.png', { type: 'image/png' });
-    fireEvent.change(screen.getByTestId('avatar-file-input'), {
-      target: { files: [file] }
-    });
+    await user.upload(screen.getByTestId('avatar-file-input'), file);
 
     await waitFor(() => {
       expect(uploadAvatarMock).toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('EditProfilePage', () => {
     });
     expect(updateUserMock).not.toHaveBeenCalled();
     expect(toastMock.error).not.toHaveBeenCalled();
-    expect(screen.getByText('BS')).toBeTruthy();
+    expect(screen.getByText('BS')).toBeInTheDocument();
   });
 
   it('renders a direct avatar url from the session image without resolution', () => {

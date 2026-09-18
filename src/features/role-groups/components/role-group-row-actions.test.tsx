@@ -2,7 +2,8 @@
 // i18n:skip
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RoleGroupRowActions } from './role-group-row-actions';
 import type { RoleGroup } from '../api/types';
 
@@ -72,33 +73,31 @@ describe('RoleGroupRowActions', () => {
     renderActions(groupFixture({ is_admin: true }));
     const edit = screen.getByRole('button', { name: 'roleGroups.editRole' });
     const del = screen.getByRole('button', { name: 'common.delete' });
-    expect(edit.hasAttribute('disabled')).toBe(true);
-    expect(del.hasAttribute('disabled')).toBe(true);
-    expect(screen.getByText('common.viewDetails')).toBeTruthy();
+    expect(edit).toBeDisabled();
+    expect(del).toBeDisabled();
+    expect(screen.getByText('common.viewDetails')).toBeInTheDocument();
   });
 
   it('disables Edit and Delete when the user lacks role_groups permission', () => {
     renderActions(groupFixture(), { canEdit: false, canDelete: false });
-    expect(
-      screen.getByRole('button', { name: 'roleGroups.editRole' }).hasAttribute('disabled')
-    ).toBe(true);
-    expect(screen.getByRole('button', { name: 'common.delete' }).hasAttribute('disabled')).toBe(
-      true
-    );
+    expect(screen.getByRole('button', { name: 'roleGroups.editRole' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'common.delete' })).toBeDisabled();
   });
 
-  it('emits onEdit with the group when Edit is enabled', () => {
+  it('emits onEdit with the group when Edit is enabled', async () => {
+    const user = userEvent.setup();
     const group = groupFixture();
     renderActions(group);
-    fireEvent.click(screen.getByRole('button', { name: 'roleGroups.editRole' }));
+    await user.click(screen.getByRole('button', { name: 'roleGroups.editRole' }));
     expect(onEdit).toHaveBeenCalledWith(group);
     expect(onDelete).not.toHaveBeenCalled();
   });
 
-  it('emits onDelete with the group when Delete is enabled', () => {
+  it('emits onDelete with the group when Delete is enabled', async () => {
+    const user = userEvent.setup();
     const group = groupFixture();
     renderActions(group);
-    fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
+    await user.click(screen.getByRole('button', { name: 'common.delete' }));
     expect(onDelete).toHaveBeenCalledWith(group);
     expect(onEdit).not.toHaveBeenCalled();
   });

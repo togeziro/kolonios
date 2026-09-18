@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { fireEvent } from '@testing-library/dom';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import '@/i18n/config';
 import { WeekStartToggle } from './week-start-toggle';
@@ -42,10 +42,11 @@ describe('WeekStartToggle', () => {
     expect(sun.getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('flips the pressed state and persists to localStorage on click', () => {
+  it('flips the pressed state and persists to localStorage on click', async () => {
+    const user = userEvent.setup();
     render(createElement(WeekStartToggle));
     const sun = screen.getByRole('button', { name: /sun/i });
-    fireEvent.click(sun);
+    await user.click(sun);
 
     expect(sun.getAttribute('aria-pressed')).toBe('true');
     expect(window.localStorage.getItem('kolonios-schedule-grid-week-start')).toBe('sunday');
