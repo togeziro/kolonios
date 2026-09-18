@@ -30,7 +30,12 @@ import {
   setCellShiftFn,
   type CellWriteResult
 } from './write-service';
-import { deleteAssignmentFn, type DeleteAssignmentResult } from './service';
+import {
+  deleteAssignmentFn,
+  clearWeekFn,
+  type DeleteAssignmentResult,
+  type ClearWeekResult
+} from './service';
 import {
   repeatWeekBulkFn,
   type RepeatWeekBulkInput,
@@ -64,6 +69,15 @@ export type DeleteAssignmentMutationInput = {
   userId: string;
   date: string;
   assignmentId: number;
+};
+
+/**
+ * "Clear week" input — one employee × the visible week anchor. The server
+ * derives the 7-day window from `weekStart`.
+ */
+export type ClearWeekMutationInput = {
+  userId: string;
+  weekStart: string;
 };
 
 export type ApplyToWholeWeekInput = {
@@ -136,6 +150,15 @@ function deleteAssignmentMutation(
   };
 }
 
+function clearWeekMutation(
+  queryClient: ReturnType<typeof useQueryClient>
+): UseMutationOptions<ClearWeekResult, Error, ClearWeekMutationInput> {
+  return {
+    mutationFn: async (input) => clearWeekFn({ data: input }),
+    onSettled: () => invalidateScheduleGridCaches(queryClient)
+  };
+}
+
 function applyToWholeWeekMutation(
   queryClient: ReturnType<typeof useQueryClient>
 ): UseMutationOptions<ApplyToWholeWeekResult, Error, ApplyToWholeWeekInput> {
@@ -199,6 +222,11 @@ export function useClearCell() {
 export function useDeleteAssignment() {
   const queryClient = useQueryClient();
   return useMutation(deleteAssignmentMutation(queryClient));
+}
+
+export function useClearWeek() {
+  const queryClient = useQueryClient();
+  return useMutation(clearWeekMutation(queryClient));
 }
 
 export function useApplyToWholeWeek() {

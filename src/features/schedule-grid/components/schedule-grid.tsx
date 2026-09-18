@@ -145,7 +145,7 @@ function ScheduleGridBodyRow({
       className='grid border-b last:border-b-0'
       style={gridColsStyle}
     >
-      <GridRowHeader row={row} onAssignShift={onAssignShift} />
+      <GridRowHeader row={row} onAssignShift={onAssignShift} weekStart={weekStart} />
       {days.map((date) => {
         const cell = row.cells.find((c) => c.date === date);
         if (!cell) {

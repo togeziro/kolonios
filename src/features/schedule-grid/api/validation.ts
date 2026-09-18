@@ -54,3 +54,15 @@ export const deleteAssignmentSchema = z.object({
 });
 
 export type DeleteAssignmentInput = z.infer<typeof deleteAssignmentSchema>;
+
+/**
+ * "Clear week" payload — one employee × the currently displayed week. The
+ * server derives the 7-day window from `weekStart` (inclusive, `+6` days), so
+ * the client never sends a second date that could disagree with the grid.
+ */
+export const clearWeekSchema = z.object({
+  userId: z.string().min(1),
+  weekStart: ymd
+});
+
+export type ClearWeekInput = z.infer<typeof clearWeekSchema>;

@@ -1965,6 +1965,16 @@
       "prev": "Sebelumnya",
       "next": "Berikutnya"
     },
+    "clearWeek": {
+      "button": "Hapus minggu",
+      "buttonAria": "Hapus jadwal {{name}} untuk minggu ini",
+      "title": "Hapus jadwal {{name}} untuk minggu ini?",
+      "body": "Menghapus semua shift, hari libur, dan date override untuk {{name}} dari {{from}} sampai {{to}}. Assignment yang tumpang tindih dengan minggu ini akan dipangkas; hari di luar minggu ini tetap disimpan.",
+      "confirm": "Hapus minggu",
+      "success": "Menghapus {{count}} entri untuk {{name}}",
+      "nothingToClear": "Tidak ada yang bisa dihapus untuk {{name}} minggu ini.",
+      "failed": "Gagal menghapus minggu ini. Silakan coba lagi."
+    },
     "popover": {
       "title": "Edit sel",
       "openAria": "Buka editor sel untuk {{date}}",

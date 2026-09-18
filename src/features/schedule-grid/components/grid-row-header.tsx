@@ -4,6 +4,7 @@ import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import type { ScheduleGridRow as GridRow } from '../api/types';
 import { buildRowHeaderAriaLabel } from '../utils/aria';
+import { ClearWeekButton } from './clear-week-button';
 
 export type GridRowHeaderProps = {
   row: GridRow;
@@ -15,6 +16,11 @@ export type GridRowHeaderProps = {
    * to open the `AssignShiftDialog` for the row's user.
    */
   onAssignShift?: (row: GridRow) => void;
+  /**
+   * Anchor of the currently displayed week (YYYY-MM-DD). Required to render
+   * the destructive "Clear week" action, which clears exactly this window.
+   */
+  weekStart?: string;
 };
 
 /**
@@ -25,7 +31,12 @@ export type GridRowHeaderProps = {
  * Ticket 04: `role="rowheader"` + `aria-label` follow the spec rule that
  * the employee column announces name + code + department to screen readers.
  */
-export function GridRowHeader({ row, sticky = true, onAssignShift }: GridRowHeaderProps) {
+export function GridRowHeader({
+  row,
+  sticky = true,
+  onAssignShift,
+  weekStart
+}: GridRowHeaderProps) {
   const { t } = useTranslation();
   const showAssignCta = row.hasAssignment === false && typeof onAssignShift === 'function';
   const rowHeaderAriaLabel = buildRowHeaderAriaLabel(row);
@@ -50,26 +61,29 @@ export function GridRowHeader({ row, sticky = true, onAssignShift }: GridRowHead
           </span>
         ) : null}
       </div>
-      {showAssignCta ? (
-        <Button
-          size='sm'
-          variant='outline'
-          className='ml-auto h-7 shrink-0 px-2 text-[11px]'
-          onClick={() => onAssignShift(row)}
-          data-testid={`assign-shift-cta-${row.userId}`}
-        >
-          <Icons.add className='mr-1 h-3 w-3' />
-          {t('scheduleGrid.row.assignCta')}
-        </Button>
-      ) : row.activeShiftName ? (
-        <span className='ml-auto shrink-0 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary'>
-          {row.activeShiftName}
-        </span>
-      ) : (
-        <span className='ml-auto shrink-0 text-[10px] text-muted-foreground/70'>
-          {t('scheduleGrid.rowHeader.noAssignment')}
-        </span>
-      )}
+      <div className='ml-auto flex shrink-0 items-center gap-1.5'>
+        {weekStart ? <ClearWeekButton row={row} weekStart={weekStart} /> : null}
+        {showAssignCta ? (
+          <Button
+            size='sm'
+            variant='outline'
+            className='h-7 shrink-0 px-2 text-[11px]'
+            onClick={() => onAssignShift(row)}
+            data-testid={`assign-shift-cta-${row.userId}`}
+          >
+            <Icons.add className='mr-1 h-3 w-3' />
+            {t('scheduleGrid.row.assignCta')}
+          </Button>
+        ) : row.activeShiftName ? (
+          <span className='shrink-0 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary'>
+            {row.activeShiftName}
+          </span>
+        ) : (
+          <span className='shrink-0 text-[10px] text-muted-foreground/70'>
+            {t('scheduleGrid.rowHeader.noAssignment')}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,23 +4,28 @@ import { requirePermission } from '@/lib/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { mapDbError } from '@/lib/errors';
 import { db } from '@/lib/db';
+import { scheduleAssignmentRangeValid } from '@/lib/db/attendance';
 import { departments } from '@/lib/db/schema/masterdata';
 import { scheduleAssignments } from '@/lib/db/schema/attendance';
 import { employees } from '@/lib/db/schema/employees';
 import { resolveScheduleGridCells, resolveScheduleGridCell } from './cell-resolver';
+import { clearCellTx } from './cell-write';
 import {
   SCHEDULE_GRID_MAX_PAGE_SIZE,
   scheduleGridFiltersSchema,
   assignShiftInlineSchema,
-  deleteAssignmentSchema
+  deleteAssignmentSchema,
+  clearWeekSchema
 } from './validation';
 import type { ScheduleGridCell, ScheduleGridResponse, ScheduleGridRow } from './types';
 import type {
   ScheduleGridFiltersInput,
   AssignShiftInlineInput,
-  DeleteAssignmentInput
+  DeleteAssignmentInput,
+  ClearWeekInput
 } from './validation';
 import { addDays, weekDays } from '../utils/date-utils';
+import { planClearAssignmentRange } from '../utils/clear-week';
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -441,6 +446,175 @@ export const deleteAssignmentFn = createServerFn({ method: 'POST' })
       };
     } catch (error) {
       mapDbError(error, 'scheduleGrid.deleteAssignment');
+      return { success: false as const, error: 'internal' as const };
+    }
+  });
+
+/**
+ * "Clear week" — wipe ONE employee's whole schedule for the visible week.
+ *
+ * The row-header escape hatch for the case the per-cell popover cannot
+ * reach: an orphan `day_offs` row (no covering assignment) renders as Day
+ * Off but never opens a popover, so it had no Clear action. This removes
+ * everything the employee has inside `[weekStart, weekStart + 6]`:
+ *
+ *   - every `date_overrides` and `day_offs` row in the window (via
+ *     `clearCellTx`, the shared orphan-prevention guard — never forked);
+ *   - their `schedule_assignments` coverage: a range fully inside the week
+ *     is deleted; a range overlapping one edge is trimmed (start or end);
+ *     a range spanning the whole week is split into a head and a tail, so
+ *     every day OUTSIDE the week is preserved. See `planClearAssignmentRange`
+ *     for the pure decision and its never-inverted guarantee.
+ *
+ * Deliberate choices:
+ *   - Split inserts preserve the original `shift_id` and `created_by` — the
+ *     surviving rows are the same assignment, not a new one, so ownership
+ *     must not silently transfer to the acting admin.
+ *   - Rows owned by another employee are never touched: the assignment
+ *     selection and both cell clears are scoped by `user_id`.
+ *   - The whole write runs in one transaction, so a partial clear can never
+ *     be observed.
+ *
+ * Contract: tuple convention `{ success: true, ...counts }` /
+ * `{ success: false, error }`; errors folded via `mapDbError`. A window
+ * with nothing clearable is a SUCCESS with `totalCleared: 0` so the client
+ * can show an info toast rather than an error.
+ */
+export type ClearWeekResult =
+  | {
+      success: true;
+      affectedUserId: string;
+      weekStart: string;
+      weekEnd: string;
+      deletedAssignments: number;
+      trimmedAssignments: number;
+      splitAssignments: number;
+      clearedOverrides: number;
+      clearedDayOffs: number;
+      totalCleared: number;
+    }
+  | {
+      success: false;
+      error: 'internal';
+    };
+
+export const clearWeekFn = createServerFn({ method: 'POST' })
+  .validator(clearWeekSchema)
+  .handler(async ({ data }: { data: ClearWeekInput }): Promise<ClearWeekResult> => {
+    const session = await requirePermission('attendance_admin', 'delete');
+    await checkRateLimit(`write:${session.user.id}`);
+
+    const weekStart = data.weekStart;
+    const weekEnd = addDays(weekStart, 6);
+
+    try {
+      const result = await db.transaction(async (tx) => {
+        // 1) Overrides + day offs for the 7 days — shared orphan-prevention
+        //    guard, one call per day so the clear can never leave a masked
+        //    sibling row behind.
+        let clearedOverrides = 0;
+        let clearedDayOffs = 0;
+        for (const date of weekDays(weekStart)) {
+          const removed = await clearCellTx(tx, { userId: data.userId, date });
+          clearedOverrides += removed.deletedOverrides;
+          clearedDayOffs += removed.deletedDayOffs;
+        }
+
+        // 2) Assignment coverage overlapping the window. Valid ranges only —
+        //    a pre-existing inverted row resolves to nothing, so there is
+        //    nothing for this action to clear there.
+        const overlapping = await tx
+          .select()
+          .from(scheduleAssignments)
+          .where(
+            and(
+              eq(scheduleAssignments.user_id, data.userId),
+              lte(scheduleAssignments.effective_from, weekEnd),
+              gte(scheduleAssignments.effective_to, weekStart),
+              scheduleAssignmentRangeValid()
+            )
+          );
+
+        let deletedAssignments = 0;
+        let trimmedAssignments = 0;
+        let splitAssignments = 0;
+
+        for (const row of overlapping) {
+          const plan = planClearAssignmentRange({
+            effectiveFrom: row.effective_from,
+            effectiveTo: row.effective_to,
+            weekStart,
+            weekEnd
+          });
+
+          switch (plan.kind) {
+            case 'none':
+              break;
+            case 'delete': {
+              await tx.delete(scheduleAssignments).where(eq(scheduleAssignments.id, row.id));
+              deletedAssignments += 1;
+              break;
+            }
+            case 'trimStart': {
+              await tx
+                .update(scheduleAssignments)
+                .set({ effective_from: plan.remainingFrom, updated_at: new Date() })
+                .where(eq(scheduleAssignments.id, row.id));
+              trimmedAssignments += 1;
+              break;
+            }
+            case 'trimEnd': {
+              await tx
+                .update(scheduleAssignments)
+                .set({ effective_to: plan.remainingTo, updated_at: new Date() })
+                .where(eq(scheduleAssignments.id, row.id));
+              trimmedAssignments += 1;
+              break;
+            }
+            case 'split': {
+              // Keep the head on the existing row, then re-create the tail
+              // with the original shift + creator so ownership survives.
+              await tx
+                .update(scheduleAssignments)
+                .set({ effective_to: plan.leftTo, updated_at: new Date() })
+                .where(eq(scheduleAssignments.id, row.id));
+              await tx.insert(scheduleAssignments).values({
+                user_id: row.user_id,
+                shift_id: row.shift_id,
+                effective_from: plan.rightFrom,
+                effective_to: row.effective_to,
+                created_by: row.created_by
+              });
+              splitAssignments += 1;
+              break;
+            }
+          }
+        }
+
+        return {
+          deletedAssignments,
+          trimmedAssignments,
+          splitAssignments,
+          clearedOverrides,
+          clearedDayOffs
+        };
+      });
+
+      return {
+        success: true as const,
+        affectedUserId: data.userId,
+        weekStart,
+        weekEnd,
+        ...result,
+        totalCleared:
+          result.deletedAssignments +
+          result.trimmedAssignments +
+          result.splitAssignments +
+          result.clearedOverrides +
+          result.clearedDayOffs
+      };
+    } catch (error) {
+      mapDbError(error, 'scheduleGrid.clearWeek');
       return { success: false as const, error: 'internal' as const };
     }
   });

@@ -38,12 +38,25 @@ export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * `date_overrides` and `day_offs` rows for (userId, date) so a new insert
  * can never be masked by a stale sibling row. Every helper below calls this
  * first — no write path may DELETE/INSERT these tables directly.
+ *
+ * Returns the number of rows removed from each table. The write helpers
+ * ignore the counts; `clearWeek` sums them so the row-header action can
+ * report "nothing to clear" without a second read.
  */
-async function clearCellRows(tx: DbTransaction, userId: string, date: string): Promise<void> {
-  await tx
+async function clearCellRows(
+  tx: DbTransaction,
+  userId: string,
+  date: string
+): Promise<{ deletedOverrides: number; deletedDayOffs: number }> {
+  const overrides = await tx
     .delete(dateOverrides)
-    .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)));
-  await tx.delete(dayOffs).where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)));
+    .where(and(eq(dateOverrides.user_id, userId), eq(dateOverrides.date, date)))
+    .returning({ id: dateOverrides.id });
+  const offs = await tx
+    .delete(dayOffs)
+    .where(and(eq(dayOffs.user_id, userId), eq(dayOffs.date, date)))
+    .returning({ id: dayOffs.id });
+  return { deletedOverrides: overrides.length, deletedDayOffs: offs.length };
 }
 
 /** Write a shift override cell: clear both tables, then insert `date_overrides`. */
@@ -78,6 +91,6 @@ export async function writeCellDayOffTx(
 export async function clearCellTx(
   tx: DbTransaction,
   args: { userId: string; date: string }
-): Promise<void> {
-  await clearCellRows(tx, args.userId, args.date);
+): Promise<{ deletedOverrides: number; deletedDayOffs: number }> {
+  return clearCellRows(tx, args.userId, args.date);
 }

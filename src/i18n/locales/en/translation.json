@@ -1965,6 +1965,16 @@
       "prev": "Prev",
       "next": "Next"
     },
+    "clearWeek": {
+      "button": "Clear week",
+      "buttonAria": "Clear {{name}}'s schedule for this week",
+      "title": "Clear {{name}}'s schedule for this week?",
+      "body": "Removes all shifts, day offs and date overrides for {{name}} from {{from}} to {{to}}. Assignments that overlap this week are trimmed; days outside the week are kept.",
+      "confirm": "Clear week",
+      "success": "Cleared {{count}} entries for {{name}}",
+      "nothingToClear": "Nothing to clear for {{name}} this week.",
+      "failed": "Couldn't clear the week. Please try again."
+    },
     "popover": {
       "title": "Edit cell",
       "openAria": "Open cell editor for {{date}}",
