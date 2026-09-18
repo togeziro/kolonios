@@ -156,7 +156,7 @@ export const getAttendanceSummaryFn = createServerFn({ method: 'GET' }).handler(
 export const createLocationFn = createServerFn({ method: 'POST' })
   .validator(locationCreateSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`write:${session.user.id}`);
     const { createLocation } = await import('@/lib/db/attendance');
     const result = await createLocation({ ...data, createdBy: session.user.id });
@@ -234,7 +234,7 @@ export const getSchedulesFn = createServerFn({ method: 'GET' }).handler(async ()
 // --- Shift master CRUD (admin) ---
 
 export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () => {
-  await requirePermission('attendance_admin', 'edit');
+  await requirePermission('attendance_admin', 'view');
   const { listShifts } = await import('@/lib/db/attendance');
   return listShifts();
 });
@@ -242,7 +242,7 @@ export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () =
 export const getShiftByIdFn = createServerFn({ method: 'GET' })
   .validator(z.object({ id: z.number().int().positive() }))
   .handler(async ({ data }) => {
-    await requirePermission('attendance_admin', 'edit');
+    await requirePermission('attendance_admin', 'view');
     const { getShiftById } = await import('@/lib/db/attendance');
     return getShiftById(data.id);
   });
@@ -250,7 +250,7 @@ export const getShiftByIdFn = createServerFn({ method: 'GET' })
 export const createShiftFn = createServerFn({ method: 'POST' })
   .validator(shiftCreateSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`write:${session.user.id}`);
     const { createSchedule } = await import('@/lib/db/attendance');
     const result = await createSchedule(data);
@@ -297,7 +297,7 @@ export const updateShiftFn = createServerFn({ method: 'POST' })
 export const deleteShiftFn = createServerFn({ method: 'POST' })
   .validator(shiftDeleteSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'delete');
     await checkRateLimit(`write:${session.user.id}`);
     const { deleteShift } = await import('@/lib/db/attendance');
     const result = await deleteShift(data.id);
@@ -326,7 +326,7 @@ export const deleteShiftFn = createServerFn({ method: 'POST' })
  * `/dashboard/employees` to complete the profile.
  */
 export const getMissingEmployeeProfilesFn = createServerFn({ method: 'GET' }).handler(async () => {
-  await requirePermission('attendance_admin', 'edit');
+  await requirePermission('attendance_admin', 'view');
   const { getMissingEmployeeProfiles } = await import('@/lib/db/users');
   return getMissingEmployeeProfiles();
 });
@@ -334,7 +334,7 @@ export const getMissingEmployeeProfilesFn = createServerFn({ method: 'GET' }).ha
 export const assignScheduleFn = createServerFn({ method: 'POST' })
   .validator(scheduleAssignmentSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`write:${session.user.id}`);
     // Cross-field rule lives here (NOT in zod) per repo convention, so the
     // form can keep field-level `required` markers. Matches
@@ -375,7 +375,7 @@ export const assignScheduleFn = createServerFn({ method: 'POST' })
 export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
   .validator(bulkAssignmentSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`write:${session.user.id}`);
     // Same rules as `assignScheduleFn`: every entry needs an end date
     // (`effectiveToRequired`) and no entry may be inverted (the lib insert
@@ -427,7 +427,7 @@ export const bulkAssignScheduleFn = createServerFn({ method: 'POST' })
 export const createDayOffFn = createServerFn({ method: 'POST' })
   .validator(dayOffSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`write:${session.user.id}`);
     const { createDayOff } = await import('@/lib/db/attendance');
     const result = await createDayOff({
@@ -467,7 +467,7 @@ export const requestAttendanceCorrectionFn = createServerFn({ method: 'POST' })
 export const getAdminAttendanceReportFn = createServerFn({ method: 'GET' })
   .validator(reportFiltersSchema)
   .handler(async ({ data: filters }) => {
-    await requirePermission('attendance_admin', 'edit');
+    await requirePermission('attendance_admin', 'reports');
     const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
     return getAdminAttendanceReport(filters);
   });
@@ -519,7 +519,7 @@ function toCsv(records: Array<Record<string, unknown>>): string {
 export const exportAttendanceReportFn = createServerFn({ method: 'POST' })
   .validator(exportReportSchema)
   .handler(async ({ data }) => {
-    await requirePermission('attendance_admin', 'edit');
+    await requirePermission('attendance_admin', 'reports');
     const { getAdminAttendanceReport } = await import('@/lib/db/attendance');
     const { filters, format } = data;
 

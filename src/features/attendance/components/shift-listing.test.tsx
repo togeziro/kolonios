@@ -38,6 +38,14 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() }
 }));
 
+vi.mock('@/hooks/use-nav', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/use-nav')>();
+  return {
+    ...actual,
+    useRoleGroupPermissions: () => ({ isAdmin: true, permissions: {} })
+  };
+});
+
 const shiftsFixture = [
   {
     id: 1,

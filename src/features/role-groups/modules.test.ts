@@ -38,7 +38,13 @@ describe('role permission modules', () => {
   });
 
   it('exposes attendance management actions used by its nav and guards', () => {
-    expect(MODULES.find((m) => m.key === 'attendance_admin')?.actions).toEqual(['view', 'edit']);
+    expect(MODULES.find((m) => m.key === 'attendance_admin')?.actions).toEqual([
+      'view',
+      'add',
+      'edit',
+      'delete',
+      'reports'
+    ]);
   });
 
   it('exposes checklist actions matching its review workflow', () => {

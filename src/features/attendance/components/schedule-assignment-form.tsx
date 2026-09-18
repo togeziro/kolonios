@@ -21,10 +21,14 @@ import {
 import { scheduleGridKeys } from '@/features/schedule-grid/api/queries';
 import { scheduleKeys } from '@/features/schedule/api/queries';
 import { assignScheduleFn, bulkAssignScheduleFn, createDayOffFn } from '../api/service';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { canAttendanceAdminAction } from './permissions';
 
 export function ScheduleAssignmentForm() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canAdd = canAttendanceAdminAction(permissions, isAdmin, 'add');
 
   // Bulk assignment covers up to the configured employee list limit (100).
   const { data: employees } = useQuery(employeesQueryOptions({ limit: 100 }));
@@ -213,17 +217,23 @@ export function ScheduleAssignmentForm() {
           </div>
         </div>
 
-        <div className='flex gap-2'>
-          <Button
-            onClick={() => assignMutation.mutate()}
-            disabled={!canAssign || assignMutation.isPending}
-          >
-            {t('attendanceAdmin.assignSchedule')}
-          </Button>
-          <Button variant='outline' onClick={runBulk} disabled={!shiftId || bulkMutation.isPending}>
-            {t('attendanceAdmin.bulkAssign')}
-          </Button>
-        </div>
+        {canAdd && (
+          <div className='flex gap-2'>
+            <Button
+              onClick={() => assignMutation.mutate()}
+              disabled={!canAssign || assignMutation.isPending}
+            >
+              {t('attendanceAdmin.assignSchedule')}
+            </Button>
+            <Button
+              variant='outline'
+              onClick={runBulk}
+              disabled={!shiftId || bulkMutation.isPending}
+            >
+              {t('attendanceAdmin.bulkAssign')}
+            </Button>
+          </div>
+        )}
 
         <div className='rounded-md border p-4'>
           <h3 className='mb-3 text-sm font-medium'>{t('attendanceAdmin.dayOff')}</h3>
@@ -253,14 +263,16 @@ export function ScheduleAssignmentForm() {
               />
             </div>
           </div>
-          <Button
-            variant='outline'
-            className='mt-3'
-            onClick={() => dayOffMutation.mutate()}
-            disabled={!dayOffUserId || dayOffMutation.isPending}
-          >
-            {t('attendanceAdmin.createDayOff')}
-          </Button>
+          {canAdd && (
+            <Button
+              variant='outline'
+              className='mt-3'
+              onClick={() => dayOffMutation.mutate()}
+              disabled={!dayOffUserId || dayOffMutation.isPending}
+            >
+              {t('attendanceAdmin.createDayOff')}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

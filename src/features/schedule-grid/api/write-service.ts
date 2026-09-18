@@ -193,7 +193,7 @@ export const setCellDayOffFn = createServerFn({ method: 'POST' })
 export const clearCellFn = createServerFn({ method: 'POST' })
   .validator(clearCellSchema)
   .handler(async ({ data }): Promise<CellWriteResult> => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'delete');
     await checkRateLimit(`write:${session.user.id}`);
     return withCellWrite('scheduleGrid.clearCell', data, async (tx) => {
       await clearCellTx(tx, { userId: data.userId, date: data.date });

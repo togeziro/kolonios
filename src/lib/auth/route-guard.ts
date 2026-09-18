@@ -82,36 +82,38 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
   },
   { pattern: /^\/dashboard\/admin\/payroll$/, module: 'payroll', action: 'view' },
 
-  // /dashboard/admin/attendance/* — admin attendance management requires edit
+  // /dashboard/admin/attendance/* — management pages open on `view`; the
+  // writes inside are enforced per-action server-side (`add`/`edit`/`delete`).
+  // Reports is its own module action so report access can be granted alone.
   {
     pattern: /^\/dashboard\/admin\/attendance\/assignments$/,
     module: 'attendance_admin',
-    action: 'edit'
+    action: 'view'
   },
   {
     pattern: /^\/dashboard\/admin\/attendance\/schedules$/,
     module: 'attendance_admin',
-    action: 'edit'
+    action: 'view'
   },
   {
     pattern: /^\/dashboard\/admin\/attendance\/schedule-grid$/,
     module: 'attendance_admin',
-    action: 'edit'
+    action: 'view'
   },
   {
     pattern: /^\/dashboard\/admin\/attendance\/locations$/,
     module: 'attendance_admin',
-    action: 'edit'
+    action: 'view'
   },
   {
     pattern: /^\/dashboard\/admin\/attendance\/reports$/,
     module: 'attendance_admin',
-    action: 'edit'
+    action: 'reports'
   },
   {
     pattern: /^\/dashboard\/admin\/attendance\/face-settings$/,
     module: 'attendance_admin',
-    action: 'edit'
+    action: 'view'
   },
 
   // /dashboard/admin/role-groups/* — list and detail (dynamic id)

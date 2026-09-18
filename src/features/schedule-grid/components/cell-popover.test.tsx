@@ -26,6 +26,14 @@ vi.mock('sonner', () => ({
   }
 }));
 
+vi.mock('@/hooks/use-nav', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/use-nav')>();
+  return {
+    ...actual,
+    useRoleGroupPermissions: () => ({ isAdmin: true, permissions: {} })
+  };
+});
+
 import { CellPopover } from './cell-popover';
 import { useEligibleShiftsForDay } from '../api/shifts-queries';
 import {

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 export const Route = createFileRoute('/dashboard/admin/attendance/schedules')({
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
-    await requirePermissionRpc({ data: 'attendance_admin.edit' });
+    await requirePermissionRpc({ data: 'attendance_admin.view' });
   },
   head: () => ({ meta: [{ title: 'Dashboard: Shift Master' }] }),
   component: SchedulesPage

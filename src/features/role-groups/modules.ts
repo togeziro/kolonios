@@ -9,7 +9,7 @@ const MODULES = [
   {
     key: 'attendance_admin',
     label: 'Attendance Management',
-    actions: ['view', 'edit']
+    actions: ['view', 'add', 'edit', 'delete', 'reports']
   },
   { key: 'checklist', label: 'Daily Checklist', actions: ['view', 'edit', 'approve'] },
   { key: 'schedule', label: 'Schedule', actions: ['view'] },
@@ -49,8 +49,22 @@ const MODULES = [
   }
 ] as const;
 
-export const PERMISSION_ACTIONS: readonly PermissionAction[] = [
-  ...new Set(MODULES.flatMap((module) => module.actions))
+// Canonical column order for the matrix. Kept stable (and matching the
+// `PermissionAction` union) instead of raw first-seen order, so adding an
+// action to an early module (e.g. `reports` on `attendance_admin`) never
+// reshuffles the columns for every other row.
+const ACTION_ORDER: readonly PermissionAction[] = [
+  'view',
+  'add',
+  'edit',
+  'delete',
+  'approve',
+  'pay',
+  'reports'
 ];
+
+export const PERMISSION_ACTIONS: readonly PermissionAction[] = ACTION_ORDER.filter((action) =>
+  MODULES.some((module) => (module.actions as readonly string[]).includes(action))
+);
 
 export { MODULES };

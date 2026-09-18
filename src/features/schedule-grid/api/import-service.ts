@@ -89,7 +89,7 @@ function normaliseCellValue(
 export const importMonthFn = createServerFn({ method: 'POST' })
   .validator(importMonthSchema)
   .handler(async ({ data }: { data: ImportMonthInput }): Promise<ImportMonthResult> => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`scheduleGrid:import:${session.user.id}`);
 
     const buffer = Buffer.from(data.fileBase64, 'base64');

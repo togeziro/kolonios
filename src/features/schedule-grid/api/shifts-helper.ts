@@ -34,7 +34,7 @@ export const listEligibleShiftsForDayFn = createServerFn({ method: 'GET' })
     async ({
       data
     }): Promise<{ success: true; shifts: EligibleShift[] } | { success: false; error: string }> => {
-      await requirePermission('attendance_admin', 'edit');
+      await requirePermission('attendance_admin', 'view');
       try {
         const ruleRows = await db
           .select({

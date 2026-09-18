@@ -51,21 +51,24 @@ describe('resolveRouteGuard', () => {
     });
   });
 
-  it('maps admin attendance management routes to attendance_admin.edit', () => {
-    const adminAttendancePaths = [
+  it('maps admin attendance management pages to attendance_admin.view, reports to reports', () => {
+    const viewPaths = [
       '/dashboard/admin/attendance/assignments',
       '/dashboard/admin/attendance/schedules',
       '/dashboard/admin/attendance/schedule-grid',
       '/dashboard/admin/attendance/locations',
-      '/dashboard/admin/attendance/reports',
       '/dashboard/admin/attendance/face-settings'
     ];
-    for (const path of adminAttendancePaths) {
+    for (const path of viewPaths) {
       expect(resolveRouteGuard(path)).toEqual({
         module: 'attendance_admin',
-        action: 'edit'
+        action: 'view'
       });
     }
+    expect(resolveRouteGuard('/dashboard/admin/attendance/reports')).toEqual({
+      module: 'attendance_admin',
+      action: 'reports'
+    });
   });
 
   it('maps role-group detail (dynamic id) to role_groups.view', () => {

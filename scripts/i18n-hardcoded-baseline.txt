@@ -3,8 +3,8 @@ src/features/attendance/components/admin-attendance-add-dialog.tsx:256
 src/features/attendance/components/admin-attendance-add-dialog.tsx:289
 src/features/attendance/components/attendance-history.tsx:148
 src/features/attendance/components/leave-history.tsx:150
-src/features/attendance/components/schedule-assignment-form.tsx:201
-src/features/attendance/components/shift-listing.tsx:142
+src/features/attendance/components/schedule-assignment-form.tsx:205
+src/features/attendance/components/shift-listing.tsx:150
 src/features/audit/components/audit-log-page.tsx:64
 src/features/branding/components/branding-section.tsx:234
 src/features/customers/components/customer-tables/columns.tsx:103

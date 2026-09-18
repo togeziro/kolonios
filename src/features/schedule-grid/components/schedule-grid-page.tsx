@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { canAttendanceAdminAction } from '@/features/attendance/components/permissions';
 import { businessDateInTimeZone } from '@/lib/dates';
 import { departmentsQueryOptions } from '@/features/masterdata/api/queries';
 import { attendanceKeys } from '@/features/attendance/api/queries';
@@ -69,6 +71,9 @@ function buildPartialFailuresCsv(failures: ImportFailureRow[]): string {
 
 export function ScheduleGridPage() {
   const { t } = useTranslation();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canAdd = canAttendanceAdminAction(permissions, isAdmin, 'add');
+  const canReports = canAttendanceAdminAction(permissions, isAdmin, 'reports');
   const [weekStartPref] = useWeekStartPreference();
 
   // The week-start URL state is owned by the page (not pushed to the route
@@ -305,43 +310,51 @@ export function ScheduleGridPage() {
             isPending={isPending}
           />
           <div className='flex flex-wrap items-center gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              data-testid='schedule-grid-bulk'
-              onClick={() => setBulkOpen(true)}
-            >
-              <Icons.copy className='mr-1 size-3.5' />
-              {t('scheduleGrid.actions.bulk')}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type='file'
-              accept='.xlsx'
-              className='hidden'
-              data-testid='schedule-grid-import-input'
-              onChange={handleImportFileChange}
-            />
-            <Button
-              variant='outline'
-              size='sm'
-              data-testid='schedule-grid-import'
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importMutation.isPending}
-            >
-              <Icons.download className='mr-1 size-3.5' />
-              {t('scheduleGrid.actions.import')}
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              data-testid='schedule-grid-export'
-              onClick={() => exportMutation.mutate()}
-              disabled={exportMutation.isPending}
-            >
-              <Icons.upload className='mr-1 size-3.5' />
-              {t('scheduleGrid.actions.export')}
-            </Button>
+            {canAdd ? (
+              <Button
+                variant='outline'
+                size='sm'
+                data-testid='schedule-grid-bulk'
+                onClick={() => setBulkOpen(true)}
+              >
+                <Icons.copy className='mr-1 size-3.5' />
+                {t('scheduleGrid.actions.bulk')}
+              </Button>
+            ) : null}
+            {canAdd ? (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type='file'
+                  accept='.xlsx'
+                  className='hidden'
+                  data-testid='schedule-grid-import-input'
+                  onChange={handleImportFileChange}
+                />
+                <Button
+                  variant='outline'
+                  size='sm'
+                  data-testid='schedule-grid-import'
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importMutation.isPending}
+                >
+                  <Icons.download className='mr-1 size-3.5' />
+                  {t('scheduleGrid.actions.import')}
+                </Button>
+              </>
+            ) : null}
+            {canReports ? (
+              <Button
+                variant='outline'
+                size='sm'
+                data-testid='schedule-grid-export'
+                onClick={() => exportMutation.mutate()}
+                disabled={exportMutation.isPending}
+              >
+                <Icons.upload className='mr-1 size-3.5' />
+                {t('scheduleGrid.actions.export')}
+              </Button>
+            ) : null}
             {importFailures ? (
               <a
                 href={importFailures.url}
@@ -393,7 +406,11 @@ export function ScheduleGridPage() {
               }}
             />
           ) : data ? (
-            <ScheduleGrid response={data} onAssignShift={setAssignTarget} today={today} />
+            <ScheduleGrid
+              response={data}
+              onAssignShift={canAdd ? setAssignTarget : undefined}
+              today={today}
+            />
           ) : null}
 
           {data ? (

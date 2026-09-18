@@ -183,7 +183,7 @@ function weekOffset(weekStart: string, date: string): number {
 export const repeatWeekBulkFn = createServerFn({ method: 'POST' })
   .validator(repeatWeekBulkSchema)
   .handler(async ({ data }): Promise<RepeatWeekBulkResult> => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`write:${session.user.id}`);
 
     try {

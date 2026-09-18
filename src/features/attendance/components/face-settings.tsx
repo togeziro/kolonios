@@ -7,9 +7,11 @@ import { Slider } from '@/components/ui/slider';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { faceSettingsQueryOptions } from '@/features/face/api/queries';
 import { updateFaceSettingsFn } from '@/features/face/api/service';
 import type { FaceAccuracyLevel, FaceValidationMode } from '@/lib/face/types';
+import { canAttendanceAdminAction } from './permissions';
 
 interface FaceSettingsProps {
   onSave?: (settings: {
@@ -22,6 +24,8 @@ interface FaceSettingsProps {
 export function FaceSettings({ onSave }: FaceSettingsProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canEdit = canAttendanceAdminAction(permissions, isAdmin, 'edit');
   const { data: settings } = useQuery(faceSettingsQueryOptions());
   const [showSeconds, setShowSeconds] = useState(false);
   const [validationMode, setValidationMode] = useState<FaceValidationMode>('background');
@@ -123,9 +127,11 @@ export function FaceSettings({ onSave }: FaceSettingsProps) {
           </div>
         </div>
 
-        <Button className='w-full' onClick={handleSave} disabled={saving}>
-          {saving ? t('common.saving') : t('common.save')}
-        </Button>
+        {canEdit && (
+          <Button className='w-full' onClick={handleSave} disabled={saving}>
+            {saving ? t('common.saving') : t('common.save')}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

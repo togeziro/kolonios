@@ -143,6 +143,17 @@ vi.mock('sonner', () => ({
   }
 }));
 
+// Grant every attendance write so the gated page actions render; the guards
+// under test mock the server fns, so permission plumbing is the only thing
+// this mock exercises.
+vi.mock('@/hooks/use-nav', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/use-nav')>();
+  return {
+    ...actual,
+    useRoleGroupPermissions: () => ({ isAdmin: true, permissions: {} })
+  };
+});
+
 // ----- DOM shims (jsdom doesn't implement these) -----
 
 class ResizeObserverMock {

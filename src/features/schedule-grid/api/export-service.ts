@@ -150,7 +150,7 @@ async function resolveExportRows(input: ExportMonthInput): Promise<
 export const exportMonthFn = createServerFn({ method: 'GET' })
   .validator(exportMonthSchema)
   .handler(async ({ data }: { data: ExportMonthInput }): Promise<ExportMonthResult> => {
-    const session = await requirePermission('attendance_admin', 'view');
+    const session = await requirePermission('attendance_admin', 'reports');
     await checkRateLimit(`scheduleGrid:export:${session.user.id}`);
 
     const rows = await resolveExportRows(data);

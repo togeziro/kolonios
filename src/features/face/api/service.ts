@@ -132,7 +132,7 @@ export const verifyFaceFn = createServerFn({ method: 'POST' })
 // --- Company settings (admin) ---
 
 export const getFaceSettingsFn = createServerFn({ method: 'GET' }).handler(async () => {
-  await requirePermission('attendance', 'edit');
+  await requirePermission('attendance', 'view');
   const { getCompanySettings } = await import('@/lib/db/masterdata');
   const result = await getCompanySettings();
   return {
@@ -146,7 +146,7 @@ export const getFaceSettingsFn = createServerFn({ method: 'GET' }).handler(async
 export const updateFaceSettingsFn = createServerFn({ method: 'POST' })
   .validator(faceSettingsSchema)
   .handler(async ({ data }) => {
-    const session = await requirePermission('attendance', 'edit');
+    const session = await requirePermission('attendance_admin', 'edit');
     await checkRateLimit(`write:${session.user.id}`);
     const { updateCompanySettings } = await import('@/lib/db/masterdata');
     await updateCompanySettings({

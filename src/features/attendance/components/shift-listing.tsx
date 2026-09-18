@@ -17,16 +17,22 @@ import {
 import { DataTable } from '@/components/ui/table/data-table';
 import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { appFeatures } from '@/lib/table-features';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { listShiftsQueryOptions } from '../api/queries';
 import { deleteShiftMutation } from '../api/mutations';
 import { buildShiftColumns, type ShiftListRow } from './shift-columns';
 import { ShiftDeleteConfirmDialog } from './shift-delete-confirm-dialog';
 import { ShiftFormSheet } from './shift-form-sheet';
+import { canAttendanceAdminAction } from './permissions';
 
 type DeleteShiftResult = { success: boolean; mode?: 'soft' | 'hard' };
 
 export function ShiftListing() {
   const { t } = useTranslation();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canAdd = canAttendanceAdminAction(permissions, isAdmin, 'add');
+  const canEdit = canAttendanceAdminAction(permissions, isAdmin, 'edit');
+  const canDelete = canAttendanceAdminAction(permissions, isAdmin, 'delete');
   const { data, isLoading } = useQuery(listShiftsQueryOptions());
 
   const shifts = useMemo<ShiftListRow[]>(
@@ -71,10 +77,10 @@ export function ShiftListing() {
   const columns = useMemo(
     () =>
       buildShiftColumns({
-        onEdit: (id) => setEditingShiftId(id),
-        onDelete
+        onEdit: canEdit ? (id) => setEditingShiftId(id) : undefined,
+        onDelete: canDelete ? onDelete : undefined
       }),
-    [onDelete]
+    [canEdit, canDelete, onDelete]
   );
 
   const table = useTable({
@@ -103,13 +109,15 @@ export function ShiftListing() {
         title={t('attendanceAdmin.shiftsTitle')}
         description={t('attendanceAdmin.shiftsDescription')}
         action={
-          <button
-            type='button'
-            onClick={() => setAddOpen(true)}
-            className='bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-7 items-center gap-1 rounded-md px-3 text-sm font-medium'
-          >
-            +{t('attendanceAdmin.addShift')}
-          </button>
+          canAdd ? (
+            <button
+              type='button'
+              onClick={() => setAddOpen(true)}
+              className='bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-7 items-center gap-1 rounded-md px-3 text-sm font-medium'
+            >
+              +{t('attendanceAdmin.addShift')}
+            </button>
+          ) : null
         }
       >
         <DataTable table={table}>

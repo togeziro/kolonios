@@ -46,6 +46,8 @@ import { businessDateInTimeZone } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 
 import type { ScheduleGridCell as GridCellData } from '../api/types';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
+import { canAttendanceAdminAction } from '@/features/attendance/components/permissions';
 import { buildCellAriaLabel } from '../utils/aria';
 import { addDays, dayOfWeek, weekDays } from '../utils/date-utils';
 import {
@@ -92,6 +94,9 @@ function formatDateHeading(date: string, t: (key: string) => string): string {
 
 export function CellPopover({ employeeId, cell, children, weekStart }: CellPopoverProps) {
   const { t } = useTranslation();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canEdit = canAttendanceAdminAction(permissions, isAdmin, 'edit');
+  const canDelete = canAttendanceAdminAction(permissions, isAdmin, 'delete');
   const [open, setOpen] = useState(false);
   const [shiftId, setShiftId] = useState<string>(cell.shiftId != null ? String(cell.shiftId) : '');
   const [isDayOffToggle, setIsDayOffToggle] = useState<boolean>(cell.isDayOff);
@@ -320,7 +325,7 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
           ) : null}
 
           {/* Day-off pre-existing conflict — Shift picker disabled until clear */}
-          {isConflict ? (
+          {isConflict && canDelete ? (
             <div
               role='alert'
               data-testid='day-off-conflict-warning'
@@ -449,7 +454,7 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
             AND the cell is not in the day-off conflict UX (that has its own
             button). An assignment-backed shift is not clearable here; that is
             what Delete schedule below is for. */}
-          {canClearCell && !applyToWeek && !isConflict ? (
+          {canClearCell && canDelete && !applyToWeek && !isConflict ? (
             <Button
               type='button'
               variant='outline'
@@ -464,7 +469,7 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
           ) : null}
 
           {/* Delete schedule — removes the whole covering assignment range. */}
-          {canDeleteAssignment ? (
+          {canDeleteAssignment && canDelete ? (
             <Button
               type='button'
               variant='outline'
@@ -491,15 +496,17 @@ export function CellPopover({ employeeId, cell, children, weekStart }: CellPopov
             >
               {t('common.cancel')}
             </Button>
-            <Button
-              type='button'
-              size='sm'
-              onClick={isDayOffToggle ? handleSaveDayOff : handleSaveShift}
-              disabled={isPending || (!isDayOffToggle && !shiftId)}
-              data-testid='popover-save-button'
-            >
-              {t('scheduleGrid.popover.save')}
-            </Button>
+            {canEdit ? (
+              <Button
+                type='button'
+                size='sm'
+                onClick={isDayOffToggle ? handleSaveDayOff : handleSaveShift}
+                disabled={isPending || (!isDayOffToggle && !shiftId)}
+                data-testid='popover-save-button'
+              >
+                {t('scheduleGrid.popover.save')}
+              </Button>
+            ) : null}
           </div>
         </PopoverContent>
       </Popover>

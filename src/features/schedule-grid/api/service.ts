@@ -121,7 +121,7 @@ export async function resolveWeekForEmployees(
 export const getScheduleGridFn = createServerFn({ method: 'GET' })
   .validator(scheduleGridFiltersSchema)
   .handler(async ({ data }: { data: ScheduleGridFiltersInput }): Promise<ScheduleGridResponse> => {
-    await requirePermission('attendance_admin', 'edit');
+    await requirePermission('attendance_admin', 'view');
 
     const weekStart = data.weekStart;
     const weekEnd = addDays(weekStart, 6);
@@ -228,7 +228,7 @@ export const getScheduleGridFn = createServerFn({ method: 'GET' })
 export const createAssignmentInlineFn = createServerFn({ method: 'POST' })
   .validator(assignShiftInlineSchema)
   .handler(async ({ data }: { data: AssignShiftInlineInput }) => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'add');
     await checkRateLimit(`write:${session.user.id}`);
 
     // `effectiveTo` is required — assignments are always bounded. A missing
@@ -406,7 +406,7 @@ export type DeleteAssignmentResult =
 export const deleteAssignmentFn = createServerFn({ method: 'POST' })
   .validator(deleteAssignmentSchema)
   .handler(async ({ data }: { data: DeleteAssignmentInput }): Promise<DeleteAssignmentResult> => {
-    const session = await requirePermission('attendance_admin', 'edit');
+    const session = await requirePermission('attendance_admin', 'delete');
     await checkRateLimit(`write:${session.user.id}`);
 
     try {

@@ -6,14 +6,20 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { locationsQueryOptions } from '../api/queries';
 import { deleteLocationFn } from '../api/service';
 import { DEFAULT_MAX_STALE_MS } from '../lib/location';
 import { LocationForm, type LocationFormState } from './admin-location-form';
+import { canAttendanceAdminAction } from './permissions';
 
 export function LocationManagePage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canAdd = canAttendanceAdminAction(permissions, isAdmin, 'add');
+  const canEdit = canAttendanceAdminAction(permissions, isAdmin, 'edit');
+  const canDelete = canAttendanceAdminAction(permissions, isAdmin, 'delete');
   const formRef = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState<LocationFormState | undefined>();
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -55,9 +61,11 @@ export function LocationManagePage() {
 
   return (
     <div className='grid gap-6 lg:grid-cols-2 [&>*]:min-w-0'>
-      <div ref={formRef} className='order-2 lg:order-1'>
-        <LocationForm initial={editing} />
-      </div>
+      {(canAdd || canEdit) && (
+        <div ref={formRef} className='order-2 lg:order-1'>
+          <LocationForm initial={editing} />
+        </div>
+      )}
 
       <Card className='order-1 lg:order-2'>
         <CardHeader>
@@ -94,25 +102,29 @@ export function LocationManagePage() {
                   </div>
                 </div>
                 <div className='flex justify-end gap-2 sm:justify-normal relative z-10'>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    size='sm'
-                    className='cursor-pointer'
-                    onClick={() => handleEdit(loc)}
-                  >
-                    {t('common.edit')}
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='destructive'
-                    size='sm'
-                    className='cursor-pointer'
-                    onClick={() => setDeletingId(loc.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {t('common.delete')}
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      className='cursor-pointer'
+                      onClick={() => handleEdit(loc)}
+                    >
+                      {t('common.edit')}
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      type='button'
+                      variant='destructive'
+                      size='sm'
+                      className='cursor-pointer'
+                      onClick={() => setDeletingId(loc.id)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {t('common.delete')}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))

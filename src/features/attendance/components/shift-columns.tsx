@@ -26,8 +26,8 @@ export interface ShiftListRow {
 }
 
 export interface ShiftColumnCallbacks {
-  onEdit: (id: number) => void;
-  onDelete: (id: number) => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
 }
 
 const EN_DASH = '\u2013'; // –
@@ -139,10 +139,11 @@ function ShiftActionsCell({
   onDelete
 }: {
   shiftId: number;
-  onEdit: (id: number) => void;
-  onDelete: (id: number) => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
 }) {
   const { t } = useTranslation();
+  if (!onEdit && !onDelete) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -151,12 +152,16 @@ function ShiftActionsCell({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className='w-40' align='end'>
-        <DropdownMenuItem onSelect={() => onEdit(shiftId)}>
-          {t('attendanceAdmin.editShift')}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onDelete(shiftId)} variant='destructive'>
-          {t('attendanceAdmin.deleteShift')}
-        </DropdownMenuItem>
+        {onEdit && (
+          <DropdownMenuItem onSelect={() => onEdit(shiftId)}>
+            {t('attendanceAdmin.editShift')}
+          </DropdownMenuItem>
+        )}
+        {onDelete && (
+          <DropdownMenuItem onSelect={() => onDelete(shiftId)} variant='destructive'>
+            {t('attendanceAdmin.deleteShift')}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

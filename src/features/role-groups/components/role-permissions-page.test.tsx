@@ -70,6 +70,13 @@ function checkboxState(moduleLabel: string) {
   return boxes.map((b) => b.getAttribute('aria-checked') === 'true');
 }
 
+function checkboxDisabled(moduleLabel: string) {
+  const row = screen.getAllByRole('row').find((r) => r.textContent?.startsWith(moduleLabel));
+  if (!row) return null;
+  const boxes = [...row.querySelectorAll('[role=checkbox]')];
+  return boxes.map((b) => (b as HTMLButtonElement).disabled);
+}
+
 beforeEach(() => {
   useQueryMock.mockReset();
 });
@@ -107,6 +114,25 @@ describe('RolePermissionsPage — matrix reflects saved permissions', () => {
     expect(checkboxState('Schedule')).toEqual([true, false, false, false, false, false, false]);
     expect(checkboxState('Achievements')).toEqual([true, false, false, false, false, false, false]);
     expect(checkboxState('Broadcast')).toEqual([true, false, false, false, false, false, false]);
+  });
+
+  it('leaves attendance_admin add/delete/reports enabled and approve/pay disabled', () => {
+    setGroupLoaded();
+    renderPage();
+
+    // Column order is the canonical vocabulary (view, add, edit, delete,
+    // approve, pay, reports). Only the module's declared actions are
+    // editable; the rest stay disabled.
+    expect(checkboxDisabled('Attendance Management')).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]);
+    expect(checkboxDisabled('Payroll')).toEqual([false, false, false, false, false, false, false]);
   });
 
   it('renders every module row, including the previously phantom ones', () => {

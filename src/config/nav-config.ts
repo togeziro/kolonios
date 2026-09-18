@@ -196,6 +196,7 @@ export const navItems: NavItem[] = [
         icon: 'clock',
         isActive: false,
         module: 'attendance_admin',
+        requiredAction: 'reports',
         items: []
       },
       {

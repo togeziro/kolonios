@@ -27,6 +27,7 @@ import {
   type AdminAttendanceDialogMode
 } from './admin-attendance-add-dialog';
 import { buildAdminAttendanceColumns } from './admin-attendance-columns';
+import { canAttendanceAdminAction } from './permissions';
 
 const STATUS_OPTIONS = ['present', 'late', 'absent', 'excused', 'pending'] as const;
 
@@ -38,7 +39,8 @@ type DialogState = {
 export function AdminAttendanceReport() {
   const { t } = useTranslation();
   const { isAdmin, permissions } = useRoleGroupPermissions();
-  const canEdit = isAdmin || permissions?.attendance_admin?.edit === true;
+  const canEdit = canAttendanceAdminAction(permissions, isAdmin, 'edit');
+  const canReports = canAttendanceAdminAction(permissions, isAdmin, 'reports');
   const [filters, setFilters] = useState<AdminAttendanceFilters>({ page: 1, limit: 50 });
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
@@ -244,17 +246,19 @@ export function AdminAttendanceReport() {
               {t('attendanceAdmin.addAttendanceButton')}
             </Button>
           ) : null}
-          {(['csv', 'xlsx', 'pdf'] as const).map((format) => (
-            <Button
-              key={format}
-              variant='outline'
-              size='sm'
-              onClick={() => exportMutation.mutate(format)}
-              disabled={exportMutation.isPending}
-            >
-              {t(`attendanceAdmin.export${format.toUpperCase()}`)}
-            </Button>
-          ))}
+          {canReports
+            ? (['csv', 'xlsx', 'pdf'] as const).map((format) => (
+                <Button
+                  key={format}
+                  variant='outline'
+                  size='sm'
+                  onClick={() => exportMutation.mutate(format)}
+                  disabled={exportMutation.isPending}
+                >
+                  {t(`attendanceAdmin.export${format.toUpperCase()}`)}
+                </Button>
+              ))
+            : null}
           <span className='ml-auto text-sm text-muted-foreground'>
             {t('attendanceAdmin.totalRecords', { count: data?.total ?? 0 })}
           </span>

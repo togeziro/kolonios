@@ -6,7 +6,7 @@ import { ScheduleGridPage } from '@/features/schedule-grid/components/schedule-g
 export const Route = createFileRoute('/dashboard/admin/attendance/schedule-grid')({
   beforeLoad: async () => {
     const { requirePermissionRpc } = await import('@/lib/auth/session');
-    await requirePermissionRpc({ data: 'attendance_admin.edit' });
+    await requirePermissionRpc({ data: 'attendance_admin.view' });
   },
   head: () => ({ meta: [{ title: 'Dashboard: Schedule Grid' }] }),
   component: ScheduleGridRoute
