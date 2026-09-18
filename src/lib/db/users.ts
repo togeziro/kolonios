@@ -442,6 +442,93 @@ export async function listMissingEmployeeProfiles(
   }
 }
 
+/**
+ * Paginated, searchable variant of the missing-profile predicate for the
+ * onboarding picker: active, non-customer users without an `employees` row.
+ * Same source of truth as `listMissingEmployeeProfiles` (not banned, no
+ * employee row, not a customer), plus the standard `UserFilters`
+ * search/sort/pagination so the picker scales beyond a sample.
+ *
+ * Returns the `UsersResponse` contract so picker consumers reuse the same
+ * row type as the users table; `has_employee_profile` is always false here.
+ * An `Inactive` status filter coherently yields an empty set (unlinked
+ * implies not banned).
+ */
+export async function getUnlinkedUsers(filters: UserFilters): Promise<UsersResponse> {
+  try {
+    const { limit, offset } = buildPagination(filters);
+
+    const searchCondition = buildSearchCondition([user.name, user.email], filters.search);
+    const rolesCondition = filters.roles?.trim() ? eq(user.role, filters.roles.trim()) : undefined;
+    const statusCondition =
+      filters.status === 'Active'
+        ? eq(user.banned, false)
+        : filters.status === 'Inactive'
+          ? eq(user.banned, true)
+          : undefined;
+    const where = buildConditions([
+      searchCondition,
+      rolesCondition,
+      statusCondition,
+      eq(user.banned, false),
+      isNull(employees.id),
+      sql`${user.role} <> 'customer'`
+    ]);
+    const orderBy = buildOrderBy(filters, userSortColumnMap) ?? asc(user.createdAt);
+
+    const [rows, countRows] = await Promise.all([
+      db
+        .select({
+          user,
+          hasEmployeeProfile: sql<boolean>`(${employees.id} IS NOT NULL)`.as('has_employee_profile')
+        })
+        .from(user)
+        .leftJoin(employees, eq(employees.id, user.id))
+        .where(where)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(user)
+        .leftJoin(employees, eq(employees.id, user.id))
+        .where(where)
+    ]);
+
+    const userIds = rows.map((u) => u.user.id);
+    const rgMap = new Map<string, { id: string; name: string }>();
+    if (userIds.length > 0) {
+      // Filter in the DB — never full-scan the join table then filter in memory.
+      const rgRows = await db
+        .select({
+          user_id: userRoleGroups.user_id,
+          id: roleGroups.id,
+          name: roleGroups.name
+        })
+        .from(userRoleGroups)
+        .innerJoin(roleGroups, eq(userRoleGroups.role_group_id, roleGroups.id))
+        .where(inArray(userRoleGroups.user_id, userIds));
+      for (const row of rgRows) {
+        rgMap.set(row.user_id, { id: row.id, name: row.name });
+      }
+    }
+
+    return {
+      success: true,
+      time: new Date().toISOString(),
+      message: 'Unlinked users fetched',
+      total_users: countRows[0]?.count ?? 0,
+      offset,
+      limit,
+      users: rows.map((r) =>
+        toUser(r.user as unknown as AdminUser, rgMap.get(r.user.id) ?? null, r.hasEmployeeProfile)
+      )
+    };
+  } catch (e) {
+    mapDbError(e, 'users.getUnlinkedUsers');
+  }
+}
+
 export async function getUserForAudit(id: string) {
   try {
     const rows = await db

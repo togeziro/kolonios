@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import {
   getUsers,
+  getUnlinkedUsers,
   createUser,
   updateUser,
   deleteUser,
@@ -525,6 +526,66 @@ describe('users data access (integration)', () => {
       });
       expect(total).toBe(2);
       expect(rows).toHaveLength(1);
+    });
+  });
+
+  describe('getUnlinkedUsers', () => {
+    beforeEach(async () => {
+      await resetAllTables();
+      // Has a profile — must never appear in the picker.
+      await seedEmployee('with-profile', { email: 'with@test.com', full_name: 'With Profile' });
+      // No profile, active, non-customer — the picker candidates.
+      await seedUser('lonely', { email: 'lonely@test.com', name: 'Lonely', role: 'employee' });
+      await seedUser('lonely-tech', {
+        email: 'tech@test.com',
+        name: 'Lonely Tech',
+        role: 'technician'
+      });
+      // Banned users are intentional state, not a gap.
+      await seedUser('banned-lonely', { email: 'banned@test.com', role: 'employee', banned: true });
+      // Customers live in the portal shell, not the onboarding surface.
+      await seedUser('customer-lonely', { email: 'cust@test.com', role: 'customer' });
+    });
+
+    it('returns only active, non-customer users without an employee row', async () => {
+      const res = await getUnlinkedUsers({});
+      expect(res.success).toBe(true);
+      expect(res.total_users).toBe(2);
+      expect(res.users.map((u) => u.id).sort()).toEqual(['lonely', 'lonely-tech']);
+      expect(res.users.every((u) => u.has_employee_profile === false)).toBe(true);
+      expect(res.users.every((u) => u.status === 'Active')).toBe(true);
+    });
+
+    it('filters by search on name/email', async () => {
+      const res = await getUnlinkedUsers({ search: 'tech@test' });
+      expect(res.total_users).toBe(1);
+      expect(res.users[0].id).toBe('lonely-tech');
+    });
+
+    it('filters by roles', async () => {
+      const res = await getUnlinkedUsers({ roles: 'technician' });
+      expect(res.total_users).toBe(1);
+      expect(res.users[0].id).toBe('lonely-tech');
+    });
+
+    it('paginates without truncating the total', async () => {
+      const res = await getUnlinkedUsers({ page: 1, limit: 1 });
+      expect(res.total_users).toBe(2);
+      expect(res.users).toHaveLength(1);
+    });
+
+    it('sorts by name asc/desc', async () => {
+      const asc = await getUnlinkedUsers({ sort: JSON.stringify([{ id: 'name', desc: false }]) });
+      expect(asc.users[0].name).toBe('Lonely');
+
+      const desc = await getUnlinkedUsers({ sort: JSON.stringify([{ id: 'name', desc: true }]) });
+      expect(desc.users[0].name).toBe('Lonely Tech');
+    });
+
+    it('Inactive status coherently yields an empty set', async () => {
+      const res = await getUnlinkedUsers({ status: 'Inactive' });
+      expect(res.total_users).toBe(0);
+      expect(res.users).toHaveLength(0);
     });
   });
 });

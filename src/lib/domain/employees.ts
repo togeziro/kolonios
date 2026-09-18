@@ -67,3 +67,14 @@ export type EmployeeMutationPayload = {
   base_salary?: number;
   status?: string;
 };
+
+/**
+ * Single-action onboarding: account (login + access level) plus HR profile.
+ * `password` blank means "generate for me" — the server returns the
+ * one-time credential ONCE (never stored, never audited). `role_group_id`
+ * assigns the access level at provision time instead of a second edit.
+ */
+export type OnboardEmployeePayload = EmployeeMutationPayload & {
+  role_group_id?: string;
+  password?: string;
+};

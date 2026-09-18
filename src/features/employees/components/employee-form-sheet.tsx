@@ -11,6 +11,7 @@ import {
   SheetTitle
 } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createEmployeeMutation, updateEmployeeMutation } from '../api/mutations';
 import type { Employee } from '../api/types';
@@ -19,14 +20,25 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { getErrorMessage } from '@/lib/errors';
 import { STATUS_OPTIONS, EMPLOYMENT_STATUS_OPTIONS } from './employee-tables/options';
+import UnlinkedUserPicker, { type UnlinkedUserChoice } from './unlinked-user-picker';
 import {
   departmentsQueryOptions,
   designationOptionsQueryOptions
 } from '@/features/masterdata/api/queries';
 
-export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeFormSheetProps) {
+export function EmployeeFormSheet({
+  employee,
+  prefillUser,
+  open,
+  onOpenChange
+}: EmployeeFormSheetProps) {
   const { t } = useTranslation();
   const isEdit = !!employee;
+  // Identity linked via picker (create flow) — prefill arrives locked from
+  // the Pending badge deep-link instead. Either way the operator never
+  // retypes name/email, so the link cannot fail on a typo.
+  const [linkedUser, setLinkedUser] = useState<UnlinkedUserChoice | null>(null);
+  const linkedIdentity = prefillUser ?? linkedUser;
 
   const { data: deptData } = useSuspenseQuery(departmentsQueryOptions());
   const { data: desigData } = useSuspenseQuery(designationOptionsQueryOptions());
@@ -64,9 +76,9 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
 
   const form = useAppForm({
     defaultValues: {
-      full_name: employee?.full_name ?? '',
+      full_name: prefillUser?.name ?? employee?.full_name ?? '',
       nickname: employee?.nickname ?? '',
-      email: employee?.email ?? '',
+      email: prefillUser?.email ?? employee?.email ?? '',
       phone: employee?.phone ?? '',
       birth_place: employee?.birth_place ?? '',
       birth_date: employee?.birth_date ?? '',
@@ -100,10 +112,19 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
         base_salary: Number(value.base_salary) || 0,
         status: value.status || 'active'
       };
-      if (isEdit) {
-        await updateMutation.mutateAsync({ id: employee.id, values: payload });
-      } else {
-        await createMutation.mutateAsync(payload);
+      /**
+       * Failure UX lives in the mutation onError toasts above; swallowing
+       * here keeps the floating handleSubmit promise from logging an
+       * unhandled rejection on every failed submit.
+       */
+      try {
+        if (isEdit) {
+          await updateMutation.mutateAsync({ id: employee.id, values: payload });
+        } else {
+          await createMutation.mutateAsync(payload);
+        }
+      } catch {
+        /* handled by onError toasts */
       }
     }
   });
@@ -111,6 +132,29 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
   const { FormTextField, FormSelectField, FormCheckboxField } = useFormFields<EmployeeFormValues>();
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+
+  /**
+   * Picker selection drives the identity fields: picking locks them to the
+   * chosen user, clearing unlocks and empties them so a stale linked
+   * identity can never be submitted as free text.
+   */
+  function handleLinkedUserChange(user: UnlinkedUserChoice | null) {
+    setLinkedUser(user);
+    form.setFieldValue('full_name', user?.name ?? '');
+    form.setFieldValue('email', user?.email ?? '');
+  }
+
+  /**
+   * Closing a fresh create discards the picker selection with the form, so
+   * reopening always starts unlinked instead of resuming a stale choice.
+   */
+  function handleOpenChange(next: boolean) {
+    if (!next && !isEdit) {
+      setLinkedUser(null);
+      form.reset();
+    }
+    onOpenChange(next);
+  }
 
   const departments = deptData?.departments ?? [];
   const deptOptions = departments.map((d: { id: number; name: string }) => ({
@@ -123,7 +167,7 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
   const isInternship = formValues.is_internship;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className='flex flex-col sm:max-w-lg'>
         <SheetHeader>
           <SheetTitle>{isEdit ? t('employee.edit') : t('employee.new')}</SheetTitle>
@@ -135,6 +179,38 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
         <div className='flex-1 overflow-auto'>
           <form.AppForm>
             <form.Form id='employee-form-sheet' className='space-y-4'>
+              {linkedIdentity && (
+                <Alert>
+                  <Icons.alertCircle />
+                  <AlertTitle>{t('employee.linkModeNoticeTitle')}</AlertTitle>
+                  <AlertDescription>
+                    {t('employee.linkModeNotice', {
+                      name: linkedIdentity.name,
+                      email: linkedIdentity.email
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
+              {!isEdit && !prefillUser && (
+                <div className='space-y-2'>
+                  <h4 className='text-sm font-medium text-muted-foreground'>
+                    {t('employee.linkUserAccount')}
+                  </h4>
+                  <UnlinkedUserPicker value={linkedUser} onChange={handleLinkedUserChange} />
+                  {linkedUser && (
+                    <div className='flex justify-end'>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => handleLinkedUserChange(null)}
+                      >
+                        {t('employee.changeLinkedUser')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className='space-y-2'>
                 <h4 className='text-sm font-medium text-muted-foreground'>
                   {t('employee.personal')}
@@ -145,6 +221,12 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
                     label={t('employee.fullName')}
                     required
                     placeholder={t('employee.namePlaceholder')}
+                    disabled={!!linkedIdentity}
+                    description={
+                      linkedIdentity
+                        ? t('employee.linkedAccountHint', { name: linkedIdentity.name })
+                        : undefined
+                    }
                   />
 
                   <FormTextField
@@ -159,6 +241,12 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
                     required
                     type='email'
                     placeholder={t('employee.emailPlaceholder')}
+                    disabled={!!linkedIdentity}
+                    description={
+                      linkedIdentity
+                        ? t('employee.linkedAccountHint', { name: linkedIdentity.name })
+                        : undefined
+                    }
                   />
 
                   <FormTextField
@@ -283,6 +371,11 @@ export function EmployeeFormSheet({ employee, open, onOpenChange }: EmployeeForm
 
 interface EmployeeFormSheetProps {
   employee?: Employee;
+  /**
+   * Identity resolved before the sheet mounts (Pending badge deep-link).
+   * Locks name/email — the link target is already decided.
+   */
+  prefillUser?: UnlinkedUserChoice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

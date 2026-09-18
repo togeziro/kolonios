@@ -5,10 +5,12 @@ import {
   getEmployeeById,
   getMyEmployee,
   createEmployee,
+  onboardEmployee,
   updateEmployee,
   deleteEmployee,
   EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR,
-  EMPLOYEE_ALREADY_LINKED
+  EMPLOYEE_ALREADY_LINKED,
+  ONBOARD_LINK_WITH_PASSWORD
 } from './employees';
 import { resetAllTables, seedUser, seedDepartment, seedDesignation } from '@/test-utils/db';
 import { db } from '@/lib/db';
@@ -414,6 +416,173 @@ describe('employees data access (integration)', () => {
         .where(eq(user.email, 'fresh@example.com'));
       expect(rows).toHaveLength(1);
       expect(rows[0].mustChangePassword).toBe(true);
+    });
+  });
+
+  describe('onboardEmployee', () => {
+    const onboardBase = {
+      full_name: 'Onboard Hire',
+      email: 'onboard@test.com',
+      birth_date: '1990-01-01',
+      join_date: '2024-01-01',
+      created_by: TEST_EMP_USER_ID
+    };
+
+    function onboardArgs(overrides: Record<string, unknown> = {}) {
+      return {
+        ...onboardBase,
+        department_id: deptId,
+        designation_id: desigId,
+        ...overrides
+      };
+    }
+
+    it('provisions account + profile atomically and returns the one-time credential', async () => {
+      const res = await onboardEmployee(onboardArgs());
+
+      expect(res.success).toBe(true);
+      expect(res.linked).toBe(false);
+      expect(res.employee.full_name).toBe('Onboard Hire');
+      expect(res.employee.employee_code).toMatch(/^EMP-\d{4}$/);
+      expect(res.user.email).toBe('onboard@test.com');
+      expect(res.employee.id).toBe(res.user.id);
+      expect(res.generatedPassword).toMatch(/^[A-Za-z0-9]{14}$/);
+
+      const rows = await db
+        .select({ id: user.id, mustChangePassword: user.mustChangePassword })
+        .from(user)
+        .where(eq(user.email, 'onboard@test.com'));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe(res.user.id);
+      expect(rows[0].mustChangePassword).toBe(true);
+    });
+
+    it('honours an admin-set password (no credential echoed back)', async () => {
+      const { auth } = await import('@/lib/auth/auth.server');
+      const mocks = auth.api as unknown as { createUser: ReturnType<typeof vi.fn> };
+      mocks.createUser.mockClear();
+
+      const res = await onboardEmployee(onboardArgs({ password: 'Password123!' }));
+
+      expect(res.success).toBe(true);
+      expect(res.linked).toBe(false);
+      expect(res.generatedPassword).toBeUndefined();
+      expect(mocks.createUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({ email: 'onboard@test.com', password: 'Password123!' })
+        })
+      );
+    });
+
+    it('rejects a weak provided password without creating anything', async () => {
+      await expect(onboardEmployee(onboardArgs({ password: 'short' }))).rejects.toMatchObject({
+        code: 'WEAK_PASSWORD'
+      });
+
+      const rows = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, 'onboard@test.com'));
+      expect(rows).toHaveLength(0);
+    });
+
+    it('compensates a half-provisioned onboard by removing the orphaned account', async () => {
+      // The profile insert fails AFTER the auth account exists (the id is
+      // already taken by another profile → PK conflict): without compensation
+      // the retry would hit "user already exists" and the orphan would linger
+      // as Pending. 'mock-auth-user-id' is the id the auth mock above always
+      // returns from createUser.
+      await seedUser('mock-auth-user-id', { email: 'taken@test.com', name: 'Taken' });
+      await seedEmployee('mock-auth-user-id', { email: 'taken@test.com' });
+      const { auth } = await import('@/lib/auth/auth.server');
+      const mocks = auth.api as unknown as { removeUser: ReturnType<typeof vi.fn> };
+      mocks.removeUser.mockClear();
+
+      await expect(
+        onboardEmployee(onboardArgs({ email: 'orphan-onboard@test.com' }))
+      ).rejects.toThrow();
+
+      // Best-effort compensation deletes the orphan with session headers.
+      expect(mocks.removeUser).toHaveBeenCalledWith({
+        headers: expect.any(Headers),
+        body: { userId: 'mock-auth-user-id' }
+      });
+      // No half-provisioned profile survives for the failed onboard email.
+      const profiles = await db
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.email, 'orphan-onboard@test.com'));
+      expect(profiles).toHaveLength(0);
+    });
+
+    it('links a pre-existing Pending user without rotating its credential', async () => {
+      const { auth } = await import('@/lib/auth/auth.server');
+      const seeded = await (
+        auth.api as unknown as {
+          createUser: (opts: { body: Record<string, unknown> }) => Promise<{ id: string }>;
+        }
+      ).createUser({
+        body: { email: 'pending@test.com', name: 'Pending', password: 'Password123!', role: 'user' }
+      });
+
+      const res = await onboardEmployee(onboardArgs({ email: 'pending@test.com' }));
+
+      expect(res.success).toBe(true);
+      expect(res.linked).toBe(true);
+      expect(res.employee.id).toBe(seeded.id);
+      expect(res.generatedPassword).toBeUndefined();
+
+      const rows = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, 'pending@test.com'));
+      expect(rows).toHaveLength(1);
+    });
+
+    it('rejects a password when linking because it would be silently ignored', async () => {
+      const { auth } = await import('@/lib/auth/auth.server');
+      await (
+        auth.api as unknown as {
+          createUser: (opts: { body: Record<string, unknown> }) => Promise<{ id: string }>;
+        }
+      ).createUser({
+        body: {
+          email: 'pending2@test.com',
+          name: 'Pending',
+          password: 'Password123!',
+          role: 'user'
+        }
+      });
+
+      await expect(
+        onboardEmployee(onboardArgs({ email: 'pending2@test.com', password: 'Password123!' }))
+      ).rejects.toMatchObject({ code: ONBOARD_LINK_WITH_PASSWORD });
+    });
+
+    it('rejects onboarding when the profile already exists', async () => {
+      const first = await onboardEmployee(onboardArgs());
+      expect(first.success).toBe(true);
+
+      await expect(onboardEmployee(onboardArgs())).rejects.toMatchObject({
+        code: EMPLOYEE_ALREADY_LINKED
+      });
+    });
+
+    it('assigns the access level at provision time', async () => {
+      const { roleGroups } = await import('./schema/role-groups');
+      const { userRoleGroups } = await import('./schema/user-role-groups');
+      await db.insert(roleGroups).values({ id: 'rg-tech', name: 'Technician', permissions: {} });
+
+      const res = await onboardEmployee(onboardArgs({ role_group_id: 'rg-tech' }));
+
+      expect(res.success).toBe(true);
+      expect(res.role_group).toEqual({ id: 'rg-tech', name: 'Technician' });
+      const memberships = await db
+        .select()
+        .from(userRoleGroups)
+        .where(eq(userRoleGroups.user_id, res.user.id));
+      expect(memberships).toHaveLength(1);
+      expect(memberships[0].role_group_id).toBe('rg-tech');
     });
   });
 

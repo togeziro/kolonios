@@ -150,6 +150,7 @@ function EmployeeProfileCell({ user }: { user: User }) {
   return (
     <Link
       to='/dashboard/employees'
+      search={{ linkUser: user.id, linkUserName: user.name, linkUserEmail: user.email }}
       className='inline-flex items-center gap-2'
       title={t('user.employeeProfileMissingHint')}
     >

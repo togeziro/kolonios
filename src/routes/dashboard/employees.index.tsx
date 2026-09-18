@@ -24,7 +24,11 @@ import PageContainer from '@/components/layout/page-container';
 import { parseFilters } from '@/lib/filters';
 import { parseSortingState } from '@/lib/parsers';
 import { employeesQueryOptions } from '@/features/employees/api/queries';
-import { EmployeeFormSheetTrigger } from '@/features/employees/components/employee-form-sheet';
+import {
+  EmployeeFormSheet,
+  EmployeeFormSheetTrigger
+} from '@/features/employees/components/employee-form-sheet';
+import { OnboardEmployeeSheetTrigger } from '@/features/employees/components/onboard-employee-sheet';
 import { columns } from '@/features/employees/components/employee-tables/columns';
 import { STATUS_OPTIONS } from '@/features/employees/components/employee-tables/options';
 import type { SearchParams, NavigateWithSearch } from '@/types';
@@ -37,7 +41,13 @@ const employeesSearchSchema = z.object({
   name: z.string().optional(),
   department_id: z.number().optional(),
   status: z.string().optional(),
-  sort: z.string().optional()
+  sort: z.string().optional(),
+  // Pending badge deep-link (users table): identity to prefill the create
+  // sheet with. Carried as display data only — the server re-validates the
+  // link by email at submit.
+  linkUser: z.string().optional(),
+  linkUserName: z.string().optional(),
+  linkUserEmail: z.string().optional()
 });
 
 function getEmployeeFilters(search: SearchParams) {
@@ -147,6 +157,8 @@ function EmployeesPage() {
         }
       />
       <EmployeeFormSheetTrigger />
+      <OnboardEmployeeSheetTrigger />
+      <LinkUserSheetOpener />
     </div>
   );
 
@@ -191,5 +203,44 @@ function EmployeesPage() {
         <DataTable table={table} />
       </DataTableCard>
     </PageContainer>
+  );
+}
+
+/**
+ * Pending badge deep-link target (users table → `?linkUser*` params). Opens
+ * the create sheet prefilled with the linked identity and clears the params
+ * on close. Conditionally rendered, so the sheet mounts fresh per open and
+ * the form defaults pick the prefill up at mount.
+ */
+function LinkUserSheetOpener() {
+  const search = useSearch({ strict: false }) as SearchParams;
+  const navigate = useNavigate() as unknown as NavigateWithSearch;
+
+  const linkUserId = search.linkUser as string | undefined;
+  const linkUserName = search.linkUserName as string | undefined;
+  const linkUserEmail = search.linkUserEmail as string | undefined;
+
+  if (!linkUserId || !linkUserName || !linkUserEmail) return null;
+
+  function clearLinkParams() {
+    void navigate({
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        linkUser: undefined,
+        linkUserName: undefined,
+        linkUserEmail: undefined
+      }),
+      replace: true
+    });
+  }
+
+  return (
+    <EmployeeFormSheet
+      open
+      prefillUser={{ id: linkUserId, name: linkUserName, email: linkUserEmail }}
+      onOpenChange={(next) => {
+        if (!next) clearLinkParams();
+      }}
+    />
   );
 }

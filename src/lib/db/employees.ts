@@ -4,6 +4,7 @@ import { DomainError, mapDbError } from '../errors';
 import { businessDateInTimeZone } from '@/lib/dates';
 import { logger } from '../logger';
 import { generateTemporaryPassword, setMustChangePassword } from '../auth/password';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import { employees } from './schema/employees';
 import { departments, designations } from './schema/masterdata';
 import { user } from './auth-schema';
@@ -11,7 +12,8 @@ import type {
   EmployeeFilters,
   EmployeesResponse,
   EmployeeByIdResponse,
-  EmployeeMutationPayload
+  EmployeeMutationPayload,
+  OnboardEmployeePayload
 } from '@/lib/domain/employees';
 import { buildPagination, buildOrderBy, buildSearchCondition, buildStatusCondition } from './utils';
 
@@ -373,6 +375,166 @@ export async function createEmployee(data: EmployeeMutationPayload & { created_b
 
 export const EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR = 'EMPLOYEE_TRACKED_CHANGE_REQUIRES_ACTOR';
 export const EMPLOYEE_ALREADY_LINKED = 'EMPLOYEE_ALREADY_LINKED';
+export const ONBOARD_LINK_WITH_PASSWORD = 'ONBOARD_LINK_WITH_PASSWORD';
+
+/**
+ * Single-action onboarding: provision the login account and the HR profile
+ * together so a Pending state is never created. Fresh email → create the
+ * auth user (generated or admin-set one-time credential, forced rotation)
+ * plus the employee row atomically; orphan compensation deletes a
+ * half-provisioned account on failure. Pre-existing Pending user → link the
+ * profile onto it (and assign the access level) without touching its
+ * credential — a provided password is rejected in this branch instead of
+ * being silently ignored.
+ */
+export async function onboardEmployee(data: OnboardEmployeePayload & { created_by: string }) {
+  // Set only in the fresh-user branch — the link branch must never rotate
+  // or delete a pre-existing account.
+  let createdUserId: string | null = null;
+  try {
+    const dataEmail = data.email.toLowerCase();
+
+    const provided = data.password?.trim() || '';
+    if (provided && provided.length < MIN_PASSWORD_LENGTH) {
+      throw new DomainError(
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+        'WEAK_PASSWORD'
+      );
+    }
+    const generated = !provided;
+    const initialPassword = generated ? generateTemporaryPassword() : provided;
+
+    // Resolve the access level first so the fresh branch creates the auth
+    // row with the final legacy role (no post-create sync needed). An
+    // unknown group id is ignored, mirroring createUser.
+    let syncedLegacyRole = 'employee';
+    let linkedRoleGroup: { id: string; name: string } | null = null;
+    if (data.role_group_id) {
+      const { getRoleGroupById, mapRoleGroupToLegacyRole } = await import('./role-groups');
+      const rg = await getRoleGroupById(data.role_group_id);
+      if (rg.success) {
+        syncedLegacyRole = mapRoleGroupToLegacyRole(rg.role_group!.name);
+        linkedRoleGroup = { id: data.role_group_id, name: rg.role_group!.name };
+      }
+    }
+
+    const [existingUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, dataEmail))
+      .limit(1);
+
+    let userId: string;
+    let linked = false;
+    if (existingUser) {
+      userId = existingUser.id;
+      const [existingEmp] = await db
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.id, userId))
+        .limit(1);
+      if (existingEmp) {
+        throw new DomainError(
+          `Employee with email "${dataEmail}" is already registered`,
+          EMPLOYEE_ALREADY_LINKED
+        );
+      }
+      if (provided) {
+        throw new DomainError(
+          `Account "${dataEmail}" already exists — clear the password to link its profile, or replace its password from Users`,
+          ONBOARD_LINK_WITH_PASSWORD
+        );
+      }
+      linked = true;
+      if (linkedRoleGroup) {
+        const { setUserRoleGroup } = await import('./role-groups');
+        await setUserRoleGroup(userId, linkedRoleGroup.id);
+        const { getRequestHeaders } = await import('@tanstack/react-start/server');
+        const { auth } = await import('@/lib/auth/auth.server');
+        await (auth.api as unknown as AdminAuthApi).adminUpdateUser({
+          headers: getRequestHeaders(),
+          body: { userId, data: { role: syncedLegacyRole } }
+        });
+      }
+    } else {
+      const { auth } = await import('@/lib/auth/auth.server');
+      const created = await (auth.api as unknown as AdminAuthApi).createUser({
+        body: {
+          email: dataEmail,
+          name: data.full_name,
+          password: initialPassword,
+          role: syncedLegacyRole
+        }
+      });
+      userId = created.id as string;
+      createdUserId = userId;
+      await setMustChangePassword(userId);
+      if (linkedRoleGroup) {
+        const { setUserRoleGroup } = await import('./role-groups');
+        await setUserRoleGroup(userId, linkedRoleGroup.id);
+      }
+    }
+
+    const employee_code = await generateEmployeeCode();
+
+    const [inserted] = await db
+      .insert(employees)
+      .values({
+        id: userId,
+        employee_code,
+        full_name: data.full_name,
+        nickname: data.nickname ?? '',
+        email: dataEmail,
+        phone: data.phone ?? '',
+        birth_place: data.birth_place ?? '',
+        birth_date: data.birth_date,
+        address: data.address ?? '',
+        id_number: data.id_number ?? '',
+        department_id: data.department_id,
+        designation_id: data.designation_id,
+        is_internship: data.is_internship ?? false,
+        employment_status: data.employment_status ?? 'active',
+        join_date: data.join_date,
+        leave_date: data.leave_date ?? null,
+        base_salary: data.base_salary ?? 0,
+        status: data.status ?? 'active'
+      })
+      .returning();
+
+    return {
+      success: true,
+      message: linked ? 'Employee profile linked successfully' : 'Employee onboarded successfully',
+      employee: serialize({
+        ...inserted,
+        department_name: null,
+        designation_name: null
+      }),
+      user: { id: userId, email: dataEmail, name: data.full_name },
+      role_group: linkedRoleGroup,
+      linked,
+      // Single-use handoff for the credential dialog — fresh + generated
+      // only. Never present when linking (no credential was set).
+      ...(!linked && generated ? { generatedPassword: initialPassword } : {})
+    };
+  } catch (e) {
+    if (createdUserId) {
+      try {
+        const { getRequestHeaders } = await import('@tanstack/react-start/server');
+        const { auth } = await import('@/lib/auth/auth.server');
+        await (auth.api as unknown as AdminAuthApi).removeUser({
+          headers: getRequestHeaders(),
+          body: { userId: createdUserId }
+        });
+      } catch (compensateError) {
+        logger.error(
+          { userId: createdUserId, err: compensateError },
+          '[db:employees.onboardEmployee] orphan compensation failed'
+        );
+      }
+    }
+    mapDbError(e, 'employees.onboardEmployee');
+  }
+}
 
 export async function updateEmployee(
   id: string,

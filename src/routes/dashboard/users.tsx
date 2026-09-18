@@ -20,6 +20,7 @@ import { DataTable } from '@/components/ui/table/data-table';
 import { DataTableCard } from '@/components/ui/table/data-table-card';
 import { ColumnVisibilityMenu } from '@/components/ui/table/data-table-view-options';
 import { useDataTable } from '@/hooks/use-data-table';
+import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import PageContainer from '@/components/layout/page-container';
 import { parseFilters } from '@/lib/filters';
 import { parseSortingState } from '@/lib/parsers';
@@ -64,6 +65,8 @@ export const Route = createFileRoute('/dashboard/users')({
 
 function UsersPage() {
   const { t } = useTranslation();
+  const { isAdmin, permissions } = useRoleGroupPermissions();
+  const canCreate = isAdmin || permissions.users?.add === true;
   const search = useSearch({ strict: false }) as SearchParams;
   const navigate = useNavigate() as unknown as NavigateWithSearch;
 
@@ -146,7 +149,7 @@ function UsersPage() {
       <Button variant='outline' size='sm' onClick={handleExport}>
         <Download /> {t('table.export')}
       </Button>
-      <UserFormSheetTrigger />
+      {canCreate && <UserFormSheetTrigger />}
     </div>
   );
 

@@ -73,18 +73,34 @@ sudo -E -u kolonios bun run scripts/create-initial-admin.ts --bootstrap
 3. **S3:** Admin → Storage Settings → test connection + one real upload.
 4. **Daily ops user:** create a non-admin account for everyday work; the
    initial admin is for administration only.
-5. **Onboarding later users (UI):** Users → Add User — the admin may set an
-   initial password (min 8 chars) or leave both password fields blank to
-   auto-generate a 14-char one-time credential, shown ONCE in a copy dialog
-   for out-of-band handover (never stored, never audited). Every
-   created/replaced password is a one-time credential: the account is
-   flagged `must_change_password` and confined to change-password until the
-   owner sets their own. Replacing a password is a row action (`…` →
-   Replace password, `users.edit`); it is audited as `user.set_password`
-   with `before/after: null` — the password itself is never audited.
-   Failed creations leave a `user.create_failed` trail (email + reason, no
-   password); partial creates are compensated server-side (orphan deleted)
-   so a retry never hits "user already exists".
+5. **Onboarding later users (UI) — main path via Employees:** Employees →
+   Onboard Employee. HR needs only `employees.add` (no `users.add` —
+   provisioning the login is an implementation detail of the employee
+   act). One form, two sections: Account (full name, email, access level)
+   and Employment (birth date, department, designation, join date — these
+   plus name/email are the Complete minimal). Leave both password fields
+   blank to auto-generate a 14-char one-time credential, shown ONCE in a
+   copy dialog for out-of-band handover (never stored, never audited); or
+   set an initial password (min 8 chars). Either way the account is
+   flagged `must_change_password` and confined to change-password until
+   the owner sets their own — the step-3 rotation gate applies to every
+   new hire, not just the first admin.
+6. **Follow-up path for Pending accounts (link, not onboard):** a User row
+   whose profile is still missing shows a Pending badge — clicking it
+   deep-links into the employee form with name/email locked, or pick the
+   login from the "Link user account" picker on Employees → New. Linking
+   attaches the profile to the existing login: no new login is created
+   and the account password stays unchanged. The picker lists only logins
+   without a profile, so linking can never fail on a retyped-email typo.
+7. **Users-page creation stays admin/Users-only:** Users → Add User is
+   visible only with `users.add` (or admin) and creates a login without a
+   profile (Pending) — prefer the Employees main path above. Replacing a
+   password is a row action (`…` → Replace password, `users.edit`); it is
+   audited as `user.set_password` with `before/after: null` — the password
+   itself is never audited. Failed creations leave a `user.create_failed`
+   trail (email + reason, no password); partial creates are compensated
+   server-side (orphan deleted) so a retry never hits "user already
+   exists".
 
 ## 5. Contingency
 

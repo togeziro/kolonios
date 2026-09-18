@@ -30,6 +30,14 @@ export const getUsersFn = createServerFn({ method: 'GET' })
     return getUsers(data);
   });
 
+export const getUnlinkedUsersFn = createServerFn({ method: 'GET' })
+  .validator(userFiltersSchema)
+  .handler(async ({ data }) => {
+    await requirePermission('users', 'view');
+    const { getUnlinkedUsers } = await import('@/lib/db/users');
+    return getUnlinkedUsers(data);
+  });
+
 export const createUserFn = createServerFn({ method: 'POST' })
   .validator(
     zodValidator(

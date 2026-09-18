@@ -6,6 +6,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { withAudit } from '@/lib/audit';
 import { businessDateInTimeZone } from '@/lib/dates';
 import { employeeFiltersSchema, employeeIdSchema, employeeMutationSchema } from './validation';
+import { onboardEmployeeSchema } from './validation';
 
 export const listEmployeesFn = createServerFn({ method: 'GET' })
   .validator(employeeFiltersSchema)
@@ -55,6 +56,53 @@ export const createEmployeeFn = createServerFn({ method: 'POST' })
       await insertAuditRow({
         actorUserId: session.user.id,
         action: 'employee.create_failed',
+        entityType: 'employee',
+        entityId: data.email,
+        before: null,
+        after: { email: data.email, name: data.full_name, error: getErrorMessage(error) },
+        requestId: getRequestId() ?? null
+      });
+      throw error;
+    }
+  });
+
+/**
+ * Single-action onboarding (account + HR profile, never Pending). Guarded
+ * by `employees.add` only: user provisioning is an implementation detail of
+ * the employee act, same as createEmployee — requiring `users.add` as well
+ * would lock HR (who holds employees.add but only users.view) out of
+ * onboarding their own hires.
+ */
+export const onboardEmployeeFn = createServerFn({ method: 'POST' })
+  .validator(onboardEmployeeSchema)
+  .handler(async ({ data }) => {
+    const session = await requirePermission('employees', 'add');
+    await checkRateLimit(`write:${session.user.id}`);
+    const { onboardEmployee } = await import('@/lib/db/employees');
+    try {
+      const onboarded = await onboardEmployee({ ...data, created_by: session.user.id });
+      const { generatedPassword: _secret, ...auditable } = onboarded;
+      await withAudit(
+        session.user.id,
+        {
+          action: 'employee.onboard',
+          entityType: 'employee',
+          entityId: onboarded.employee.id,
+          before: null,
+          // The one-time credential must never touch the audit trail — it
+          // lives only in the onboard response + the admin's copy dialog.
+          after: auditable
+        },
+        async () => undefined
+      );
+      return onboarded;
+    } catch (error) {
+      const { getErrorMessage } = await import('@/lib/errors');
+      const { insertAuditRow } = await import('@/lib/db/audit');
+      const { getRequestId } = await import('@/lib/request-id.server');
+      await insertAuditRow({
+        actorUserId: session.user.id,
+        action: 'employee.onboard_failed',
         entityType: 'employee',
         entityId: data.email,
         before: null,

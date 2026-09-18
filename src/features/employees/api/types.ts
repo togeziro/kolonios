@@ -1,1 +1,6 @@
-export type { Employee, EmployeeFilters, EmployeeMutationPayload } from '@/lib/domain/employees';
+export type {
+  Employee,
+  EmployeeFilters,
+  EmployeeMutationPayload,
+  OnboardEmployeePayload
+} from '@/lib/domain/employees';
