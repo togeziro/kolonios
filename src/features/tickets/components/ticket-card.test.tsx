@@ -51,8 +51,6 @@ function makeTicket(status: TicketStatus): Ticket {
 }
 
 // Regression: ISSUE-003 — ticket status badges rendered the raw lowercase enum
-// Found by /qa on 2026-09-15
-// Report: .gstack/qa-reports/qa-report-localhost-2026-09-15.md
 describe('ticket status labels', () => {
   it('maps every status to an existing translated label', () => {
     for (const status of STATUSES) {

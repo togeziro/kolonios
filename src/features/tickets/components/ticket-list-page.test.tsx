@@ -44,8 +44,6 @@ vi.mock('../api/queries', () => ({
 import TicketListPage from './ticket-list-page';
 
 // Regression: ISSUE-001 — ticket filter tabs rendered raw i18n keys
-// Found by /qa on 2026-09-15
-// Report: .gstack/qa-reports/qa-report-localhost-2026-09-15.md
 describe('TicketListPage status tabs', () => {
   it('renders translated labels without raw keys or uninterpolated placeholders', () => {
     queryMock.mockReturnValue({ data: { tickets: [] }, isLoading: false });
