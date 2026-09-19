@@ -256,6 +256,33 @@ describe('EmployeeFormSheet — link-mode notice', () => {
   });
 });
 
+describe('EmployeeFormSheet — date fields', () => {
+  it('renders birth, join, and leave dates as date pickers with the same format', () => {
+    renderSheet();
+
+    const birth = screen.getByLabelText(/Birth Date/i);
+    const join = screen.getByLabelText(/Join Date/i);
+    const leave = screen.getByLabelText(/Leave Date/i);
+
+    expect(birth.tagName).toBe('BUTTON');
+    expect(join.tagName).toBe('BUTTON');
+    expect(leave.tagName).toBe('BUTTON');
+    expect(screen.queryByRole('textbox', { name: /Birth Date/i })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: /Join Date/i })).toBeNull();
+    expect(birth.textContent).toMatch(/YYYY-MM-DD/);
+    expect(join.textContent).toMatch(/YYYY-MM-DD/);
+  });
+
+  it('shows the stored dates on the pickers in edit mode', () => {
+    renderSheet({ employee: EDIT_EMPLOYEE });
+
+    // Stored yyyy-MM-dd values display localized; the trigger still carries
+    // the value instead of the empty placeholder.
+    expect(screen.getByLabelText(/Birth Date/i).textContent).not.toMatch(/YYYY-MM-DD/);
+    expect(screen.getByLabelText(/Join Date/i).textContent).not.toMatch(/YYYY-MM-DD/);
+  });
+});
+
 describe('EmployeeFormSheet — already-linked error path', () => {
   it('shows the directed already-registered message instead of a generic failure', async () => {
     const user = userEvent.setup();

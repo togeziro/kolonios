@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { useAppForm, useFormFields } from '@/components/ui/tanstack-form';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Label } from '@/components/ui/label';
 import {
   Sheet,
   SheetContent,
@@ -35,6 +38,16 @@ import {
 } from '@/features/masterdata/api/queries';
 
 const NO_ROLE_GROUP = 'none';
+
+/**
+ * Zod-backed fields surface StandardSchemaV1Issue objects in meta.errors,
+ * not plain strings (same shape as the shift form's local FieldError).
+ */
+function fieldErrorMessage(error: unknown): string {
+  if (typeof error === 'string') return error;
+  const message = (error as { message?: unknown })?.message;
+  return typeof message === 'string' ? message : String(error);
+}
 
 export function OnboardEmployeeSheet({
   open,
@@ -124,6 +137,9 @@ export function OnboardEmployeeSheet({
     label: d.name
   }));
   const designationOptions = desigData?.options ?? [];
+
+  // Birth dates in the future are never valid; the picker enforces it.
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   async function copyGenerated() {
     if (!generatedPassword) return;
@@ -228,18 +244,49 @@ export function OnboardEmployeeSheet({
                     {t('employee.employment')}
                   </h4>
                   <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-                    <FormTextField
-                      name='birth_date'
-                      label={t('employee.birthDate')}
-                      required
-                      placeholder={t('employee.datePlaceholder')}
-                    />
-                    <FormTextField
-                      name='join_date'
-                      label={t('employee.joinDate')}
-                      required
-                      placeholder={t('employee.datePlaceholder')}
-                    />
+                    <form.AppField name='birth_date'>
+                      {(field) => (
+                        <div className='flex flex-col gap-2'>
+                          <Label htmlFor={field.name}>
+                            {t('employee.birthDate')}
+                            <span className='text-destructive'>{' *'}</span>
+                          </Label>
+                          <DatePicker
+                            id={field.name}
+                            value={field.state.value}
+                            onChange={(v) => field.handleChange(v ?? '')}
+                            maxDate={today}
+                            placeholder={t('employee.datePlaceholder')}
+                          />
+                          {field.state.meta.errors.length > 0 ? (
+                            <p className='text-destructive text-sm'>
+                              {fieldErrorMessage(field.state.meta.errors[0])}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.AppField>
+                    <form.AppField name='join_date'>
+                      {(field) => (
+                        <div className='flex flex-col gap-2'>
+                          <Label htmlFor={field.name}>
+                            {t('employee.joinDate')}
+                            <span className='text-destructive'>{' *'}</span>
+                          </Label>
+                          <DatePicker
+                            id={field.name}
+                            value={field.state.value}
+                            onChange={(v) => field.handleChange(v ?? '')}
+                            placeholder={t('employee.datePlaceholder')}
+                          />
+                          {field.state.meta.errors.length > 0 ? (
+                            <p className='text-destructive text-sm'>
+                              {fieldErrorMessage(field.state.meta.errors[0])}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.AppField>
                     <FormSelectField
                       name='department_id'
                       label={t('employee.department')}

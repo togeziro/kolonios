@@ -81,6 +81,22 @@ describe('OnboardEmployeeSheet', () => {
 
     expect(screen.getByText(/auto-generate a one-time password/i)).not.toBeNull();
   });
+
+  it('renders birth and join dates as date pickers with the same format, not free text', () => {
+    renderSheet();
+
+    const birth = screen.getByLabelText(/Birth Date/i);
+    const join = screen.getByLabelText(/Join Date/i);
+
+    // DatePicker trigger is a button (calendar popover), not a textbox.
+    expect(birth.tagName).toBe('BUTTON');
+    expect(join.tagName).toBe('BUTTON');
+    expect(screen.queryByRole('textbox', { name: /Birth Date/i })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: /Join Date/i })).toBeNull();
+    // Same empty-state format on both pickers.
+    expect(birth.textContent).toMatch(/YYYY-MM-DD/);
+    expect(join.textContent).toMatch(/YYYY-MM-DD/);
+  });
 });
 
 describe('onboardFormSchema', () => {

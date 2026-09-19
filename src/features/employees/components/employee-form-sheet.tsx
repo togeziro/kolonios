@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '@tanstack/react-form';
+import { format } from 'date-fns';
 import { useAppForm, useFormFields } from '@/components/ui/tanstack-form';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Label } from '@/components/ui/label';
 import {
   Sheet,
   SheetContent,
@@ -165,6 +168,8 @@ export function EmployeeFormSheet({
   const designationOptions = desigData?.options ?? [];
   const formValues = useStore(form.store, (state) => state.values);
   const isInternship = formValues.is_internship;
+  // Birth dates in the future are never valid; the picker enforces it.
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -261,12 +266,26 @@ export function EmployeeFormSheet({
                     placeholder={t('employee.cityPlaceholder')}
                   />
 
-                  <FormTextField
-                    name='birth_date'
-                    label={t('employee.birthDate')}
-                    required
-                    placeholder={t('employee.datePlaceholder')}
-                  />
+                  <form.AppField name='birth_date'>
+                    {(field) => (
+                      <div className='flex flex-col gap-2'>
+                        <Label htmlFor={field.name}>
+                          {t('employee.birthDate')}
+                          <span className='text-destructive'>{' *'}</span>
+                        </Label>
+                        <DatePicker
+                          id={field.name}
+                          value={field.state.value}
+                          onChange={(v) => field.handleChange(v ?? '')}
+                          maxDate={today}
+                          placeholder={t('employee.datePlaceholder')}
+                        />
+                        {field.state.meta.errors.length > 0 ? (
+                          <p className='text-destructive text-sm'>{field.state.meta.errors[0]}</p>
+                        ) : null}
+                      </div>
+                    )}
+                  </form.AppField>
 
                   <FormTextField
                     name='address'
@@ -303,12 +322,25 @@ export function EmployeeFormSheet({
                     placeholder={t('employee.selectDesignation')}
                   />
 
-                  <FormTextField
-                    name='join_date'
-                    label={t('employee.joinDate')}
-                    required
-                    placeholder={t('employee.datePlaceholder')}
-                  />
+                  <form.AppField name='join_date'>
+                    {(field) => (
+                      <div className='flex flex-col gap-2'>
+                        <Label htmlFor={field.name}>
+                          {t('employee.joinDate')}
+                          <span className='text-destructive'>{' *'}</span>
+                        </Label>
+                        <DatePicker
+                          id={field.name}
+                          value={field.state.value}
+                          onChange={(v) => field.handleChange(v ?? '')}
+                          placeholder={t('employee.datePlaceholder')}
+                        />
+                        {field.state.meta.errors.length > 0 ? (
+                          <p className='text-destructive text-sm'>{field.state.meta.errors[0]}</p>
+                        ) : null}
+                      </div>
+                    )}
+                  </form.AppField>
 
                   <FormSelectField
                     name='employment_status'
@@ -320,11 +352,22 @@ export function EmployeeFormSheet({
                   <FormCheckboxField name='is_internship' label={t('employee.internship')} />
 
                   {!isInternship && (
-                    <FormTextField
-                      name='leave_date'
-                      label={t('employee.leaveDate')}
-                      placeholder={t('employee.datePlaceholder')}
-                    />
+                    <form.AppField name='leave_date'>
+                      {(field) => (
+                        <div className='flex flex-col gap-2'>
+                          <Label htmlFor={field.name}>{t('employee.leaveDate')}</Label>
+                          <DatePicker
+                            id={field.name}
+                            value={field.state.value}
+                            onChange={(v) => field.handleChange(v ?? '')}
+                            placeholder={t('employee.datePlaceholder')}
+                          />
+                          {field.state.meta.errors.length > 0 ? (
+                            <p className='text-destructive text-sm'>{field.state.meta.errors[0]}</p>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.AppField>
                   )}
                 </div>
               </div>
