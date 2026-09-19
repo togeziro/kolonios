@@ -190,7 +190,8 @@ describe('filterNavItemsByRole', () => {
     tickets: { view: true, add: true },
     jobs: { view: true },
     spv_review: { view: true, edit: true },
-    checklist: { view: true, edit: true, approve: true }
+    checklist: { view: true, edit: true, approve: true },
+    settings: { view: true, edit: true }
   };
 
   it('admin sees everything except employee self-service items', () => {
@@ -250,6 +251,21 @@ describe('filterNavItemsByRole', () => {
     const titles = topLevelTitles(filtered);
     expect(titles).not.toContain('Review Queue');
     expect(titles).not.toContain('Leave Approvals');
+  });
+
+  it('settings.view without settings.edit hides Face Settings but keeps sibling attendance pages', () => {
+    // Mirrors prod Operation: attendance_admin.view opens the dropdown and
+    // settings.view opens Branding, but Face Settings needs settings.edit.
+    const operationPerms: Permissions = {
+      ...technicianPerms,
+      attendance_admin: { view: true },
+      settings: { view: true, edit: false }
+    };
+    const filtered = filterNavItemsByRole(navItems, operationPerms, false);
+    const attendance = filtered.find((item) => item.title === 'Attendance Admin');
+    const children = attendance?.items?.map((item) => item.title) ?? [];
+    expect(children).toContain('Locations');
+    expect(children).not.toContain('Face Settings');
   });
 
   it('non-admin with full permissions sees everything', () => {

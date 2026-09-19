@@ -205,6 +205,7 @@ export const navItems: NavItem[] = [
         icon: 'settings',
         isActive: false,
         module: 'settings',
+        requiredAction: 'edit',
         items: []
       }
     ]

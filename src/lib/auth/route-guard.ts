@@ -113,7 +113,7 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
   {
     pattern: /^\/dashboard\/admin\/attendance\/face-settings$/,
     module: 'settings',
-    action: 'view'
+    action: 'edit'
   },
 
   // /dashboard/admin/role-groups/* — list and detail (dynamic id)

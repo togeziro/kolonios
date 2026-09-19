@@ -132,7 +132,11 @@ export const verifyFaceFn = createServerFn({ method: 'POST' })
 // --- Company settings (admin) ---
 
 export const getFaceSettingsFn = createServerFn({ method: 'GET' }).handler(async () => {
-  await requirePermission('settings', 'view');
+  // Broad read: the technician check-in flow (attendance.view only) needs the
+  // accuracy level + validation mode to verify faces. Write access is gated
+  // separately on settings.edit; the admin page itself requires settings.edit
+  // (route guard + nav), so view-only roles can read but never open/configure.
+  await requirePermission('attendance', 'view');
   const { getCompanySettings } = await import('@/lib/db/masterdata');
   const result = await getCompanySettings();
   return {

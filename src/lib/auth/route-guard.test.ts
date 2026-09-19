@@ -66,7 +66,7 @@ describe('resolveRouteGuard', () => {
     }
     expect(resolveRouteGuard('/dashboard/admin/attendance/face-settings')).toEqual({
       module: 'settings',
-      action: 'view'
+      action: 'edit'
     });
     expect(resolveRouteGuard('/dashboard/admin/attendance/reports')).toEqual({
       module: 'attendance_admin',
