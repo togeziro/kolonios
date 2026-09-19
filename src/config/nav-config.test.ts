@@ -26,7 +26,7 @@ describe('nav-config', () => {
       'Payroll',
       'Payslips',
       'Broadcast',
-      'Attendance Management',
+      'Attendance Admin',
       'Holiday Calendar',
       'Settings',
       'Review Queue',
@@ -70,16 +70,16 @@ describe('nav-config', () => {
     );
   });
 
-  it('nests attendance admin pages under an Attendance Management dropdown', () => {
-    const attendance = navItems.find((item) => item.title === 'Attendance Management');
+  it('nests attendance admin pages under an Attendance Admin dropdown', () => {
+    const attendance = navItems.find((item) => item.title === 'Attendance Admin');
     const children = attendance?.items?.map((item) => item.title) ?? [];
     expect(children).toEqual([
-      'Attendance Locations',
-      'Attendance Schedules',
+      'Locations',
+      'Schedules',
       'Schedule Grid',
-      'Attendance Assignments',
-      'Attendance Reports',
-      'Attendance Face Settings'
+      'Assignments',
+      'Reports',
+      'Face Settings'
     ]);
   });
 
@@ -128,7 +128,7 @@ describe('nav-config', () => {
 
   it('gates dropdown parents by their module so children inherit access', () => {
     const payroll = navItems.find((item) => item.title === 'Payroll');
-    const attendance = navItems.find((item) => item.title === 'Attendance Management');
+    const attendance = navItems.find((item) => item.title === 'Attendance Admin');
     expect(payroll!.module).toBe('payroll');
     expect(attendance!.module).toBe('attendance_admin');
     for (const child of [...(payroll!.items ?? []), ...(attendance!.items ?? [])]) {
@@ -203,7 +203,7 @@ describe('filterNavItemsByRole', () => {
       'Leave',
       'Payroll',
       'Broadcast',
-      'Attendance Management',
+      'Attendance Admin',
       'Holiday Calendar',
       'Settings',
       'Review Queue',

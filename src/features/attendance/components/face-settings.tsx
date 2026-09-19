@@ -11,7 +11,7 @@ import { useRoleGroupPermissions } from '@/hooks/use-nav';
 import { faceSettingsQueryOptions } from '@/features/face/api/queries';
 import { updateFaceSettingsFn } from '@/features/face/api/service';
 import type { FaceAccuracyLevel, FaceValidationMode } from '@/lib/face/types';
-import { canAttendanceAdminAction } from './permissions';
+import { hasModulePermission } from '@/lib/auth/session';
 
 interface FaceSettingsProps {
   onSave?: (settings: {
@@ -25,7 +25,7 @@ export function FaceSettings({ onSave }: FaceSettingsProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { isAdmin, permissions } = useRoleGroupPermissions();
-  const canEdit = canAttendanceAdminAction(permissions, isAdmin, 'edit');
+  const canEdit = hasModulePermission(permissions, isAdmin, 'settings', 'edit');
   const { data: settings } = useQuery(faceSettingsQueryOptions());
   const [showSeconds, setShowSeconds] = useState(false);
   const [validationMode, setValidationMode] = useState<FaceValidationMode>('background');

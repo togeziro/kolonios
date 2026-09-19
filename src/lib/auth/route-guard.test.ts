@@ -56,8 +56,7 @@ describe('resolveRouteGuard', () => {
       '/dashboard/admin/attendance/assignments',
       '/dashboard/admin/attendance/schedules',
       '/dashboard/admin/attendance/schedule-grid',
-      '/dashboard/admin/attendance/locations',
-      '/dashboard/admin/attendance/face-settings'
+      '/dashboard/admin/attendance/locations'
     ];
     for (const path of viewPaths) {
       expect(resolveRouteGuard(path)).toEqual({
@@ -65,6 +64,10 @@ describe('resolveRouteGuard', () => {
         action: 'view'
       });
     }
+    expect(resolveRouteGuard('/dashboard/admin/attendance/face-settings')).toEqual({
+      module: 'settings',
+      action: 'view'
+    });
     expect(resolveRouteGuard('/dashboard/admin/attendance/reports')).toEqual({
       module: 'attendance_admin',
       action: 'reports'

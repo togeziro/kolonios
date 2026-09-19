@@ -112,7 +112,7 @@ export const ROUTE_REGISTRY: ReadonlyArray<RouteEntry> = [
   },
   {
     pattern: /^\/dashboard\/admin\/attendance\/face-settings$/,
-    module: 'attendance_admin',
+    module: 'settings',
     action: 'view'
   },
 

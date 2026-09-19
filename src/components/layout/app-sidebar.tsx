@@ -48,13 +48,13 @@ export const navTitleKeys: Record<string, string> = {
   'Ready to Pay': 'navigation.payQueue',
   Broadcast: 'navigation.broadcast',
   Settings: 'navigation.settings',
-  'Attendance Locations': 'navigation.attendanceLocations',
-  'Attendance Schedules': 'navigation.attendanceSchedules',
+  Locations: 'navigation.attendanceLocations',
+  Schedules: 'navigation.attendanceSchedules',
   'Schedule Grid': 'navigation.scheduleGrid',
-  'Attendance Assignments': 'navigation.attendanceAssignments',
-  'Attendance Reports': 'navigation.attendanceReports',
-  'Attendance Face Settings': 'navigation.attendanceFaceSettings',
-  'Attendance Management': 'navigation.attendanceManagement',
+  Assignments: 'navigation.attendanceAssignments',
+  Reports: 'navigation.attendanceReports',
+  'Face Settings': 'navigation.attendanceFaceSettings',
+  'Attendance Admin': 'navigation.attendanceManagement',
   Users: 'navigation.users',
   Departments: 'navigation.departments',
   'Job Titles': 'navigation.jobTitles',
@@ -114,7 +114,7 @@ function NavItemMenu({
           <CollapsibleTrigger asChild>
             <SidebarMenuButton tooltip={label} isActive={active}>
               {item.icon && <Icon />}
-              <span>{label}</span>
+              <span className='truncate'>{label}</span>
               <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
             </SidebarMenuButton>
           </CollapsibleTrigger>
@@ -124,7 +124,9 @@ function NavItemMenu({
                 <SidebarMenuSubItem key={subItem.title}>
                   <SidebarMenuSubButton asChild isActive={isSubItemActive(pathname, subItem.url)}>
                     <Link to={subItem.url}>
-                      <span>{t(navTitleKeys[subItem.title] ?? subItem.title)}</span>
+                      <span className='truncate'>
+                        {t(navTitleKeys[subItem.title] ?? subItem.title)}
+                      </span>
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -141,7 +143,7 @@ function NavItemMenu({
       <SidebarMenuButton asChild tooltip={label} isActive={active}>
         <Link to={item.url}>
           <Icon />
-          <span>{label}</span>
+          <span className='truncate'>{label}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>

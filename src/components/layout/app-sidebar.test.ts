@@ -19,12 +19,12 @@ describe('sidebar navigation translations', () => {
 
   it('maps every attendance admin page title to a translation key', () => {
     for (const title of [
-      'Attendance Locations',
-      'Attendance Schedules',
+      'Locations',
+      'Schedules',
       'Schedule Grid',
-      'Attendance Assignments',
-      'Attendance Reports',
-      'Attendance Face Settings'
+      'Assignments',
+      'Reports',
+      'Face Settings'
     ]) {
       expect(navTitleKeys[title], `missing nav key for ${title}`).toBeDefined();
     }

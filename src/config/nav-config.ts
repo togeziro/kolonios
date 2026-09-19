@@ -152,14 +152,14 @@ export const navItems: NavItem[] = [
     items: []
   },
   {
-    title: 'Attendance Management',
+    title: 'Attendance Admin',
     url: '/dashboard/admin/attendance/locations',
     icon: 'clock',
     isActive: false,
     module: 'attendance_admin',
     items: [
       {
-        title: 'Attendance Locations',
+        title: 'Locations',
         url: '/dashboard/admin/attendance/locations',
         icon: 'clock',
         isActive: false,
@@ -167,7 +167,7 @@ export const navItems: NavItem[] = [
         items: []
       },
       {
-        title: 'Attendance Schedules',
+        title: 'Schedules',
         url: '/dashboard/admin/attendance/schedules',
         icon: 'clock',
         isActive: false,
@@ -183,7 +183,7 @@ export const navItems: NavItem[] = [
         items: []
       },
       {
-        title: 'Attendance Assignments',
+        title: 'Assignments',
         url: '/dashboard/admin/attendance/assignments',
         icon: 'clock',
         isActive: false,
@@ -191,7 +191,7 @@ export const navItems: NavItem[] = [
         items: []
       },
       {
-        title: 'Attendance Reports',
+        title: 'Reports',
         url: '/dashboard/admin/attendance/reports',
         icon: 'clock',
         isActive: false,
@@ -200,11 +200,11 @@ export const navItems: NavItem[] = [
         items: []
       },
       {
-        title: 'Attendance Face Settings',
+        title: 'Face Settings',
         url: '/dashboard/admin/attendance/face-settings',
         icon: 'settings',
         isActive: false,
-        module: 'attendance_admin',
+        module: 'settings',
         items: []
       }
     ]
