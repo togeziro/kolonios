@@ -1065,7 +1065,8 @@ async function seedRoleGroups() {
           achievements: { view: true },
           checklist: { view: true, edit: true, approve: true },
           leave: { view: true, edit: true },
-          attendance_admin: { view: true },
+          attendance_admin: { view: true, add: true, edit: true, delete: true },
+          settings: { view: true },
           spv_review: { view: true, edit: true }
         },
         is_admin: false
