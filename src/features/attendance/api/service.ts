@@ -231,6 +231,23 @@ export const getSchedulesFn = createServerFn({ method: 'GET' }).handler(async ()
   return getShifts();
 });
 
+// Minimal employee options for the assignments form. Gated on
+// `attendance_admin.view` (same as the page) instead of `employees.view`, so
+// supervisor roles that manage assignments but lack the employees module still
+// get a working dropdown — without opening the full employee records.
+export const getAssignmentEmployeeOptionsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    await requirePermission('attendance_admin', 'view');
+    const { listEmployees } = await import('@/lib/db/employees');
+    const result = await listEmployees({ limit: 100 });
+    return (result.employees ?? []).map((e) => ({
+      id: e.id,
+      full_name: e.full_name,
+      email: e.email
+    }));
+  }
+);
+
 // --- Shift master CRUD (admin) ---
 
 export const listShiftsFn = createServerFn({ method: 'GET' }).handler(async () => {

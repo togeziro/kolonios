@@ -9,6 +9,7 @@ vi.mock('./service', () => ({
   getShiftsFn: vi.fn(),
   getAttendanceSummaryFn: vi.fn(),
   getSchedulesFn: vi.fn(),
+  getAssignmentEmployeeOptionsFn: vi.fn(),
   getScheduleAssignmentsFn: vi.fn()
 }));
 
@@ -16,6 +17,7 @@ import { attendanceKeys } from './queries';
 import {
   attendanceHistoryQueryOptions,
   attendanceSummaryQueryOptions,
+  assignmentEmployeesQueryOptions,
   locationsQueryOptions,
   myAttendanceQueryOptions,
   myLeavesQueryOptions,
@@ -24,6 +26,7 @@ import {
 } from './queries';
 import type { AttendanceFilters, LeaveFilters } from './types';
 import {
+  getAssignmentEmployeeOptionsFn,
   getAttendanceHistoryFn,
   getAttendanceSummaryFn,
   getLocationsFn,
@@ -103,6 +106,13 @@ describe('attendance query options', () => {
     expect(options.queryKey).toEqual(['attendance', 'summary']);
     options.queryFn!(undefined as never);
     expect(getAttendanceSummaryFn).toHaveBeenCalledWith();
+  });
+
+  it('assignmentEmployeesQueryOptions uses its own key and fn', () => {
+    const options = assignmentEmployeesQueryOptions();
+    expect(options.queryKey).toEqual(['attendance', 'assignment-employees']);
+    options.queryFn!(undefined as never);
+    expect(getAssignmentEmployeeOptionsFn).toHaveBeenCalledWith();
   });
 });
 

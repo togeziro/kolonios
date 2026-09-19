@@ -8,6 +8,7 @@ import {
   getShiftsFn,
   getAttendanceSummaryFn,
   getSchedulesFn,
+  getAssignmentEmployeeOptionsFn,
   getMissingEmployeeProfilesFn,
   getAdminAttendanceReportFn,
   listShiftsFn,
@@ -98,6 +99,12 @@ export const schedulesQueryOptions = () =>
   queryOptions({
     queryKey: attendanceKeys.schedules(),
     queryFn: () => getSchedulesFn()
+  });
+
+export const assignmentEmployeesQueryOptions = () =>
+  queryOptions({
+    queryKey: [...attendanceKeys.all, 'assignment-employees'] as const,
+    queryFn: () => getAssignmentEmployeeOptionsFn()
   });
 
 export const missingEmployeeProfilesQueryOptions = () =>

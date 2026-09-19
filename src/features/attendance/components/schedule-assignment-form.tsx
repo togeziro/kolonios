@@ -9,9 +9,9 @@ import { Icons } from '@/components/icons';
 import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { employeesQueryOptions } from '@/features/employees/api/queries';
 import {
   schedulesQueryOptions,
+  assignmentEmployeesQueryOptions,
   missingEmployeeProfilesQueryOptions,
   attendanceKeys
 } from '../api/queries';
@@ -31,11 +31,11 @@ export function ScheduleAssignmentForm() {
   const canAdd = canAttendanceAdminAction(permissions, isAdmin, 'add');
 
   // Bulk assignment covers up to the configured employee list limit (100).
-  const { data: employees } = useQuery(employeesQueryOptions({ limit: 100 }));
+  const { data: employees } = useQuery(assignmentEmployeesQueryOptions());
   const { data: schedules } = useQuery(schedulesQueryOptions());
   const { data: missing } = useQuery(missingEmployeeProfilesQueryOptions());
 
-  const employeeRows = employees?.employees ?? [];
+  const employeeRows = employees ?? [];
   const scheduleRows = schedules?.shifts ?? [];
   const missingCount = missing?.count ?? 0;
 
