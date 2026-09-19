@@ -3,11 +3,12 @@ import { parseDbUrl, requireLocalHost } from './lib/db-url';
 import { client as dbClient } from '../src/lib/db';
 import { listMissingEmployeeProfiles } from '../src/lib/db/users';
 
-// Lists workforce users (role != 'customer') that have no matching
+// Lists workforce users (not banned/customer/admin) that have no matching
 // `employees` row. Read-only — safe to run on any environment. The same
 // query backs the `/dashboard/admin/attendance/assignments` warning banner.
 //
-// Excludes banned accounts (defunct sessions) and the customer role so the
+// Excludes banned accounts (defunct sessions), the customer role, and the
+// admin role (operators never receive shift assignments) so the
 // output is only true workforce gaps that an admin needs to fill in via
 // `/dashboard/employees`. Exits 0 even when there is nothing to do, so it
 // can be wired into a cron/alerting job.

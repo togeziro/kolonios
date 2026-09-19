@@ -373,7 +373,9 @@ export async function replaceUserPassword(userId: string, newPassword: string) {
  * Excludes banned accounts — a banned user without an employee row is not a
  * provisioning gap, it's intentional state. Customers and other non-employee
  * `role` rows are excluded for the same reason: the bulk-assign surface is
- * about workforce scheduling, not about every auth account.
+ * about workforce scheduling, not about every auth account. `admin` accounts
+ * are excluded too — operators never receive shift assignments, so an admin
+ * without an employee row is expected state, not a gap.
  */
 export async function getMissingEmployeeProfiles(opts: { sampleLimit?: number } = {}) {
   const sampleLimit = opts.sampleLimit ?? 3;
@@ -391,8 +393,9 @@ export async function getMissingEmployeeProfiles(opts: { sampleLimit?: number } 
 
 /**
  * The single source of truth for the "workforce user without an employee
- * profile" predicate: not banned, no `employees` row, and not a customer
- * (customer accounts live in the portal shell, not the scheduling surface).
+ * profile" predicate: not banned, no `employees` row, not a customer
+ * (customer accounts live in the portal shell, not the scheduling surface),
+ * and not an `admin` (operators never receive shift assignments).
  *
  * Used by `getMissingEmployeeProfiles` (the assignments banner) and by the
  * `db:list-missing-employees` / `db:backfill-missing-employees` scripts.
@@ -412,7 +415,7 @@ export async function listMissingEmployeeProfiles(
   }>;
 }> {
   const limit = opts.limit ?? 50;
-  const conditions = [eq(user.banned, false), isNull(employees.id)];
+  const conditions = [eq(user.banned, false), isNull(employees.id), sql`${user.role} <> 'admin'`];
   if (!opts.includeCustomer) {
     conditions.push(sql`${user.role} <> 'customer'`);
   }

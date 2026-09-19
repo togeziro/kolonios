@@ -495,6 +495,8 @@ describe('users data access (integration)', () => {
       await seedUser('banned-lonely', { email: 'banned@test.com', role: 'employee', banned: true });
       // Customers live in the portal shell, not the scheduling surface.
       await seedUser('customer-lonely', { email: 'cust@test.com', role: 'customer' });
+      // Admins never receive shift assignments — no profile is expected state.
+      await seedUser('admin-lonely', { email: 'boss@test.com', name: 'Boss', role: 'admin' });
     });
 
     it('returns only active, non-customer users without an employee row', async () => {
@@ -506,7 +508,7 @@ describe('users data access (integration)', () => {
       expect(rows[0].createdAt).toBeInstanceOf(Date);
     });
 
-    it('includeCustomer widens the set but still skips banned users', async () => {
+    it('includeCustomer widens the set but still skips banned users and admins', async () => {
       const { total, rows } = await listMissingEmployeeProfiles({ includeCustomer: true });
       expect(total).toBe(2);
       expect(rows.map((r) => r.id).sort()).toEqual(['customer-lonely', 'lonely']);
