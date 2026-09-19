@@ -63,3 +63,34 @@ describe('DatePicker calendar locale', () => {
     expect(screen.queryByText('Sen')).not.toBeInTheDocument();
   });
 });
+
+describe('DatePicker caption dropdowns', () => {
+  it('shows month and year dropdowns for fast long-range jumps', async () => {
+    renderWithI18n(createElement(DatePicker, {}));
+    await openPopover(/select date/i);
+
+    // day-picker renders native month + year <select> elements.
+    expect(await screen.findAllByRole('combobox')).toHaveLength(2);
+  });
+
+  it('respects startMonth/endMonth bounds on the year dropdown', async () => {
+    renderWithI18n(
+      createElement(DatePicker, {
+        startMonth: new Date(1950, 0),
+        endMonth: new Date(2026, 11)
+      })
+    );
+    await openPopover(/select date/i);
+
+    await waitFor(() => expect(screen.getByRole('option', { name: '1950' })).toBeInTheDocument());
+    expect(screen.queryByRole('option', { name: '1949' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: '2027' })).not.toBeInTheDocument();
+  });
+
+  it('shows dropdowns in DatePickerRange too', async () => {
+    renderWithI18n(createElement(DatePickerRange, {}));
+    await openPopover(/select date range/i);
+
+    expect(await screen.findAllByRole('combobox')).toHaveLength(2);
+  });
+});

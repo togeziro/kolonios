@@ -140,6 +140,9 @@ export function OnboardEmployeeSheet({
 
   // Birth dates in the future are never valid; the picker enforces it.
   const today = format(new Date(), 'yyyy-MM-dd');
+  // Dropdown bounds: 30-year jumps need a year list, not month arrows.
+  const birthMin = new Date(1950, 0);
+  const workMin = new Date(2000, 0);
 
   async function copyGenerated() {
     if (!generatedPassword) return;
@@ -256,6 +259,8 @@ export function OnboardEmployeeSheet({
                             value={field.state.value}
                             onChange={(v) => field.handleChange(v ?? '')}
                             maxDate={today}
+                            startMonth={birthMin}
+                            endMonth={new Date()}
                             placeholder={t('employee.datePlaceholder')}
                           />
                           {field.state.meta.errors.length > 0 ? (
@@ -277,6 +282,7 @@ export function OnboardEmployeeSheet({
                             id={field.name}
                             value={field.state.value}
                             onChange={(v) => field.handleChange(v ?? '')}
+                            startMonth={workMin}
                             placeholder={t('employee.datePlaceholder')}
                           />
                           {field.state.meta.errors.length > 0 ? (

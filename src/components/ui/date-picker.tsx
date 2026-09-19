@@ -18,8 +18,28 @@ interface DatePickerProps {
   disabled?: boolean;
   minDate?: string;
   maxDate?: string;
+  /**
+   * Bounds for the month/year dropdowns (captionLayout="dropdown"). Jumping
+   * years via dropdown is what makes 20–30-year jumps (e.g. birth dates)
+   * fast; unset means day-picker's default (last 100 years).
+   */
+  startMonth?: Date;
+  endMonth?: Date;
   className?: string;
 }
+
+/**
+ * Compact native-select styling for the calendar caption dropdowns.
+ * day-picker renders plain <select> elements — functional everywhere
+ * including mobile, styled to match the app's inputs.
+ */
+const dropdownClassNames = {
+  dropdowns: 'flex items-center justify-center gap-1.5',
+  months_dropdown:
+    'h-8 rounded-md border border-input bg-background px-1 text-sm shadow-xs outline-none focus-visible:border-ring',
+  years_dropdown:
+    'h-8 rounded-md border border-input bg-background px-1 text-sm shadow-xs outline-none focus-visible:border-ring'
+};
 
 export function DatePicker({
   id,
@@ -30,6 +50,8 @@ export function DatePicker({
   disabled = false,
   minDate,
   maxDate,
+  startMonth,
+  endMonth,
   className
 }: DatePickerProps) {
   const { i18n } = useTranslation();
@@ -75,6 +97,10 @@ export function DatePicker({
           mode='single'
           selected={selectedDate}
           onSelect={handleSelect}
+          captionLayout='dropdown'
+          startMonth={startMonth}
+          endMonth={endMonth}
+          classNames={dropdownClassNames}
           disabled={(date) => {
             if (minDate && date < new Date(minDate)) return true;
             if (maxDate && date > new Date(maxDate)) return true;
@@ -91,6 +117,8 @@ interface DatePickerRangeProps {
   onChange?: (value: { from?: string; to?: string } | undefined) => void;
   placeholder?: string;
   disabled?: boolean;
+  startMonth?: Date;
+  endMonth?: Date;
   className?: string;
 }
 
@@ -99,6 +127,8 @@ export function DatePickerRange({
   onChange,
   placeholder = 'Select date range',
   disabled = false,
+  startMonth,
+  endMonth,
   className
 }: DatePickerRangeProps) {
   const { i18n } = useTranslation();
@@ -163,6 +193,10 @@ export function DatePickerRange({
           mode='range'
           selected={dateRange}
           onSelect={handleSelect}
+          captionLayout='dropdown'
+          startMonth={startMonth}
+          endMonth={endMonth}
+          classNames={dropdownClassNames}
         />
       </PopoverContent>
     </Popover>
